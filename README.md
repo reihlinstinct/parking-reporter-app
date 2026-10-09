@@ -36,3 +36,7 @@ See [design](docs/DESIGN.md), [preview status](M1_STATUS.md), [security](SECURIT
 ## Safety
 
 Never commit real plates, evidence, profiles, keys or tokens. Fixtures are explicitly synthetic. Local review is not a submission or permission to post. Edits invalidate review. Original hash and stable ID guard against duplicates. Uncertain writes must not be retried automatically. Photos remain local for recognition. No municipal credentials or endpoints belong in public code or APKs.
+
+## Offline recognition preview
+
+Explicit local Tesseract OCR offers plate candidates, with manual fallback and required review. No ML Kit or recognition telemetry. See [OCR limits, model provenance and licensing](docs/OFFLINE_OCR.md). This does not complete field validation or enable live reporting.
