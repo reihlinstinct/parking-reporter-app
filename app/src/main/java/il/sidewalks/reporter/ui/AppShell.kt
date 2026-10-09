@@ -89,8 +89,15 @@ fun AppShell(
             }
         }, onCancel = { page = "home" })
         "review" -> draft?.let { value ->
-            val image = remember(original) {
-                original?.let { file -> BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = 4 })?.asImageBitmap() }
+            val image by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, original) {
+                value = withContext(Dispatchers.IO) {
+                    try {
+                        original?.let { file ->
+                            val prepared = il.sidewalks.reporter.evidence.OutgoingEvidence.prepare(file)
+                            BitmapFactory.decodeByteArray(prepared.jpeg, 0, prepared.jpeg.size)?.asImageBitmap()
+                        }
+                    } catch (_: Exception) { null }
+                }
             }
             ReviewScreen(value, image, ::saveDraft, onBack = { page = "home" }, onOutgoingPreview = {
                 scope.launch {
