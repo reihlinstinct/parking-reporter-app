@@ -90,6 +90,28 @@ class EncryptedPackageTest {
         assertFalse(assertThrows(IntakeUploadFailure::class.java) { IntakeUploader(port, journal).send(upload, upload.approvalDigest) }.uncertain)
         assertEquals(0, writes)
     }
+    @Test fun githubPortRedirectsAndFailuresNeverRetry() {
+        for (code in listOf(307, 403, 429, 500)) {
+            okhttp3.mockwebserver.MockWebServer().use { server ->
+                server.enqueue(okhttp3.mockwebserver.MockResponse().setResponseCode(code).addHeader("Location", server.url("/elsewhere")))
+                val port = GitHubIntakePort({ "synthetic-token" }, server.url("/issues").toString())
+                assertThrows(IllegalArgumentException::class.java) { port.create("package-synthetic", "{}") }
+                assertEquals(1, server.requestCount)
+            }
+        }
+    }
+    @Test fun githubPortUsesIssueThenCommentsWithoutPlainReport() {
+        okhttp3.mockwebserver.MockWebServer().use { server ->
+            server.enqueue(okhttp3.mockwebserver.MockResponse().setResponseCode(201).setBody("{\"number\":7}"))
+            server.enqueue(okhttp3.mockwebserver.MockResponse().setResponseCode(201).setBody("{}"))
+            val port = GitHubIntakePort({ "synthetic-token" }, server.url("/issues").toString())
+            assertEquals(7L, port.create("package-synthetic", "ciphertext-manifest"))
+            port.comment(7, "ciphertext-chunk")
+            val first = server.takeRequest(); assertEquals("/issues", first.path)
+            assertEquals("Bearer synthetic-token", first.getHeader("Authorization"))
+            assertEquals("/issues/7/comments", server.takeRequest().path)
+        }
+    }
     private class MemoryJournal : UploadJournal {
         var state: UploadCheckpoint? = null
         override fun reserve(upload: SealedUpload): UploadCheckpoint { check(state == null); return UploadCheckpoint(upload.id, upload.digest, UploadPhase.PREPARED).also { state = it } }
