@@ -30,6 +30,14 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
+      - name: Build smaller arm64 phone preview
+        run: sh gradlew --no-daemon clean assembleDebug -PpreviewArm64
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: phone-arm64-preview-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
   emulator:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
