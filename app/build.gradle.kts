@@ -11,8 +11,8 @@ android {
         applicationId = "il.sidewalks.reporter"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0-m1-preview"
+        versionCode = 3
+        versionName = "0.3.0-offline-intake-preview"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }
@@ -22,6 +22,7 @@ android {
 }
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 dependencies {
+    implementation("com.google.crypto.tink:tink-android:1.23.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.room:room-runtime:2.7.2")
     implementation("androidx.room:room-ktx:2.7.2")

@@ -6,6 +6,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import il.sidewalks.reporter.security.ReporterSettings
@@ -19,6 +21,7 @@ fun SettingsScreen(initial: ReporterSettings?, save: (ReporterSettings, () -> Un
     var phone by remember { mutableStateOf(initial?.phone.orEmpty()) }
     var email by remember { mutableStateOf(initial?.email.orEmpty()) }
     var saved by remember { mutableStateOf(false) }
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("הגדרות פרטיות", style = MaterialTheme.typography.titleLarge)
         Text("כל מדווח מזין את פרטיו שלו. הפרטים מוצפנים במכשיר, ללא גיבוי. אין שליחה או בדיקת התחברות ממסך זה. פרטי הגישה העירוניים אינם מוצגים למשתמש.")
@@ -32,5 +35,6 @@ fun SettingsScreen(initial: ReporterSettings?, save: (ReporterSettings, () -> Un
         } }) { Text("אמת זהות ושמור מוצפן") }
         if (saved) Text("נשמר מוצפן, הפרטים הוסרו מהמסך")
         TextButton(onClick = back) { Text("חזור") }
+    }
     }
 }
