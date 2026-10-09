@@ -47,6 +47,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             scope.launch {
                 plates = withContext(Dispatchers.Default) {
                     try { il.sidewalks.reporter.recognition.OfflinePlateOcr(context).recognize(image!!.asAndroidBitmap()) }
+                    catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
                     catch (_: Exception) { emptyList() }
                 }
                 recognizing = false
