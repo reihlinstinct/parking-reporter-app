@@ -121,6 +121,17 @@ class M1ShellTest {
         assertEquals(il.sidewalks.reporter.intake.EncryptedPackage.sha256(original), output.originalHash)
         file.delete()
     }
+    @Test fun homeDemoExplainsNoNetworkAndCreatesSyntheticPackage() {
+        compose.setContent { MaterialTheme {
+            il.sidewalks.reporter.ui.AppShell(authenticate = { it() }, requestCamera = {}, readSettings = { null }, saveSettings = {})
+        } }
+        compose.onNodeWithText("בדוק חבילה מוצפנת ללא רשת").performScrollTo().performClick()
+        compose.waitUntil(15_000) {
+            compose.onAllNodesWithText("הבדיקה הסינתטית הצליחה", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("הבדיקה הסינתטית הצליחה", substring = true).performScrollTo()
+        screenshot("m1-home-intake-synthetic.png")
+    }
     @Test fun originalEvidenceHashAndMissingMetadata() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val file = File(context.cacheDir, "synthetic-evidence.jpg")
