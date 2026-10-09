@@ -1,0 +1,33 @@
+# Android and local tooling
+.gradle/
+.kotlin/
+**/build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+# Signing and credentials
+*.jks
+*.keystore
+*.p12
+*.pem
+.env
+.env.*
+!.env.example
+secrets/
+credentials/
+# Real evidence and local report stores (synthetic fixtures are reviewed separately)
+private-data/
+evidence/
+reports/
+*.db
+*.db-shm
+*.db-wal
+# Generated distributions and local checks
+*.apk
+*.aab
+__pycache__/
+*.pyc
+
+# Official launcher is fetched with checksum verification before builds.
+gradle/wrapper/gradle-wrapper.jar
