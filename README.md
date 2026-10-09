@@ -4,7 +4,7 @@ Open-source Android development preview for local review of sidewalk-parking evi
 
 ## Current capabilities
 
-CameraX original-byte capture, SHA-256, EXIF metadata, manual corrections, optional geocoder suggestions, encrypted reporter settings, local Room ledger and digest-bound manual review. No live report submission, bundled municipal secrets or cloud photo recognition.
+CameraX original-byte capture, SHA-256, EXIF metadata, manual corrections, optional geocoder suggestions, encrypted reporter settings, local Room ledger and digest-bound manual review. No live report submission, bundled municipal secrets or cloud photo recognition. The offline encrypted-package demo uses generated synthetic data and an in-memory sink, never the network.
 
 ## Build and tests
 
