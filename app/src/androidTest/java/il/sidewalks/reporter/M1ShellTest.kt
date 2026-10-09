@@ -81,6 +81,26 @@ class M1ShellTest {
         assertTrue(failed)
         assertFalse(file.exists())
     }
+    @Test fun rtlReviewUsesHebrewCategoryAndReadableDate() {
+        compose.setContent { MaterialTheme { ReviewScreen(draft(), null, {}, {}) } }
+        compose.onNodeWithText("חניה על המדרכה").assertExists()
+        compose.onNodeWithText("sidewalk_parking").assertDoesNotExist()
+        compose.onNodeWithText("\u206601/01/2026 12:00 (UTC+00:00)\u2069").assertExists()
+    }
+    @Test fun offlineEncryptedDemoAndDurableDuplicateCheckpoint() {
+        assertTrue(il.sidewalks.reporter.intake.SyntheticIntakeDemo.run().contains("הבדיקה הסינתטית הצליחה"))
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val directory = File(context.cacheDir, "synthetic-intake-journal"); directory.deleteRecursively()
+        val upload = il.sidewalks.reporter.intake.SealedUpload("synthetic-upload", "synthetic-key", "synthetic-device", "a".repeat(64), byteArrayOf(1, 2, 3))
+        var journal = il.sidewalks.reporter.intake.FileUploadJournal(directory)
+        val checkpoint = journal.reserve(upload)
+        journal.store(checkpoint.copy(phase = il.sidewalks.reporter.intake.UploadPhase.CREATING))
+        journal = il.sidewalks.reporter.intake.FileUploadJournal(directory)
+        var blocked = false
+        try { journal.reserve(upload) } catch (_: Exception) { blocked = true }
+        assertTrue(blocked)
+        directory.deleteRecursively()
+    }
     @Test fun originalEvidenceHashAndMissingMetadata() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val file = File(context.cacheDir, "synthetic-evidence.jpg")
