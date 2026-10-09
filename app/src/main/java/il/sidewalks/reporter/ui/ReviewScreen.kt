@@ -7,6 +7,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,10 +28,12 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var time by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedTime.orEmpty()) }
     var latitude by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedLatitude?.toString().orEmpty()) }
     var longitude by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedLongitude?.toString().orEmpty()) }
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("בדיקת דיווח - ללא שליחה", style = MaterialTheme.typography.titleLarge)
         image?.let { Image(it, "צילום ראיה", modifier = Modifier.fillMaxWidth().height(220.dp)) }
-        Text("זמן ראיה: ${draft.evidence.capturedAtIso ?: "חסר"}")
+        Text("זמן הראיה המקורי")
+        Text("\u2066${HebrewPresentation.evidenceTime(draft.evidence.capturedAtIso)}\u2069", modifier = Modifier.fillMaxWidth())
         Text("GPS: ${if (draft.evidence.latitude == null) "חסר" else "נקרא מהראיה"}")
         OutlinedTextField(draft.plate, { draft = draft.edit(plate = it) }, label = { Text("לוחית ללא מקפים") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(draft.address, { draft = draft.edit(address = it) }, label = { Text("רחוב ומספר בית שאישרת") }, modifier = Modifier.fillMaxWidth())
@@ -51,10 +55,11 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 Text("הצעה בלבד: ${suggestion.display}")
             }
         }
-        OutlinedTextField(draft.subject, { draft = draft.edit(subject = it) }, label = { Text("קטגוריה") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(HebrewPresentation.category(draft.subject), {}, readOnly = true, label = { Text("קטגוריה") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(draft.exactHebrewText, { draft = draft.edit(text = it) }, label = { Text("הטקסט המדויק לבדיקה") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
         Text("מלא ואשר זמן עם אזור זמן וקואורדינטות ידועות לך. אין לנחש מידע חסר. הערכים המקוריים נשמרים בנפרד.")
-        OutlinedTextField(time, { time = it; draft = draft.copy(unresolved = setOf("זמן דורש אישור"), approvedDigest = null) }, label = { Text("זמן ISO עם היסט, למשל 2026-01-01T12:00:00+02:00") }, modifier = Modifier.fillMaxWidth())
+        Text("\u20662026-01-01T12:00:00+02:00\u2069", modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(time, { time = it; draft = draft.copy(unresolved = setOf("זמן דורש אישור"), approvedDigest = null) }, label = { Text("זמן מאושר עם אזור זמן (ISO)") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(latitude, { latitude = it; draft = draft.copy(unresolved = setOf("מיקום דורש אישור"), approvedDigest = null) }, label = { Text("קו רוחב") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(longitude, { longitude = it; draft = draft.copy(unresolved = setOf("מיקום דורש אישור"), approvedDigest = null) }, label = { Text("קו אורך") }, modifier = Modifier.fillMaxWidth())
         Button(onClick = { draft = draft.confirmEvidence(time, latitude.toDoubleOrNull(), longitude.toDoubleOrNull()) }) { Text("אשר זמן, מיקום וכתובת שבדקת") }
@@ -64,5 +69,6 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         Text(if (draft.isApproved()) "התוכן אושר מקומית, לא נשלח" else "התוכן לא אושר")
         Button(onClick = { onSave(draft) }) { Text("שמור טיוטה") }
         TextButton(onClick = onBack) { Text("חזור") }
+    }
     }
 }
