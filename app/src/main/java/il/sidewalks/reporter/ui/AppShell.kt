@@ -7,6 +7,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -62,6 +64,7 @@ fun AppShell(
             finally { saving = false }
         }
     }
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     when (page) {
         "camera" -> CaptureScreen(onCaptured = { file ->
             scope.launch {
@@ -115,9 +118,19 @@ fun AppShell(
                 try { profile = readSettings(); page = "settings" }
                 catch (_: Exception) { status = "לא ניתן לקרוא מידע מוצפן, נדרש בירור" }
             } }) { Text("הגדרות פרטיות") }
+            Button(onClick = {
+                scope.launch {
+                    status = "מריץ בדיקה סינתטית מקומית"
+                    status = withContext(Dispatchers.Default) {
+                        try { il.sidewalks.reporter.intake.SyntheticIntakeDemo.run() }
+                        catch (_: Exception) { "הבדיקה המקומית נכשלה, אין שליחה" }
+                    }
+                }
+            }) { Text("בדוק חבילה מוצפנת ללא רשת") }
             Text("התחברות לשירות הדיווח עדיין אינה זמינה. פרטי גישה עירוניים אינם חלק מהאפליקציה.")
             Text(status)
             Text("ביטול הרשאת מצלמה או אימות משאיר את המסך ללא פעולה. אין שמירת פרטים גלויים כחלופה.")
         }
+    }
     }
 }
