@@ -11,6 +11,7 @@ android {
         applicationId = "il.sidewalks.reporter"
         minSdk = 26
         targetSdk = 35
+        if (providers.gradleProperty("previewArm64").isPresent) { ndk { abiFilters += "arm64-v8a" } }
         versionCode = 4
         versionName = "0.4.0-offline-ocr-preview"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
