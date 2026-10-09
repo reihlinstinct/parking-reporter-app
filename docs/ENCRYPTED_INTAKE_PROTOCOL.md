@@ -51,6 +51,8 @@ Canonical report JSON sorts object keys, UTF8 encodes text and binds profile, ex
 
 The fixed GitHub transport targets only the public intake. No municipal endpoint is present. No retry/redirect; every write is preceded by durable checkpoint. A timeout or failed persistence after a possible write becomes uncertain, never automatic retry. Uploaded means transport complete, not a filed report. The preview home button uses an in-memory sink, not GitHub; FileUploadJournal is independently instrumented for restart/duplicate stops.
 
-Not yet release-ready: no receiving-worker interoperability, production key enrollment, outgoing-image human review/EXIF stripping pipeline, real GitHub token storage/device flow, photo-chunk service limits or real submission. Do not connect real data to this preview implementation.
+Not yet release-ready: no receiving-worker interoperability, production key enrollment, full outgoing-image/package confirmation integration, real GitHub token storage/device flow, photo-chunk service limits or real submission. Do not connect real data to this preview implementation.
 
 Dependency source: https://repo.maven.apache.org/maven2/com/google/crypto/tink/tink-android/1.23.0/tink-android-1.23.0.pom
+
+OutgoingEvidence creates a separately previewed JPEG, honors EXIF orientation, bounds decode dimensions/bytes and strips EXIF through re-encoding. It never changes the original. No implicit approval follows resizing. A synthetic instrumented test checks rotation, original-byte identity and missing EXIF time/GPS in the derivative. Live UI send remains disconnected.
