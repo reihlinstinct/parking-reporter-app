@@ -14,6 +14,6 @@ The wrapper and model are Apache-2.0. Native Leptonica, libpng and Independent J
 
 The explicit button scans a bounded local bitmap on a worker thread and offers at most ten candidates. Only seven/eight ASCII digits or the corresponding hyphenated forms are accepted. Letters are never silently converted to digits, spaced fragments are never joined, and output is never automatically approved. Choosing a candidate edits the draft and invalidates its digest approval. Empty/failing recognition preserves manual entry.
 
-This is generic OCR, not a validated vehicle/license-plate detector. Full-frame OCR can miss small/angled plates or offer unrelated numbers. No accuracy promise is made. Synthetic native tests are not field evaluation. Physical-device memory/lifecycle tests, crop selection and a privacy-safe annotated test set remain before claiming M2 complete.
+This is generic OCR, not a validated vehicle/license-plate detector. Full-frame OCR can miss small/angled plates or offer unrelated numbers. No accuracy promise is made. Synthetic native tests are not field evaluation. Android 15+ 16 KB page-size compatibility for the prebuilt native libraries is not yet verified. Physical-device memory/lifecycle tests, crop selection and a privacy-safe annotated test set remain before claiming M2 complete.
 
 The model and native libraries increase APK size. No municipality credentials, network routes or real reports are involved.
