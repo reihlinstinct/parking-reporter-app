@@ -1,6 +1,6 @@
 # Encrypted public intake - synthetic prototype specification
 
-Design only. No real reports, reporter data, credentials, keys or municipal calls. No public repository or GitHub App created yet. The current offline script is experimental, not production cryptography.
+Development preview only. No live traffic, device-flow enrollment, real profiles or municipal calls. The Python script is an experimental earlier format, not compatible with the Android PRPKG2 preview. Live auth and receiving-worker validation remain release gates.
 
 ## One logical package
 
@@ -42,3 +42,15 @@ https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-githu
 https://docs.github.com/en/rest/issues/issues
 https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api
 https://developers.google.com/tink/hybrid
+
+## Android PRPKG2 preview
+
+Pinned Tink Android1.23.0 (Apache2.0) supplies ECIES P256/HKDF SHA256/AES128 GCM encryption and ECDSA P256 signatures. Runtime demo keys are generated in RAM, never enrolled or persisted. The receiver public key and device signing key must be provisioned and independently pinned/enrolled before real use. No app device flow runs from the UI.
+
+Canonical report JSON sorts object keys, UTF8 encodes text and binds profile, exact report, original hash, outgoing JPEG hash, time and coordinates. Local draft review alone is insufficient: the separate full-package approval digest must be confirmed. PRPKG2 + big-endian header length + canonical header + JPEG is signed over a domain prefix. Signature length + signature + package is encrypted with the same domain as associated context. Ciphertext chunks include issue binding, count and digest; completion marker is sent last.
+
+The fixed GitHub transport targets only the public intake. No municipal endpoint is present. No retry/redirect; every write is preceded by durable checkpoint. A timeout or failed persistence after a possible write becomes uncertain, never automatic retry. Uploaded means transport complete, not a filed report. The preview home button uses an in-memory sink, not GitHub; FileUploadJournal is independently instrumented for restart/duplicate stops.
+
+Not yet release-ready: no receiving-worker interoperability, production key enrollment, outgoing-image human review/EXIF stripping pipeline, real GitHub token storage/device flow, photo-chunk service limits or real submission. Do not connect real data to this preview implementation.
+
+Dependency source: https://repo.maven.apache.org/maven2/com/google/crypto/tink/tink-android/1.23.0/tink-android-1.23.0.pom
