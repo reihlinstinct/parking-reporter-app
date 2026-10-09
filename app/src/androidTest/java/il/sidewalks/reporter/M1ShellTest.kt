@@ -3,6 +3,7 @@ package il.sidewalks.reporter
 import android.graphics.Bitmap
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
@@ -40,6 +41,22 @@ class M1ShellTest {
         compose.onNodeWithText("לוחית ללא מקפים").performScrollTo().performTextReplacement("7654321")
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
         compose.runOnIdle { assertFalse(saved?.isApproved() == true) }
+    }
+    @Test fun offlinePlateCandidateRequiresSelectionAndInvalidatesReview() {
+        val bitmap = Bitmap.createBitmap(1200, 260, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap); canvas.drawColor(android.graphics.Color.WHITE)
+        canvas.drawText("12345678", 65f, 190f, android.graphics.Paint().apply {
+            color = android.graphics.Color.BLACK; textSize = 160f; isAntiAlias = true
+            typeface = android.graphics.Typeface.create("monospace", android.graphics.Typeface.BOLD)
+        })
+        var saved: ReviewDraft? = null
+        compose.setContent { MaterialTheme { ReviewScreen(draft().approve(), bitmap.asImageBitmap(), { saved = it }, {}) } }
+        compose.onNodeWithText("הצע לוחית מתוך הצילום").performScrollTo().performClick()
+        compose.waitUntil(30_000) { compose.onAllNodesWithText("הצעה בלבד: \u206612345678\u2069").fetchSemanticsNodes().isNotEmpty() }
+        screenshot("m2-ocr-synthetic.png")
+        compose.onNodeWithText("הצעה בלבד: \u206612345678\u2069").performScrollTo().performClick()
+        compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("12345678", saved?.plate); assertFalse(saved?.isApproved() == true) }
     }
     @Test fun settingsContainReporterOnlyAndClearAfterSave() {
         var saved: ReporterSettings? = null

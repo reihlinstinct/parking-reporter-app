@@ -57,6 +57,9 @@ jobs:
             sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            # Local OCR tests must work without emulator networking.
+            adb shell svc wifi disable
+            adb shell svc data disable
             mkdir -p app/build/reports/androidTests/screenshots
             adb shell am instrument -w il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner | tee app/build/reports/androidTests/instrumentation.txt
             grep -E '^OK \([1-9][0-9]* tests?\)'  app/build/reports/androidTests/instrumentation.txt
@@ -68,6 +71,8 @@ jobs:
             test -s app/build/reports/androidTests/screenshots/m1-settings-synthetic.png
             adb shell run-as il.sidewalks.reporter cat files/m1-home-intake-synthetic.png > app/build/reports/androidTests/screenshots/m1-home-intake-synthetic.png
             test -s app/build/reports/androidTests/screenshots/m1-home-intake-synthetic.png
+            adb shell run-as il.sidewalks.reporter cat files/m2-ocr-synthetic.png > app/build/reports/androidTests/screenshots/m2-ocr-synthetic.png
+            test -s app/build/reports/androidTests/screenshots/m2-ocr-synthetic.png
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         if: always()
         with:
