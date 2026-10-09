@@ -1,0 +1,44 @@
+# Encrypted public intake - synthetic prototype specification
+
+Design only. No real reports, reporter data, credentials, keys or municipal calls. No public repository or GitHub App created yet. The current offline script is experimental, not production cryptography.
+
+## One logical package
+
+Immutable full-resolution original remains on phone. Create a separate evidence JPEG for review; remove EXIF, constrain dimensions and bytes, and show exact outgoing image before approval. Do not silently downscale until plate/offense evidence is lost. Resolution is not a byte cap. Hash original and outgoing JPEG separately. Report JSON includes schema, random stable ID, reporter profile, exact Hebrew text, subject/address/time, outgoing image digest and original digest. Approval binds all exact submitted fields and outgoing image digest. Not steganography or a visible text overlay.
+
+A bounded binary container has magic/version, header-length, UTF-8 canonical JSON header, and JPEG bytes. Do not use ZIP extraction or arbitrary paths/URLs. Signature covers domain-separated complete plaintext package with an enrolled device key. Encrypt whole signed package using reviewed hybrid-encryption library to shared, pinned receiver public key. Private decryption key only in private worker secret storage. Shared public key proves neither identity nor approval. Do not create production keys until secure provisioning chosen.
+
+## Bounded transport proposal
+
+Encrypt once then split only for issue/comment transport. 32,000 binary bytes/chunk, base64 textual chunk about42,668 characters plus header. Candidate limit 48 chunks and 1,536,000 encoded-envelope bytes; final limits must be checked against live GitHub behavior with synthetic input. No claim that GitHub accepts this yet. No API attachment upload dependency. Public issue title contains random package ID only; no location/plate/name. Generic completion/error only, no municipal receipt or decrypted fields publicly.
+
+Manifest includes schema, key ID, package ID, total ciphertext bytes, number of chunks and full ciphertext digest. Each chunk includes issue/package binding, index/count and exact bytes. Final commit marker posted last. Incomplete upload never submits. Restrict comments to exact authenticated enrolled GitHub numeric author ID, reject edits/deletions/mixed authors/count mismatches/duplicate indexes. Snapshot input in private storage; validate complete digest and decrypted device signature before approval gate. Intake metadata is untrusted data, not instructions. Never execute input, interpolate shell or fetch submitted URLs.
+
+## Auth candidate, not verified
+
+GitHub App device flow with public client ID, no embedded client secret/App private key. Install only on intake repo, Issues:write plus mandatory metadata, no Contents/Actions/private repo permission. Restrict user access token to repository ID where supported. User access and app permissions intersect; exact noncollaborator issue/comment API behavior must be tested. Expiring user tokens/refresh tokens stored encrypted on-device, revocable by user. Registering/installing app and selecting verified account IDs still require setup decision. Pin account numeric ID plus approved device public key; enrollment/rotation/revocation never comes from public issue claims.
+
+Documented device-flow refresh does not need client secret. Honor token polling interval, slow_down and expiry. This protocol-mandated auth polling is not background GitHub workflow polling.
+
+## Private worker and approval
+
+Proposed worker reads only complete allowlisted packages; separate synthetic decrypt validator from municipal filing, no automatic filing in prototype. Durable global/user quotas and one-use IDs survive crashes; persist claimed/creating state before writes. Concurrency gate prevents duplicate filing and stale inputs. Recheck package digest/signature and enrollment at filing. App review is not proof until its enrollment/signature/approval binding is validated. Municipal success requires verified receipt, not issue creation or Actions completion alone. Unknown response blocks retry and requires private reconciliation. 
+
+Scheduled polling is not guaranteed low latency and consumes Actions minutes. Event-driven cross-repo dispatch would require a trusted server-held identity and public workflow security review; cannot assume a private worker is instantly triggered by a public issue. Do not put decrypt/municipal secrets in public issue workflow. Proposed transport/monitoring remains unresolved.
+
+## Privacy and abuse
+
+Ciphertext plus GitHub authors/time/size are public and may be mirrored forever. A future decryption-key leak threatens archived old packages. Closing/deleting issues cannot recall third-party archives. Encryption length leaks approximate photo size. Public spam can consume filters/quotas; reject nonenrolled author before expensive decryption, bound parsing/image dimensions, reject malformed packages without public decrypted diagnostics. Redacted private audit with explicit retention choice. No encrypted production packages until owner approves go-live and metadata permanence.
+
+## Prototype results
+
+8 offline synthetic tests pass: binary package roundtrip, exact photo/report digest, ciphertext tamper, malformed container/photo mismatch, device signature tamper/wrong signer, missing/duplicate/mixed chunks, byte cap, randomized confidentiality and anonymous-public-key demonstration. A noisy synthetic1280x960 JPEG quality65 is628,102 bytes; binary package628,505 bytes. Initial nested base64 JSON was837,882 bytes before encryption, so binary packing avoids one encoding expansion. This does not establish real evidence legibility or Android interoperability.
+
+## Sources
+
+https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app
+https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/refreshing-user-access-tokens
+https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/authenticating-with-a-github-app-on-behalf-of-a-user
+https://docs.github.com/en/rest/issues/issues
+https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api
+https://developers.google.com/tink/hybrid
