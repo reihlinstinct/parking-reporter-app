@@ -12,13 +12,18 @@ class FileUploadJournal(directory: File) : UploadJournal {
         return AtomicFile(File(root, "$id.json"))
     }
     @Synchronized override fun reserve(upload: SealedUpload): UploadCheckpoint {
+        val lockFile = File(root, "journal.lock")
+        return java.io.RandomAccessFile(lockFile, "rw").channel.use { channel ->
+        channel.lock().use {
         val target = file(upload.id)
         check(!target.baseFile.exists()) { "Existing upload requires reconciliation" }
         // Global digest duplicates are blocked even under different package IDs.
         root.listFiles()?.filter { it.extension == "json" }?.forEach {
             check(JSONObject(AtomicFile(it).readFully().toString(Charsets.UTF_8)).getString("digest") != upload.digest)
         }
-        return UploadCheckpoint(upload.id, upload.digest, UploadPhase.PREPARED).also(::store)
+        UploadCheckpoint(upload.id, upload.digest, UploadPhase.PREPARED).also(::store)
+        }
+        }
     }
     @Synchronized override fun store(checkpoint: UploadCheckpoint) {
         val target = file(checkpoint.packageId)
