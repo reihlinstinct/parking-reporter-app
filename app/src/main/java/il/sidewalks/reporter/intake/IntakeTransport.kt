@@ -53,10 +53,10 @@ class IntakeUploader(private val port: IntakeWritePort, private val journal: Upl
 class IntakeUploadFailure(val uncertain: Boolean) : Exception("Intake upload stopped; do not retry automatically")
 
 /** No device flow is launched and no token is supplied by the preview UI. */
-class GitHubIntakePort(private val bearer: () -> String) : IntakeWritePort {
+class GitHubIntakePort internal constructor(private val bearer: () -> String, private val endpoint: String) : IntakeWritePort {
+    constructor(bearer: () -> String) : this(bearer, "https://api.github.com/repos/reihlinstinct/parking-report-intake/issues")
     private val client = OkHttpClient.Builder().retryOnConnectionFailure(false).followRedirects(false)
         .followSslRedirects(false).callTimeout(45, TimeUnit.SECONDS).build()
-    private val endpoint = "https://api.github.com/repos/reihlinstinct/parking-report-intake/issues"
     private fun post(url: String, json: JSONObject): JSONObject {
         val token = bearer(); require(token.isNotBlank())
         val request = Request.Builder().url(url).header("Authorization", "Bearer $token")
