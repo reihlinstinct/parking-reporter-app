@@ -8,6 +8,7 @@ class HebrewPresentationTest {
     @Test fun formatKeepsEvidenceOffsetAndDoesNotGuessTimezone() {
         assertEquals("01/01/2026 12:00 (UTC+00:00)", HebrewPresentation.evidenceTime("2026-01-01T12:00:00Z"))
         assertEquals("01/01/2026 14:30 (UTC+02:00)", HebrewPresentation.evidenceTime("2026-01-01T14:30:00+02:00"))
+        assertEquals("01/01/2026 12:00 (אזור זמן לא ידוע)", HebrewPresentation.evidenceTime("2026-01-01T12:00:00"))
         assertEquals("חסר", HebrewPresentation.evidenceTime(null))
         assertEquals("unknown", HebrewPresentation.evidenceTime("unknown"))
     }
