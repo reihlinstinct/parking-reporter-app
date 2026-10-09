@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.unit.dp
 import il.sidewalks.reporter.core.ReviewDraft
 
@@ -23,6 +24,9 @@ import il.sidewalks.reporter.core.ReviewDraft
 fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft) -> Unit, onBack: () -> Unit, onOutgoingPreview: (() -> Unit)? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var plates by remember(initial.evidence.stableId) { mutableStateOf<List<String>>(emptyList()) }
+    var recognizing by remember { mutableStateOf(false) }
+    var ocrStatus by remember { mutableStateOf("") }
     var suggestions by remember { mutableStateOf<List<il.sidewalks.reporter.evidence.AddressSuggestion>>(emptyList()) }
     var geocoding by remember { mutableStateOf(false) }
     var geocodeStatus by remember { mutableStateOf("") }
@@ -37,7 +41,21 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         Text("זמן הראיה המקורי")
         Text("\u2066${HebrewPresentation.evidenceTime(draft.evidence.capturedAtIso)}\u2069", modifier = Modifier.fillMaxWidth(), style = TextStyle(textDirection = TextDirection.Ltr))
         Text("GPS: ${if (draft.evidence.latitude == null) "חסר" else "נקרא מהראיה"}")
-        OutlinedTextField(draft.plate, { draft = draft.edit(plate = it) }, label = { Text("לוחית ללא מקפים") }, modifier = Modifier.fillMaxWidth())
+        Text("זיהוי לוחית מתבצע במכשיר בלבד. תוצאה היא הצעה, ולא אישור שהלוחית נכונה.")
+        Button(enabled = image != null && !recognizing, onClick = {
+            recognizing = true
+            scope.launch {
+                plates = withContext(Dispatchers.Default) {
+                    try { il.sidewalks.reporter.recognition.OfflinePlateOcr(context).recognize(image!!.asAndroidBitmap()) }
+                    catch (_: Exception) { emptyList() }
+                }
+                recognizing = false
+                ocrStatus = if (plates.isEmpty()) "לא זוהתה לוחית. הזן ידנית מתוך התמונה" else "בדוק כל ספרה בתמונה לפני בחירה"
+            }
+        }) { Text(if (recognizing) "מזהה במכשיר..." else "הצע לוחית מתוך הצילום") }
+        Text(ocrStatus)
+        plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate) }) { Text("הצעה בלבד: \u2066$plate\u2069") } }
+        OutlinedTextField(draft.plate, { draft = draft.edit(plate = it) }, textStyle = TextStyle(textDirection = TextDirection.Ltr), label = { Text("לוחית ללא מקפים") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(draft.address, { draft = draft.edit(address = it) }, label = { Text("רחוב ומספר בית שאישרת") }, modifier = Modifier.fillMaxWidth())
         Text("חיפוש כתובת שולח קואורדינטות בלבד לספק המיקום של המכשיר. מספרי בית הם הצעות בלבד.")
         Button(enabled = !geocoding && latitude.toDoubleOrNull() != null && longitude.toDoubleOrNull() != null, onClick = {
