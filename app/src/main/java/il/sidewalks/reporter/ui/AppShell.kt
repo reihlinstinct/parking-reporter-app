@@ -2,6 +2,7 @@ package il.sidewalks.reporter.ui
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -39,6 +40,7 @@ fun AppShell(
     var page by remember { mutableStateOf("home") }
     var profile by remember { mutableStateOf<ReporterSettings?>(null) }
     var draft by remember { mutableStateOf<ReviewDraft?>(null) }
+    var outgoing by remember { mutableStateOf<il.sidewalks.reporter.evidence.OutgoingImage?>(null) }
     var original by remember { mutableStateOf<File?>(null) }
     var revision by remember { mutableLongStateOf(0) }
     var records by remember { mutableStateOf<List<ReportRecord>>(emptyList()) }
@@ -90,7 +92,29 @@ fun AppShell(
             val image = remember(original) {
                 original?.let { file -> BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = 4 })?.asImageBitmap() }
             }
-            ReviewScreen(value, image, ::saveDraft) { page = "home" }
+            ReviewScreen(value, image, ::saveDraft, onBack = { page = "home" }, onOutgoingPreview = {
+                scope.launch {
+                    try {
+                        val derivative = withContext(Dispatchers.IO) {
+                            val file = original ?: error("Missing original")
+                            il.sidewalks.reporter.evidence.OutgoingEvidence.prepare(file)
+                        }
+                        check(derivative.originalHash == value.evidence.originalSha256)
+                        outgoing = derivative; page = "outgoing"
+                    } catch (_: Exception) { status = "לא ניתן להכין תמונה לבדיקה; אין שליחה" }
+                }
+            })
+        }
+        "outgoing" -> outgoing?.let { value ->
+            Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("תמונה נפרדת לבדיקה", style = MaterialTheme.typography.titleLarge)
+                val bitmap = remember(value.hash) { BitmapFactory.decodeByteArray(value.jpeg, 0, value.jpeg.size).asImageBitmap() }
+                Image(bitmap, "התמונה המדויקת המיועדת להעברה בעתיד", Modifier.fillMaxWidth().height(360.dp))
+                Text("המקור לא השתנה. נתוני EXIF הוסרו מהעותק. בדוק שהלוחית והעבירה קריאות; אל תאשר תמונה שאיבדה ראיה.")
+                Text("${value.width} × ${value.height}, ${value.jpeg.size} bytes")
+                Text("שליחה והתחברות אינן זמינות בגרסת הבדיקה. אין אישור שליחה ממסך זה.")
+                TextButton(onClick = { outgoing = null; page = "review" }) { Text("חזור לבדיקה") }
+            }
         }
         "settings" -> SettingsScreen(profile, save = { value, cleared ->
             authenticate {
