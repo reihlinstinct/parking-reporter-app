@@ -57,6 +57,9 @@ jobs:
             sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            # Local OCR tests must work without emulator networking.
+            adb shell svc wifi disable
+            adb shell svc data disable
             mkdir -p app/build/reports/androidTests/screenshots
             adb shell am instrument -w il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner | tee app/build/reports/androidTests/instrumentation.txt
             grep -E '^OK \([1-9][0-9]* tests?\)'  app/build/reports/androidTests/instrumentation.txt
