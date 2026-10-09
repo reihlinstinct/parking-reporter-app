@@ -90,7 +90,7 @@ fun AppShell(
         }, onCancel = { page = "home" })
         "review" -> draft?.let { value ->
             val image by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, original) {
-                value = withContext(Dispatchers.IO) {
+                this.value = withContext(Dispatchers.IO) {
                     try {
                         original?.let { file ->
                             val prepared = il.sidewalks.reporter.evidence.OutgoingEvidence.prepare(file)
