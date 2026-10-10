@@ -30,7 +30,7 @@ data class ReviewDraft(
     val confirmedLongitude: Double? = evidence.longitude,
 ) {
     fun isReady(): Boolean = unresolved.isEmpty() &&
-        plate.matches(Regex("[0-9]{7,8}")) && address.isNotBlank() && subject.isNotBlank() &&
+        ReportCategory.from(subject)?.let { if (it.needsPlate) plate.matches(Regex("[0-9]{7,8}")) else plate.isEmpty() } == true && address.isNotBlank() &&
         exactHebrewText.isNotBlank() && validTime(confirmedTime) &&
         confirmedLatitude?.let { it.isFinite() && it in -90.0..90.0 } == true &&
         confirmedLongitude?.let { it.isFinite() && it in -180.0..180.0 } == true
@@ -53,5 +53,5 @@ data class ReviewDraft(
     fun isApproved(): Boolean = isReady() && approvedDigest == digest()
     fun edit(plate: String = this.plate, address: String = this.address,
              subject: String = this.subject, text: String = this.exactHebrewText): ReviewDraft =
-        copy(plate = plate, address = address, subject = subject, exactHebrewText = text, approvedDigest = null)
+        copy(plate = if (ReportCategory.from(subject)?.needsPlate == false) "" else plate, address = address, subject = subject, exactHebrewText = text, approvedDigest = null)
 }
