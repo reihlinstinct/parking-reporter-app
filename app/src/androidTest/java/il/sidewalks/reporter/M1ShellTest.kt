@@ -158,6 +158,8 @@ class M1ShellTest {
         compose.onNodeWithText("חניה על המדרכה ▾").performClick()
         compose.onNodeWithText("תמרור שבור").performClick()
         compose.onNodeWithText("לוחית:", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("רכב חונה על המדרכה").assertDoesNotExist()
+        compose.onNodeWithText("אשר את התוכן לבדיקה").assertIsNotEnabled()
         screenshot("design-sign-synthetic.png")
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
         compose.runOnIdle { assertEquals("", saved?.plate); assertFalse(saved?.isApproved() == true) }
