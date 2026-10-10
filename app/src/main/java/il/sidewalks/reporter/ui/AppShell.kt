@@ -47,6 +47,7 @@ fun AppShell(
     var saving by remember { mutableStateOf(false) }
     suspend fun reload() { records = withContext(Dispatchers.IO) { database.reports().all() } }
     LaunchedEffect(Unit) { reload() }
+    var showTools by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
     fun saveDraft(value: ReviewDraft) {
         if (saving) return
@@ -80,10 +81,10 @@ fun AppShell(
                     withContext(Dispatchers.IO) {
                         database.reports().reserve(ReportRecord(evidence.stableId, evidence.originalSha256,
                             "originals/${file.name}", 0,
-                            il.sidewalks.reporter.ledger.DraftCodec.encode(ReviewDraft(evidence, "", "", "sidewalk_parking", "", missing)), null))
+                            il.sidewalks.reporter.ledger.DraftCodec.encode(ReviewDraft(evidence, "", "", "", "", missing)), null))
                     }
                     original = file; revision = 0
-                    draft = ReviewDraft(evidence, "", "", "sidewalk_parking", "", missing)
+                    draft = ReviewDraft(evidence, "", "", "", "", missing)
                     reload(); page = "review"
                 } catch (_: Exception) { status = "הראיה כפולה או שלא נשמרה, לא בוצעה שליחה"; page = "home" }
             }
@@ -131,8 +132,16 @@ fun AppShell(
         }, back = { profile = null; page = "home" })
         else -> Column(Modifier.fillMaxSize().systemBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("מדרכות פנויות", style = MaterialTheme.typography.headlineMedium)
-            Text("M1 בתהליך פיתוח - טיוטות מקומיות בלבד, אין הגשת דיווח")
-            Button(onClick = { requestCamera { page = "camera" } }) { Text("צלם ראיה מקורית") }
+            Text("צלם תמונה כדי להתחיל דיווח", style = MaterialTheme.typography.titleLarge)
+            Text("הניתוח נעשה במכשיר. תוכל לבדוק ולתקן לפני שליחה.")
+            Button(onClick = { requestCamera { page = "camera" } }) { Text("צלם תמונה") }
+            TextButton(onClick = { authenticate {
+                try { profile = readSettings(); page = "settings" }
+                catch (_: Exception) { status = "לא ניתן לקרוא מידע מוצפן" }
+            } }) { Text("הגדרות") }
+            Text("גרסת בדיקה מקומית. אין שליחה.", style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = { showTools = !showTools }) { Text("טיוטות וכלי בדיקה") }
+            if (showTools) {
             records.forEach { record ->
                 TextButton(onClick = {
                     try {
@@ -159,6 +168,7 @@ fun AppShell(
                 }
             }) { Text("בדוק חבילה מוצפנת ללא רשת") }
             Text("התחברות לשירות הדיווח עדיין אינה זמינה. פרטי גישה עירוניים אינם חלק מהאפליקציה.")
+            }
             Text(status)
             Text("ביטול הרשאת מצלמה או אימות משאיר את המסך ללא פעולה. אין שמירת פרטים גלויים כחלופה.")
         }
