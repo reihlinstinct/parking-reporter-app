@@ -154,13 +154,21 @@ class M1ShellTest {
     }
     @Test fun nonVehicleReviewHasNoPlateAndCorrectionClearsApproval() {
         var saved: ReviewDraft? = null
-        compose.setContent { MaterialTheme { ReviewScreen(draft().approve(), null, { saved = it }, {}) } }
+        val bitmap = Bitmap.createBitmap(700, 300, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        canvas.drawColor(android.graphics.Color.rgb(235, 235, 235))
+        canvas.drawRect(325f, 120f, 350f, 290f, android.graphics.Paint().apply { color = android.graphics.Color.DKGRAY })
+        canvas.drawRect(230f, 20f, 455f, 125f, android.graphics.Paint().apply { color = android.graphics.Color.WHITE })
+        canvas.drawText("SYNTHETIC SIGN", 248f, 75f, android.graphics.Paint().apply { color = android.graphics.Color.BLACK; textSize = 22f })
+        compose.setContent { MaterialTheme { ReviewScreen(draft().approve(), bitmap.asImageBitmap(), { saved = it }, {}) } }
         compose.onNodeWithText("חניה על המדרכה ▾").performClick()
         compose.onNodeWithText("תמרור שבור").performClick()
         compose.onNodeWithText("לוחית:", substring = true).assertDoesNotExist()
         compose.onNodeWithText("רכב חונה על המדרכה").assertDoesNotExist()
         compose.onNodeWithText("אשר את התוכן לבדיקה").assertIsNotEnabled()
         screenshot("design-sign-synthetic.png")
+        compose.onNodeWithText("שלח").performScrollTo()
+        screenshot("design-sign-actions-synthetic.png")
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
         compose.runOnIdle { assertEquals("", saved?.plate); assertFalse(saved?.isApproved() == true) }
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
