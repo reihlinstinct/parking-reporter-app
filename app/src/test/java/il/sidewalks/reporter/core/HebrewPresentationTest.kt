@@ -14,6 +14,6 @@ class HebrewPresentationTest {
     }
     @Test fun categoryIsHebrewWithoutChangingTransportCode() {
         assertEquals("חניה על המדרכה", HebrewPresentation.category("sidewalk_parking"))
-        assertEquals("קטגוריה לא מוכרת", HebrewPresentation.category("unknown"))
+        assertEquals("נדרש תיקון קטגוריה", HebrewPresentation.category("unknown"))
     }
 }
