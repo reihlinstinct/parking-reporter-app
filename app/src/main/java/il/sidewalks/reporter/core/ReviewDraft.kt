@@ -53,5 +53,5 @@ data class ReviewDraft(
     fun isApproved(): Boolean = isReady() && approvedDigest == digest()
     fun edit(plate: String = this.plate, address: String = this.address,
              subject: String = this.subject, text: String = this.exactHebrewText): ReviewDraft =
-        copy(plate = if (ReportCategory.from(subject)?.needsPlate == false) "" else plate, address = address, subject = subject, exactHebrewText = text, approvedDigest = null)
+        copy(plate = if (ReportCategory.from(subject)?.needsPlate == false) "" else plate, address = address, subject = subject, exactHebrewText = if (subject != this.subject && text == this.exactHebrewText) "" else text, approvedDigest = null)
 }
