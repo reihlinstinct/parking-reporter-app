@@ -35,31 +35,68 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var time by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedTime.orEmpty()) }
     var latitude by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedLatitude?.toString().orEmpty()) }
     var longitude by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedLongitude?.toString().orEmpty()) }
+    var editing by remember(initial.evidence.stableId) { mutableStateOf(false) }
+    var categoryMenu by remember { mutableStateOf(false) }
+    suspend fun recognize() {
+        recognizing = true
+        try {
+            plates = withContext(Dispatchers.Default) {
+                try { if (useGoogle) il.sidewalks.reporter.recognition.MlKitPlateOcr.recognize(image!!.asAndroidBitmap()) else il.sidewalks.reporter.recognition.OfflinePlateOcr(context).recognize(image!!.asAndroidBitmap()) }
+                catch (_: LinkageError) { emptyList() }
+                catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                catch (_: Exception) { emptyList() }
+            }
+            if (il.sidewalks.reporter.core.ReportCategory.from(draft.subject)?.needsPlate == false) plates = emptyList()
+            ocrStatus = if (plates.isEmpty()) "לא זוהתה לוחית; ניתן לערוך" else "נמצאו הצעות. בדוק כל ספרה בצילום"
+        } finally { recognizing = false }
+    }
+    LaunchedEffect(initial.evidence.stableId, image) {
+        if (image != null && draft.plate.isEmpty() && il.sidewalks.reporter.core.ReportCategory.from(draft.subject)?.needsPlate != false) recognize()
+    }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("בדיקת דיווח - ללא שליחה", style = MaterialTheme.typography.titleLarge)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("בדיקת הדיווח", style = MaterialTheme.typography.titleLarge)
+            TextButton(onClick = { editing = !editing }) { Text(if (editing) "סיום עריכה" else "ערוך") }
+        }
         image?.let { Image(it, "צילום ראיה", modifier = Modifier.fillMaxWidth().height(220.dp)) }
+        Box {
+            TextButton(onClick = { categoryMenu = true }) { Text("${HebrewPresentation.category(draft.subject)} ▾") }
+            DropdownMenu(expanded = categoryMenu, onDismissRequest = { categoryMenu = false }) {
+                il.sidewalks.reporter.core.ReportCategory.entries.forEach { category ->
+                    DropdownMenuItem(text = { Text(category.hebrew) }, onClick = {
+                        draft = draft.edit(subject = category.code); if (!category.needsPlate) plates = emptyList(); categoryMenu = false
+                    })
+                }
+            }
+        }
+        Text("זיהוי קטגוריה אוטומטי עדיין בפיתוח. בחר קטגוריה לבדיקה.", style = MaterialTheme.typography.bodySmall)
+        if (!editing) {
+            if (il.sidewalks.reporter.core.ReportCategory.from(draft.subject)?.needsPlate == true) {
+                Text("לוחית: \u2066${draft.plate.ifBlank { "לא אושרה" }}\u2069", style = MaterialTheme.typography.titleMedium)
+                if (recognizing) { LinearProgressIndicator(Modifier.fillMaxWidth()); Text("מנתח את הצילום במכשיר...") }
+                Text(ocrStatus, style = MaterialTheme.typography.bodySmall)
+                plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate) }) { Text("הצעה בלבד: \u2066$plate\u2069") } }
+            }
+            Text("כתובת: ${draft.address.ifBlank { "נדרשת השלמה בעריכה" }}")
+            Text("זמן: \u2066${HebrewPresentation.evidenceTime(draft.confirmedTime)}\u2069")
+            Text(draft.exactHebrewText.ifBlank { "תיאור הדיווח נדרש בעריכה" })
+            if (draft.unresolved.isNotEmpty()) Text("דרוש בירור: ${draft.unresolved.joinToString()}", style = MaterialTheme.typography.bodySmall)
+        }
+        if (editing) {
         Text("זמן הראיה המקורי")
         Text("\u2066${HebrewPresentation.evidenceTime(draft.evidence.capturedAtIso)}\u2069", modifier = Modifier.fillMaxWidth(), style = TextStyle(textDirection = TextDirection.Ltr))
         Text("GPS: ${if (draft.evidence.latitude == null) "חסר" else "נקרא מהראיה"}")
         Text("התמונות והלוחיות מעובדות במכשיר ואינן נשלחות ל-Google. ML Kit שולח ל-Google נתוני שימוש וביצועים ועשוי לפנות לשרתיה לעדכונים. תוצאה היא הצעה בלבד.")
+        if (il.sidewalks.reporter.core.ReportCategory.from(draft.subject)?.needsPlate != false) {
         Row { Checkbox(checked = useGoogle, enabled = !recognizing, onCheckedChange = { useGoogle = it; plates = emptyList(); ocrStatus = "" }); Text("זיהוי עם Google ML Kit במקום Tesseract") }
-        Button(enabled = image != null && !recognizing, onClick = {
-            recognizing = true
-            scope.launch {
-                plates = withContext(Dispatchers.Default) {
-                    try { if (useGoogle) il.sidewalks.reporter.recognition.MlKitPlateOcr.recognize(image!!.asAndroidBitmap()) else il.sidewalks.reporter.recognition.OfflinePlateOcr(context).recognize(image!!.asAndroidBitmap()) }
-                    catch (_: LinkageError) { emptyList() }
-                    catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-                    catch (_: Exception) { emptyList() }
-                }
-                recognizing = false
-                ocrStatus = if (plates.isEmpty()) "לא זוהתה לוחית. הזן ידנית מתוך התמונה" else "בדוק כל ספרה בתמונה לפני בחירה"
-            }
-        }) { Text(if (recognizing) "מזהה במכשיר..." else "הצע לוחית מתוך הצילום") }
+        Button(enabled = image != null && !recognizing, onClick = { scope.launch { recognize() } }) { Text(if (recognizing) "מזהה במכשיר..." else "הצע לוחית מתוך הצילום") }
         Text(ocrStatus)
         plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate) }) { Text("הצעה בלבד: \u2066$plate\u2069") } }
-        OutlinedTextField(draft.plate, { draft = draft.edit(plate = it) }, textStyle = TextStyle(textDirection = TextDirection.Ltr), label = { Text("לוחית ללא מקפים") }, modifier = Modifier.fillMaxWidth())
+        if (il.sidewalks.reporter.core.ReportCategory.from(draft.subject)?.needsPlate == true) OutlinedTextField(draft.plate, { draft = draft.edit(plate = it) }, singleLine = true,
+            textStyle = MaterialTheme.typography.titleLarge.copy(textDirection = TextDirection.Ltr),
+            label = { Text("לוחית ללא מקפים") }, modifier = Modifier.width(216.dp))
+        }
         OutlinedTextField(draft.address, { draft = draft.edit(address = it) }, label = { Text("רחוב ומספר בית שאישרת") }, modifier = Modifier.fillMaxWidth())
         Text("חיפוש כתובת שולח קואורדינטות בלבד לספק המיקום של המכשיר. מספרי בית הם הצעות בלבד.")
         Button(enabled = !geocoding && latitude.toDoubleOrNull() != null && longitude.toDoubleOrNull() != null, onClick = {
@@ -79,7 +116,6 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 Text("הצעה בלבד: ${suggestion.display}")
             }
         }
-        OutlinedTextField(HebrewPresentation.category(draft.subject), {}, readOnly = true, label = { Text("קטגוריה") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(draft.exactHebrewText, { draft = draft.edit(text = it) }, label = { Text("הטקסט המדויק לבדיקה") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
         Text("מלא ואשר זמן עם אזור זמן וקואורדינטות ידועות לך. אין לנחש מידע חסר. הערכים המקוריים נשמרים בנפרד.")
         Text("\u20662026-01-01T12:00:00+02:00\u2069", modifier = Modifier.fillMaxWidth())
@@ -88,11 +124,14 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         OutlinedTextField(longitude, { longitude = it; draft = draft.copy(unresolved = setOf("מיקום דורש אישור"), approvedDigest = null) }, label = { Text("קו אורך") }, modifier = Modifier.fillMaxWidth())
         Button(onClick = { draft = draft.confirmEvidence(time, latitude.toDoubleOrNull(), longitude.toDoubleOrNull()) }) { Text("אשר זמן, מיקום וכתובת שבדקת") }
         if (draft.unresolved.isNotEmpty()) Text("דרוש בירור: ${draft.unresolved.joinToString()}")
+        }
         Text("כל שינוי מבטל אישור. האישור כאן אינו שולח לעירייה או לרשת חברתית.")
         Button(enabled = draft.isReady(), onClick = { draft = draft.approve(); onSave(draft) }) { Text("אשר את התוכן לבדיקה") }
         Text(if (draft.isApproved()) "התוכן אושר מקומית, לא נשלח" else "התוכן לא אושר")
         Button(onClick = { onSave(draft) }) { Text("שמור טיוטה") }
         onOutgoingPreview?.let { action -> Button(onClick = action) { Text("בדוק תמונה נפרדת ללא נתוני צילום") } }
+        Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("שלח") }
+        Text("שליחה אינה זמינה בגרסת הבדיקה", style = MaterialTheme.typography.bodySmall)
         TextButton(onClick = onBack) { Text("חזור") }
     }
     }
