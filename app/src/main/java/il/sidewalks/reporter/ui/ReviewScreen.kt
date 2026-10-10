@@ -25,6 +25,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var plates by remember(initial.evidence.stableId) { mutableStateOf<List<String>>(emptyList()) }
+    var useGoogle by remember { mutableStateOf(false) }
     var recognizing by remember { mutableStateOf(false) }
     var ocrStatus by remember { mutableStateOf("") }
     var suggestions by remember { mutableStateOf<List<il.sidewalks.reporter.evidence.AddressSuggestion>>(emptyList()) }
@@ -41,12 +42,13 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         Text("זמן הראיה המקורי")
         Text("\u2066${HebrewPresentation.evidenceTime(draft.evidence.capturedAtIso)}\u2069", modifier = Modifier.fillMaxWidth(), style = TextStyle(textDirection = TextDirection.Ltr))
         Text("GPS: ${if (draft.evidence.latitude == null) "חסר" else "נקרא מהראיה"}")
-        Text("זיהוי לוחית מתבצע במכשיר בלבד. תוצאה היא הצעה, ולא אישור שהלוחית נכונה.")
+        Text("התמונות והלוחיות מעובדות במכשיר ואינן נשלחות ל-Google. ML Kit שולח ל-Google נתוני שימוש וביצועים ועשוי לפנות לשרתיה לעדכונים. תוצאה היא הצעה בלבד.")
+        Row { Checkbox(checked = useGoogle, enabled = !recognizing, onCheckedChange = { useGoogle = it; plates = emptyList(); ocrStatus = "" }); Text("זיהוי עם Google ML Kit במקום Tesseract") }
         Button(enabled = image != null && !recognizing, onClick = {
             recognizing = true
             scope.launch {
                 plates = withContext(Dispatchers.Default) {
-                    try { il.sidewalks.reporter.recognition.OfflinePlateOcr(context).recognize(image!!.asAndroidBitmap()) }
+                    try { if (useGoogle) il.sidewalks.reporter.recognition.MlKitPlateOcr.recognize(image!!.asAndroidBitmap()) else il.sidewalks.reporter.recognition.OfflinePlateOcr(context).recognize(image!!.asAndroidBitmap()) }
                     catch (_: LinkageError) { emptyList() }
                     catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
                     catch (_: Exception) { emptyList() }

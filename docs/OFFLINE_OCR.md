@@ -17,3 +17,13 @@ The explicit button scans a bounded local bitmap on a worker thread and offers a
 This is generic OCR, not a validated vehicle/license-plate detector. Full-frame OCR can miss small/angled plates or offer unrelated numbers. No accuracy promise is made. Synthetic native tests are not field evaluation. Android 15+ 16 KB page-size compatibility for the prebuilt native libraries is not yet verified. Physical-device memory/lifecycle tests, crop selection and a privacy-safe annotated test set remain before claiming M2 complete.
 
 The model and native libraries increase APK size. No municipality credentials, network routes or real reports are involved.
+
+## Optional Google ML Kit comparison
+
+Bundled Latin text-recognition 16.0.1 is an explicit alternate OCR option. Model is packaged at build time, not fetched on first recognition. Input photographs and recognized plate text are processed on-device and are not sent to Google. The SDK sends usage/performance metrics to Google and may contact Google for updates or accelerator information. These metrics are allowed for this development stage and disclosed in the review/privacy screens. Tesseract remains available. No photos, reporter data or real reports are used in tests.
+
+Sources: https://developers.google.com/ml-kit/terms and https://developers.google.com/ml-kit/vision/text-recognition/v2/android
+
+Synthetic comparison uses equal inputs and the same candidate parser. It is a tiny development check, not field accuracy or evidence of behavior on the test phone. Public emulator run 38066741292: both engines returned the expected candidate on all four plate cases and no candidates on all four blank/distractor cases. Accuracy tied on this tiny corpus; Tesseract remains the default and ML Kit is explicit opt-in. Tesseract took 100-329 ms and ML Kit 3177-3641 ms per case on this network-disabled emulator, creating a recognizer for each call. These are not phone performance or field accuracy measurements. All 15 instrumented tests passed.
+
+Observed run: https://github.com/reihlinstinct/parking-reporter-app/actions/runs/38066741292

@@ -81,6 +81,8 @@ jobs:
             test -s app/build/reports/androidTests/screenshots/m1-home-intake-synthetic.png
             adb shell run-as il.sidewalks.reporter cat files/m2-ocr-synthetic.png > app/build/reports/androidTests/screenshots/m2-ocr-synthetic.png
             test -s app/build/reports/androidTests/screenshots/m2-ocr-synthetic.png
+            adb shell run-as il.sidewalks.reporter cat files/ocr-comparison.json > app/build/reports/androidTests/ocr-comparison.json
+            test -s app/build/reports/androidTests/ocr-comparison.json
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         if: always()
         with:

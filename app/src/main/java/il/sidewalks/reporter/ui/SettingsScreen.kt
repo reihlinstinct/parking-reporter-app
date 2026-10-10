@@ -23,6 +23,7 @@ fun SettingsScreen(initial: ReporterSettings?, save: (ReporterSettings, () -> Un
     var saved by remember { mutableStateOf(false) }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Google ML Kit: התמונות והלוחיות נשארות במכשיר; נתוני שימוש וביצועים נשלחים ל-Google. ה-SDK עשוי לפנות לשרתיה לעדכונים.")
         Text("הגדרות פרטיות", style = MaterialTheme.typography.titleLarge)
         Text("כל מדווח מזין את פרטיו שלו. הפרטים מוצפנים במכשיר, ללא גיבוי. אין שליחה או בדיקת התחברות ממסך זה. פרטי הגישה העירוניים אינם מוצגים למשתמש.")
         OutlinedTextField(firstName, { firstName = it; saved = false }, label = { Text("שם פרטי") }, modifier = Modifier.fillMaxWidth())

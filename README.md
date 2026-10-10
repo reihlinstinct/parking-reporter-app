@@ -39,4 +39,4 @@ Never commit real plates, evidence, profiles, keys or tokens. Fixtures are expli
 
 ## Offline recognition preview
 
-Explicit local Tesseract OCR offers plate candidates, with manual fallback and required review. No ML Kit or recognition telemetry. See [OCR limits, model provenance and licensing](docs/OFFLINE_OCR.md). This does not complete field validation or enable live reporting.
+Explicit local Tesseract OCR offers plate candidates, with manual fallback and required review. Optional bundled Google ML Kit recognition sends API usage/performance metrics to Google; photos and plate results stay on-device. See [OCR limits, model provenance and licensing](docs/OFFLINE_OCR.md). This does not complete field validation or enable live reporting.
