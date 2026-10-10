@@ -72,7 +72,9 @@ class ReviewDraftTest {
         for (code in listOf("broken_sign", "faded_crosswalk")) {
             val changed = draft().approve().edit(subject = code)
             assertEquals("", changed.plate)
-            assertTrue(changed.isReady())
+            assertEquals("", changed.exactHebrewText)
+            assertFalse(changed.isReady())
+            assertTrue(changed.edit(text = "תיאור בדיקה מתאים").isReady())
             assertFalse(changed.isApproved())
             assertFalse(changed.copy(plate = "1234567").isReady())
             assertEquals(changed, il.sidewalks.reporter.ledger.DraftCodec.decode(il.sidewalks.reporter.ledger.DraftCodec.encode(changed)))
