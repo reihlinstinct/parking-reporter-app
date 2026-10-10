@@ -68,6 +68,19 @@ class ReviewDraftTest {
         assertFalse(decoded.isApproved())
         assertNull(decoded.approvedDigest)
     }
+    @Test fun categoriesDriveRequiredPlateAndClearStaleVehicleData() {
+        for (code in listOf("broken_sign", "faded_crosswalk")) {
+            val changed = draft().approve().edit(subject = code)
+            assertEquals("", changed.plate)
+            assertTrue(changed.isReady())
+            assertFalse(changed.isApproved())
+            assertFalse(changed.copy(plate = "1234567").isReady())
+            assertEquals(changed, il.sidewalks.reporter.ledger.DraftCodec.decode(il.sidewalks.reporter.ledger.DraftCodec.encode(changed)))
+        }
+        assertFalse(draft().copy(subject = "unknown").isReady())
+        assertFalse(draft().copy(plate = "").isReady())
+        assertFalse(draft().edit(subject = "broken_sign").edit(subject = "sidewalk_parking").isReady())
+    }
     @Test fun badCoordinatesAndHashRejected() {
         assertThrows(IllegalArgumentException::class.java) { draft().evidence.copy(latitude = Double.NaN) }
         assertThrows(IllegalArgumentException::class.java) { draft().evidence.copy(longitude = 181.0) }
