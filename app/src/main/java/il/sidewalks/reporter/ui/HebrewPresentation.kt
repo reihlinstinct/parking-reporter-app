@@ -14,8 +14,5 @@ object HebrewPresentation {
         try { LocalDateTime.parse(value).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", Locale.ROOT)) + " (אזור זמן לא ידוע)" }
         catch (_: Exception) { value?.takeIf { it.isNotBlank() } ?: "חסר" }
     }
-    fun category(code: String): String = when (code) {
-        "sidewalk_parking" -> "חניה על המדרכה"
-        else -> "קטגוריה לא מוכרת"
-    }
+    fun category(code: String): String = il.sidewalks.reporter.core.ReportCategory.from(code)?.hebrew ?: "נדרש תיקון קטגוריה"
 }

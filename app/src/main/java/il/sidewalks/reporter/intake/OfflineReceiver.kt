@@ -25,9 +25,10 @@ object OfflineReceiver {
         listOf("original_sha256", "outgoing_sha256", "review_digest").forEach { field ->
             require(report.getString(field).matches(Regex("[a-f0-9]{64}")))
         }
-        listOf("id", "plate", "address", "subject", "exact_text", "time").forEach { field ->
+        listOf("id", "address", "subject", "exact_text", "time").forEach { field ->
             require(report.get(field) is String && report.getString(field).length in 1..4000)
         }
+        require(report.get("plate") is String && report.getString("plate").length <= 8)
         val reporter = report.getJSONObject("reporter")
         exact(reporter, setOf("first", "last", "phone", "id", "email"))
         reporter.keys().asSequence().forEach { field -> require(reporter.get(field) is String && reporter.getString(field).isNotBlank() && reporter.getString(field).length <= 256) }

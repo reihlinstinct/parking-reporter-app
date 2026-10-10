@@ -27,3 +27,9 @@ The public client contains no municipal endpoint or secret, and no private repos
 ## Release gates
 
 Camera lifecycle, authenticated Keystore behavior, device storage recovery, schema migrations, EXIF orientation, physical-device UI, model terms and target-device support require validation. Emulator checks use synthetic data only and do not prove physical-device or municipal behavior. minSdk 26 is a build target, not universal-device validation.
+
+## Photo-first review
+
+The home screen asks for a photo; Settings and saved drafts are secondary. Local OCR runs after capture and suggests plate candidates, never approval. The compact review exposes a small Edit action and category dropdown. Automatic category classification is not implemented: a new report has no selected category and cannot be approved until the user chooses one. These are local preview categories, not validated municipal category identifiers.
+
+Broken-sign and faded-crosswalk categories require an empty plate; changing from a vehicle category clears plate and approval. Returning to vehicle parking requires a reviewed plate again. Reporter details remain in Settings. Missing address, time offset, location or description still blocks approval. Geocoding remains opt-in with provider disclosure. Send is visibly disabled; production enrollment and transport remain outside this preview.

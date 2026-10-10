@@ -38,6 +38,7 @@ class M1ShellTest {
         screenshot("m1-review-synthetic.png")
         compose.onNodeWithText("אשר את התוכן לבדיקה").performScrollTo().performClick()
         compose.runOnIdle { assertTrue(saved?.isApproved() == true) }
+        compose.onNodeWithText("ערוך").performScrollTo().performClick()
         compose.onNodeWithText("לוחית ללא מקפים").performScrollTo().performTextReplacement("7654321")
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
         compose.runOnIdle { assertFalse(saved?.isApproved() == true) }
@@ -51,6 +52,7 @@ class M1ShellTest {
         })
         var saved: ReviewDraft? = null
         compose.setContent { MaterialTheme { ReviewScreen(draft().approve(), bitmap.asImageBitmap(), { saved = it }, {}) } }
+        compose.onNodeWithText("ערוך").performScrollTo().performClick()
         compose.onNodeWithText("הצע לוחית מתוך הצילום").performScrollTo().performClick()
         compose.waitUntil(30_000) { compose.onAllNodesWithText("הצעה בלבד: \u206612345678\u2069").fetchSemanticsNodes().isNotEmpty() }
         screenshot("m2-ocr-synthetic.png")
@@ -100,9 +102,9 @@ class M1ShellTest {
     }
     @Test fun rtlReviewUsesHebrewCategoryAndReadableDate() {
         compose.setContent { MaterialTheme { ReviewScreen(draft(), null, {}, {}) } }
-        compose.onNodeWithText("חניה על המדרכה").assertExists()
+        compose.onNodeWithText("חניה על המדרכה ▾").assertExists()
         compose.onNodeWithText("sidewalk_parking").assertDoesNotExist()
-        compose.onNodeWithText("\u206601/01/2026 12:00 (UTC+00:00)\u2069").assertExists()
+        compose.onNodeWithText("זמן: \u206601/01/2026 12:00 (UTC+00:00)\u2069").assertExists()
     }
     @Test fun offlineEncryptedDemoAndDurableDuplicateCheckpoint() {
         assertTrue(il.sidewalks.reporter.intake.SyntheticIntakeDemo.run().contains("הבדיקה הסינתטית הצליחה"))
@@ -142,12 +144,43 @@ class M1ShellTest {
         compose.setContent { MaterialTheme {
             il.sidewalks.reporter.ui.AppShell(authenticate = { it() }, requestCamera = {}, readSettings = { null }, saveSettings = {})
         } }
+        compose.onNodeWithText("טיוטות וכלי בדיקה").performScrollTo().performClick()
         compose.onNodeWithText("בדוק חבילה מוצפנת ללא רשת").performScrollTo().performClick()
         compose.waitUntil(15_000) {
             compose.onAllNodesWithText("הבדיקה הסינתטית הצליחה", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("הבדיקה הסינתטית הצליחה", substring = true).performScrollTo()
         screenshot("m1-home-intake-synthetic.png")
+    }
+    @Test fun nonVehicleReviewHasNoPlateAndCorrectionClearsApproval() {
+        var saved: ReviewDraft? = null
+        val bitmap = Bitmap.createBitmap(700, 300, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        canvas.drawColor(android.graphics.Color.rgb(235, 235, 235))
+        canvas.drawRect(325f, 120f, 350f, 290f, android.graphics.Paint().apply { color = android.graphics.Color.DKGRAY })
+        canvas.drawRect(230f, 20f, 455f, 125f, android.graphics.Paint().apply { color = android.graphics.Color.WHITE })
+        canvas.drawText("SYNTHETIC SIGN", 248f, 75f, android.graphics.Paint().apply { color = android.graphics.Color.BLACK; textSize = 22f })
+        compose.setContent { MaterialTheme { ReviewScreen(draft().approve(), bitmap.asImageBitmap(), { saved = it }, {}) } }
+        compose.onNodeWithText("חניה על המדרכה ▾").performClick()
+        compose.onNodeWithText("תמרור שבור").performClick()
+        compose.onNodeWithText("לוחית:", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("רכב חונה על המדרכה").assertDoesNotExist()
+        compose.onNodeWithText("אשר את התוכן לבדיקה").assertIsNotEnabled()
+        screenshot("design-sign-synthetic.png")
+        compose.onNodeWithText("שלח").performScrollTo()
+        screenshot("design-sign-actions-synthetic.png")
+        compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("", saved?.plate); assertFalse(saved?.isApproved() == true) }
+        compose.onNodeWithText("ערוך").performScrollTo().performClick()
+        compose.onNodeWithText("לוחית ללא מקפים").assertDoesNotExist()
+    }
+    @Test fun photoFirstHomeScreenshot() {
+        compose.setContent { MaterialTheme {
+            il.sidewalks.reporter.ui.AppShell(authenticate = { it() }, requestCamera = {}, readSettings = { null }, saveSettings = {})
+        } }
+        compose.onNodeWithText("צלם תמונה").assertExists()
+        compose.onNodeWithText("שם פרטי").assertDoesNotExist()
+        screenshot("design-home-synthetic.png")
     }
     @Test fun originalEvidenceHashAndMissingMetadata() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
