@@ -14,6 +14,7 @@
 - Unit tests plus functional/emulator-based e2e tests for user flows. Mock network transport; CI never calls the municipal API or creates reports.
 - Regression tests for approval invalidation, duplicate photos/IDs, crash checkpoints, uncertain outcomes and no-retry behavior.
 - Synthetic photos, plates and reporter profiles only. No private evidence, personal details, secrets, generated build output or junk files.
+- Design diagrams: any issue or proposal that needs design (API, containers, architecture, data flow, security boundaries, test pipelines) includes a Mermaid diagram in the issue body or docs. Mermaid renders natively on GitHub and stays version-controlled; do not add binary diagram files. Diagrams use synthetic data only: no real plates, locations or living-person data.
 - Update README, design and release notes when behavior changes. Record material architectural choices in a short design note.
 - Pin toolchain and dependencies, verify Gradle distribution checksums and review dependency licenses before release.
 
