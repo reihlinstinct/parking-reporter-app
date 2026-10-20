@@ -6,7 +6,7 @@ Pre-release design/scaffolding only. No released app is currently supported. Bef
 
 ## Reporting a vulnerability
 
-Do not open an issue containing credentials, real plates, evidence photos, reporter identities, tokens or exploit details that expose private data. Use the repository's private vulnerability-reporting control if enabled. Otherwise contact the repository owner through an already-established private channel with a sanitized summary and ask for a secure transfer method. No response-time promise is made yet.
+Do not open an issue containing credentials, real plates, evidence photos, reporter identities, tokens or exploit details that expose private data. Report privately through the repository's Security tab: choose "Report a vulnerability" (private vulnerability reporting is enabled). If that route is unavailable, contact the repository owner through an already-established private channel with a sanitized summary and ask for a secure transfer method. No response-time promise is made yet.
 
 ## Security requirements
 
