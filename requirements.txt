@@ -2,4 +2,4 @@
 # Pinned so Dependabot and pip-audit can track them; verified clean with
 # pip-audit (PyPA Advisory DB) on 2026-10-20.
 cryptography==50.0.2
-pillow==12.3.0
+pillow==13.0.0
