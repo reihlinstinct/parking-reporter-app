@@ -41,4 +41,7 @@ jobs:
           python3 -m venv /tmp/venv
           /tmp/venv/bin/pip install -r requirements.txt
       - name: Run synthetic intake smoke tests
-        run: /tmp/venv/bin/python scripts/synthetic_intake_prototype.py
+        run: /tmp/venv/bin/python scripts/synthetic_intake_prototype.py -v 2>&1 | tee /tmp/unittest.txt
+      - name: Python test summary
+        if: always()
+        run: python3 scripts/test_summary.py --title 'Python tooling smoke tests' --unittest /tmp/unittest.txt
