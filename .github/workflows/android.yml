@@ -24,6 +24,13 @@ jobs:
           java-version: '17'
       - run: sh scripts/prepare_wrapper.sh
       - run: sh gradlew --no-daemon lintDebug testDebugUnitTest assembleDebug
+      - name: Unit test coverage (JaCoCo)
+        if: always()
+        continue-on-error: true
+        run: sh gradlew --no-daemon createDebugCoverageReport
+      - name: Unit test summary
+        if: always()
+        run: python3 scripts/test_summary.py --title 'Unit tests (debug)' --junit app/build/test-results/testDebugUnitTest --jacoco app/build/reports/jacoco
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: m1-preview-apk
@@ -69,8 +76,8 @@ jobs:
             adb shell svc wifi disable
             adb shell svc data disable
             mkdir -p app/build/reports/androidTests/screenshots
-            adb shell am instrument -w il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner | tee app/build/reports/androidTests/instrumentation.txt
-            grep -E '^OK \([1-9][0-9]* tests?\)'  app/build/reports/androidTests/instrumentation.txt
+            adb shell am instrument -w -r il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner | tee app/build/reports/androidTests/instrumentation.txt
+            python3 scripts/test_summary.py --title 'Instrumented tests (emulator, API 30)' --instrumentation app/build/reports/androidTests/instrumentation.txt --check
             adb shell run-as il.sidewalks.reporter cat files/m0-synthetic.png > app/build/reports/androidTests/screenshots/m0-synthetic.png
             test -s app/build/reports/androidTests/screenshots/m0-synthetic.png
             adb shell run-as il.sidewalks.reporter cat files/m1-review-synthetic.png > app/build/reports/androidTests/screenshots/m1-review-synthetic.png
