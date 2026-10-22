@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.5] - 2026-10-22
+
+### Other changes
+
+- build(deps): bump ossf/scorecard-action from 2.4.4 to 2.5.0 (#31) (21d44c9)
+
 ## [0.4.4] - 2026-10-22
 
 ### Other changes
