@@ -38,6 +38,11 @@ def check() -> list[str]:
             base = match.group(1).split("-", 1)[0]
             if f"## [{base}]" not in changelog.read_text(encoding="utf-8"):
                 errors.append(f"CHANGELOG.md missing entry for version {base}")
+    release_workflow = ROOT / ".github" / "workflows" / "release.yml"
+    if release_workflow.is_file():
+        workflow_text = release_workflow.read_text(encoding="utf-8")
+        if 'git push origin "v${NEW_VERSION}"' not in workflow_text or "--follow-tags" in workflow_text:
+            errors.append("release.yml must push the release tag explicitly; --follow-tags skips lightweight tags")
     readme = (ROOT / "README.md").read_text(encoding="utf-8") if (ROOT / "README.md").exists() else ""
     for milestone in range(7):
         if f"M{milestone}" not in readme:
