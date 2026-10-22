@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-22
+
+### Other changes
+
+- build(deps): bump github/codeql-action/upload-sarif (#16) (cf45bae)
+
 ## [0.4.0] - 2026-10-22
 
 ### Added
