@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-10-22
+
+### Other changes
+
+- build(deps): bump kotlin to 2.4.21, ksp to 2.3.12, room to 2.8.5 (curated compatible set) (#35) (772e831)
+
 ## [0.4.3] - 2026-10-22
 
 ### Other changes
