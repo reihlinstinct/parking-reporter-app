@@ -27,3 +27,18 @@ jobs:
         run: python3 scripts/check_repository.py
       # Android build, unit and emulator/e2e jobs belong to M1.
       # This workflow never uses secrets or calls the municipal API.
+  python-smoke:
+    name: Python tooling smoke test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned tooling dependencies
+        run: |
+          python3 -m venv /tmp/venv
+          /tmp/venv/bin/pip install -r requirements.txt
+      - name: Run synthetic intake smoke tests
+        run: /tmp/venv/bin/python scripts/synthetic_intake_prototype.py
