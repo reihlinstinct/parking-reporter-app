@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.10] - 2026-10-22
+
+### Other changes
+
+- ci: fix unit-test coverage report (deviceless JacocoReport task) (#42) (6dd2f94)
+
 ## [0.4.9] - 2026-10-22
 
 ### Other changes
