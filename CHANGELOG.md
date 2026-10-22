@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-10-22
+
+### Other changes
+
+- build(deps): bump androidx.fragment:fragment-ktx from 1.8.6 to 1.9.1 (#24) (837a875)
+
 ## [0.4.2] - 2026-10-22
 
 ### Other changes
