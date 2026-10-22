@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-10-22
+
+### Other changes
+
+- Update release.yml (#34) (9d60ffe)
+
 ## [0.4.1] - 2026-10-22
 
 ### Other changes
