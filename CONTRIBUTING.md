@@ -18,6 +18,14 @@
 - Update README, design and release notes when behavior changes. Record material architectural choices in a short design note.
 - Pin toolchain and dependencies, verify Gradle distribution checksums and review dependency licenses before release.
 
+## Versioning
+
+- Semantic Versioning, derived from conventional commit subjects: `fix` bumps PATCH, `feat` bumps MINOR, a breaking change (`BREAKING CHANGE` or `!:`) bumps MAJOR.
+- Releases are automated and lightweight: `.github/workflows/release.yml` runs `scripts/release.py` on every merge to main, bumps `versionName`/`versionCode`, adds the CHANGELOG.md entry, tags `v<version>` and creates the GitHub release with notes in Hebrew and English (commit subjects stay in English). Small, frequent releases; no manual ceremony.
+- Every bug fix ships with a regression test.
+- The version is visible in the app (Settings screen).
+- No distribution outside this repository (APK, stores, municipality) without explicit owner approval.
+
 ## Current checks
 
 With Python 3 installed, run `python3 scripts/check_repository.py` from the repository root. This checks the scaffolding; it is not an Android test suite or a full secret scanner.

@@ -6,7 +6,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = (
-    "README.md", "SECURITY.md", "CONTRIBUTING.md", "docs/DESIGN.md",
+    "README.md", "CHANGELOG.md", "SECURITY.md", "CONTRIBUTING.md", "docs/DESIGN.md",
     "docs/RELEASE_CHECKLIST.md", ".gitignore", ".editorconfig",
     ".github/PULL_REQUEST_TEMPLATE.md", ".github/ISSUE_TEMPLATE/bug_report.md",
     ".github/ISSUE_TEMPLATE/feature_request.md",
@@ -30,6 +30,14 @@ def check() -> list[str]:
             local = target.split("#", 1)[0]
             if local and not (path.parent / local).exists():
                 errors.append(f"Broken local link in {path.relative_to(ROOT)}: {target}")
+    gradle = ROOT / "app" / "build.gradle.kts"
+    changelog = ROOT / "CHANGELOG.md"
+    if gradle.is_file() and changelog.is_file():
+        match = re.search(r'versionName\s*=\s*"([^"]+)"', gradle.read_text(encoding="utf-8"))
+        if match:
+            base = match.group(1).split("-", 1)[0]
+            if f"## [{base}]" not in changelog.read_text(encoding="utf-8"):
+                errors.append(f"CHANGELOG.md missing entry for version {base}")
     readme = (ROOT / "README.md").read_text(encoding="utf-8") if (ROOT / "README.md").exists() else ""
     for milestone in range(7):
         if f"M{milestone}" not in readme:

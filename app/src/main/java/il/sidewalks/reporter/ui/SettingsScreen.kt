@@ -10,6 +10,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import il.sidewalks.reporter.BuildConfig
 import il.sidewalks.reporter.security.ReporterSettings
 
 /** Caller obtains fresh system authentication before opening and again before saving. */
@@ -36,6 +37,7 @@ fun SettingsScreen(initial: ReporterSettings?, save: (ReporterSettings, () -> Un
         } }) { Text("אמת זהות ושמור מוצפן") }
         if (saved) Text("נשמר מוצפן, הפרטים הוסרו מהמסך")
         TextButton(onClick = back) { Text("חזור") }
+        Text("גרסה " + BuildConfig.VERSION_NAME, style = MaterialTheme.typography.bodySmall)
     }
     }
 }
