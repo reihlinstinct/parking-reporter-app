@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.7] - 2026-10-22
+
+### Other changes
+
+- build(deps): bump pillow from 12.3.0 to 13.0.0 (#30) (1564de0)
+
 ## [0.4.6] - 2026-10-22
 
 ### Other changes
