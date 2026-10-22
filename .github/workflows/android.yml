@@ -27,7 +27,7 @@ jobs:
       - name: Unit test coverage (JaCoCo)
         if: always()
         continue-on-error: true
-        run: sh gradlew --no-daemon createDebugCoverageReport
+        run: sh gradlew --no-daemon jacocoDebugUnitTestReport
       - name: Unit test summary
         if: always()
         run: python3 scripts/test_summary.py --title 'Unit tests (debug)' --junit app/build/test-results/testDebugUnitTest --jacoco app/build/reports/jacoco
