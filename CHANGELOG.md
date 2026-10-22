@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.11] - 2026-10-22
+
+### Other changes
+
+- docs: label, milestone and issue-order scheme (#43) (d0a67c0)
+
 ## [0.4.10] - 2026-10-22
 
 ### Other changes
