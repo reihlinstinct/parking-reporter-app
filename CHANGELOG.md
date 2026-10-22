@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.6] - 2026-10-22
+
+### Other changes
+
+- ci: add python tooling smoke test (venv + synthetic intake suite) (#37) (69faeff)
+
 ## [0.4.5] - 2026-10-22
 
 ### Other changes
