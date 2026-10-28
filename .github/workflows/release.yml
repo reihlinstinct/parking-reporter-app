@@ -36,6 +36,10 @@ jobs:
           NEW_VERSION: ${{ steps.prepare.outputs.new_version }}
           NOTES: ${{ steps.prepare.outputs.notes_path }}
         run: |
+          if git ls-remote --tags origin "refs/tags/v${NEW_VERSION}" | grep -q .; then
+            echo "v${NEW_VERSION} already released by another run; skipping."
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add CHANGELOG.md app/build.gradle.kts
