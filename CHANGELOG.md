@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.17] - 2026-10-28
+
+### Other changes
+
+- ci: pin runs-on to ubuntu-24.04 (#59) (58401d2)
+
 ## [0.4.16] - 2026-10-28
 
 ### Other changes
