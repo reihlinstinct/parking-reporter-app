@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.16] - 2026-10-28
+
+### Other changes
+
+- ci: rebase release commit onto latest main before tagging and pushing (#55) (9261068)
+
 ## [0.4.15] - 2026-10-28
 
 ### Other changes
