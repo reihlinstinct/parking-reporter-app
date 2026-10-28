@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.14] - 2026-10-28
+
+### Other changes
+
+- build(deps): bump com.google.crypto.tink:tink-android (#48) (c79b131)
+
 ## [0.4.13] - 2026-10-28
 
 ### Other changes
