@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.15] - 2026-10-28
+
+### Other changes
+
+- docs: distinguish Gradle runtime and wrapper bootstrap versions (#52) (#53) (2bc15e3)
+
 ## [0.4.14] - 2026-10-28
 
 ### Other changes
