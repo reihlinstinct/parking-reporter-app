@@ -8,7 +8,11 @@ CameraX original-byte capture, SHA-256, EXIF metadata, manual corrections, optio
 
 ## Build and tests
 
-Java 17, Android SDK 35, Gradle 8.11.1. Accept Android SDK terms before installing its packages.
+Java 17 and Android SDK 35. The checked-in wrapper properties select Gradle
+8.13 and verify its distribution checksum. The preparation script separately
+bootstraps a checksum-verified wrapper JAR from Gradle 8.11.1; that does not
+select the Gradle runtime version. Accept Android SDK terms before installing
+its packages.
 
 ```sh
 sh scripts/prepare_wrapper.sh
