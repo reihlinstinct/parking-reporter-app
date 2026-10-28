@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.13] - 2026-10-28
+
+### Other changes
+
+- build(deps): bump org.jetbrains.kotlinx:kotlinx-coroutines-android (#47) (4041114)
+
 ## [0.4.12] - 2026-10-28
 
 ### Other changes
