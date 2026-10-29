@@ -25,6 +25,8 @@ python3 scripts/check_repository.py
 
 CI builds, lints and runs synthetic unit/emulator tests. Check the current run before claiming success. Debug APKs are test artifacts, not signed production releases. Physical camera, device authentication and target-device behavior still need validation.
 
+Every workflow ends with a `Run summary` job that writes a summary to the top of the run page: which jobs ran, their result and duration, what was skipped and why, the commits and files the run changed, and which checks cover those changes (`.github/ci-coverage-map.json` declares the coverage; files matching no mapping are flagged). The script is `scripts/ci/run_summary.py`.
+
 ## Milestones
 
 | Stage | Goal |

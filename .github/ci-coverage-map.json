@@ -1,0 +1,14 @@
+{
+  "mappings": [
+    { "pattern": "app/**", "checks": ["build", "emulator"] },
+    { "pattern": "*.gradle.kts", "checks": ["build"] },
+    { "pattern": "gradle/**", "checks": ["build"] },
+    { "pattern": "gradle.properties", "checks": ["build"] },
+    { "pattern": "scripts/check_repository.py", "checks": ["scaffold"] },
+    { "pattern": "scripts/synthetic_intake_prototype.py", "checks": ["python-smoke"] },
+    { "pattern": "scripts/test_summary.py", "checks": ["python-smoke"] },
+    { "pattern": "scripts/release.py", "checks": ["release"] },
+    { "pattern": "scripts/**", "checks": ["scaffold"] },
+    { "pattern": "docs/wiki/**", "checks": ["sync"] }
+  ]
+}
