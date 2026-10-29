@@ -6,6 +6,20 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.21] - 2026-10-29
+
+### Other changes
+
+- Merge pull request #67 from reihlinstinct/ci/run-summary-v12 (4191a32)
+- ci: step summary v19 - coverage map checks filtered to nonempty strings (96d61c8)
+- ci: step summary v18 - docstring states the self-test stop condition (8ea4bee)
+- ci: step summary v17 - edge-case audit: deletion verdict needs after, empty log row, payload shape guards (6af8c6e)
+- ci: step summary v16 - accurate no-range reason for deletion pushes (946b92c)
+- ci: step summary v15 - push range uses payload after SHA, ignore deletions (6470ed7)
+- ci: step summary v14 - recognize quoted job ids (08860cd)
+- ci: step summary v13 - job headers with trailing comments, clear current on unknown job keys (d12d639)
+- ci: step summary v12 - log-row helper, jobs-block parser fix (0a2dffa)
+
 ## [0.4.20] - 2026-10-29
 
 ### Other changes
