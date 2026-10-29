@@ -2,7 +2,7 @@ name: Wiki sync
 
 # Mirrors docs/wiki/ to this repo's GitHub wiki (<repo>.wiki.git).
 # docs/wiki/ is the source of truth - direct wiki UI edits are overwritten.
-# Design: docs/DESIGN-wiki-sync.md
+# Design: https://github.com/reihlinstinct/mitsubishi-echonet/blob/main/docs/DESIGN-wiki-sync.md
 #
 # Auth: the default GITHUB_TOKEN with job-level `contents: write` pushes to
 # the same repo's .wiki.git. No PAT is used. If GitHub ever refuses the push
@@ -10,8 +10,7 @@ name: Wiki sync
 # explicit owner approval before it is created; do not add one here.
 #
 # One-time setup: the wiki git backend does not exist until the Wiki feature
-# is enabled in repo Settings and one first page is saved in the UI. The
-# bootstrap branch below covers the rest.
+# is enabled in repo Settings and one first page is saved in the UI.
 
 on:
   push:
@@ -34,7 +33,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Sync docs/wiki to the GitHub wiki
         env:
