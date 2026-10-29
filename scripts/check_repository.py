@@ -29,6 +29,13 @@ def check() -> list[str]:
                 continue
             local = target.split("#", 1)[0]
             if local and not (path.parent / local).exists():
+                # Pages under docs/wiki/ are GitHub Wiki source: they use
+                # extensionless page-name links ([x](Home)) that resolve to
+                # <name>.md here and to the wiki page after sync.
+                if path.relative_to(ROOT).parts[:2] == ("docs", "wiki") and (
+                    path.parent / f"{local}.md"
+                ).is_file():
+                    continue
                 errors.append(f"Broken local link in {path.relative_to(ROOT)}: {target}")
     gradle = ROOT / "app" / "build.gradle.kts"
     changelog = ROOT / "CHANGELOG.md"
