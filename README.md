@@ -2,6 +2,8 @@
 
 Open-source Android development preview for local review of sidewalk-parking evidence. Kotlin and English documentation; Hebrew UI and report text. MIT licensed. Not a production reporting app.
 
+Hebrew user guide: the [wiki](https://github.com/reihlinstinct/parking-reporter-app/wiki) (source: [docs/wiki/](docs/wiki/), PR-reviewed).
+
 ## Current capabilities
 
 CameraX original-byte capture, SHA-256, EXIF metadata, manual corrections, optional geocoder suggestions, encrypted reporter settings, local Room ledger and digest-bound manual review. No live report submission, bundled municipal secrets or cloud photo recognition. The offline encrypted-package demo uses generated synthetic data and an in-memory sink, never the network.
