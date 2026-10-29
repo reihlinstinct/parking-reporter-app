@@ -21,7 +21,7 @@
    "path": ".github/workflows/repository-checks.yml",
    "rule": "unhashed-pip-install",
    "scope": "dependencies",
-   "evidence": "pip install -r requirements.txt",
+   "evidence": "/tmp/venv/bin/pip install -r requirements.txt",
    "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
    "reason": "Pre-existing pip install without --require-hashes; resolves unhashed dependencies; tracked for hash pinning in this issue."
   },
