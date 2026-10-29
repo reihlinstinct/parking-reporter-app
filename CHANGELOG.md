@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.23] - 2026-10-29
+
+### Other changes
+
+- Add CODEOWNERS (#76) (d496db9)
+
 ## [0.4.22] - 2026-10-29
 
 ### Other changes
