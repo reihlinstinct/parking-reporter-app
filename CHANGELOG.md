@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.24] - 2026-10-29
+
+### Other changes
+
+- docs: add CI status badge(s) to README (#78) (b6833b7)
+
 ## [0.4.23] - 2026-10-29
 
 ### Other changes
