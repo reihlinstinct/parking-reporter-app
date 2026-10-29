@@ -62,6 +62,8 @@ jobs:
           rm -rf -- "$GNUPGHOME"
 
   summary:
+    permissions:
+      contents: read
     name: Run summary
     if: always()
     needs: [signing-test]

@@ -35,6 +35,8 @@ jobs:
           sarif_file: results.sarif
 
   summary:
+    permissions:
+      contents: read
     name: Run summary
     if: always()
     needs: [analysis]

@@ -52,6 +52,8 @@ jobs:
           gh release create "v${NEW_VERSION}" --title "v${NEW_VERSION}" --notes-file "$NOTES"
 
   summary:
+    permissions:
+      contents: read
     name: Run summary
     if: always()
     needs: [release]
