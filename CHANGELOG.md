@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.18] - 2026-10-29
+
+### Other changes
+
+- Wiki pilot: Hebrew user guide in docs/wiki/ + sync workflow (#61) (#62) (95e2404)
+
 ## [0.4.17] - 2026-10-28
 
 ### Other changes
