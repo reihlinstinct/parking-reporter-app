@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.22] - 2026-10-29
+
+### Other changes
+
+- Add code of conduct and accessibility statement (#69) (f1afdaf)
+
 ## [0.4.21] - 2026-10-29
 
 ### Other changes
