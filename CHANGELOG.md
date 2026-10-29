@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.19] - 2026-10-29
+
+### Other changes
+
+- Pin actions/checkout to full SHA in wiki-sync, fix design doc reference (#62 follow-up) (#63) (25ce9ae)
+
 ## [0.4.18] - 2026-10-29
 
 ### Other changes
