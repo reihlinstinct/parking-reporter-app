@@ -1,5 +1,7 @@
 # Parking Reporter for Android
 
+[![Android CI](https://github.com/reihlinstinct/parking-reporter-app/actions/workflows/android.yml/badge.svg)](https://github.com/reihlinstinct/parking-reporter-app/actions/workflows/android.yml) [![repository checks](https://github.com/reihlinstinct/parking-reporter-app/actions/workflows/repository-checks.yml/badge.svg)](https://github.com/reihlinstinct/parking-reporter-app/actions/workflows/repository-checks.yml)
+
 Open-source Android development preview for local review of sidewalk-parking evidence. Kotlin and English documentation; Hebrew UI and report text. MIT licensed. Not a production reporting app.
 
 Hebrew user guide: the [wiki](https://github.com/reihlinstinct/parking-reporter-app/wiki) (source: [docs/wiki/](docs/wiki/), PR-reviewed).
