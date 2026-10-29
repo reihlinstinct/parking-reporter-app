@@ -6,6 +6,21 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.20] - 2026-10-29
+
+### Other changes
+
+- Merge pull request #65 from reihlinstinct/ci/64-run-summaries (99cb783)
+- ci: parse git output as bytes and order name-scalar checks (#64) (c9f59ce)
+- ci: keep the forged-row self-test free of literal hosts (#64) (bd9cecf)
+- ci: parse plain-scalar YAML comments out of job display names (#64) (1ba47aa)
+- ci: close U+2028/U+2029 log-split injection in summaries (#64) (e3c6c05)
+- ci: escape HTML in summary text and diff PR base...head (#64) (412fb42)
+- ci: harden summary rendering, pin job permissions, fix maps (#64) (f8c0d27)
+- ci: align run_summary.py and coverage maps with review findings (#64) (d8212fc)
+- chore: update run_summary.py to canonical v3 (60d62a6)
+- ci: add a run-summary job to every workflow (#64) (9d0c036)
+
 ## [0.4.19] - 2026-10-29
 
 ### Other changes
