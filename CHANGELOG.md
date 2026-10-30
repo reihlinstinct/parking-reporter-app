@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.26] - 2026-10-30
+
+### Other changes
+
+- ci: skip heavy jobs on docs-only PRs, add concurrency, caching and weekly full run (#80) (9f15747)
+
 ## [0.4.25] - 2026-10-30
 
 ### Other changes
