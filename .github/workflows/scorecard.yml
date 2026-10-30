@@ -1,6 +1,7 @@
 name: Scorecard supply-chain security
 on:
   branch_protection_rule:
+  pull_request:
   push:
     branches: [main]
   schedule:
@@ -10,7 +11,23 @@ on:
 permissions: read-all
 
 jobs:
+  guard:
+    name: Scorecard regression guard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Offline guard and self-tests
+        run: |
+          python3 -m unittest discover -s tests/security -p test_scorecard_guard.py -v
+          python3 scripts/security/scorecard_guard.py
   analysis:
+    if: github.event_name != 'pull_request'
+    needs: guard
     name: Scorecard analysis
     runs-on: ubuntu-24.04
     permissions:
@@ -35,10 +52,10 @@ jobs:
           sarif_file: results.sarif
 
   summary:
+    if: always() && github.event_name != 'pull_request'
     permissions:
       contents: read
     name: Run summary
-    if: always()
     needs: [analysis]
     runs-on: ubuntu-24.04
     steps:

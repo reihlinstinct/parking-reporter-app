@@ -1,0 +1,69 @@
+{
+ "version": 1,
+ "findings": [
+  {
+   "path": ".github/workflows/manual-gpg-signing.yml",
+   "rule": "top-level-write",
+   "scope": "workflow",
+   "evidence": "contents: write",
+   "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
+   "reason": "Pre-existing workflow-level write in the manual signing-test workflow; tracked for job-level scoping in this issue."
+  },
+  {
+   "path": ".github/workflows/release.yml",
+   "rule": "job-write",
+   "scope": "release",
+   "evidence": "contents: write",
+   "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
+   "reason": "Semantic-release job creates release commits/tags; job-scoped; reviewed."
+  },
+  {
+   "path": ".github/workflows/repository-checks.yml",
+   "rule": "unhashed-pip-install",
+   "scope": "dependencies",
+   "evidence": "/tmp/venv/bin/pip install -r requirements.txt",
+   "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
+   "reason": "Pre-existing pip install without --require-hashes; resolves unhashed dependencies; tracked for hash pinning in this issue."
+  },
+  {
+   "path": ".github/workflows/scorecard.yml",
+   "rule": "job-write",
+   "scope": "analysis",
+   "evidence": "security-events: write",
+   "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
+   "reason": "Approved job-scoped SARIF upload to GitHub code scanning; no code or secrets write."
+  },
+  {
+   "path": ".github/workflows/scorecard.yml",
+   "rule": "job-write",
+   "scope": "analysis",
+   "evidence": "id-token: write",
+   "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
+   "reason": "OIDC token for OpenSSF publish_results badge publishing; pre-existing; job-scoped; reviewed."
+  },
+  {
+   "path": ".github/workflows/wiki-sync.yml",
+   "rule": "job-write",
+   "scope": "sync",
+   "evidence": "contents: write",
+   "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
+   "reason": "Wiki sync job pushes docs/wiki/ to the repo wiki (documented in-file); job-scoped; reviewed."
+  },
+  {
+   "path": "requirements.txt",
+   "rule": "unhashed-requirement",
+   "scope": "dependencies",
+   "evidence": "cryptography==50.0.2",
+   "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
+   "reason": "Pre-existing requirement entry without exact version and sha256 hash; tracked for hash pinning in this issue."
+  },
+  {
+   "path": "requirements.txt",
+   "rule": "unhashed-requirement",
+   "scope": "dependencies",
+   "evidence": "pillow==13.0.0",
+   "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
+   "reason": "Pre-existing requirement entry without exact version and sha256 hash; tracked for hash pinning in this issue."
+  }
+ ]
+}
