@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.4.25] - 2026-10-30
+
+### Other changes
+
+- Add regression guard to existing OpenSSF Scorecard workflow (#74) (a6ecef0)
+
 ## [0.4.24] - 2026-10-29
 
 ### Other changes
