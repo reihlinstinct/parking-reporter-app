@@ -78,7 +78,8 @@ class LedgerKeyStore(context: Context) {
             syncDirectory()
         }
         private fun syncDirectory() {
-            val directory = Os.open(app.noBackupFilesDir.path, OsConstants.O_RDONLY or OsConstants.O_DIRECTORY, 0)
+            check(app.noBackupFilesDir.isDirectory) { "Ledger custody directory unavailable" }
+            val directory = Os.open(app.noBackupFilesDir.path, OsConstants.O_RDONLY, 0)
             try { Os.fsync(directory) } finally { Os.close(directory) }
         }
         companion object { private val processLock = Any() }
