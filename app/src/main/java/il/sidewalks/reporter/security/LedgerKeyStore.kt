@@ -50,10 +50,12 @@ class LedgerKeyStore(context: Context) {
                 file.channel.lock().use { block() }
             }
         }
-        override fun hasHistory(): Boolean = pending.exists() ||
-            File(committed.path + ".bak").exists() ||
-            app.databaseList().any { it.startsWith("report-ledger") } ||
-            app.noBackupFilesDir.listFiles()?.any { it.name.startsWith("report-ledger-migration") } == true
+        override fun hasHistory(): Boolean {
+            val files = app.noBackupFilesDir.listFiles() ?: error("Ledger history unavailable")
+            return pending.exists() || File(committed.path + ".bak").exists() ||
+                app.databaseList().any { it.startsWith("report-ledger") } ||
+                files.any { it.name.startsWith("report-ledger-migration") }
+        }
         override fun readCommitted(): ByteArray? {
             if (!committed.exists()) return null
             // Interrupted files are not silently promoted or used as authority to reset.

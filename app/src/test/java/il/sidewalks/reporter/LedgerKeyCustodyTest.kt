@@ -12,7 +12,7 @@ class LedgerKeyCustodyTest {
         var bytes: ByteArray? = null; var history = false; var failure: String? = null
         var writes = 0
         override fun <T> exclusive(block: () -> T): T = synchronized(this) { block() }
-        override fun hasHistory() = history
+        override fun hasHistory(): Boolean { check(failure != "history-inspection"); return history }
         override fun readCommitted(): ByteArray? = bytes?.copyOf()?.also {
             if (failure == "readback") it[5] = (it[5].toInt() xor 1).toByte()
         }
@@ -42,6 +42,11 @@ class LedgerKeyCustodyTest {
             val s = Store(); val k = Keys().apply { authenticated = invalid; this.invalid = invalid }
             rejects { LedgerKeyCustody(s, k).loadOrCreateEmpty() }; assertEquals(0, s.writes)
         }
+    }
+    @Test fun unavailableHistoryInspectionNeverCreatesOrWrites() {
+        val s = Store().apply { failure = "history-inspection" }; val k = Keys()
+        rejects { LedgerKeyCustody(s, k).loadOrCreateEmpty() }
+        assertEquals(0, k.creates); assertEquals(0, s.writes)
     }
     @Test fun anyExistingDatabaseOrMigrationHistoryRefusesCreation() {
         val s = Store().apply { history = true }; val k = Keys()
