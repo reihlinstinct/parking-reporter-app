@@ -49,7 +49,9 @@ class LedgerKeyCustodyTest {
     }
     @Test fun missingAliasAndCorruptWrapperNeverReplace() {
         val s = Store(); val k = Keys(); LedgerKeyCustody(s, k).loadOrCreateEmpty()
+        val original = k.key
         k.key = null; rejects { LedgerKeyCustody(s, k).loadOrCreateEmpty() }; assertEquals(1, k.creates)
+        k.key = original
         s.bytes = ByteArray(61); rejects { LedgerKeyCustody(s, k).loadOrCreateEmpty() }; assertEquals(1, s.writes)
     }
     @Test fun allDurabilityFailuresStopAndInterruptedHistoryNeverResets() {
