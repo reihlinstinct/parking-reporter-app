@@ -5,6 +5,8 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.AtomicFile
+import android.system.Os
+import android.system.OsConstants
 import java.io.File
 import java.security.KeyStore
 import javax.crypto.KeyGenerator
@@ -26,7 +28,17 @@ class LedgerKeyStore(context: Context) {
         // AtomicFile.openRead also recovers a committed backup after an interrupted write.
         if (wrapped.baseFile.exists() || File(wrapped.baseFile.path + ".bak").exists()) {
             check(existing != null) { "Ledger wrapping key unavailable" }
-            val bytes = wrapped.openRead().use { it.readBytes() }
+            val bytes = wrapped.openRead().use { input ->
+                val value = ByteArray(61)
+                var offset = 0
+                while (offset < value.size) {
+                    val count = input.read(value, offset, value.size - offset)
+                    check(count > 0) { "Invalid ledger envelope" }
+                    offset += count
+                }
+                check(input.read() == -1) { "Invalid ledger envelope" }
+                value
+            }
             return try { LedgerEnvelope.unwrap(bytes, existing) } finally { bytes.fill(0) }
         }
         check(firstInitialization) { "Ledger key unavailable" }
@@ -46,6 +58,8 @@ class LedgerKeyStore(context: Context) {
                 try {
                     stream.write(envelope)
                     wrapped.finishWrite(stream)
+                    val directory = Os.open(app.noBackupFilesDir.path, OsConstants.O_RDONLY or OsConstants.O_DIRECTORY, 0)
+                    try { Os.fsync(directory) } finally { Os.close(directory) }
                 } catch (failure: Exception) {
                     wrapped.failWrite(stream)
                     throw failure
