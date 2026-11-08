@@ -37,7 +37,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m pip install --quiet --require-hashes \
-            -r scripts/security/city-checks-requirements.txt
+            -r city-checks-requirements.txt
       - name: Run read-only checks
         env:
           PARKING_106_SUBSCRIPTION_KEY: ${{ secrets.CITY_106_SUBSCRIPTION_KEY }}
