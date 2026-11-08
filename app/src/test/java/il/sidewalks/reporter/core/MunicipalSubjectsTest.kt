@@ -15,8 +15,8 @@ import org.junit.Test
 class MunicipalSubjectsTest {
 
     private fun loadCatalog(): MunicipalSubjects {
-        val stream = javaClass.classLoader!!.getResourceAsStream(MunicipalSubjects.ASSET_PATH)
-            ?: fail("Catalog asset not found on test classpath: ${MunicipalSubjects.ASSET_PATH}")
+        val stream = javaClass.classLoader?.getResourceAsStream(MunicipalSubjects.ASSET_PATH)
+        checkNotNull(stream) { "Catalog asset not found on test classpath: ${MunicipalSubjects.ASSET_PATH}" }
         return stream.use { MunicipalSubjects.load(it) }
     }
 
