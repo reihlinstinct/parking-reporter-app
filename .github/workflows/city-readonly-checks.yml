@@ -23,16 +23,27 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - run: python3 --version | grep -q '^Python 3\.12\.'
-      - name: Install the read-only catalog client (pinned commit)
+      - name: Fetch the pinned read-only catalog client
         run: |
           set -euo pipefail
-          python3 -m pip install --quiet \
-            'git+https://github.com/reihlinstinct/parking-report-helper.git@51dd5c02916b1ebbe62fdd2390132f9f58a39eb8'
+          umask 077
+          curl -fsSL -o "$RUNNER_TEMP/helper.tar.gz" \
+            'https://github.com/reihlinstinct/parking-report-helper/archive/51dd5c02916b1ebbe62fdd2390132f9f58a39eb8.tar.gz'
+          echo '99d95dabe5714c87f5de31aff47ccac65f4e7a24b01eebe5e19584fd7915f798  '"$RUNNER_TEMP/helper.tar.gz" | sha256sum -c -
+          mkdir -p city-checks-helper
+          tar -xzf "$RUNNER_TEMP/helper.tar.gz" -C city-checks-helper --strip-components=1
+          rm "$RUNNER_TEMP/helper.tar.gz"
+      - name: Install hashed runtime dependencies
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet --require-hashes \
+            -r scripts/security/city-checks-requirements.txt
       - name: Run read-only checks
         env:
           PARKING_106_SUBSCRIPTION_KEY: ${{ secrets.CITY_106_SUBSCRIPTION_KEY }}
           PARKING_106_USERNAME: ${{ secrets.CITY_106_USERNAME }}
           PARKING_106_PASSWORD: ${{ secrets.CITY_106_PASSWORD }}
+          PYTHONPATH: city-checks-helper/src
         shell: bash
         run: |
           set -euo pipefail
