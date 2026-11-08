@@ -139,9 +139,7 @@ jobs:
             adb shell rm /sdcard/test-run.mp4 || true
             test "$(cat app/build/reports/androidTests/instrumentation.rc)" = "0"
             python3 scripts/test_summary.py --title 'Instrumented tests (emulator, API 30)' --instrumentation app/build/reports/androidTests/instrumentation.txt --check
-            for f in $(adb shell run-as il.sidewalks.reporter ls files/ | tr -d '\r' | grep '\.png$'); do
-              adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/androidTests/screenshots/$f" || true
-            done
+            for f in $(adb shell run-as il.sidewalks.reporter ls files/ | tr -d '\r' | grep '\.png$'); do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/androidTests/screenshots/$f" || true; done
             adb shell run-as il.sidewalks.reporter cat files/m0-synthetic.png > app/build/reports/androidTests/screenshots/m0-synthetic.png
             test -s app/build/reports/androidTests/screenshots/m0-synthetic.png
             adb shell run-as il.sidewalks.reporter cat files/m1-review-synthetic.png > app/build/reports/androidTests/screenshots/m1-review-synthetic.png
