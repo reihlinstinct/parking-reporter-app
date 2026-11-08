@@ -221,8 +221,8 @@ class M1ShellTest {
         compose.setContent { MaterialTheme { SettingsScreen(null, { s, done -> saved = s; done() }, {}) } }
         compose.onNodeWithText("אמת זהות ושמור מוצפן").assertIsNotEnabled()
         compose.onNodeWithText("שם פרטי").performTextInput("בדיקה")
-        compose.onNodeWithText("אמת זהות ושמור מוצפן").assertIsEnabled().performClick()
+        compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().assertIsEnabled().performClick()
         compose.runOnIdle { assertEquals("בדיקה", saved?.firstName) }
-        compose.onNodeWithText("אמת זהות ושמור מוצפן").assertIsNotEnabled()
+        compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().assertIsNotEnabled()
     }
 }
