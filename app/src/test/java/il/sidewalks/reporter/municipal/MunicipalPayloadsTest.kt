@@ -174,4 +174,13 @@ class MunicipalPayloadsTest {
         assertEquals("[1, true, null, \"x\"]", PythonJson.dumps(listOf(1, true, null, "x")))
         assertEquals("{\"a\": {\"b\": 2}}", PythonJson.dumps(linkedMapOf("a" to linkedMapOf("b" to 2))))
     }
+
+    @Test
+    fun approvedDescriptionIsValidatedTrimmedButSentVerbatim() {
+        // Helper parity (api_cli.py "Preserve exact reviewed whitespace too"):
+        // surrounding whitespace passes validation yet stays in the payload.
+        val padded = reportFields.copy(description = "  דיווח מאושר.  ")
+        val report = MunicipalPayloads.buildReport(padded)
+        assertEquals("  דיווח מאושר.  ", report["CaseDescription"])
+    }
 }

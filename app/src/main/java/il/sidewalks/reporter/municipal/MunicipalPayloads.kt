@@ -140,7 +140,11 @@ object MunicipalPayloads {
 
     /** The CreateCase report payload, fields in the helper's exact order. */
     fun buildReport(fields: ReportFields): LinkedHashMap<String, Any?> {
-        val description = checkText(fields.description, "Report text")
+        // Parity with the helper's api_cli.py: the approved description is
+        // VALIDATED trimmed (check_text strips) but SENT verbatim - the
+        // helper preserves the exact reviewed whitespace on purpose.
+        checkText(fields.description, "Report text")
+        val description = fields.description
         if (!Regex("[0-9]+").matches(fields.subjectCode)) {
             throw MunicipalInputException("Municipal subject code must be numeric.")
         }
