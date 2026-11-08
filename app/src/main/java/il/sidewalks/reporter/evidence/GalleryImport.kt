@@ -24,4 +24,11 @@ object GalleryImport {
             temp.delete()
         }
     }
+
+    /**
+     * Deletes a copied original that never reached the ledger (for example a
+     * refused duplicate reserve), so no EXIF-carrying file stays orphaned in
+     * originals/. Idempotent: true when the file is gone afterwards.
+     */
+    fun deleteOrphaned(file: File): Boolean = file.delete() || !file.exists()
 }

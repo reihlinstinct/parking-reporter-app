@@ -56,6 +56,7 @@ fun AppShell(
     suspend fun reload() { records = withContext(Dispatchers.IO) { database.reports().all() } }
     LaunchedEffect(Unit) { reload() }
     var status by remember { mutableStateOf("") }
+    var pendingImport by remember { mutableStateOf<File?>(null) }
     fun saveDraft(value: ReviewDraft) {
         if (saving) return
         saving = true
@@ -80,19 +81,30 @@ fun AppShell(
             catch (_: Exception) { status = "לא ניתן לקרוא מידע מוצפן" }
         }
     }
-    fun startReview(file: File) {
+    fun startReview(file: File, usePhotoLocation: Boolean = true) {
         scope.launch {
             try {
-                val evidence = withContext(Dispatchers.IO) { EvidenceReader().read(file) }
+                var evidence = withContext(Dispatchers.IO) { EvidenceReader().read(file) }
+                if (!usePhotoLocation && (evidence.latitude != null || evidence.longitude != null)) {
+                    evidence = evidence.copy(latitude = null, longitude = null)
+                }
                 val missing = buildSet {
                     if (evidence.latitude == null) add("GPS חסר")
                     if (evidence.capturedAtIso == null) add("זמן חסר") else add("אזור זמן דורש אישור")
                     add("כתובת ומספר בית דורשים אישור")
                 }
-                withContext(Dispatchers.IO) {
-                    database.reports().reserve(ReportRecord(evidence.stableId, evidence.originalSha256,
-                        "originals/${file.name}", 0,
-                        il.sidewalks.reporter.ledger.DraftCodec.encode(ReviewDraft(evidence, "", "", "", "", missing)), null))
+                try {
+                    withContext(Dispatchers.IO) {
+                        database.reports().reserve(ReportRecord(evidence.stableId, evidence.originalSha256,
+                            "originals/${file.name}", 0,
+                            il.sidewalks.reporter.ledger.DraftCodec.encode(ReviewDraft(evidence, "", "", "", "", missing)), null))
+                    }
+                } catch (e: Exception) {
+                    // The reserve failed (for example a duplicate original), so
+                    // the copied file has no ledger row: delete it rather than
+                    // leave an EXIF-carrying original orphaned on disk.
+                    withContext(Dispatchers.IO) { GalleryImport.deleteOrphaned(file) }
+                    throw e
                 }
                 original = file; revision = 0
                 draft = ReviewDraft(evidence, "", "", "", "", missing)
@@ -114,13 +126,19 @@ fun AppShell(
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) {
             scope.launch {
+                var copied: File? = null
                 try {
                     val file = withContext(Dispatchers.IO) {
                         GalleryImport.copyToOriginals({ context.contentResolver.openInputStream(uri) },
                             File(context.noBackupFilesDir, "originals"))
                     }
-                    startReview(file)
-                } catch (_: Exception) { status = "התמונה לא נקראה, לא בוצעה שליחה" }
+                    copied = file
+                    val hasGps = withContext(Dispatchers.IO) { EvidenceReader().read(file).latitude != null }
+                    if (hasGps) pendingImport = file else startReview(file)
+                } catch (_: Exception) {
+                    copied?.let { orphan -> withContext(Dispatchers.IO) { GalleryImport.deleteOrphaned(orphan) } }
+                    status = "התמונה לא נקראה, לא בוצעה שליחה"
+                }
             }
         }
     }
@@ -241,6 +259,23 @@ fun AppShell(
         }
     }
     }
+    }
+    pendingImport?.let { file ->
+        AlertDialog(
+            onDismissRequest = {
+                pendingImport = null
+                scope.launch(Dispatchers.IO) { GalleryImport.deleteOrphaned(file) }
+                status = "הייבוא בוטל, לא בוצעה שליחה"
+            },
+            title = { Text("נמצא מיקום בתמונה") },
+            text = { Text("להשתמש במיקום מהתמונה לדיווח? ניתן גם בלי, ולסמן את המיקום ידנית.") },
+            confirmButton = {
+                TextButton(onClick = { pendingImport = null; startReview(file, usePhotoLocation = true) }) { Text("השתמש במיקום") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingImport = null; startReview(file, usePhotoLocation = false) }) { Text("ללא מיקום") }
+            },
+        )
     }
     }
 }

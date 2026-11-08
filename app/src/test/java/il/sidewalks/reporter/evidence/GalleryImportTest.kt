@@ -27,4 +27,12 @@ class GalleryImportTest {
         assertNotEquals(a.name, b.name)
         assertTrue(a.name.endsWith(".jpg"))
     }
+    @Test fun deleteOrphanedRemovesUnreservedCopy() {
+        val dir = java.nio.file.Files.createTempDirectory("gallery-import").toFile()
+        val out = GalleryImport.copyToOriginals({ "orphan".byteInputStream() }, dir)
+        assertTrue(out.exists())
+        assertTrue(GalleryImport.deleteOrphaned(out))
+        assertFalse(out.exists())
+        assertTrue(GalleryImport.deleteOrphaned(out))
+    }
 }
