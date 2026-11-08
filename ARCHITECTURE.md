@@ -2,6 +2,10 @@
 
 Development preview. This document gives the high-level system context and data flow. Details and release gates live in [docs/DESIGN.md](docs/DESIGN.md); the encrypted intake proposal lives in [docs/ENCRYPTED_INTAKE_PROTOCOL.md](docs/ENCRYPTED_INTAKE_PROTOCOL.md). Diagrams use synthetic entities only: no real plates, locations or living-person data.
 
+## Platform roadmap
+
+Android first, then port everything to iOS (owner decision 2026-11-08). No iOS work now. Design choices should stay portable: shared feature names/phrases per locale, a shared deep-link contract (open capture/report screen, optionally with a photo attached), and report-flow logic kept separable from the Compose UI so a future iOS app re-implements rather than redesigns. Voice/entry-point parity planning lives in issue #149.
+
 ## System context
 
 ```mermaid
