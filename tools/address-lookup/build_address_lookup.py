@@ -12,8 +12,7 @@ shape the helper pipeline and the app's StreetDirectory load.
 
 Usage:
   python3 build_address_lookup.py --out addresses.json
-Deps: python3 + openpyxl (pip install openpyxl). Network: Overpass + the
-municipal open-data portal.
+Deps: python3 only. Network: Overpass + data.gov.il.
 """
 import argparse
 import json
@@ -33,11 +32,12 @@ area(3601381350)->.jerusalem;
 );
 out center tags;
 """
-STREETS_XLSX_URL = (
-    "https://jerusalem.datacity.org.il/dataset/"
-    "8be07be2-c31c-4a53-bd0e-28cb1ff84333/resource/"
-    "902ecb1b-ae98-455a-b755-ba5b4285d59c/download/-.xlsx"
-)
+# National street registry (רשות האוכלוסין וההגירה) on data.gov.il:
+# locality 3000 = Jerusalem; סמל_רחוב is the municipal street code the
+# 106 API uses (verified: אגריפס -> 613, matching the pipeline lookup).
+DATASTORE_URL = "https://data.gov.il/api/3/action/datastore_search"
+STREETS_RESOURCE_ID = "9ad3862c-8391-4b2f-84a4-2d4c68625f4b"
+JERUSALEM_LOCALITY = "3000"
 
 HEBREW_FINALS = str.maketrans({"ך": "כ", "ם": "מ", "ן": "נ", "ף": "פ", "ץ": "צ"})
 
@@ -65,34 +65,32 @@ def fetch(url, data=None, retries=3):
 
 
 def load_streets():
-    """Street name -> municipal street code, from the ODbL municipal layer."""
-    import io
-    import openpyxl
-    raw = fetch(STREETS_XLSX_URL)
-    book = openpyxl.load_workbook(io.BytesIO(raw), read_only=True)
-    sheet = book.active
-    rows = sheet.iter_rows(values_only=True)
-    header = [str(c).strip() if c else "" for c in next(rows)]
-    col = {name: i for i, name in enumerate(header)}
-    needed = ("STREET", "STREETCODE", "CITYNAME", "CITYCODE")
-    missing = [n for n in ("STREET", "STREETCODE") if n not in col]
-    if missing:
-        raise SystemExit(f"municipal layer missing columns {missing}: header={header}")
+    """Street name -> municipal street code, from the national registry."""
     streets = {}
-    for row in rows:
-        name = row[col["STREET"]]
-        code = row[col["STREETCODE"]]
-        if not name or code is None:
-            continue
-        code = str(code).strip()
-        entry = streets.setdefault(code, {
-            "StreetName": str(name).strip(),
-            "StreetCode": code,
+    offset = 0
+    while True:
+        query = urllib.parse.urlencode({
+            "resource_id": STREETS_RESOURCE_ID,
+            "filters": json.dumps({"סמל_ישוב": JERUSALEM_LOCALITY}),
+            "limit": 5000,
+            "offset": offset,
         })
-        if "CITYNAME" in col and row[col["CITYNAME"]]:
-            entry["CityName"] = str(row[col["CITYNAME"]]).strip()
-        if "CITYCODE" in col and row[col["CITYCODE"]] is not None:
-            entry["CityCode"] = str(row[col["CITYCODE"]]).strip()
+        data = json.loads(fetch(f"{DATASTORE_URL}?{query}"))
+        records = data["result"]["records"]
+        for row in records:
+            name = str(row.get("שם_רחוב") or "").strip()
+            code = row.get("סמל_רחוב")
+            if not name or code is None:
+                continue
+            streets[str(code)] = {
+                "StreetName": name,
+                "StreetCode": str(code),
+                "CityName": str(row.get("שם_ישוב") or "").strip(),
+                "CityCode": str(row.get("סמל_ישוב") or "").strip(),
+            }
+        offset += len(records)
+        if offset >= data["result"]["total"] or not records:
+            break
     # One street name must map to ONE code, like the pipeline's lookup.
     by_name = {}
     for code, entry in streets.items():

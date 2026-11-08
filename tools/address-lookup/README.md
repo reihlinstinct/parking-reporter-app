@@ -8,10 +8,14 @@ and which is therefore kept out of this repository.
 
 ## Sources and licences
 
-1. **Street codes and names** - Jerusalem municipality open-data portal,
-   dataset "צירי דרכים בירושלים"
-   (<https://jerusalem.datacity.org.il/dataset/8be07be2-c31c-4a53-bd0e-28cb1ff84333>),
-   licensed **Open Data Commons Open Database License (ODbL)**.
+1. **Street codes and names** - the national street registry "רשימת
+   רחובות ישראל" (רשות האוכלוסין וההגירה) on **data.gov.il**
+   (resource `9ad3862c-8391-4b2f-84a4-2d4c68625f4b`, locality 3000 =
+   Jerusalem). Its סמל_רחוב is the municipal street code the 106 API
+   uses (spot-checked: אגריפס -> 613). Published as Israeli open
+   government data; the dataset page does not state an explicit licence
+   field - confirm before republication (data.gov.il default terms are
+   CC-BY-style attribution).
 2. **Address points (house numbers)** - **© OpenStreetMap contributors**,
    <https://www.openstreetmap.org/copyright>, licensed **ODbL**, fetched
    live from the Overpass API inside the Jerusalem municipality boundary
@@ -25,7 +29,6 @@ travels with the generator.
 ## Reproduce
 
 ```bash
-pip install openpyxl
 python3 tools/address-lookup/build_address_lookup.py --out addresses.json
 ```
 
