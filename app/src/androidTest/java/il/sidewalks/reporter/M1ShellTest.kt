@@ -83,6 +83,8 @@ class M1ShellTest {
         compose.onNodeWithText("בדיקה").assertDoesNotExist()
         compose.onNodeWithText("synthetic-subscription-key").assertDoesNotExist()
         compose.onNodeWithText("synthetic-api-pass").assertDoesNotExist()
+        // The unmasked username field is checked too; masked fields expose only bullets.
+        compose.onNodeWithText("synthetic-api-user").assertDoesNotExist()
     }
     @Test fun duplicateAndStaleRevisionBlockedAcrossReopen() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -212,5 +214,15 @@ class M1ShellTest {
         file.appendText("changed")
         assertNotEquals(a.originalSha256, reader.read(file, "synthetic").originalSha256)
         file.delete()
+    }
+
+    @Test fun settingsSaveDisabledWhenAllBlankAndAfterSave() {
+        var saved: ReporterSettings? = null
+        compose.setContent { MaterialTheme { SettingsScreen(null, { s, done -> saved = s; done() }, {}) } }
+        compose.onNodeWithText("אמת זהות ושמור מוצפן").assertIsNotEnabled()
+        compose.onNodeWithText("שם פרטי").performTextInput("בדיקה")
+        compose.onNodeWithText("אמת זהות ושמור מוצפן").assertIsEnabled().performClick()
+        compose.runOnIdle { assertEquals("בדיקה", saved?.firstName) }
+        compose.onNodeWithText("אמת זהות ושמור מוצפן").assertIsNotEnabled()
     }
 }

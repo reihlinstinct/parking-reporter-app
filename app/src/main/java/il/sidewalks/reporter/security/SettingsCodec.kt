@@ -29,7 +29,12 @@ object SettingsCodec {
     }
 
     fun decode(plaintext: ByteArray): ReporterSettings {
-        val json = JSONObject(String(plaintext, Charsets.UTF_8))
+        // org.json error messages embed the whole input; never leak stored values.
+        val json = try {
+            JSONObject(String(plaintext, Charsets.UTF_8))
+        } catch (failure: Exception) {
+            throw IllegalArgumentException("Stored settings are unreadable")
+        }
         return ReporterSettings(
             json.getString("firstName"), json.getString("lastName"), json.getString("phone"),
             json.getString("idNumber"), json.getString("email"),

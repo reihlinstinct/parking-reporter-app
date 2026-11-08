@@ -1,8 +1,12 @@
 package il.sidewalks.reporter.security
 
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.spec.GCMParameterSpec
 import org.junit.Test
 
 /** Plaintext-shape tests only; encryption itself is Keystore-instrumented. */
@@ -49,5 +53,34 @@ class SettingsCodecTest {
         assertFalse(rendered.contains("synthetic-key"))
         assertFalse(rendered.contains("synthetic-user"))
         assertFalse(rendered.contains("synthetic-pass"))
+    }
+
+    @Test
+    fun diskBytesAreCiphertextNotPlaintext() {
+        // Catches a mutant that writes the plaintext JSON to disk: every
+        // sentinel value must be absent from the framed bytes.
+        val key = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key) }
+        val settings = ReporterSettings(
+            "SentinelFirst", "SentinelLast", "0500000000", "000000000", "sentinel@example.com",
+            municipalSubscriptionKey = "SentinelKey", municipalUsername = "SentinelUser", municipalPassword = "SentinelPass",
+        )
+        val plaintext = SettingsCodec.encode(settings)
+        val disk = SecureSettings.encodeForDisk(plaintext, cipher)
+        val diskAsText = String(disk, Charsets.ISO_8859_1)
+        for (sentinel in listOf("SentinelFirst", "SentinelLast", "SentinelKey", "SentinelUser", "SentinelPass", "sentinel@example.com", "000000000")) {
+            assertFalse("plaintext leaked to disk bytes: $sentinel", diskAsText.contains(sentinel))
+        }
+        val roundTrip = SecureSettings.decodeForDisk(disk) { iv ->
+            Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv)) }
+        }
+        assertEquals("SentinelKey", SettingsCodec.decode(roundTrip).municipalSubscriptionKey)
+    }
+
+    @Test
+    fun decodeFailureCarriesNoValues() {
+        val bytes = "SentinelKey-not-json".toByteArray(Charsets.UTF_8)
+        val failure = assertThrows(IllegalArgumentException::class.java) { SettingsCodec.decode(bytes) }
+        assertFalse(failure.message.orEmpty().contains("SentinelKey"))
     }
 }

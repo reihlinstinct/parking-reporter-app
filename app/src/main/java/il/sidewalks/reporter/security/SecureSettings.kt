@@ -38,26 +38,42 @@ class SecureSettings(context: Context) {
         val plaintext = SettingsCodec.encode(settings)
         try {
             val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key()) }
-            val encrypted = cipher.doFinal(plaintext)
+            val diskBytes = encodeForDisk(plaintext, cipher)
             val stream = file.startWrite()
             try {
-                stream.write(cipher.iv.size); stream.write(cipher.iv); stream.write(encrypted)
+                stream.write(diskBytes)
                 file.finishWrite(stream)
             } catch (failure: Exception) { file.failWrite(stream); throw failure }
         } finally { plaintext.fill(0) }
     }
     fun read(): ReporterSettings? {
         if (!file.baseFile.exists()) return null
-        val data = file.readFully()
-        val size = data.firstOrNull()?.toInt()?.and(255) ?: error("Invalid encrypted settings")
-        require(size == 12 && data.size > size + 17)
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
-            init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, data.copyOfRange(1, size + 1)))
+        val plaintext = decodeForDisk(file.readFully()) { iv ->
+            Cipher.getInstance("AES/GCM/NoPadding").apply {
+                init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, iv))
+            }
         }
-        val plaintext = cipher.doFinal(data.copyOfRange(size + 1, data.size))
         try {
             return SettingsCodec.decode(plaintext)
         } finally { plaintext.fill(0) }
     }
     // No plaintext fallback, no automatic key reset on invalidation.
+
+    companion object {
+        /** Framed as iv-length byte + IV + AES-GCM ciphertext. Unit-tested with a non-Keystore key. */
+        internal fun encodeForDisk(plaintext: ByteArray, cipher: Cipher): ByteArray {
+            val encrypted = cipher.doFinal(plaintext)
+            val out = ByteArray(1 + cipher.iv.size + encrypted.size)
+            out[0] = cipher.iv.size.toByte()
+            System.arraycopy(cipher.iv, 0, out, 1, cipher.iv.size)
+            System.arraycopy(encrypted, 0, out, 1 + cipher.iv.size, encrypted.size)
+            return out
+        }
+        internal fun decodeForDisk(data: ByteArray, cipherFor: (ByteArray) -> Cipher): ByteArray {
+            val size = data.firstOrNull()?.toInt()?.and(255) ?: throw IllegalArgumentException("Invalid encrypted settings")
+            require(size == 12 && data.size > size + 17) { "Invalid encrypted settings" }
+            val cipher = cipherFor(data.copyOfRange(1, size + 1))
+            return cipher.doFinal(data.copyOfRange(size + 1, data.size))
+        }
+    }
 }

@@ -6,6 +6,9 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+### Added
+- Settings screen accepts manually entered municipal API credentials, stored only in the existing Keystore AES-GCM encrypted settings envelope (masked password keyboard fields, no autocorrect, blank fields keep the stored values, save disabled when every field is blank and after a save, disk bytes verified ciphertext in tests). Live submission remains disabled.
+
 ## [0.9.6] - 2026-11-08
 
 ### Other changes

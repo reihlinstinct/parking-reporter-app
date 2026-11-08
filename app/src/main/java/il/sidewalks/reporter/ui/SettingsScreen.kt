@@ -2,12 +2,14 @@ package il.sidewalks.reporter.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import il.sidewalks.reporter.BuildConfig
@@ -29,20 +31,26 @@ fun SettingsScreen(initial: ReporterSettings?, save: (ReporterSettings, () -> Un
     Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Google ML Kit: התמונות והלוחיות נשארות במכשיר; נתוני שימוש וביצועים נשלחים ל-Google. ה-SDK עשוי לפנות לשרתיה לעדכונים.")
         Text("הגדרות פרטיות", style = MaterialTheme.typography.titleLarge)
-        Text("כל מדווח מזין את פרטיו שלו. הפרטים מוצפנים במכשיר, ללא גיבוי. אין שליחה או בדיקת התחברות ממסך זה. פרטי הגישה העירוניים אינם מוצגים למשתמש.")
+        Text("כל מדווח מזין את פרטיו שלו. הפרטים מוצפנים במכשיר, ללא גיבוי. אין שליחה או בדיקת התחברות ממסך זה. פרטי הגישה העירוניים מוזנים ידנית ונשמרים מוצפנים במכשיר בלבד.")
         OutlinedTextField(firstName, { firstName = it; saved = false }, label = { Text("שם פרטי") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(lastName, { lastName = it; saved = false }, label = { Text("שם משפחה") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(id, { id = it; saved = false }, label = { Text("מספר זהות") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(phone, { phone = it; saved = false }, label = { Text("טלפון") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(email, { email = it; saved = false }, label = { Text("אימייל") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(id, { id = it; saved = false }, label = { Text("מספר זהות") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(phone, { phone = it; saved = false }, label = { Text("טלפון") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(email, { email = it; saved = false }, label = { Text("אימייל") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
         HorizontalDivider()
         Text("גישת API עירונית (הזנה ידנית)", style = MaterialTheme.typography.titleMedium)
         Text("המפתחות מוזנים ידנית ונשמרים מוצפנים במכשיר בלבד, ללא גיבוי. הם אינם חלק מהאפליקציה ואינם נשלחים למקום אחר. שליחה חיה אינה זמינה ותופעל רק באישור נפרד.", style = MaterialTheme.typography.bodySmall)
-        OutlinedTextField(subscriptionKey, { subscriptionKey = it; saved = false }, label = { Text("מפתח מנוי") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(apiUsername, { apiUsername = it; saved = false }, label = { Text("שם משתמש API") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(apiPassword, { apiPassword = it; saved = false }, label = { Text("סיסמת API") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-        Button(onClick = { save(ReporterSettings(firstName, lastName, phone, id, email,
-            municipalSubscriptionKey = subscriptionKey, municipalUsername = apiUsername, municipalPassword = apiPassword)) {
+        OutlinedTextField(subscriptionKey, { subscriptionKey = it; saved = false }, label = { Text("מפתח מנוי") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(apiUsername, { apiUsername = it; saved = false }, label = { Text("שם משתמש API") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(apiPassword, { apiPassword = it; saved = false }, label = { Text("סיסמת API") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
+        // Blank credential fields keep the stored values, and the button stays disabled
+        // when every field is blank or right after a save, so a second tap after the
+        // screen cleared itself cannot wipe the stored credentials. Values are trimmed.
+        val anyField = listOf(firstName, lastName, id, phone, email, subscriptionKey, apiUsername, apiPassword).any { it.isNotBlank() }
+        Button(enabled = !saved && anyField, onClick = { save(ReporterSettings(firstName.trim(), lastName.trim(), phone.trim(), id.trim(), email.trim(),
+            municipalSubscriptionKey = subscriptionKey.trim().ifBlank { initial?.municipalSubscriptionKey.orEmpty() },
+            municipalUsername = apiUsername.trim().ifBlank { initial?.municipalUsername.orEmpty() },
+            municipalPassword = apiPassword.trim().ifBlank { initial?.municipalPassword.orEmpty() })) {
             firstName = ""; lastName = ""; id = ""; phone = ""; email = ""
             subscriptionKey = ""; apiUsername = ""; apiPassword = ""; saved = true
         } }, modifier = Modifier.fillMaxWidth()) { Text("אמת זהות ושמור מוצפן") }
