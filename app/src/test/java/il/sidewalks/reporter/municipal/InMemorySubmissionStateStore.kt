@@ -5,11 +5,13 @@ import java.util.concurrent.atomic.AtomicBoolean
 /** Test-double store: memory-only, with a real single-flight claim. */
 class InMemorySubmissionStateStore : SubmissionStateStore {
     var stored: MutableMap<String, Any?>? = null
+    val writes = mutableListOf<String>()
     private val held = AtomicBoolean(false)
 
     override fun read(): MutableMap<String, Any?>? = stored?.let { LinkedHashMap(it) }
 
     override fun write(state: Map<String, Any?>) {
+        writes.add(state["status"] as? String ?: "?")
         stored = LinkedHashMap(state)
     }
 
