@@ -164,8 +164,10 @@ fun AppShell(
     // Deep link / Quick Settings tile / share-sheet entry (issue #149 phase 1).
     LaunchedEffect(entry.value) {
         when (val request = entry.value?.request) {
-            is EntryIntents.Request.SharedPhoto -> importShared(Uri.parse(request.uriString))
-            EntryIntents.Request.NewReport -> requestCamera { page = "camera" }
+            // An entry arriving over the settings screen drops the decrypted
+            // profile from memory before any navigation.
+            is EntryIntents.Request.SharedPhoto -> { profile = null; importShared(Uri.parse(request.uriString)) }
+            EntryIntents.Request.NewReport -> { profile = null; requestCamera { page = "camera" } }
             null -> {}
         }
     }

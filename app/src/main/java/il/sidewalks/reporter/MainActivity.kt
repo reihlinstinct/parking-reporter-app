@@ -65,12 +65,16 @@ class MainActivity : ComponentActivity() {
     }
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
         handleEntryIntent(intent)
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        handleEntryIntent(intent)
+        // Only the first creation consumes the entry intent: after a rotation
+        // the request has already routed (its draft is reserved in the ledger)
+        // and re-firing it would steal the screen mid-flow.
+        if (savedInstanceState == null) handleEntryIntent(intent)
         setContent { MaterialTheme {
             AppShell(
                 authenticate = ::authenticate,
