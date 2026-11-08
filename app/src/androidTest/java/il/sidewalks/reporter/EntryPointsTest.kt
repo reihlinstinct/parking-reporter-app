@@ -2,7 +2,6 @@ package il.sidewalks.reporter
 
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
@@ -54,11 +53,7 @@ class EntryPointsTest {
     @Test fun sharedPhotoStartsReviewPrefilled() {
         cleanLedgerAndOriginals()
         try {
-            val context = InstrumentationRegistry.getInstrumentation().targetContext
-            val src = File(context.cacheDir, "shared-entry-synthetic.jpg")
-            val bmp = Bitmap.createBitmap(48, 32, Bitmap.Config.ARGB_8888)
-            bmp.setPixel(1, 1, android.graphics.Color.BLUE)
-            src.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+            // TestShareProvider (test APK, exported) generates and serves the JPEG.
             val uri = Uri.parse("content://il.sidewalks.reporter.testshare/shared-entry-synthetic.jpg")
             val signal = mutableStateOf(EntrySignal(1, EntryIntents.Request.SharedPhoto(uri.toString())))
             compose.setContent {
@@ -71,7 +66,6 @@ class EntryPointsTest {
                 compose.onAllNodesWithText("בדיקת הדיווח").fetchSemanticsNodes().isNotEmpty()
             }
             compose.onNodeWithText("בדיקת הדיווח").assertExists()
-            src.delete()
         } finally {
             cleanLedgerAndOriginals()
         }

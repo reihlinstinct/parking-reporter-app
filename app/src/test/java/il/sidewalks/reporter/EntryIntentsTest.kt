@@ -68,6 +68,17 @@ class EntryIntentsTest {
     }
 
     @Test
+    fun shareAndViewActionsAreNotInterchangeable() {
+        // MIME must start with "image/", not just "image".
+        assertNull(EntryIntents.parse("android.intent.action.SEND", null, "imagex/jpeg", "content://media/1"))
+        // A link is only honored on VIEW.
+        assertNull(EntryIntents.parse("android.intent.action.SEND", "il.sidewalks.reporter://report/new", null, null))
+        // A stream is only honored on SEND.
+        assertNull(EntryIntents.parse("android.intent.action.VIEW", null, "image/jpeg", "content://media/1"))
+        assertNull(EntryIntents.parse("android.intent.action.MAIN", null, "image/jpeg", "content://media/1"))
+    }
+
+    @Test
     fun unknownIntentsIgnored() {
         assertNull(EntryIntents.parse("android.intent.action.VIEW", "il.sidewalks.reporter://other/new", null, null))
         assertNull(EntryIntents.parse("android.intent.action.MAIN", null, null, null))
