@@ -2,6 +2,7 @@ package il.sidewalks.reporter.ui
 
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -125,7 +126,10 @@ fun AppShell(
                 original = file; revision = 0
                 draft = ReviewDraft(evidence, "", "", "", "", missing)
                 reload(); page = "review"
-            } catch (_: Exception) { status = "הראיה כפולה או שלא נשמרה, לא בוצעה שליחה"; page = "home" }
+            } catch (e: Exception) {
+                Log.w("AppShell", "review start failed", e)
+                status = "הראיה כפולה או שלא נשמרה, לא בוצעה שליחה"; page = "home"
+            }
         }
     }
     fun openRecord(record: ReportRecord) {
@@ -152,7 +156,8 @@ fun AppShell(
                 copied = file
                 val hasGps = withContext(Dispatchers.IO) { EvidenceReader().read(file).latitude != null }
                 if (hasGps) pendingImport = file else startReview(file)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w("AppShell", "shared/gallery image import failed", e)
                 copied?.let { orphan -> withContext(Dispatchers.IO) { GalleryImport.deleteOrphaned(orphan) } }
                 status = "התמונה לא נקראה, לא בוצעה שליחה"
             }

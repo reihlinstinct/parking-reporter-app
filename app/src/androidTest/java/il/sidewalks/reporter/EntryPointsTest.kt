@@ -62,8 +62,15 @@ class EntryPointsTest {
                         readSettings = { null }, saveSettings = {}, entry = signal)
                 }
             }
-            compose.waitUntil(15_000) {
-                compose.onAllNodesWithText("בדיקת הדיווח").fetchSemanticsNodes().isNotEmpty()
+            try {
+                compose.waitUntil(15_000) {
+                    compose.onAllNodesWithText("בדיקת הדיווח").fetchSemanticsNodes().isNotEmpty()
+                }
+            } catch (e: ComposeTimeoutException) {
+                // Dump the visible tree so CI logcat shows which screen and
+                // status the import actually reached (catches are silent).
+                compose.onRoot().printToLog("EntryPointsTest")
+                throw e
             }
             compose.onNodeWithText("בדיקת הדיווח").assertExists()
         } finally {
