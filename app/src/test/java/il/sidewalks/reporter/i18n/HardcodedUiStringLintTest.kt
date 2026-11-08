@@ -71,7 +71,7 @@ class HardcodedUiStringLintTest {
         assertEquals(
             setOf(
                 "AppShell.kt", "ReviewScreen.kt", "SettingsScreen.kt", "CaptureScreen.kt",
-                "ReportsScreen.kt", "MainActivity.kt", "ReportCategory.kt", "HebrewPresentation.kt",
+                "ReportsScreen.kt", "ReportCategory.kt", "HebrewPresentation.kt",
             ),
             PENDING,
         )

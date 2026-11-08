@@ -35,6 +35,7 @@ import il.sidewalks.reporter.ledger.ReportDatabase
 import il.sidewalks.reporter.ledger.ReportRecord
 import il.sidewalks.reporter.municipal.FileSubmissionStateStore
 import il.sidewalks.reporter.municipal.OkHttpMunicipalClient
+import il.sidewalks.reporter.municipal.MunicipalInputException
 import il.sidewalks.reporter.municipal.StreetDirectory
 import il.sidewalks.reporter.municipal.SubmissionCoordinator
 import il.sidewalks.reporter.security.ReporterSettings
