@@ -224,6 +224,7 @@ class M1ShellTest {
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().assertIsEnabled().performClick()
         compose.runOnIdle { assertEquals("בדיקה", saved?.firstName) }
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().assertIsNotEnabled()
+    }
     @Test fun homeShowsTwoCaptureButtonsAndReportsNav() {
         compose.setContent { MaterialTheme {
             il.sidewalks.reporter.ui.AppShell(authenticate = { it() }, requestCamera = {}, readSettings = { null }, saveSettings = {})
