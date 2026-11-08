@@ -21,6 +21,9 @@ fun SettingsScreen(initial: ReporterSettings?, save: (ReporterSettings, () -> Un
     var id by remember { mutableStateOf(initial?.idNumber.orEmpty()) }
     var phone by remember { mutableStateOf(initial?.phone.orEmpty()) }
     var email by remember { mutableStateOf(initial?.email.orEmpty()) }
+    var subscriptionKey by remember { mutableStateOf(initial?.municipalSubscriptionKey.orEmpty()) }
+    var apiUsername by remember { mutableStateOf(initial?.municipalUsername.orEmpty()) }
+    var apiPassword by remember { mutableStateOf(initial?.municipalPassword.orEmpty()) }
     var saved by remember { mutableStateOf(false) }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -32,8 +35,16 @@ fun SettingsScreen(initial: ReporterSettings?, save: (ReporterSettings, () -> Un
         OutlinedTextField(id, { id = it; saved = false }, label = { Text("מספר זהות") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
         OutlinedTextField(phone, { phone = it; saved = false }, label = { Text("טלפון") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(email, { email = it; saved = false }, label = { Text("אימייל") }, modifier = Modifier.fillMaxWidth())
-        Button(onClick = { save(ReporterSettings(firstName, lastName, phone, id, email)) {
-            firstName = ""; lastName = ""; id = ""; phone = ""; email = ""; saved = true
+        HorizontalDivider()
+        Text("גישת API עירונית (הזנה ידנית)", style = MaterialTheme.typography.titleMedium)
+        Text("המפתחות מוזנים ידנית ונשמרים מוצפנים במכשיר בלבד, ללא גיבוי. הם אינם חלק מהאפליקציה ואינם נשלחים למקום אחר. שליחה חיה אינה זמינה ותופעל רק באישור נפרד.", style = MaterialTheme.typography.bodySmall)
+        OutlinedTextField(subscriptionKey, { subscriptionKey = it; saved = false }, label = { Text("מפתח מנוי") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(apiUsername, { apiUsername = it; saved = false }, label = { Text("שם משתמש API") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(apiPassword, { apiPassword = it; saved = false }, label = { Text("סיסמת API") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+        Button(onClick = { save(ReporterSettings(firstName, lastName, phone, id, email,
+            municipalSubscriptionKey = subscriptionKey, municipalUsername = apiUsername, municipalPassword = apiPassword)) {
+            firstName = ""; lastName = ""; id = ""; phone = ""; email = ""
+            subscriptionKey = ""; apiUsername = ""; apiPassword = ""; saved = true
         } }, modifier = Modifier.fillMaxWidth()) { Text("אמת זהות ושמור מוצפן") }
         if (saved) Text("נשמר מוצפן, הפרטים הוסרו מהמסך")
         debugTools?.let { tools ->

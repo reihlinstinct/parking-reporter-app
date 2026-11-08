@@ -4,7 +4,6 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.AtomicFile
-import org.json.JSONObject
 import java.io.File
 import java.security.KeyStore
 import javax.crypto.Cipher
@@ -14,7 +13,10 @@ import javax.crypto.spec.GCMParameterSpec
 
 data class ReporterSettings(
     val firstName: String, val lastName: String, val phone: String, val idNumber: String, val email: String,
+    val municipalSubscriptionKey: String = "", val municipalUsername: String = "", val municipalPassword: String = "",
 ) {
+    fun hasMunicipalCredentials(): Boolean =
+        municipalSubscriptionKey.isNotBlank() && municipalUsername.isNotBlank() && municipalPassword.isNotBlank()
     override fun toString(): String = "ReporterSettings(redacted)"
 }
 /** Requires recent system device-credential authentication for every encryption/decryption. */
@@ -33,9 +35,7 @@ class SecureSettings(context: Context) {
         }
     }
     fun save(settings: ReporterSettings) {
-        val json = JSONObject().put("firstName", settings.firstName).put("lastName", settings.lastName)
-            .put("phone", settings.phone).put("idNumber", settings.idNumber).put("email", settings.email)
-        val plaintext = json.toString().toByteArray(Charsets.UTF_8)
+        val plaintext = SettingsCodec.encode(settings)
         try {
             val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key()) }
             val encrypted = cipher.doFinal(plaintext)
@@ -56,9 +56,7 @@ class SecureSettings(context: Context) {
         }
         val plaintext = cipher.doFinal(data.copyOfRange(size + 1, data.size))
         try {
-            val json = JSONObject(String(plaintext, Charsets.UTF_8))
-            return ReporterSettings(json.getString("firstName"), json.getString("lastName"), json.getString("phone"),
-                json.getString("idNumber"), json.getString("email"))
+            return SettingsCodec.decode(plaintext)
         } finally { plaintext.fill(0) }
     }
     // No plaintext fallback, no automatic key reset on invalidation.
