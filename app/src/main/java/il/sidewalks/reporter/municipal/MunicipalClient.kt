@@ -136,11 +136,19 @@ class OkHttpMunicipalClient(
                 if (!response.isSuccessful) {
                     throw MunicipalApiException("$endpoint: HTTP ${response.code}.")
                 }
+                // BufferedSource.readByteArray(n) requires EXACTLY n bytes and throws
+                // EOFException at end-of-stream, so cap enforcement reads in chunks:
+                // Buffer.read(sink, count) reads up to count and returns -1 at end.
                 val source = response.body.source()
-                raw = source.readByteArray(MAX_RESPONSE_BYTES + 1)
-                if (raw.size.toLong() > MAX_RESPONSE_BYTES) {
-                    throw MunicipalApiException("$endpoint: municipality did not confirm success.")
+                val buffer = okio.Buffer()
+                while (true) {
+                    val read = source.read(buffer, CHUNK_BYTES)
+                    if (read == -1L) break
+                    if (buffer.size > MAX_RESPONSE_BYTES) {
+                        throw MunicipalApiException("$endpoint: municipality did not confirm success.")
+                    }
                 }
+                raw = buffer.readByteArray()
             }
         } catch (e: MunicipalApiException) {
             throw e
@@ -162,6 +170,7 @@ class OkHttpMunicipalClient(
     private companion object {
         const val TIMEOUT_SECONDS = 45L
         const val MAX_RESPONSE_BYTES = 16L * 1024 * 1024
+        const val CHUNK_BYTES = 65536L
         val JSON_MEDIA_TYPE = "text/plain; charset=utf-8".toMediaType()
 
         fun JSONObject.toMap(): Map<String, Any?> {
