@@ -31,4 +31,18 @@ object GalleryImport {
      * originals/. Idempotent: true when the file is gone afterwards.
      */
     fun deleteOrphaned(file: File): Boolean = file.delete() || !file.exists()
+
+    /**
+     * Deletes every original the ledger does not reference (for example a
+     * copy whose import was interrupted by rotation or a process kill).
+     * Returns the number of files removed; never touches referenced names.
+     */
+    fun sweepUnreferenced(originals: File, referencedNames: Set<String>): Int {
+        val files = originals.listFiles() ?: return 0
+        var removed = 0
+        for (file in files) {
+            if (file.isFile && file.name !in referencedNames && file.delete()) removed++
+        }
+        return removed
+    }
 }

@@ -54,7 +54,18 @@ fun AppShell(
     var records by remember { mutableStateOf<List<ReportRecord>>(emptyList()) }
     var saving by remember { mutableStateOf(false) }
     suspend fun reload() { records = withContext(Dispatchers.IO) { database.reports().all() } }
-    LaunchedEffect(Unit) { reload() }
+    LaunchedEffect(Unit) {
+        reload()
+        // A copy whose import never finished (rotation or process kill while
+        // the location dialog was open, a failed reserve) has no ledger row:
+        // sweep any original the ledger does not reference.
+        withContext(Dispatchers.IO) {
+            try {
+                val referenced = database.reports().all().map { File(it.originalRelativePath).name }.toSet()
+                GalleryImport.sweepUnreferenced(File(context.noBackupFilesDir, "originals"), referenced)
+            } catch (_: Exception) {}
+        }
+    }
     var status by remember { mutableStateOf("") }
     var pendingImport by remember { mutableStateOf<File?>(null) }
     fun saveDraft(value: ReviewDraft) {

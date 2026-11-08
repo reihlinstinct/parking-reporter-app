@@ -35,4 +35,25 @@ class GalleryImportTest {
         assertFalse(out.exists())
         assertTrue(GalleryImport.deleteOrphaned(out))
     }
+    @Test fun failedCopyLeavesNoPartialFiles() {
+        val dir = java.nio.file.Files.createTempDirectory("gallery-import").toFile()
+        val broken = object : java.io.InputStream() {
+            private var sent = 0
+            override fun read(): Int = if (sent++ < 100) 65 else throw java.io.IOException("synthetic mid-copy failure")
+        }
+        try {
+            GalleryImport.copyToOriginals({ broken }, dir)
+            fail("expected failure")
+        } catch (_: java.io.IOException) {}
+        assertEquals(0, dir.listFiles()?.size ?: 0)
+    }
+    @Test fun sweepUnreferencedRemovesOnlyUnreferenced() {
+        val dir = java.nio.file.Files.createTempDirectory("gallery-sweep").toFile()
+        val keep = GalleryImport.copyToOriginals({ "keep".byteInputStream() }, dir, "keep.jpg")
+        val drop = GalleryImport.copyToOriginals({ "drop".byteInputStream() }, dir, "drop.jpg")
+        assertEquals(1, GalleryImport.sweepUnreferenced(dir, setOf("keep.jpg")))
+        assertTrue(keep.exists())
+        assertFalse(drop.exists())
+        assertEquals(0, GalleryImport.sweepUnreferenced(dir, setOf("keep.jpg")))
+    }
 }
