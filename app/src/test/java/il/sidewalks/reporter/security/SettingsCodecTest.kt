@@ -78,6 +78,33 @@ class SettingsCodecTest {
     }
 
     @Test
+    fun decodeForDiskRejectsNon12ByteIv() {
+        // Both directions of a wrong IV-size header are refused before decrypting.
+        val key = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
+        for (ivSize in listOf(11, 13)) {
+            val data = ByteArray(1 + ivSize + 32) { 0 }.also { it[0] = ivSize.toByte() }
+            assertThrows(IllegalArgumentException::class.java) {
+                SecureSettings.decodeForDisk(data) { iv ->
+                    Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv)) }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun decodeForDiskRejectsTruncatedAndEmpty() {
+        val key = KeyGenerator.getInstance("AES").apply { init(256) }.generateKey()
+        val truncated = ByteArray(1 + 12 + 16) { 0 }.also { it[0] = 12 } // needs > 12+17 framed bytes
+        for (data in listOf(truncated, ByteArray(0))) {
+            assertThrows(IllegalArgumentException::class.java) {
+                SecureSettings.decodeForDisk(data) { iv ->
+                    Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv)) }
+                }
+            }
+        }
+    }
+
+    @Test
     fun decodeFailureCarriesNoValues() {
         val bytes = "SentinelKey-not-json".toByteArray(Charsets.UTF_8)
         val failure = assertThrows(IllegalArgumentException::class.java) { SettingsCodec.decode(bytes) }
