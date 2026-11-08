@@ -128,12 +128,13 @@ jobs:
             adb shell svc wifi disable
             adb shell svc data disable
             mkdir -p app/build/reports/androidTests/screenshots
-            adb shell screenrecord --time-limit 600 /sdcard/test-run.mp4 &
+            adb shell screenrecord --time-limit 180 /sdcard/test-run.mp4 &
             RECPID=$!
             set +e
-            adb shell am instrument -w -r il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner | tee app/build/reports/androidTests/instrumentation.txt
-            RC=${PIPESTATUS[0]}
+            adb shell am instrument -w -r il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/androidTests/instrumentation.txt 2>&1
+            RC=$?
             set -e
+            cat app/build/reports/androidTests/instrumentation.txt
             adb shell pkill -INT screenrecord || true
             sleep 2
             kill -INT $RECPID 2>/dev/null || true
