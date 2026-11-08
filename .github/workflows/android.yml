@@ -71,6 +71,16 @@ jobs:
         if: always()
         run: python3 scripts/test_summary.py --title 'Unit tests (debug)' --junit app/build/test-results/testDebugUnitTest --jacoco app/build/reports/jacoco
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: unit-test-report
+          path: |
+            app/build/test-results/testDebugUnitTest/
+            app/build/reports/jacoco/
+            app/build/reports/lint-results-debug.html
+          if-no-files-found: warn
+          retention-days: 14
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: m1-preview-apk
           path: app/build/outputs/apk/debug/*.apk
@@ -118,8 +128,23 @@ jobs:
             adb shell svc wifi disable
             adb shell svc data disable
             mkdir -p app/build/reports/androidTests/screenshots
+            adb shell screenrecord --time-limit 600 /sdcard/test-run.mp4 &
+            RECPID=$!
+            set +e
             adb shell am instrument -w -r il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner | tee app/build/reports/androidTests/instrumentation.txt
+            RC=${PIPESTATUS[0]}
+            set -e
+            adb shell pkill -INT screenrecord || true
+            sleep 2
+            kill -INT $RECPID 2>/dev/null || true
+            wait $RECPID 2>/dev/null || true
+            adb pull /sdcard/test-run.mp4 app/build/reports/androidTests/test-run.mp4 || true
+            adb shell rm /sdcard/test-run.mp4 || true
+            test $RC -eq 0
             python3 scripts/test_summary.py --title 'Instrumented tests (emulator, API 30)' --instrumentation app/build/reports/androidTests/instrumentation.txt --check
+            for f in $(adb shell run-as il.sidewalks.reporter ls files/ | tr -d '\r' | grep '\.png$'); do
+              adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/androidTests/screenshots/$f" || true
+            done
             adb shell run-as il.sidewalks.reporter cat files/m0-synthetic.png > app/build/reports/androidTests/screenshots/m0-synthetic.png
             test -s app/build/reports/androidTests/screenshots/m0-synthetic.png
             adb shell run-as il.sidewalks.reporter cat files/m1-review-synthetic.png > app/build/reports/androidTests/screenshots/m1-review-synthetic.png
