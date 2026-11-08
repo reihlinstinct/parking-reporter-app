@@ -34,12 +34,11 @@ class HardcodedUiStringLintTest {
             "SettingsScreen.kt",
             "CaptureScreen.kt",
             "ReportsScreen.kt",
-            "MainActivity.kt",
             "ReportCategory.kt",
             "HebrewPresentation.kt",
         )
 
-        private const val MAX_PENDING = 8
+        private const val MAX_PENDING = 7
     }
 
     private fun mainSources(): List<File> {
