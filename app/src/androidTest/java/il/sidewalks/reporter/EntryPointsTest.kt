@@ -6,10 +6,8 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.test.assertExists
+import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithText
 import androidx.test.platform.app.InstrumentationRegistry
 import il.sidewalks.reporter.ui.AppShell
 import org.junit.Assert.assertEquals
@@ -31,7 +29,7 @@ class EntryPointsTest {
         val share = pm.resolveActivity(
             Intent(Intent.ACTION_SEND).setType("image/jpeg").setPackage(context.packageName), 0)
         assertEquals(MainActivity::class.java.name, share?.activityInfo?.name)
-        val services = pm.getPackageInfo(context.packageName, PackageManager.GET_SERVICES).services
+        val services = pm.getPackageInfo(context.packageName, PackageManager.GET_SERVICES).services.orEmpty()
         val tile = services.single { it.name == ReportTileService::class.java.name }
         assertEquals("android.permission.BIND_QUICK_SETTINGS_TILE", tile.permission)
         assertTrue(tile.exported)
