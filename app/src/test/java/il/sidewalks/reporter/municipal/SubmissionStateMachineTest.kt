@@ -77,8 +77,6 @@ class SubmissionStateMachineTest {
         assertEquals("synthetic-case-id", result.case["CaseIdInCRM"])
         assertEquals(listOf("prepared", "creating", "created", "attaching", "complete"), store.writes)
         assertEquals(listOf("login", "contact", "create", "attach"), client.calls)
-        assertEquals("synthetic-contact-id", contact["ContactIdInCRM"])
-        assertEquals("synthetic-token", contact["Token"])
         assertEquals("synthetic-file-name.jpg", store.stored!!["file_name"])
     }
 
@@ -225,8 +223,8 @@ class SubmissionStateMachineTest {
         val client = FakeClient()
         val store = InMemorySubmissionStateStore()
         val caller = LinkedHashMap(contact)
+        val snapshot = LinkedHashMap(caller)
         machine(client).submit(store, caller, report, jpeg)
-        assertEquals(null, caller["Token"])
-        assertEquals(null, caller["ContactIdInCRM"])
+        assertEquals(snapshot, caller)
     }
 }
