@@ -12,6 +12,7 @@ Usage:
 """
 import argparse
 import importlib.util
+import pathlib
 import sys
 
 GOLDEN = [
@@ -48,11 +49,12 @@ def main():
         row = []
         for label, path in (("ref", args.reference), ("new", args.candidate)):
             try:
-                resolved = module.Addresses(path).resolve(street, house, None)
+                resolved = module.Addresses(pathlib.Path(path)).resolve(street, house, None)
                 row.append((label, resolved))
             except Exception as exc:  # noqa: BLE001 - comparison harness
                 row.append((label, f"ERR: {exc}"))
-        same = row[0][1] == row[1][1]
+        both_err = all(str(v).startswith("ERR:") for _, v in row)
+        same = row[0][1] == row[1][1] and not both_err
         if not same:
             diffs += 1
         print(("OK   " if same else "DIFF ") + f"{street} {house}: {row[0][1]} vs {row[1][1]}")
