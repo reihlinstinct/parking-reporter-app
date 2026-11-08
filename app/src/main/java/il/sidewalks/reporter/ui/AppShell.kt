@@ -61,7 +61,8 @@ fun AppShell(
         // sweep any original the ledger does not reference.
         withContext(Dispatchers.IO) {
             try {
-                val referenced = database.reports().all().map { File(it.originalRelativePath).name }.toSet()
+                // Ledger rows' relative paths; GalleryImport compares only the file names.
+                val referenced = database.reports().all().map { it.originalRelativePath }.toSet()
                 GalleryImport.sweepUnreferenced(File(context.noBackupFilesDir, "originals"), referenced)
             } catch (_: Exception) {}
         }

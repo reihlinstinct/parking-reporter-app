@@ -35,14 +35,31 @@ object GalleryImport {
     /**
      * Deletes every original the ledger does not reference (for example a
      * copy whose import was interrupted by rotation or a process kill).
-     * Returns the number of files removed; never touches referenced names.
+     * [referencedPaths] are the ledger rows' relative paths (for example
+     * "originals/<uuid>.jpg"); only their file names are compared, so a
+     * caller passing a full relative path still protects the file.
+     * Files modified after [notAfterMillis] are never touched: a copy still
+     * being written (the activity recreated while the system picker is open,
+     * or a reserve committing just after the ledger snapshot) is always
+     * newer than the cutoff, while a copy stranded by an earlier rotation
+     * or kill is removed at a later start.
+     * Returns the number of files removed.
      */
-    fun sweepUnreferenced(originals: File, referencedNames: Set<String>): Int {
+    fun sweepUnreferenced(
+        originals: File,
+        referencedPaths: Set<String>,
+        notAfterMillis: Long = System.currentTimeMillis() - IN_FLIGHT_AGE_MILLIS,
+    ): Int {
+        val referencedNames = referencedPaths.map { File(it).name }.toSet()
         val files = originals.listFiles() ?: return 0
         var removed = 0
         for (file in files) {
-            if (file.isFile && file.name !in referencedNames && file.delete()) removed++
+            if (file.isFile && file.name !in referencedNames &&
+                file.lastModified() <= notAfterMillis && file.delete()) removed++
         }
         return removed
     }
+
+    /** A file newer than this may still be written by an in-flight import. */
+    const val IN_FLIGHT_AGE_MILLIS = 60_000L
 }
