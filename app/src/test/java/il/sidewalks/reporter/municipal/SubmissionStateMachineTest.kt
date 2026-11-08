@@ -11,7 +11,7 @@ import org.junit.Test
  */
 class SubmissionStateMachineTest {
 
-    private class FakeClient(
+    private open class FakeClient(
         var contactId: String? = "synthetic-contact-id",
         var createError: Exception? = null,
         var attachError: Exception? = null,
@@ -112,6 +112,7 @@ class SubmissionStateMachineTest {
         assertThrows(MunicipalReviewNeededException::class.java) {
             machine(client).submit(store, contact, report, jpeg)
         }
+        assertEquals(emptyList<String>(), client.calls)
     }
 
     @Test
@@ -188,5 +189,44 @@ class SubmissionStateMachineTest {
             machine(client).submit(store, contact, report, jpeg)
         }
         assertEquals(listOf("login", "contact"), client.calls)
+    }
+
+    @Test
+    fun concurrentSubmitSecondIsRefusedAndExactlyOneCaseIsCreated() {
+        // Thread A blocks inside login; a second submit through the SAME store
+        // must be refused by the single-flight claim instead of racing to a
+        // duplicate CreateCase.
+        val gate = java.util.concurrent.CountDownLatch(1)
+        val inLogin = java.util.concurrent.CountDownLatch(1)
+        val client = object : FakeClient() {
+            override fun login(): String {
+                inLogin.countDown()
+                gate.await(5, java.util.concurrent.TimeUnit.SECONDS)
+                return super.login()
+            }
+        }
+        val store = InMemorySubmissionStateStore()
+        var resultA: SubmissionResult? = null
+        val threadA = kotlin.concurrent.thread {
+            resultA = machine(client).submit(store, contact, report, jpeg)
+        }
+        assertTrue(inLogin.await(5, java.util.concurrent.TimeUnit.SECONDS))
+        assertThrows(MunicipalReviewNeededException::class.java) {
+            machine(client).submit(store, contact, report, jpeg)
+        }
+        gate.countDown()
+        threadA.join(5000)
+        assertTrue(resultA is SubmissionResult.Submitted)
+        assertEquals(1, client.calls.count { it == "create" })
+    }
+
+    @Test
+    fun submitDoesNotMutateTheCallersContactMap() {
+        val client = FakeClient()
+        val store = InMemorySubmissionStateStore()
+        val caller = LinkedHashMap(contact)
+        machine(client).submit(store, caller, report, jpeg)
+        assertEquals(null, caller["Token"])
+        assertEquals(null, caller["ContactIdInCRM"])
     }
 }

@@ -30,18 +30,15 @@ interface SubmissionStateStore {
 
     /** Durably persists the state. Throwing aborts the submission (fail-closed). */
     fun write(state: Map<String, Any?>)
-}
 
-class InMemorySubmissionStateStore : SubmissionStateStore {
-    var stored: MutableMap<String, Any?>? = null
-    val writes = mutableListOf<String>()
-
-    override fun read(): MutableMap<String, Any?>? = stored
-
-    override fun write(state: Map<String, Any?>) {
-        writes.add(state["status"] as? String ?: "?")
-        stored = LinkedHashMap(state)
-    }
+    /**
+     * Runs [block] while holding this store's exclusive submission claim,
+     * refusing with MunicipalReviewNeededException when another in-flight
+     * submission already holds it. The claim spans the whole submit() call:
+     * two concurrent submissions must never both reach CreateCase (a
+     * duplicate municipal case is the worst outcome this app can produce).
+     */
+    fun <T> withSubmissionLock(block: () -> T): T
 }
 
 sealed class SubmissionResult {
@@ -63,7 +60,10 @@ class SubmissionStateMachine(
         report: LinkedHashMap<String, Any?>,
         jpeg: ByteArray,
         retryPhoto: Boolean = false,
-    ): SubmissionResult {
+    ): SubmissionResult = store.withSubmissionLock {
+        // The helper mutates the caller's contact dict (Token, ContactIdInCRM);
+        // the port works on a copy so a caller-side map never changes mid-flight.
+        val contact: LinkedHashMap<String, Any?> = LinkedHashMap(contact)
         val state: MutableMap<String, Any?> = store.read() ?: mutableMapOf<String, Any?>(
             "version" to 1,
             "status" to "prepared",
@@ -83,7 +83,7 @@ class SubmissionStateMachine(
             )
         }
         if (state["status"] == "complete") {
-            return SubmissionResult.AlreadySubmitted(
+            return@withSubmissionLock SubmissionResult.AlreadySubmitted(
                 (state["case"] as? Map<String, Any?>) ?: emptyMap()
             )
         }
@@ -155,6 +155,6 @@ class SubmissionStateMachine(
         }
         state["status"] = "complete"
         store.write(state)
-        return SubmissionResult.Submitted(case)
+        return@withSubmissionLock SubmissionResult.Submitted(case)
     }
 }

@@ -2,6 +2,7 @@ package il.sidewalks.reporter.municipal
 
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.SocketPolicy
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -21,7 +22,7 @@ class MunicipalClientContractTest {
     private fun resource(name: String): ByteArray =
         requireNotNull(javaClass.classLoader.getResource("municipal/$name")).readBytes()
 
-    private fun client(server: MockWebServer) = OkHttpMunicipalClient(
+    private fun client(server: MockWebServer) = OkHttpMunicipalClient.forTesting(
         server.url("/CRMCityConnect/api/jerusalem/"),
         "synthetic-key",
         "synthetic-user",
@@ -162,15 +163,38 @@ class MunicipalClientContractTest {
     fun emptyCredentialsFailBeforeAnyNetwork() {
         MockWebServer().use { server ->
             assertThrows(MunicipalInputException::class.java) {
-                OkHttpMunicipalClient(server.url("/"), "", "synthetic-user", "synthetic-password")
+                OkHttpMunicipalClient.forTesting(server.url("/"), "", "synthetic-user", "synthetic-password")
             }
             assertThrows(MunicipalInputException::class.java) {
-                OkHttpMunicipalClient(server.url("/"), "synthetic-key", "", "synthetic-password")
+                OkHttpMunicipalClient.forTesting(server.url("/"), "synthetic-key", "", "synthetic-password")
             }
             assertThrows(MunicipalInputException::class.java) {
-                OkHttpMunicipalClient(server.url("/"), "synthetic-key", "synthetic-user", "")
+                OkHttpMunicipalClient.forTesting(server.url("/"), "synthetic-key", "synthetic-user", "")
             }
             assertEquals(0, server.requestCount)
+        }
+    }
+
+    @Test
+    fun oversizedButValidJsonIsRejected() {
+        MockWebServer().use { server ->
+            // Valid JSON whose size alone exceeds the 16 MB cap must still be refused.
+            val padded = "{}".toByteArray() + ByteArray(16 * 1024 * 1024) { ' '.code.toByte() }
+            server.enqueue(MockResponse().setBody(okio.Buffer().write(padded)))
+            assertThrows(MunicipalApiException::class.java) { client(server).login() }
+        }
+    }
+
+    @Test
+    fun droppedConnectionIsNotRetried() {
+        MockWebServer().use { server ->
+            // The connection dies before the request is read; with connection
+            // retries disabled the attempt must happen exactly once.
+            server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START))
+            assertThrows(MunicipalApiException::class.java) {
+                client(server).upsertContact("synthetic-token", LinkedHashMap())
+            }
+            assertEquals(1, server.requestCount)
         }
     }
 
@@ -180,7 +204,7 @@ class MunicipalClientContractTest {
         val dead = MockWebServer()
         val deadUrl = dead.url("/")
         dead.shutdown()
-        val api = OkHttpMunicipalClient(
+        val api = OkHttpMunicipalClient.forTesting(
             deadUrl, "synthetic-key", "synthetic-user", "synthetic-password",
         )
         assertThrows(MunicipalApiException::class.java) { api.login() }

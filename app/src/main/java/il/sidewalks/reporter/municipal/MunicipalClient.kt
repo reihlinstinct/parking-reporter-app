@@ -51,12 +51,20 @@ interface MunicipalClient {
     fun attachPhoto(token: String, caseIdInCRM: String, webCaseIdInCRM: String, fileName: String, jpeg: ByteArray)
 }
 
-class OkHttpMunicipalClient(
+class OkHttpMunicipalClient private constructor(
     private val baseUrl: HttpUrl,
     private val subscriptionKey: String,
     private val username: String,
     private val password: String,
 ) : MunicipalClient {
+
+    /**
+     * Production path: the documented municipal endpoint only. The base URL
+     * is not a parameter on purpose - a client that can be pointed at
+     * another host can leak the municipal credentials there.
+     */
+    constructor(subscriptionKey: String, username: String, password: String) :
+        this(DEFAULT_BASE_URL, subscriptionKey, username, password)
 
     init {
         if (subscriptionKey.isEmpty() || username.isEmpty() || password.isEmpty()) {
@@ -167,13 +175,25 @@ class OkHttpMunicipalClient(
         return parsed.toMap()
     }
 
-    private companion object {
-        const val TIMEOUT_SECONDS = 45L
-        const val MAX_RESPONSE_BYTES = 16L * 1024 * 1024
-        const val CHUNK_BYTES = 65536L
-        val JSON_MEDIA_TYPE = "text/plain; charset=utf-8".toMediaType()
+    companion object {
+        /** The documented municipal endpoint root (helper api106.BASE). */
+        val DEFAULT_BASE_URL: HttpUrl =
+            "https://api.jerusalem.muni.il/CRMCityConnect/api/jerusalem/".toHttpUrl()
 
-        fun JSONObject.toMap(): Map<String, Any?> {
+        /** Test-only: points the client at a mock server. Never used in app code. */
+        internal fun forTesting(
+            baseUrl: HttpUrl,
+            subscriptionKey: String,
+            username: String,
+            password: String,
+        ): OkHttpMunicipalClient = OkHttpMunicipalClient(baseUrl, subscriptionKey, username, password)
+
+        private const val TIMEOUT_SECONDS = 45L
+        private const val MAX_RESPONSE_BYTES = 16L * 1024 * 1024
+        private const val CHUNK_BYTES = 65536L
+        private val JSON_MEDIA_TYPE = "text/plain; charset=utf-8".toMediaType()
+
+        private fun JSONObject.toMap(): Map<String, Any?> {
             val map = LinkedHashMap<String, Any?>()
             for (key in keys()) {
                 val value = get(key)
