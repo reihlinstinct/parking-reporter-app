@@ -38,15 +38,15 @@ class FirstRunScreenTest {
     }
 
     @Test fun firstRunShowsWelcomeAndStartEntersTheShell() {
-        var done = false
+        val done = androidx.compose.runtime.mutableStateOf(false)
         compose.setContent { MaterialTheme {
             AppShell(
                 authenticate = { _, _, action -> action() },
                 requestCamera = {},
                 readSettings = { null },
                 saveSettings = {},
-                showFirstRun = !done,
-                onFirstRunDone = { done = true },
+                showFirstRun = !done.value,
+                onFirstRunDone = { done.value = true },
             )
         } }
         compose.onNodeWithText("ברוכים הבאים למדרכות פנויות").assertExists()
@@ -54,17 +54,6 @@ class FirstRunScreenTest {
         // The plain shell is not underneath: no navigation bar yet.
         compose.onNodeWithText("הגדרות").assertDoesNotExist()
         compose.onNodeWithText("מתחילים").performClick()
-        compose.runOnIdle { assertEquals(true, done) }
-        compose.setContent { MaterialTheme {
-            AppShell(
-                authenticate = { _, _, action -> action() },
-                requestCamera = {},
-                readSettings = { null },
-                saveSettings = {},
-                showFirstRun = !done,
-                onFirstRunDone = { done = true },
-            )
-        } }
         compose.onNodeWithText("הגדרות").assertExists()
         compose.onNodeWithText("ברוכים הבאים למדרכות פנויות").assertDoesNotExist()
     }
