@@ -105,9 +105,13 @@ jobs:
           cache: gradle
       - run: sh scripts/prepare_wrapper.sh
       - name: Validate dispatch input before any network
+        env:
+          APPROVED_SHA256_INPUT: ${{ inputs.approved_sha256 }}
         run: |
           # Fail fast on a malformed hash so a typo never reaches the engine.
-          echo "${{ inputs.approved_sha256 }}" | grep -qxE '[0-9a-f]{64}'
+          # The dispatch value reaches the shell only as a quoted env var,
+          # never through workflow-expression interpolation.
+          printf '%s' "$APPROVED_SHA256_INPUT" | grep -qxE '[0-9a-f]{64}'
       - name: Decrypt trial photo
         env:
           TRIAL_DATA_KEY: ${{ secrets.TRIAL_DATA_KEY }}
