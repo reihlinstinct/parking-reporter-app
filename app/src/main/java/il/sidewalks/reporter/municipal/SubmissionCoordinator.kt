@@ -129,7 +129,7 @@ class SubmissionCoordinator(
     }
 
     companion object {
-        private val HOUSE_SUFFIX = Regex("^(.*\\S)\\s+(" + HOUSE_NUMBER.pattern + "$")
+        private val HOUSE_SUFFIX = Regex("^(.*\\S)\\s+(" + HOUSE_NUMBER.pattern + ")$")
 
         /**
          * Splits a confirmed "street house" line into (street, house). A line
