@@ -13,7 +13,7 @@ jobs:
     # Read-only by design: logs in and reads the subject catalog; never
     # submits, amends, or lists cases. Secrets load at runtime from the
     # environment and are never printed; the check script is secret-free.
-    if: ${{ github.repository == 'reihlinstinct/parking-reporter-app' && github.ref == 'refs/heads/main' && github.actor == github.repository_owner }}
+    if: ${{ github.repository == 'reihlinstinct/parking-reporter-app' && github.ref == 'refs/heads/main' && github.actor == github.repository_owner && github.triggering_actor == github.repository_owner }}
     environment: city-readonly-checks
     runs-on: ubuntu-24.04
     timeout-minutes: 10
