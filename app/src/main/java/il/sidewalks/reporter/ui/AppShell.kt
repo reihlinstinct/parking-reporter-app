@@ -325,13 +325,8 @@ fun AppShell(
             // values, readable without the unlock that a settings read would need.
             // null (never saved) keeps the old answer-after-unlock behavior.
             val missingCredentials = remember(value.evidence.stableId) {
-                il.sidewalks.reporter.security.SettingsProfileStore(context).read()?.map {
-                    when (it) {
-                        "subscription_key" -> "settings.field.subscription_key"
-                        "api_username" -> "settings.field.api_username"
-                        else -> "settings.field.api_password"
-                    }
-                }.orEmpty()
+                il.sidewalks.reporter.security.SettingsProfileStore(context).read()
+                    ?.map(::municipalFieldLabelKey).orEmpty()
             }
             ReviewScreen(value, image, ::saveDraft, onBack = { page = "home" },
                 onSubmit = { shown -> submitReport(shown) },
@@ -446,6 +441,23 @@ fun AppShell(
  * (issue #115). The mapping is #160's, one key per outcome; [SubmissionCoordinator]
  * never produces user-facing text itself.
  */
+internal fun municipalFieldLabelKey(id: String): String = when (id) {
+    "subscription_key" -> "settings.field.subscription_key"
+    "api_username" -> "settings.field.api_username"
+    else -> "settings.field.api_password"
+}
+
+private const val MISSING_FIELDS_PREFIX = "municipal credentials absent: "
+
+/** Name the unset municipal fields when the detail carries their IDs (owner
+ *  2026-11-09: an error must say exactly which values are missing). */
+internal fun missingCredentialsSuffix(strings: Strings, detail: String): String {
+    if (!detail.startsWith(MISSING_FIELDS_PREFIX)) return ""
+    val ids = detail.removePrefix(MISSING_FIELDS_PREFIX).split(",").map { it.trim() }.filter { it.isNotEmpty() }
+    if (ids.isEmpty()) return ""
+    return ": " + ids.joinToString(", ") { strings.t(municipalFieldLabelKey(it)) }
+}
+
 internal fun municipalOutcomeText(strings: Strings, outcome: SubmissionCoordinator.Outcome): String = when (outcome) {
     is SubmissionCoordinator.Outcome.Submitted ->
         strings.t("shell.submit.sent",
@@ -454,7 +466,8 @@ internal fun municipalOutcomeText(strings: Strings, outcome: SubmissionCoordinat
         strings.t("shell.submit.already_sent", mapOf("case_number" to (outcome.caseNumber ?: "")))
     is SubmissionCoordinator.Outcome.Blocked -> when (outcome.reason) {
         SubmissionCoordinator.Reason.NOT_APPROVED -> strings.t("shell.submit.blocked.not_approved")
-        SubmissionCoordinator.Reason.MISSING_CREDENTIALS -> strings.t("shell.submit.blocked.missing_credentials")
+        SubmissionCoordinator.Reason.MISSING_CREDENTIALS ->
+            strings.t("shell.submit.blocked.missing_credentials") + missingCredentialsSuffix(strings, outcome.detail)
         SubmissionCoordinator.Reason.UNSUPPORTED_CATEGORY -> strings.t("shell.submit.blocked.unsupported_category")
         SubmissionCoordinator.Reason.ADDRESS_UNRESOLVED ->
             strings.t("shell.submit.blocked.address_unresolved", mapOf("detail" to outcome.detail))

@@ -59,7 +59,10 @@ class SubmissionCoordinator(
     ): Outcome {
         if (!draft.isApproved()) return Outcome.Blocked(Reason.NOT_APPROVED, "draft not approved")
         if (!settings.hasMunicipalCredentials()) {
-            return Outcome.Blocked(Reason.MISSING_CREDENTIALS, "municipal credentials absent")
+            // Name exactly which values are missing (constant field IDs, never
+            // values) so the UI can say it (owner 2026-11-09).
+            return Outcome.Blocked(Reason.MISSING_CREDENTIALS,
+                "municipal credentials absent: " + settings.missingMunicipalFields().joinToString(", "))
         }
         val category = ReportCategory.from(draft.subject)
             ?: return Outcome.Blocked(Reason.UNSUPPORTED_CATEGORY, draft.subject)
