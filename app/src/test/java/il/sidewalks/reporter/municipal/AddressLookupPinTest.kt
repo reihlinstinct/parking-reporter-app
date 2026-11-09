@@ -15,7 +15,7 @@ class AddressLookupPinTest {
     }
 
     @Test fun mismatchedCopyIsRefused() {
-        assertThrows(MunicipalInputException::class.java) {
+        assertThrows(AddressLookupMismatchException::class.java) {
             AddressLookupPin.verifyPinned("{\"version\": 1, \"streets\": [], \"addresses\": []}")
         }
     }

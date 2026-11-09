@@ -156,6 +156,10 @@ fun AppShell(
                             { id -> FileSubmissionStateStore.forReport(
                                 File(context.noBackupFilesDir, "submissions"), id) },
                         ).submitApproved(shown, settings, file)
+                    } catch (e: il.sidewalks.reporter.municipal.AddressLookupMismatchException) {
+                        SubmissionCoordinator.Outcome.Blocked(
+                            SubmissionCoordinator.Reason.LOOKUP_MISMATCH,
+                            "lookup is outdated or modified")
                     } catch (e: MunicipalInputException) {
                         SubmissionCoordinator.Outcome.Blocked(
                             SubmissionCoordinator.Reason.LOOKUP_NOT_INSTALLED,
@@ -451,5 +455,6 @@ internal fun municipalOutcomeText(strings: Strings, outcome: SubmissionCoordinat
         SubmissionCoordinator.Reason.LOCAL_FAILURE ->
             strings.t("shell.submit.blocked.local_failure", mapOf("detail" to outcome.detail))
         SubmissionCoordinator.Reason.LOOKUP_NOT_INSTALLED -> strings.t("shell.submit.blocked.lookup_not_installed")
+        SubmissionCoordinator.Reason.LOOKUP_MISMATCH -> strings.t("shell.submit.blocked.lookup_mismatch")
     }
 }

@@ -11,6 +11,8 @@ import java.security.MessageDigest
  * When the private data is regenerated, the pin changes in the same change
  * that adopts the new file.
  */
+class AddressLookupMismatchException : Exception("address lookup on device does not match the pinned copy")
+
 object AddressLookupPin {
     const val EXPECTED_SHA256 =
         "5eaa83a9eb9253798109555bf2f6ea6ab6ec941a86e86c15c6761b2e5ee046d4"
@@ -23,9 +25,7 @@ object AddressLookupPin {
     /** Returns the text unchanged when pinned; refuses anything else. */
     fun verifyPinned(text: String): String {
         if (sha256Hex(text) != EXPECTED_SHA256) {
-            throw MunicipalInputException(
-                "address lookup on device does not match the pinned copy"
-            )
+            throw AddressLookupMismatchException()
         }
         return text
     }
