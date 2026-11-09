@@ -60,6 +60,9 @@ fun AppShell(
     // submission client at an on-device loopback stub. App code passes
     // nothing; the production client keeps its pinned municipal base URL.
     municipalClientFactory: ((ReporterSettings) -> MunicipalClient)? = null,
+    // Test-only in-memory lookup. Production always uses the normal loader,
+    // including its file pin; a stub test never overwrites installed data.
+    streetDirectoryLoader: (() -> StreetDirectory)? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -147,7 +150,8 @@ fun AppShell(
                             ?: return@withContext SubmissionCoordinator.Outcome.Blocked(
                                 SubmissionCoordinator.Reason.MISSING_CREDENTIALS, "settings unreadable")
                         val directory = streetsDirectory
-                            ?: loadStreetDirectory(context).also { streetsDirectory = it }
+                            ?: (streetDirectoryLoader?.invoke() ?: loadStreetDirectory(context))
+                                .also { streetsDirectory = it }
                         val file = original
                             ?: return@withContext SubmissionCoordinator.Outcome.Blocked(
                                 SubmissionCoordinator.Reason.INPUT_INVALID, "missing original")

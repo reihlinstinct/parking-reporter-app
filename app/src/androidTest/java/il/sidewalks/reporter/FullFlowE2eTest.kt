@@ -1,7 +1,6 @@
 package il.sidewalks.reporter
 
 import android.net.Uri
-import android.util.Log
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsEnabled
@@ -17,14 +16,12 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
 import il.sidewalks.reporter.ledger.ReportDatabase
+import il.sidewalks.reporter.municipal.StreetDirectory
 import il.sidewalks.reporter.municipal.MunicipalClient
 import il.sidewalks.reporter.municipal.OkHttpMunicipalClient
 import il.sidewalks.reporter.security.ReporterSettings
-import il.sidewalks.reporter.security.SecureSettings
 import il.sidewalks.reporter.ui.AppShell
 import java.io.File
-import java.security.MessageDigest
-import java.time.Instant
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
@@ -42,17 +39,11 @@ import org.junit.Test
  * Full report flow, end to end, on the real AppShell: shared-photo entry,
  * review, evidence confirmation, approval, send, municipal submission.
  *
- * Two modes, ONE flow code path:
- * - Stub (default, the CI emulator job): an on-device loopback MockWebServer
- *   answers the four municipal calls with canned responses; the test asserts
- *   the request sequence and bodies. No network, no credentials, no private
- *   data. The app manifest forbids cleartext; app/src/debug scopes a
- *   loopback-only exception to test builds (MainManifestGuardTest).
- * - Live (never in CI): -e e2eLive 1 -e e2eText "..." -e e2eApprovedSha256
- *   <hex>. Runs the same flow against the real endpoint with the device's
- *   stored settings, ONLY after proving the typed text hashes to the digest
- *   the owner approved (m0-trial-submit route). Every step is logged with
- *   timings and outcomes, credentials and tokens scrubbed.
+ * Stub-only: an on-device loopback MockWebServer answers the four municipal
+ * calls with canned responses. No network outside loopback, no credentials,
+ * no private data, and no live mode. The app manifest forbids cleartext;
+ * app/src/debug scopes a loopback-only exception to test builds.
+ * Device-unlock is replaced by a pass-through only in this synthetic test.
  */
 class FullFlowE2eTest {
     @get:Rule val compose = createComposeRule()
@@ -79,16 +70,11 @@ class FullFlowE2eTest {
             db.close()
         }
         File(context.noBackupFilesDir, "submissions").deleteRecursively()
-        File(context.noBackupFilesDir, "addresses.json").delete()
     }
 
-    /** Synthetic lookup file: one synthetic street, one house point. */
-    private fun installSyntheticStreetDirectory() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        File(context.noBackupFilesDir, "addresses.json").writeText(
-            """{"version":1,"streets":[{"StreetCode":"900001","StreetName":"רחוב בדיקה"}],"addresses":[[31.77,35.2137,"1","רחוב בדיקה"]]}""",
-            Charsets.UTF_8)
-    }
+    /** Synthetic directory injected in memory; never edits an installed file. */
+    private fun syntheticStreetDirectory(): StreetDirectory = StreetDirectory.load(
+        """{"version":1,"streets":[{"StreetCode":"900001","StreetName":"רחוב בדיקה"}],"addresses":[[31.77,35.2137,"1","רחוב בדיקה"]]}""")
 
     private fun launchFlow(settings: ReporterSettings, factory: ((ReporterSettings) -> MunicipalClient)?) {
         val uri = Uri.parse("content://il.sidewalks.reporter.testshare/shared-entry-synthetic.jpg")
@@ -97,7 +83,8 @@ class FullFlowE2eTest {
             MaterialTheme {
                 AppShell(authenticate = { _, _, action -> action() }, requestCamera = { it() },
                     readSettings = { settings }, saveSettings = {}, entry = signal,
-                    municipalClientFactory = factory)
+                    municipalClientFactory = factory,
+                    streetDirectoryLoader = { syntheticStreetDirectory() })
             }
         }
     }
@@ -155,7 +142,6 @@ class FullFlowE2eTest {
 
     @Test fun fullReportFlowStubbedServer() {
         cleanState()
-        installSyntheticStreetDirectory()
         val settings = ReporterSettings(
             firstName = "ישראל", lastName = "ישראלי", phone = "+972501234567",
             idNumber = "000000018", email = "synthetic@example.com",
@@ -205,113 +191,4 @@ class FullFlowE2eTest {
         }
     }
 
-    /**
-     * Live mode: same flow against the real municipal endpoint. NEVER runs
-     * in CI - the emulator job passes no e2eLive argument, so this returns
-     * immediately there. A live run requires the owner's approved text and
-     * its digest (m0-trial-submit); the send is tapped only after the typed
-     * text is proven byte-identical to the approved one. Detailed step logs
-     * (timings, statuses, case number, failure point) go to logcat and to
-     * files/e2e-live-log.txt with credentials, ID and tokens scrubbed.
-     */
-    @Test fun fullReportFlowLiveApprovedTextOnly() {
-        val args = InstrumentationRegistry.getArguments()
-        if (args.getString("e2eLive") != "1") return
-        val text = requireNotNull(args.getString("e2eText")) { "live mode requires -e e2eText" }
-        val expectedDigest = requireNotNull(args.getString("e2eApprovedSha256")) { "live mode requires -e e2eApprovedSha256" }
-        val actualDigest = MessageDigest.getInstance("SHA-256")
-            .digest(text.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
-        assertEquals("the text must be byte-identical to the owner-approved text",
-            expectedDigest, actualDigest)
-
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val secure = SecureSettings(context)
-        val settings = requireNotNull(secure.read()) { "live mode requires stored reporter settings" }
-        val logFile = File(context.filesDir, "e2e-live-log.txt")
-        logFile.delete()
-        val logging = LiveRunLog(logFile, settings)
-
-        val uri = Uri.parse("content://il.sidewalks.reporter.testshare/shared-entry-synthetic.jpg")
-        val signal = mutableStateOf(EntrySignal(1, EntryIntents.Request.SharedPhoto(uri.toString())))
-        compose.setContent {
-            MaterialTheme {
-                AppShell(authenticate = { _, _, action -> action() }, requestCamera = { it() },
-                    readSettings = { secure.read() }, saveSettings = { secure.save(it) }, entry = signal,
-                    municipalClientFactory = { s ->
-                        logging.wrap(OkHttpMunicipalClient(
-                            subscriptionKey = s.municipalSubscriptionKey,
-                            username = s.municipalUsername,
-                            password = s.municipalPassword))
-                    })
-            }
-        }
-        try {
-            logging.note("live run started; approved text digest verified")
-            driveToApproved(text)
-            tapSendAndAwaitCaseNumber()
-            screenshot("e2e-live-submitted.png")
-            logging.note("live run completed; case number shown in the app")
-        } catch (e: Throwable) {
-            logging.note("live run FAILED at ${e.javaClass.simpleName}: ${e.message}")
-            throw e
-        }
-    }
-
-    /**
-     * Live-run step log: every municipal step with timing and outcome. The
-     * municipal client's errors never carry credentials, tokens or bodies by
-     * design; every line is still scrubbed against the exact stored secret
-     * values as defense in depth. Exists only in the androidTest sources.
-     */
-    private class LiveRunLog(private val out: File, settings: ReporterSettings) {
-        private val secrets = listOf(settings.municipalSubscriptionKey,
-            settings.municipalUsername, settings.municipalPassword, settings.idNumber)
-
-        private fun scrub(line: String): String {
-            var result = line
-            for (secret in secrets) {
-                if (secret.length >= 4) result = result.replace(secret, "[redacted]")
-            }
-            return result
-        }
-
-        fun note(detail: String) {
-            val line = "${Instant.now()} $detail"
-            Log.i("FullFlowE2e", scrub(line))
-            out.appendText(scrub(line) + "\n", Charsets.UTF_8)
-        }
-
-        fun wrap(delegate: MunicipalClient): MunicipalClient = object : MunicipalClient {
-            private fun <T> step(name: String, call: () -> T): T {
-                val started = System.nanoTime()
-                note("$name started")
-                try {
-                    val result = call()
-                    note("$name ok ${(System.nanoTime() - started) / 1_000_000}ms")
-                    return result
-                } catch (e: Exception) {
-                    note("$name FAILED ${(System.nanoTime() - started) / 1_000_000}ms " +
-                        "${e.javaClass.simpleName}: ${e.message}")
-                    throw e
-                }
-            }
-
-            override fun login(): String {
-                val token = step("Login") { delegate.login() }
-                note("Login token received (value redacted)")
-                return token
-            }
-            override fun upsertContact(token: String, contact: LinkedHashMap<String, Any?>): Map<String, Any?> =
-                step("createupdatecontact") { delegate.upsertContact(token, contact) }
-            override fun createCase(token: String, contact: LinkedHashMap<String, Any?>,
-                report: LinkedHashMap<String, Any?>): Map<String, Any?> {
-                val result = step("CreateCase") { delegate.createCase(token, contact, report) }
-                note("CreateCase returned case number ${result["CaseNumberInCRM"]}")
-                return result
-            }
-            override fun attachPhoto(token: String, caseIdInCRM: String, webCaseIdInCRM: String,
-                fileName: String, jpeg: ByteArray) =
-                step("AddFileToCase") { delegate.attachPhoto(token, caseIdInCRM, webCaseIdInCRM, fileName, jpeg) }
-        }
-    }
 }
