@@ -271,7 +271,11 @@ fun AppShell(
         if (uri != null) importShared(uri)
     }
     // Deep link / Quick Settings tile / share-sheet entry (issue #149 phase 1).
-    LaunchedEffect(entry.value) {
+    // A first launch that lands on the welcome screen (#187) defers the entry
+    // until Start is tapped: the import/camera flow then begins from home,
+    // not underneath the welcome.
+    LaunchedEffect(entry.value, showFirstRun) {
+        if (showFirstRun) return@LaunchedEffect
         when (val request = entry.value?.request) {
             // An entry arriving over the settings screen drops the decrypted
             // profile from memory before any navigation.

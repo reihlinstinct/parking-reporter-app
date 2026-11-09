@@ -1,6 +1,7 @@
 package il.sidewalks.reporter.ui
 
 import android.content.Context
+import il.sidewalks.reporter.i18n.UiPrefsLanguageStore
 
 /**
  * One-time first-run flag (issue #187). Lives in the same unauthenticated
@@ -15,7 +16,7 @@ class FirstRunStore(context: Context) {
     fun markSeen() { prefs.edit().putBoolean(KEY_FIRST_RUN_SEEN, true).apply() }
 
     companion object {
-        const val PREFS_NAME = "ui-prefs"
+        const val PREFS_NAME = UiPrefsLanguageStore.PREFS_NAME
         const val KEY_FIRST_RUN_SEEN = "firstRunSeen"
     }
 }
