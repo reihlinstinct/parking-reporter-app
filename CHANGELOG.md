@@ -8,6 +8,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 - Add a plate-free bollard request category using municipal subject 5164, with labels in all five languages.
 
+## [0.16.4] - 2026-11-09
+
+### Other changes
+
+- ci: manual TRIAL_DATA_KEY rotation workflow (closes #181) (#182) (e3e8ce0)
+
 ## [0.16.3] - 2026-11-09
 
 ### Other changes
