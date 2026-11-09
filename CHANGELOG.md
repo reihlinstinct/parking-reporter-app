@@ -6,9 +6,46 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-11-09
+
+### Features
+
+- feat: municipal navy/gold Material 3 theme (#161 item 1) (#199) (77f86f9)
+
+### Other changes
+
+- test: opt-in live emulator submission E2E with encrypted recording (#194) (db5f2c2)
+
+## [0.18.0] - 2026-11-09
+
+### Features
+
+- feat: municipal navy/gold Material 3 theme (#161 item 1) (#199) (77f86f9)
+
+## [0.17.2] - 2026-11-09
+
+### Fixes
+
+- fix: establish isolated owner VPN before one approved submit (#198) (1fccf5e)
+
+## [0.17.1] - 2026-11-09
+
+### Fixes
+
+- fix: fail closed on missing mandatory trial inputs before decrypt/network (#196) (babcb5e)
+
+### Fixed
+- Fail closed with constant input-stage markers when a mandatory live-trial secret is missing, before decryption or municipal calls; add test-only constant stage and error-kind markers without logging values.
+
+## [0.17.0] - 2026-11-09
+
+### Features
+
+- feat: plate-free bollard category and explicit trial subject (#189) (f73f86d)
+
 ### Added
 
-- One-time first-run welcome screen (#187). Upgrading installs have no flag yet, so they see the welcome once after the update.
+- Add a plate-free bollard request category using the established municipal subject 1280, with labels in all five languages.
 
 ## [0.16.6] - 2026-11-09
 

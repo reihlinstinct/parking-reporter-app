@@ -15,7 +15,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.activity.ComponentActivity
 import il.sidewalks.reporter.ui.AppShell
-import il.sidewalks.reporter.ui.FirstRunStore
+import il.sidewalks.reporter.ui.theme.AppTheme
+import il.sidewalks.reporter.ui.theme.NavyStatusBar
 import il.sidewalks.reporter.security.SecureSettings
 import il.sidewalks.reporter.security.ReporterSettings
 import androidx.activity.compose.setContent
@@ -76,19 +77,14 @@ class MainActivity : ComponentActivity() {
         // the request has already routed (its draft is reserved in the ledger)
         // and re-firing it would steal the screen mid-flow.
         if (savedInstanceState == null) handleEntryIntent(intent)
-        // Issue #187: one-time first-run welcome before the main flow.
-        val firstRun = FirstRunStore(this)
-        setContent { MaterialTheme {
-            var showFirstRun by remember { mutableStateOf(!firstRun.seen()) }
+        setContent { AppTheme { NavyStatusBar {
             AppShell(
                 authenticate = ::authenticate,
                 requestCamera = ::camera,
                 readSettings = { SecureSettings(this).read() },
                 saveSettings = { settings -> SecureSettings(this).save(settings) },
                 entry = entrySignal,
-                showFirstRun = showFirstRun,
-                onFirstRunDone = { firstRun.markSeen(); showFirstRun = false },
             )
-        } }
+        } } }
     }
 }
