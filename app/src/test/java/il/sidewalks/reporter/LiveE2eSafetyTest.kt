@@ -89,7 +89,7 @@ class LiveE2eSafetyTest {
         // The picker label comes from the same TRIAL_SUBJECT code the engine
         // trial files with, never from free text.
         assertTrue(resolver.contains("TRIAL_SUBJECT"))
-        assertTrue(resolver.contains("sidewalk_parking"))
+        assertTrue(resolver.contains("missing env TRIAL_SUBJECT"))
         assertTrue(resolver.contains("unsupported trial subject"))
         val yaml = workflow.readText()
         assertTrue(yaml.contains("TRIAL_SUBJECT"))
@@ -108,6 +108,10 @@ class LiveE2eSafetyTest {
         // A digest that already went through a live run is refused: the
         // cross-run duplicate guard reads prior runs' encrypted records.
         assertTrue(yaml.contains("actions: read"))
+        // Expired records are skipped (14-day memory), and a digest burns
+        // only once the send tap happened.
+        assertTrue(yaml.contains("select(.expired | not)"))
+        assertTrue(yaml.contains("LIVE_E2E SEND_TAPPED"))
         assertTrue(yaml.contains("live-e2e-run-record"))
         assertTrue(yaml.contains("refusing to re-dispatch"))
         // An ambiguous outcome fails loudly with the check-106-first rule.

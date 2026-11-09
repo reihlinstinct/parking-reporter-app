@@ -131,6 +131,8 @@ class LiveEmulatorSubmissionTest {
         }
         var cleaned = false
         var preserveState = false
+        var sendTapped = false
+        var outcomeKnown = false
         try {
             driver.driveToApproved(FlowFields(
                 text = text,
@@ -143,6 +145,7 @@ class LiveEmulatorSubmissionTest {
             marker("APPROVED")
             driver.screenshot("live-e2e-approved.png")
             marker("SEND_TAPPED")
+            sendTapped = true
             // A live call can be slow; the wait is deliberately longer than
             // the stub's. DRAFT_NOT_SAVED means the gate refused and nothing
             // was sent, so only then is a retry safe.
@@ -156,6 +159,7 @@ class LiveEmulatorSubmissionTest {
             when (outcome) {
                 FlowDriver.SendOutcome.SUBMITTED -> {
                     marker("SEND_CONFIRMED")
+                    outcomeKnown = true
                     driver.screenshot("live-e2e-submitted.png")
                     // The case number is owner-private: the encrypted bundle
                     // only, never the public marker log.
@@ -167,19 +171,35 @@ class LiveEmulatorSubmissionTest {
                     cleaned = true
                     marker("DONE")
                 }
-                FlowDriver.SendOutcome.DRAFT_NOT_SAVED ->
+                FlowDriver.SendOutcome.DRAFT_NOT_SAVED -> {
+                    outcomeKnown = true
                     throw AssertionError("draft-not-saved persisted across retries")
+                }
                 FlowDriver.SendOutcome.TIMEOUT -> {
                     // The request may already have reached the city: the case
                     // may exist. Keep the app's submission-state record for
                     // the encrypted bundle instead of cleaning it away.
                     marker("OUTCOME_UNKNOWN")
-                    driver.screenshot("live-e2e-outcome-unknown.png")
+                    outcomeKnown = true
+                    runCatching { driver.screenshot("live-e2e-outcome-unknown.png") }
                     preserveSubmissionState(context, hash)
                     preserveState = true
                     throw AssertionError("live outcome unknown after send - do not re-dispatch; check 106 first")
                 }
             }
+        } catch (t: Throwable) {
+            if (sendTapped && !outcomeKnown) {
+                // A failure after the send tap is as ambiguous as a timeout:
+                // the request may have reached the city. Keep the evidence
+                // instead of letting finally wipe it, and forbid re-runs.
+                marker("OUTCOME_UNKNOWN")
+                runCatching { driver.screenshot("live-e2e-outcome-unknown.png") }
+                runCatching { preserveSubmissionState(context, hash) }
+                preserveState = true
+                throw AssertionError(
+                    "live outcome unknown after send - do not re-dispatch; check 106 first", t)
+            }
+            throw t
         } finally {
             if (!cleaned && !preserveState) runCatching { cleanOwnedPhoto(context, hash) }
         }

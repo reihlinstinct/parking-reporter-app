@@ -68,12 +68,17 @@ jobs:
           mkdir -p /tmp/live-e2e/prior
           resp=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts?name=live-e2e-run-record-encrypted&per_page=100")
-          count=$(jq -r '.total_count' <<<"$resp")
+          # The listing also returns artifacts past their retention (expired
+          # ones cannot be downloaded); skip them - that matches the
+          # documented 14-day memory of this guard. per_page=100 covers the
+          # first page only, which is far above this dispatch-only volume.
+          count=$(jq -r '[.artifacts[] | select(.expired | not)] | length' <<<"$resp")
           echo "prior run records found: $count"
           if [ "$count" != "0" ]; then
             while IFS=$'\t' read -r id url; do
               [ -n "$id" ] || continue
-              curl -sSL -H "Authorization: Bearer $GH_TOKEN" "$url" -o "/tmp/live-e2e/prior/$id.zip"
+              curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$url" -o "/tmp/live-e2e/prior/$id.zip" || {
+                echo 'cannot download a prior run record - refusing (fail closed)'; exit 1; }
               unzip -o -q "/tmp/live-e2e/prior/$id.zip" -d "/tmp/live-e2e/prior/$id"
               enc=$(find "/tmp/live-e2e/prior/$id" -name '*.enc' | head -1)
               plain=$(openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in "$enc" -pass env:TRIAL_DATA_KEY) || {
@@ -83,7 +88,7 @@ jobs:
                 echo 'this approved digest already went through a live run - refusing to re-dispatch'
                 exit 1
               fi
-            done < <(jq -r '.artifacts[] | [.id, .archive_download_url] | @tsv' <<<"$resp")
+            done < <(jq -r '.artifacts[] | select(.expired | not) | [.id, .archive_download_url] | @tsv' <<<"$resp")
           fi
           echo 'no prior live run took this digest'
       - name: Build app and test APKs
@@ -283,8 +288,11 @@ jobs:
         run: |
           set -euo pipefail
           cd /tmp/live-e2e
-          if [ -f staged.ok ]; then
-            outcome=failed
+          if [ -f staged.ok ] && grep -q 'LIVE_E2E SEND_TAPPED' live-log.txt 2>/dev/null; then
+            # The digest is burned only once the send tap happened - the
+            # point where a case may exist. A run that failed earlier (boot
+            # failure, gate refusal) filed nothing and stays re-runnable.
+            outcome=aborted_after_send_tap
             if grep -q 'LIVE_E2E OUTCOME_UNKNOWN' live-log.txt 2>/dev/null; then outcome=outcome_unknown; fi
             if grep -q 'LIVE_E2E SUBMITTED case=' live-log.txt 2>/dev/null; then outcome=submitted; fi
             jq -n --arg d "$APPROVED_SHA256_INPUT" --arg o "$outcome" --arg r "$GITHUB_RUN_ID" --arg a "$GITHUB_RUN_ATTEMPT" --arg t "$(date -u +%FT%TZ)" \
@@ -293,7 +301,7 @@ jobs:
               -in run-record.json -out live-e2e-run-record.json.enc -pass env:TRIAL_DATA_KEY
             shred -u run-record.json
           else
-            echo 'params never staged; no run record needed'
+            echo 'the send was never tapped; this digest stays re-runnable, no run record'
           fi
       - name: Upload the encrypted evidence bundle
         if: always()

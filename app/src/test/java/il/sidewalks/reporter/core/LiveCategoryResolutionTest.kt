@@ -14,7 +14,11 @@ import org.junit.Test
 class LiveCategoryResolutionTest {
     @Test fun resolveTrialSubjectLabel() {
         val out = System.getenv("LIVE_CATEGORY_PATH") ?: return
-        val code = System.getenv("TRIAL_SUBJECT")?.takeIf { it.isNotBlank() } ?: "sidewalk_parking"
+        // TRIAL_SUBJECT is mandatory for a live run, mirroring the engine trial's
+        // env() helper: fail closed when the secret is absent rather than guessing
+        // a category for the approved text.
+        val code = System.getenv("TRIAL_SUBJECT")?.takeIf { it.isNotBlank() }
+            ?: throw IllegalStateException("missing env TRIAL_SUBJECT")
         val category = ReportCategory.from(code)
             ?: throw AssertionError("unsupported trial subject")
         val stringsFile = listOf(

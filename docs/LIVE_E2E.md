@@ -30,13 +30,17 @@ on a schedule.
 2. **Environment approval**: the job runs in the `m0-trial-submit`
    environment, whose required reviewer is the owner.
 3. **Cross-run duplicate guard**: the run refuses an `approved_sha256` that
-   any earlier live run already staged, checked against earlier runs'
-   encrypted run records (`live-e2e-run-record-encrypted` artifacts, read
-   with `actions: read` and decrypted with `TRIAL_DATA_KEY`). An
-   undecryptable record fails the run closed. Runs are serialized by the
-   workflow concurrency group. The records expire with their 14-day artifact
-   retention: a re-dispatch of an older case needs the manual 106 check
-   first, exactly like an ambiguous outcome (below).
+   any earlier live run already sent (or may have sent), checked against
+   earlier runs' encrypted run records (`live-e2e-run-record-encrypted`
+   artifacts, read with `actions: read` and decrypted with
+   `TRIAL_DATA_KEY`). An undecryptable record fails the run closed. Runs are
+   serialized by the workflow concurrency group. A run record is written
+   only once the send tap happened - the point where a case may exist - so
+   a run that failed earlier (emulator boot, staging, a refused gate) burns
+   nothing and the same digest can be dispatched again. The records expire
+   with their 14-day artifact retention: a re-dispatch of an older case
+   needs the manual 106 check first, exactly like an ambiguous outcome
+   (below).
 4. **Digest binding**: the dispatch input `approved_sha256` must equal the
    sha256 of the staged `TRIAL_APPROVED_TEXT` secret. The runner checks this
    before staging and the test re-checks it on-device before the flow
@@ -63,7 +67,8 @@ block (403 / connect failure marker) does it bring up the owner L2TP tunnel
 - **Submitted**: marker `LIVE_E2E SUBMITTED case=present` (or `unparsed`).
   The municipal case number itself is written only into the encrypted
   bundle (`live-e2e-case-number.txt`), never the public log.
-- **Outcome unknown** (timeout after the send tap): the request may already
+- **Outcome unknown** (a timeout or any other failure after the send tap):
+  the request may already
   have reached the city. The test logs `LIVE_E2E OUTCOME_UNKNOWN`, keeps the
   app's own submission-state record for the encrypted bundle instead of
   deleting it, and the run fails with: **do not re-dispatch and do not use
