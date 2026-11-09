@@ -2,6 +2,7 @@ package il.sidewalks.reporter.municipal
 
 import il.sidewalks.reporter.core.Evidence
 import il.sidewalks.reporter.core.ReviewDraft
+import il.sidewalks.reporter.core.ReportCategory
 import il.sidewalks.reporter.security.ReporterSettings
 import java.io.File
 import java.security.MessageDigest
@@ -44,13 +45,22 @@ class EngineLiveTrialTest {
         municipalPassword = env("J106_APP_PASSWORD"),
     )
 
+    // Markers are constant strings only (no values, no digests): they go to
+    // stdout and to a file the workflow prints, so a result is visible even
+    // though Gradle hides test stdout without showStandardStreams.
+    private fun report(marker: String) {
+        println("TRIAL_RESULT $marker")
+        val path = System.getenv("TRIAL_RESULT_PATH") ?: return
+        File(path).appendText("TRIAL_RESULT $marker\n")
+    }
+
     @Test fun loginOnlyDiagnostic() {
         assumeTrue(System.getenv("J106_LIVE_TRIAL") == "login-only")
         try {
             // Login-only phase: least privilege, only the three J106 secrets.
             val token = municipalClient().login()
             assertTrue(token.isNotEmpty())
-            println("TRIAL_RESULT LOGIN_OK")
+            report("LOGIN_OK")
         } catch (e: Throwable) {
             // A 403 or a connect failure on login proves the direct egress is
             // blocked BEFORE any case write could have been attempted (login
@@ -60,7 +70,7 @@ class EngineLiveTrialTest {
             if (message.contains("HTTP 403") || message.contains("network failure")) {
                 File(System.getenv("EGRESS_MARKER_PATH") ?: "/tmp/egress-blocked").writeText("egress blocked\n")
             }
-            println("TRIAL_RESULT ERROR class=" + e.javaClass.simpleName)
+            report("ERROR class=" + e.javaClass.simpleName)
             throw AssertionError("login-only trial failed; class marker printed")
         }
     }
@@ -93,11 +103,13 @@ class EngineLiveTrialTest {
                 latitude = env("TRIAL_LAT").toDouble(),
                 longitude = env("TRIAL_LON").toDouble(),
             )
+            val category = ReportCategory.from(env("TRIAL_SUBJECT"))
+                ?: throw IllegalStateException("unsupported trial subject")
             val draft = ReviewDraft(
                 evidence = evidence,
-                plate = env("TRIAL_PLATE"),
+                plate = System.getenv("TRIAL_PLATE").orEmpty(),
                 address = env("TRIAL_ADDRESS"),
-                subject = "sidewalk_parking",
+                subject = category.code,
                 exactHebrewText = text,
                 unresolved = emptySet(),
             ).approve()
@@ -111,20 +123,23 @@ class EngineLiveTrialTest {
             // fallback, so a failure here can never re-run a case write.
             when (val outcome = coordinator.submitApproved(draft, settings(), photo)) {
                 is SubmissionCoordinator.Outcome.Submitted ->
-                    println("TRIAL_RESULT SUBMITTED")
+                    report("SUBMITTED")
                 is SubmissionCoordinator.Outcome.AlreadySubmitted ->
-                    println("TRIAL_RESULT ALREADY_SUBMITTED")
+                    report("ALREADY_SUBMITTED")
                 is SubmissionCoordinator.Outcome.Blocked -> {
-                    println("TRIAL_RESULT BLOCKED reason=${outcome.reason}")
+                    report("BLOCKED reason=${outcome.reason}")
                     throw AssertionError("trial blocked")
                 }
             }
         } catch (e: Throwable) {
-            println("TRIAL_RESULT ERROR class=" + e.javaClass.simpleName)
+            report("ERROR class=" + e.javaClass.simpleName)
             throw AssertionError("submit trial failed; class marker printed")
         }
     }
 
-    private fun municipalClientFrom(s: ReporterSettings): OkHttpMunicipalClient =
-        OkHttpMunicipalClient(s.municipalSubscriptionKey, s.municipalUsername, s.municipalPassword)
+    private fun municipalClientFrom(s: ReporterSettings): MunicipalClient =
+        TrialStageClient(
+            OkHttpMunicipalClient(s.municipalSubscriptionKey, s.municipalUsername, s.municipalPassword),
+            ::report,
+        )
 }

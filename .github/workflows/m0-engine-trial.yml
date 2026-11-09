@@ -42,6 +42,7 @@ jobs:
           J106_APP_USERNAME: ${{ secrets.J106_APP_USERNAME }}
           J106_APP_PASSWORD: ${{ secrets.J106_APP_PASSWORD }}
           TRIAL_STATE_DIR: /tmp/trial-state
+          TRIAL_RESULT_PATH: /tmp/trial-result.txt
           EGRESS_MARKER_PATH: /tmp/egress-blocked
         run: |
           sh gradlew --no-daemon testDebugUnitTest --tests 'il.sidewalks.reporter.municipal.EngineLiveTrialTest'
@@ -75,22 +76,32 @@ jobs:
           J106_APP_USERNAME: ${{ secrets.J106_APP_USERNAME }}
           J106_APP_PASSWORD: ${{ secrets.J106_APP_PASSWORD }}
           TRIAL_STATE_DIR: /tmp/trial-state
+          TRIAL_RESULT_PATH: /tmp/trial-result.txt
         run: |
           sh gradlew --no-daemon testDebugUnitTest --tests 'il.sidewalks.reporter.municipal.EngineLiveTrialTest'
+      - name: Show trial result markers
+        if: always()
+        run: cat /tmp/trial-result.txt 2>/dev/null || echo 'no TRIAL_RESULT markers produced'
+      - name: "Verdict: login-only must reach LOGIN_OK"
+        run: |
+          # A failed login without an egress marker used to end green
+          # (direct step is continue-on-error for the fallback path).
+          grep -q 'TRIAL_RESULT LOGIN_OK' /tmp/trial-result.txt 2>/dev/null || { echo 'login-only trial did not reach LOGIN_OK'; exit 1; }
       - name: Always remove tunnel and trial plaintext
         if: always()
         run: |
           sudo python3 trial/l2tp.py down || true
           rm -f /tmp/egress-blocked
           rm -rf /tmp/trial-state
+          rm -f /tmp/trial-result.txt
 
-  # Real submit: a single attempt on direct egress, no fallback, gated by the
+  # Real submit: VPN-first, a single municipal attempt, no fallback, gated by the
   # m0-trial-submit environment whose required reviewer is the owner (his
   # approval 2026-11-09: the gate applies only before a real submit). The
   # exact report text still needs his explicit approval in chat first, and
   # its sha256 is bound here via the dispatch input.
   trial-submit:
-    if: github.ref == 'refs/heads/main' && inputs.phase == 'submit'
+    if: github.repository == 'reihlinstinct/parking-reporter-app' && github.event_name == 'workflow_dispatch' && github.run_attempt == 1 && github.ref == 'refs/heads/main' && inputs.phase == 'submit'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: m0-trial-submit
@@ -112,6 +123,43 @@ jobs:
           # The dispatch value reaches the shell only as a quoted env var,
           # never through workflow-expression interpolation.
           printf '%s' "$APPROVED_SHA256_INPUT" | grep -qxE '[0-9a-f]{64}'
+      - name: Validate mandatory submit inputs before decrypt or network
+        env:
+          J106_SUBSCRIPTION_KEY: ${{ secrets.J106_SUBSCRIPTION_KEY }}
+          J106_APP_USERNAME: ${{ secrets.J106_APP_USERNAME }}
+          J106_APP_PASSWORD: ${{ secrets.J106_APP_PASSWORD }}
+          REPORTER_FIRST_NAME: ${{ secrets.REPORTER_FIRST_NAME }}
+          REPORTER_LAST_NAME: ${{ secrets.REPORTER_LAST_NAME }}
+          REPORTER_PHONE: ${{ secrets.REPORTER_PHONE }}
+          REPORTER_ID_NUMBER: ${{ secrets.REPORTER_ID_NUMBER }}
+          REPORTER_EMAIL: ${{ secrets.REPORTER_EMAIL }}
+          TRIAL_APPROVED_TEXT: ${{ secrets.TRIAL_APPROVED_TEXT }}
+          TRIAL_SUBJECT: ${{ secrets.TRIAL_SUBJECT }}
+          TRIAL_ADDRESS: ${{ secrets.TRIAL_ADDRESS }}
+          TRIAL_LAT: ${{ secrets.TRIAL_LAT }}
+          TRIAL_LON: ${{ secrets.TRIAL_LON }}
+          TRIAL_CAPTURED_AT: ${{ secrets.TRIAL_CAPTURED_AT }}
+          TRIAL_STREET_LOOKUP_JSON: ${{ secrets.TRIAL_STREET_LOOKUP_JSON }}
+          TRIAL_DATA_KEY: ${{ secrets.TRIAL_DATA_KEY }}
+          TRIAL_APPROVED_SHA256: ${{ inputs.approved_sha256 }}
+        run: bash scripts/trial_submit_preflight.sh
+      - name: Bring up owner VPN before any municipal call
+        env:
+          VPN_L2TP_SERVER: ${{ secrets.VPN_L2TP_SERVER }}
+          VPN_L2TP_PSK: ${{ secrets.VPN_L2TP_PSK }}
+          VPN_L2TP_USERNAME: ${{ secrets.VPN_L2TP_USERNAME }}
+          VPN_L2TP_PASSWORD: ${{ secrets.VPN_L2TP_PASSWORD }}
+        run: |
+          # No secret values or daemon output in public logs. Fail closed.
+          for name in VPN_L2TP_SERVER VPN_L2TP_PSK VPN_L2TP_USERNAME VPN_L2TP_PASSWORD; do
+            test -n "${!name//[[:space:]]/}" || { echo 'TRIAL_RESULT VPN_INPUT_MISSING'; exit 1; }
+          done
+          sudo apt-get update -qq > /dev/null 2>&1
+          sudo apt-get install -y strongswan xl2tpd ppp > /dev/null 2>&1
+          # One tunnel attempt. up validates all municipal IPv4 routes and
+          # installs HTTPS kill-switch + PPP private-network isolation.
+          sudo --preserve-env=VPN_L2TP_SERVER,VPN_L2TP_PSK,VPN_L2TP_USERNAME,VPN_L2TP_PASSWORD \
+            python3 trial/l2tp.py up
       - name: Decrypt trial photo
         env:
           TRIAL_DATA_KEY: ${{ secrets.TRIAL_DATA_KEY }}
@@ -132,6 +180,7 @@ jobs:
           REPORTER_EMAIL: ${{ secrets.REPORTER_EMAIL }}
           TRIAL_APPROVED_TEXT: ${{ secrets.TRIAL_APPROVED_TEXT }}
           TRIAL_APPROVED_SHA256: ${{ inputs.approved_sha256 }}
+          TRIAL_SUBJECT: ${{ secrets.TRIAL_SUBJECT }}
           TRIAL_PLATE: ${{ secrets.TRIAL_PLATE }}
           TRIAL_ADDRESS: ${{ secrets.TRIAL_ADDRESS }}
           TRIAL_LAT: ${{ secrets.TRIAL_LAT }}
@@ -140,10 +189,16 @@ jobs:
           TRIAL_STREET_LOOKUP_JSON: ${{ secrets.TRIAL_STREET_LOOKUP_JSON }}
           TRIAL_PHOTO_PATH: /tmp/trial-original.jpg
           TRIAL_STATE_DIR: /tmp/trial-state
+          TRIAL_RESULT_PATH: /tmp/trial-result.txt
         run: |
           sh gradlew --no-daemon testDebugUnitTest --tests 'il.sidewalks.reporter.municipal.EngineLiveTrialTest'
-      - name: Always remove trial plaintext
+      - name: Show trial result markers
+        if: always()
+        run: cat /tmp/trial-result.txt 2>/dev/null || echo 'no TRIAL_RESULT markers produced'
+      - name: Always remove tunnel and trial plaintext
         if: always()
         run: |
+          sudo python3 trial/l2tp.py down
           rm -f /tmp/trial-original.jpg
           rm -rf /tmp/trial-state
+          rm -f /tmp/trial-result.txt
