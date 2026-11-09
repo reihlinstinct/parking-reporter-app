@@ -158,6 +158,10 @@ class MunicipalPayloadsTest {
         assertThrows(MunicipalInputException::class.java) {
             MunicipalPayloads.buildReport(reportFields.copy(houseNumber = "/3"))
         }
+        // Hebrew-letter house numbers pass (parity with the helper's Unicode \w).
+        val hebrew = MunicipalPayloads.buildReport(reportFields.copy(houseNumber = "12א"))
+        assertEquals("הפלמח 12א", hebrew["CaseAddressText"])
+        assertEquals("12א", hebrew["CaseHouseNumber"])
         val report = MunicipalPayloads.buildReport(reportFields)
         assertEquals("הפלמח 900", report["CaseAddressText"])
         assertEquals(1, report["Language"])
