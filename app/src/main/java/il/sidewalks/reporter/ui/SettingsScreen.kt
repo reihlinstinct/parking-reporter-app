@@ -24,18 +24,16 @@ import il.sidewalks.reporter.i18n.ProvideStringsIfMissing
 import il.sidewalks.reporter.i18n.TextDir
 import il.sidewalks.reporter.security.ReporterSettings
 
-/** A save merges blank fields against the freshly read stored settings: after a save
- *  the screen clears itself and the caller drops its copy, so blank always means
- *  "keep the stored value". Removing a stored value needs a dedicated action. */
+/** A save merges blank PERSONAL fields against the freshly read stored settings:
+ *  after a save the screen clears itself and the caller drops its copy, so a blank
+ *  personal field means "keep the stored value". The municipal credential fields
+ *  save exactly as typed: clearing one removes its stored value (owner 2026-11-09). */
 internal fun mergeReporterSettings(value: ReporterSettings, stored: ReporterSettings?): ReporterSettings = value.copy(
     firstName = value.firstName.ifBlank { stored?.firstName.orEmpty() },
     lastName = value.lastName.ifBlank { stored?.lastName.orEmpty() },
     phone = value.phone.ifBlank { stored?.phone.orEmpty() },
     idNumber = value.idNumber.ifBlank { stored?.idNumber.orEmpty() },
-    email = value.email.ifBlank { stored?.email.orEmpty() },
-    municipalSubscriptionKey = value.municipalSubscriptionKey.ifBlank { stored?.municipalSubscriptionKey.orEmpty() },
-    municipalUsername = value.municipalUsername.ifBlank { stored?.municipalUsername.orEmpty() },
-    municipalPassword = value.municipalPassword.ifBlank { stored?.municipalPassword.orEmpty() })
+    email = value.email.ifBlank { stored?.email.orEmpty() })
 
 /** Caller obtains fresh system authentication before opening and again before saving. */
 @Composable
@@ -74,9 +72,9 @@ fun SettingsScreen(
         OutlinedTextField(subscriptionKey, { subscriptionKey = it; saved = false }, label = { Text(s.t("settings.field.subscription_key")) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
         OutlinedTextField(apiUsername, { apiUsername = it; saved = false }, label = { Text(s.t("settings.field.api_username")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
         OutlinedTextField(apiPassword, { apiPassword = it; saved = false }, label = { Text(s.t("settings.field.api_password")) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
-        // Blank fields keep the stored values via mergeReporterSettings in the caller's
-        // save callback, and the button stays disabled when every field is blank or right
-        // after a save. Values are trimmed; blank can never mean "delete a stored value".
+        // Blank personal fields keep the stored values via mergeReporterSettings in the
+        // caller's save callback; blank municipal credential fields clear the stored
+        // values. The button stays disabled when every field is blank or right after a save.
         val anyField = listOf(firstName, lastName, id, phone, email, subscriptionKey, apiUsername, apiPassword).any { it.isNotBlank() }
         Button(enabled = !saved && anyField, onClick = { save(ReporterSettings(firstName.trim(), lastName.trim(), phone.trim(), id.trim(), email.trim(),
             municipalSubscriptionKey = subscriptionKey.trim().ifBlank { initial?.municipalSubscriptionKey.orEmpty() },

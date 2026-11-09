@@ -321,9 +321,21 @@ fun AppShell(
             // Live submit is always visible (owner 19:49: no master toggle
             // and no settings pre-read; the per-submit device unlock is the
             // gate, and missing credentials answer after it).
+            // Plaintext field-IDs record: which municipal credentials are unset, no
+            // values, readable without the unlock that a settings read would need.
+            // null (never saved) keeps the old answer-after-unlock behavior.
+            val missingCredentials = remember(value.evidence.stableId) {
+                il.sidewalks.reporter.security.SettingsProfileStore(context).read()?.map {
+                    when (it) {
+                        "subscription_key" -> "settings.field.subscription_key"
+                        "api_username" -> "settings.field.api_username"
+                        else -> "settings.field.api_password"
+                    }
+                }.orEmpty()
+            }
             ReviewScreen(value, image, ::saveDraft, onBack = { page = "home" },
                 onSubmit = { shown -> submitReport(shown) },
-                submitting = submitting, submissionNote = submissionNote, onOutgoingPreview = {
+                submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, onOutgoingPreview = {
                 scope.launch {
                     try {
                         val derivative = withContext(Dispatchers.IO) {
@@ -350,9 +362,14 @@ fun AppShell(
         "settings" -> SettingsScreen(profile, save = { value, cleared ->
             authenticate(strings.t("shell.unlock.settings_title"), strings.t("shell.unlock.settings_subtitle")) {
                 try {
-                    // The screen clears itself and profile is dropped after a save, so blank
-                    // fields must keep the stored values: merge against a fresh read.
-                    saveSettings(mergeReporterSettings(value, readSettings())); profile = null; cleared(); status = strings.t("shell.status.settings_saved")
+                    // The screen clears itself and profile is dropped after a save: blank
+                    // personal fields keep the stored values, blank municipal credentials
+                    // clear them; merge against a fresh read, then record which municipal
+                    // fields are unset (IDs only) so the review screen can grey out send.
+                    val merged = mergeReporterSettings(value, readSettings())
+                    saveSettings(merged)
+                    il.sidewalks.reporter.security.SettingsProfileStore(context).save(merged.missingMunicipalFields())
+                    profile = null; cleared(); status = strings.t("shell.status.settings_saved")
                 }
                 catch (_: Exception) { status = strings.t("shell.status.settings_save_failed") }
             }

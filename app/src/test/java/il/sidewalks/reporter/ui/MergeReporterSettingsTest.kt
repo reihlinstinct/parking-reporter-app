@@ -9,9 +9,28 @@ class MergeReporterSettingsTest {
         municipalSubscriptionKey = "synthetic-key", municipalUsername = "synthetic-user", municipalPassword = "synthetic-pass")
 
     @Test
-    fun blankFieldsKeepStoredValues() {
+    fun blankPersonalFieldsKeepStoredValues() {
         val cleared = ReporterSettings("", "", "", "", "")
-        assertEquals(stored, mergeReporterSettings(cleared, stored))
+        val merged = mergeReporterSettings(cleared, stored)
+        assertEquals("א", merged.firstName)
+        assertEquals("050", merged.phone)
+        assertEquals("a@b.invalid", merged.email)
+    }
+
+    @Test
+    fun blankMunicipalFieldsClearStoredValues() {
+        // Owner 2026-11-09: clearing a municipal credential field and saving
+        // removes the stored value - no dedicated delete action.
+        val cleared = ReporterSettings("", "", "", "", "")
+        val merged = mergeReporterSettings(cleared, stored)
+        assertEquals("", merged.municipalSubscriptionKey)
+        assertEquals("", merged.municipalUsername)
+        assertEquals("", merged.municipalPassword)
+        val partial = mergeReporterSettings(
+            ReporterSettings("", "", "", "", "", municipalUsername = "new-user"), stored)
+        assertEquals("", partial.municipalSubscriptionKey)
+        assertEquals("new-user", partial.municipalUsername)
+        assertEquals("", partial.municipalPassword)
     }
 
     @Test
