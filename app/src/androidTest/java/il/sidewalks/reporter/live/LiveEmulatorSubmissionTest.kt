@@ -38,10 +38,11 @@ import org.junit.Test
  * municipal endpoint, the real on-device street directory and the same
  * FlowDriver the synthetic stub E2E drives.
  *
- * Privacy: credentials and report details never reach logcat, assertion
- * messages or stdout. The only test output is a scrubbed marker log (fixed
- * step names, the municipal case number, exception class names) plus
- * screenshots for the encrypted evidence bundle.
+ * Privacy: credentials, report details and the municipal case number never
+ * reach logcat, assertion messages or stdout. The only public test output
+ * is a scrubbed marker log (fixed step names, case=present|unparsed,
+ * exception class names); the case number, screenshots and any preserved
+ * submission state go only to the workflow's encrypted evidence bundle.
  */
 class LiveEmulatorSubmissionTest {
     @get:Rule val compose = createComposeRule()
@@ -129,6 +130,7 @@ class LiveEmulatorSubmissionTest {
             }
         }
         var cleaned = false
+        var preserveState = false
         try {
             driver.driveToApproved(FlowFields(
                 text = text,
@@ -137,20 +139,63 @@ class LiveEmulatorSubmissionTest {
                 capturedAtIso = params.getString("capturedAt"),
                 latitude = params.getString("lat"),
                 longitude = params.getString("lon"),
-                categoryLabel = params.optString("categoryLabel").ifBlank { "חניה על המדרכה" }))
+                categoryLabel = params.getString("categoryLabel")))
             marker("APPROVED")
             driver.screenshot("live-e2e-approved.png")
-            driver.tapSendAndAwaitCaseNumber()
-            marker("SEND_CONFIRMED")
-            driver.screenshot("live-e2e-submitted.png")
-            val shown = driver.nodeTextContaining("מספר קריאה") ?: ""
-            val caseNumber = Regex("\\d{4}-\\d{7}").find(shown)?.value ?: "unparsed"
-            marker("SUBMITTED case=$caseNumber")
-            cleanOwnedPhoto(context, hash)
-            cleaned = true
-            marker("DONE")
+            marker("SEND_TAPPED")
+            // A live call can be slow; the wait is deliberately longer than
+            // the stub's. DRAFT_NOT_SAVED means the gate refused and nothing
+            // was sent, so only then is a retry safe.
+            var outcome = driver.tapSendAndAwaitOnce(120_000)
+            var sendAttempts = 1
+            while (outcome == FlowDriver.SendOutcome.DRAFT_NOT_SAVED && sendAttempts < 3) {
+                Thread.sleep(500)
+                sendAttempts += 1
+                outcome = driver.tapSendAndAwaitOnce(120_000)
+            }
+            when (outcome) {
+                FlowDriver.SendOutcome.SUBMITTED -> {
+                    marker("SEND_CONFIRMED")
+                    driver.screenshot("live-e2e-submitted.png")
+                    // The case number is owner-private: the encrypted bundle
+                    // only, never the public marker log.
+                    val shown = driver.nodeTextContaining("מספר קריאה") ?: ""
+                    val caseNumber = Regex("\\d{4}-\\d{7}").find(shown)?.value
+                    File(context.filesDir, "live-e2e-case-number.txt").writeText(caseNumber ?: "")
+                    marker("SUBMITTED case=" + if (caseNumber != null) "present" else "unparsed")
+                    cleanOwnedPhoto(context, hash)
+                    cleaned = true
+                    marker("DONE")
+                }
+                FlowDriver.SendOutcome.DRAFT_NOT_SAVED ->
+                    throw AssertionError("draft-not-saved persisted across retries")
+                FlowDriver.SendOutcome.TIMEOUT -> {
+                    // The request may already have reached the city: the case
+                    // may exist. Keep the app's submission-state record for
+                    // the encrypted bundle instead of cleaning it away.
+                    marker("OUTCOME_UNKNOWN")
+                    driver.screenshot("live-e2e-outcome-unknown.png")
+                    preserveSubmissionState(context, hash)
+                    preserveState = true
+                    throw AssertionError("live outcome unknown after send - do not re-dispatch; check 106 first")
+                }
+            }
         } finally {
-            if (!cleaned) runCatching { cleanOwnedPhoto(context, hash) }
+            if (!cleaned && !preserveState) runCatching { cleanOwnedPhoto(context, hash) }
+        }
+    }
+
+    /** Copy the app's own submission-state record for the encrypted bundle. */
+    private fun preserveSubmissionState(context: Context, hash: String) {
+        val db = Room.databaseBuilder(context, ReportDatabase::class.java, "report-ledger.db").build()
+        try {
+            val record = runBlocking { db.reports().findPhoto(hash) } ?: return
+            val state = File(context.noBackupFilesDir, "submissions/${record.stableId}.json")
+            if (state.isFile) {
+                state.copyTo(File(context.filesDir, "live-e2e-submission-state.json"), overwrite = true)
+            }
+        } finally {
+            db.close()
         }
     }
 

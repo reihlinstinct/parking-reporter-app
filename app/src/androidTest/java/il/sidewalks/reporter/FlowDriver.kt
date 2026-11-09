@@ -78,6 +78,31 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         }
     }
 
+    /** What the UI showed after one send tap. */
+    internal enum class SendOutcome { SUBMITTED, DRAFT_NOT_SAVED, TIMEOUT }
+
+    /**
+     * Tap send once and wait up to [outcomeWaitMs] for the outcome. Never
+     * throws on timeout: after a real send tap a timeout is ambiguous (the
+     * request may already have reached the city) and the caller decides what
+     * that means - the stub fails, the live run keeps its evidence.
+     */
+    fun tapSendAndAwaitOnce(outcomeWaitMs: Long): SendOutcome {
+        compose.onNodeWithText("שלח לעירייה").performScrollTo().performClick()
+        try {
+            compose.waitUntil(outcomeWaitMs) {
+                compose.onAllNodesWithText("נשלח לעירייה. מספר קריאה", substring = true)
+                    .fetchSemanticsNodes().isNotEmpty() ||
+                    compose.onAllNodesWithText("הטיוטה לא נשמרה", substring = true)
+                        .fetchSemanticsNodes().isNotEmpty()
+            }
+        } catch (e: ComposeTimeoutException) {
+            return SendOutcome.TIMEOUT
+        }
+        return if (compose.onAllNodesWithText("נשלח לעירייה. מספר קריאה", substring = true)
+            .fetchSemanticsNodes().isNotEmpty()) SendOutcome.SUBMITTED else SendOutcome.DRAFT_NOT_SAVED
+    }
+
     fun tapSendAndAwaitCaseNumber() {
         // The send gate compares the shown draft to the last SAVED one and
         // the post-approval save is asynchronous; retry the tap if the gate
@@ -85,21 +110,14 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         var attempt = 0
         while (true) {
             attempt += 1
-            compose.onNodeWithText("שלח לעירייה").performScrollTo().performClick()
-            try {
-                compose.waitUntil(45_000) {
-                    compose.onAllNodesWithText("נשלח לעירייה. מספר קריאה", substring = true)
-                        .fetchSemanticsNodes().isNotEmpty() ||
-                        compose.onAllNodesWithText("הטיוטה לא נשמרה", substring = true)
-                            .fetchSemanticsNodes().isNotEmpty()
+            when (tapSendAndAwaitOnce(45_000)) {
+                SendOutcome.SUBMITTED -> return
+                SendOutcome.DRAFT_NOT_SAVED -> {
+                    if (attempt >= 3) fail("draft-not-saved persisted across retries")
+                    Thread.sleep(500)
                 }
-            } catch (e: ComposeTimeoutException) {
-                fail("no submission outcome shown")
+                SendOutcome.TIMEOUT -> fail("no submission outcome shown")
             }
-            if (compose.onAllNodesWithText("נשלח לעירייה. מספר קריאה", substring = true)
-                .fetchSemanticsNodes().isNotEmpty()) return
-            if (attempt >= 3) fail("draft-not-saved persisted across retries")
-            Thread.sleep(500)
         }
     }
 
@@ -107,7 +125,7 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
     fun nodeTextContaining(substring: String): String? {
         val node = compose.onAllNodesWithText(substring, substring = true)
             .fetchSemanticsNodes().firstOrNull() ?: return null
-        return node.config.getOrNull(SemanticsProperties.Text)
-            ?.joinToString(separator = "") { it.text }
+        if (SemanticsProperties.Text !in node.config) return null
+        return node.config[SemanticsProperties.Text].joinToString(separator = "") { it.text }
     }
 }

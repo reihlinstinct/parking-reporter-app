@@ -50,6 +50,24 @@ class LiveE2eSafetyTest {
         assertTrue(source.contains("live-e2e-log.txt"))
         // The staged params carry secrets and must always be wiped.
         assertTrue(source.contains("paramsFile.delete()"))
+        // The municipal case number is owner-private: only a fixed marker
+        // reaches the public log, never the interpolated number.
+        assertTrue(source.contains("\"SUBMITTED case=\" + if (caseNumber != null) \"present\" else \"unparsed\""))
+        assertFalse(Regex("SUBMITTED case=\\$").containsMatchIn(source))
+    }
+
+    @Test fun ambiguousSubmitKeepsItsEvidence() {
+        val source = liveTest.readText()
+        // A timeout after the send tap may mean the case exists: it gets a
+        // distinct marker, the submission state is preserved for the
+        // encrypted bundle, and cleanup is skipped.
+        assertTrue(source.contains("OUTCOME_UNKNOWN"))
+        assertTrue(source.contains("preserveSubmissionState"))
+        assertTrue(source.contains("live-e2e-submission-state.json"))
+        assertTrue(source.contains("if (!cleaned && !preserveState)"))
+        assertTrue(source.contains("do not re-dispatch; check 106 first"))
+        // Only a refused send (nothing reached the city) may be retried.
+        assertTrue(source.contains("DRAFT_NOT_SAVED && sendAttempts < 3"))
     }
 
     @Test fun liveProviderServesOnlyAStagedPhoto() {
@@ -63,6 +81,22 @@ class LiveE2eSafetyTest {
         assertFalse(provider.contains("MODE_WRITE"))
     }
 
+    @Test fun categoryLabelResolvesFromStagedSubject() {
+        val resolver = repoFile(
+            "src/test/java/il/sidewalks/reporter/core/LiveCategoryResolutionTest.kt",
+            "app/src/test/java/il/sidewalks/reporter/core/LiveCategoryResolutionTest.kt")
+            .readText()
+        // The picker label comes from the same TRIAL_SUBJECT code the engine
+        // trial files with, never from free text.
+        assertTrue(resolver.contains("TRIAL_SUBJECT"))
+        assertTrue(resolver.contains("sidewalk_parking"))
+        assertTrue(resolver.contains("unsupported trial subject"))
+        val yaml = workflow.readText()
+        assertTrue(yaml.contains("TRIAL_SUBJECT"))
+        assertTrue(yaml.contains("LiveCategoryResolutionTest"))
+        assertFalse(yaml.contains("category_label"))
+    }
+
     @Test fun liveWorkflowIsManualGatedAndEncryptsEvidence() {
         val yaml = workflow.readText()
         assertTrue(yaml.contains("workflow_dispatch:"))
@@ -71,6 +105,14 @@ class LiveE2eSafetyTest {
         assertTrue(yaml.contains("FILE-LIVE-REPORT"))
         // The staged text digest is validated on the runner before staging.
         assertTrue(yaml.contains("approved text digest mismatch"))
+        // A digest that already went through a live run is refused: the
+        // cross-run duplicate guard reads prior runs' encrypted records.
+        assertTrue(yaml.contains("actions: read"))
+        assertTrue(yaml.contains("live-e2e-run-record"))
+        assertTrue(yaml.contains("refusing to re-dispatch"))
+        // An ambiguous outcome fails loudly with the check-106-first rule.
+        assertTrue(yaml.contains("OUTCOME_UNKNOWN"))
+        assertTrue(yaml.contains("check 106 first"))
         // Recording, screenshots and raw instrumentation output are uploaded
         // only inside the openssl-encrypted bundle.
         assertTrue(yaml.contains("openssl enc"))
@@ -80,7 +122,8 @@ class LiveE2eSafetyTest {
         uploadPaths.forEach { path ->
             assertFalse("unencrypted private evidence upload: $path",
                 path.endsWith(".mp4") || path.endsWith(".png") ||
-                    path.endsWith("instrumentation.txt") || path.endsWith("params.json"))
+                    path.endsWith("instrumentation.txt") || path.endsWith("params.json") ||
+                    path.endsWith("case-number.txt") || path.endsWith("submission-state.json"))
         }
         // The staged params and photo are wiped from the device afterwards.
         assertTrue(yaml.contains("rm -f files/live-params.json"))
