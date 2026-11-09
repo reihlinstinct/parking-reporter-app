@@ -179,10 +179,10 @@ class FullFlowE2eTest {
                 tapSendAndAwaitCaseNumber()
                 screenshot("e2e-submitted-synthetic.png")
 
-                val login = server.takeRequest(5, TimeUnit.SECONDS) ?: fail("Login never reached the stub")
-                val contact = server.takeRequest(5, TimeUnit.SECONDS) ?: fail("contact never reached the stub")
-                val create = server.takeRequest(5, TimeUnit.SECONDS) ?: fail("CreateCase never reached the stub")
-                val attach = server.takeRequest(5, TimeUnit.SECONDS) ?: fail("AddFileToCase never reached the stub")
+                val login = requireNotNull(server.takeRequest(5, TimeUnit.SECONDS)) { "Login never reached the stub" }
+                val contact = requireNotNull(server.takeRequest(5, TimeUnit.SECONDS)) { "contact never reached the stub" }
+                val create = requireNotNull(server.takeRequest(5, TimeUnit.SECONDS)) { "CreateCase never reached the stub" }
+                val attach = requireNotNull(server.takeRequest(5, TimeUnit.SECONDS)) { "AddFileToCase never reached the stub" }
                 assertEquals("/Login", login.path)
                 assertEquals("/createupdatecontact", contact.path)
                 assertEquals("/CreateCase", create.path)
@@ -217,8 +217,8 @@ class FullFlowE2eTest {
     @Test fun fullReportFlowLiveApprovedTextOnly() {
         val args = InstrumentationRegistry.getArguments()
         if (args.getString("e2eLive") != "1") return
-        val text = args.getString("e2eText") ?: fail("live mode requires -e e2eText")
-        val expectedDigest = args.getString("e2eApprovedSha256") ?: fail("live mode requires -e e2eApprovedSha256")
+        val text = requireNotNull(args.getString("e2eText")) { "live mode requires -e e2eText" }
+        val expectedDigest = requireNotNull(args.getString("e2eApprovedSha256")) { "live mode requires -e e2eApprovedSha256" }
         val actualDigest = MessageDigest.getInstance("SHA-256")
             .digest(text.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
         assertEquals("the text must be byte-identical to the owner-approved text",
@@ -226,7 +226,7 @@ class FullFlowE2eTest {
 
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val secure = SecureSettings(context)
-        val settings = secure.read() ?: fail("live mode requires stored reporter settings")
+        val settings = requireNotNull(secure.read()) { "live mode requires stored reporter settings" }
         val logFile = File(context.filesDir, "e2e-live-log.txt")
         logFile.delete()
         val logging = LiveRunLog(logFile, settings)
