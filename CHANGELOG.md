@@ -6,7 +6,7 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
-- Add a plate-free bollard request category using municipal subject 5164, with labels in all five languages.
+- Add a plate-free bollard request category using the established municipal subject 1280, with labels in all five languages.
 
 ## [0.16.4] - 2026-11-09
 

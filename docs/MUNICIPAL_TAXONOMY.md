@@ -44,23 +44,33 @@ any platform. Expected fingerprint:
 | `sidewalk_parking` | 1145 | חנייה אסורה - חנייה על מדרכה |
 | `broken_sign` | 17841 | תמרור תנועה נפל / דהוי / שבור / נוטה ליפול |
 | `faded_crosswalk` | 1137 | חידוש סימון מעבר חצייה |
-| `bollard_request` | 5164 | אחר, contextual path: גדרות, מעקות, עמודים / אחר |
+| `bollard_request` | 1280 | עמוד מחסום ברזל נוטה ליפול / נפל |
 
-### Bollard requests use generic Other, not a dedicated installation code
+### Bollard installation requests use the established bollard channel
 
-The captured catalog repeats `5164` under 12 paths. `MunicipalSubjectsTest` records
-`גדרות, מעקות, עמודים / אחר` as the intended context, but `CreateCase` sends
-only `CaseSubjectCode`. The path is not transmitted and does not guarantee a
-receiving department. The approved Hebrew description must explicitly state
-the installation request. `1280` is for a leaning or fallen iron barrier post,
-so it is not a substitute for a new installation.
+The catalog's `1280` label describes a leaning or fallen iron barrier post.
+The municipal opening-receipt label is shorter: an uprooted/fallen barrier
+post. That repair-style label does not by itself establish an installation
+service. However, historical filed payloads and their matching city opening
+receipts show that new-installation requests have repeatedly used `1280`.
+Some also have owner-confirmed installation outcomes. This is the operational
+basis for the mapping, not a claim that the catalog says "new installation".
 
-Offline inspection of the official 106+ v8.6.4 app found the same wire shape:
-selection assigns `CaseSubjectCode` from the selected subject, while
-`WebCaseSubjectCode` remains null. This establishes request-shape parity,
-not the city's internal routing. A live generic-Other filing needs an accepted
-text-based-triage route or separate routing confirmation; this mapping alone
-is not that confirmation. Do not probe routing by creating a test case.
+The approved Hebrew description must explicitly request installation. It
+must not falsely say an existing post was uprooted or fell. The API sends only
+`CaseSubjectCode` and the approved description; the local picker label does
+not alter the city's catalog. Tests pin the code, exact catalog label and path.
+
+`5164` is generic Other repeated under 12 catalog paths. It is not the chosen
+bollard mapping. Offline inspection of the official 106+ v8.6.4 app found only
+`CaseSubjectCode` assigned on selection and `WebCaseSubjectCode` left null, so
+sending a local hierarchy path would not establish a specific destination.
+
+The historical reports, receipts and outcome evidence remain private. No
+report-specific address, case number, photo or approval message belongs here.
+A prepared code mapping does not authorize a live filing or a change to any
+already-approved filing parameters. Keep the live run held until that choice
+is confirmed. Do not probe routing by creating a test case.
 
 ## Boundaries
 

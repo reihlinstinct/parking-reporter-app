@@ -92,7 +92,7 @@ class MainCategoryPresentationExtractionTest {
     @Test
     fun categoryCodesAreStableAndEachHasItsOwnLabelKey() {
         assertEquals(listOf("sidewalk_parking", "broken_sign", "faded_crosswalk", "bollard_request"), ReportCategory.entries.map { it.code })
-        assertEquals(listOf("1145", "17841", "1137", "5164"), ReportCategory.entries.map { it.municipalSubjectCode })
+        assertEquals(listOf("1145", "17841", "1137", "1280"), ReportCategory.entries.map { it.municipalSubjectCode })
         assertEquals(listOf(true, false, false, false), ReportCategory.entries.map { it.needsPlate })
         for (category in ReportCategory.entries) {
             assertEquals("category.${category.code}", category.labelKey)
