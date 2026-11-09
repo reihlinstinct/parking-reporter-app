@@ -54,7 +54,7 @@ fun SettingsScreen(
     selectedLanguage: String? = null,
     onLanguageSelected: ((String?) -> Unit)? = null,
     onLicenses: (() -> Unit)? = null,
-    onRemoveCredentials: ((removed: Boolean) -> Unit)? = null,
+    onRemoveCredentials: ((done: (removed: Boolean) -> Unit) -> Unit)? = null,
 ) {
     var firstName by remember { mutableStateOf(initial?.firstName.orEmpty()) }
     var lastName by remember { mutableStateOf(initial?.lastName.orEmpty()) }
