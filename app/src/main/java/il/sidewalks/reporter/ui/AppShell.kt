@@ -38,6 +38,7 @@ import il.sidewalks.reporter.i18n.systemLanguageCode
 import il.sidewalks.reporter.ledger.ReportDatabase
 import il.sidewalks.reporter.ledger.ReportRecord
 import il.sidewalks.reporter.municipal.FileSubmissionStateStore
+import il.sidewalks.reporter.municipal.MunicipalClient
 import il.sidewalks.reporter.municipal.OkHttpMunicipalClient
 import il.sidewalks.reporter.municipal.AddressLookupPin
 import il.sidewalks.reporter.municipal.MunicipalInputException
@@ -56,10 +57,13 @@ fun AppShell(
     readSettings: () -> ReporterSettings?,
     saveSettings: (ReporterSettings) -> Unit,
     entry: State<EntrySignal?> = mutableStateOf(null),
-    // Issue #187: one-time first-run welcome. Defaults keep existing call
-    // sites (tests included) on the plain shell.
-    showFirstRun: Boolean = false,
-    onFirstRunDone: () -> Unit = {},
+    // Test-only seam (FullFlowE2eTest): instrumented tests point the
+    // submission client at an on-device loopback stub. App code passes
+    // nothing; the production client keeps its pinned municipal base URL.
+    municipalClientFactory: ((ReporterSettings) -> MunicipalClient)? = null,
+    // Test-only in-memory lookup. Production always uses the normal loader,
+    // including its file pin; a stub test never overwrites installed data.
+    streetDirectoryLoader: (() -> StreetDirectory)? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -147,15 +151,17 @@ fun AppShell(
                             ?: return@withContext SubmissionCoordinator.Outcome.Blocked(
                                 SubmissionCoordinator.Reason.MISSING_CREDENTIALS, "settings unreadable")
                         val directory = streetsDirectory
-                            ?: loadStreetDirectory(context).also { streetsDirectory = it }
+                            ?: (streetDirectoryLoader?.invoke() ?: loadStreetDirectory(context))
+                                .also { streetsDirectory = it }
                         val file = original
                             ?: return@withContext SubmissionCoordinator.Outcome.Blocked(
                                 SubmissionCoordinator.Reason.INPUT_INVALID, "missing original")
                         SubmissionCoordinator(
-                            { s -> OkHttpMunicipalClient(
-                                subscriptionKey = s.municipalSubscriptionKey,
-                                username = s.municipalUsername,
-                                password = s.municipalPassword) },
+                            municipalClientFactory ?: { s ->
+                                OkHttpMunicipalClient(
+                                    subscriptionKey = s.municipalSubscriptionKey,
+                                    username = s.municipalUsername,
+                                    password = s.municipalPassword) },
                             directory,
                             { id -> FileSubmissionStateStore.forReport(
                                 File(context.noBackupFilesDir, "submissions"), id) },
@@ -276,11 +282,7 @@ fun AppShell(
         if (uri != null) importShared(uri)
     }
     // Deep link / Quick Settings tile / share-sheet entry (issue #149 phase 1).
-    // A first launch that lands on the welcome screen (#187) defers the entry
-    // until Start is tapped: the import/camera flow then begins from home,
-    // not underneath the welcome.
-    LaunchedEffect(entry.value, showFirstRun) {
-        if (showFirstRun) return@LaunchedEffect
+    LaunchedEffect(entry.value) {
         when (val request = entry.value?.request) {
             // An entry arriving over the settings screen drops the decrypted
             // profile from memory before any navigation.
@@ -290,10 +292,6 @@ fun AppShell(
         }
     }
     ProvideStrings(catalog, language) {
-    if (showFirstRun) {
-        FirstRunScreen(strings, onStart = onFirstRunDone)
-        return@ProvideStrings
-    }
     Scaffold(
         bottomBar = {
             if (page == "home" || page == "settings" || page == "reports") {

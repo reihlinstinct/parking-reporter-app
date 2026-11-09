@@ -6,9 +6,11 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
-### Added
+## [0.16.6] - 2026-11-09
 
-- One-time first-run welcome screen (#187). Upgrading installs have no flag yet, so they see the welcome once after the update.
+### Other changes
+
+- test: full report-flow E2E (stub default, opt-in live mode) (#185) (e63a112)
 
 ## [0.16.5] - 2026-11-09
 
