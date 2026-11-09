@@ -18,5 +18,14 @@ class StubE2eSafetyTest {
         assertFalse(source.contains("addresses.json"))
         assertTrue(source.contains("streetDirectoryLoader = { syntheticStreetDirectory() }"))
         assertTrue(source.contains("OkHttpMunicipalClient.forTesting(server.url"))
+        assertFalse(source.contains("deleteRecursively"))
+        assertTrue(source.contains("DELETE FROM reports WHERE stableId = ? AND originalSha256 = ?"))
+        assertTrue(source.contains("findPhoto(hash) } == null"))
+        val androidTests = file.parentFile.walkTopDown().filter { it.extension in setOf("kt", "java") }.toList()
+        androidTests.forEach { testFile ->
+            val text = testFile.readText()
+            assertFalse("Live arguments in ${testFile.name}", text.contains("getArguments("))
+            assertFalse("Production client in ${testFile.name}", Regex("OkHttpMunicipalClient\\s*\\(").containsMatchIn(text))
+        }
     }
 }

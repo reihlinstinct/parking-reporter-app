@@ -22,6 +22,7 @@ import il.sidewalks.reporter.municipal.OkHttpMunicipalClient
 import il.sidewalks.reporter.security.ReporterSettings
 import il.sidewalks.reporter.ui.AppShell
 import java.io.File
+import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
@@ -32,6 +33,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -59,17 +61,38 @@ class FullFlowE2eTest {
         }
     }
 
-    private fun cleanState() {
+    private val sharedUri = Uri.parse("content://il.sidewalks.reporter.testshare/shared-entry-synthetic.jpg")
+    private var ownedPhotoHash: String? = null
+
+    /** Never take ownership of a pre-existing row, even one with the test photo. */
+    private fun claimSyntheticPhoto() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val bytes = requireNotNull(context.contentResolver.openInputStream(sharedUri)).use { it.readBytes() }
+        val hash = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
         val db = Room.databaseBuilder(context, ReportDatabase::class.java, "report-ledger.db").build()
         try {
-            val paths = runBlocking { db.reports().all() }.map { it.originalRelativePath }
-            db.openHelper.writableDatabase.execSQL("DELETE FROM reports")
-            paths.forEach { File(context.noBackupFilesDir, it).delete() }
+            assumeTrue("Test photo already has a report; leave it untouched", runBlocking { db.reports().findPhoto(hash) } == null)
+            ownedPhotoHash = hash
         } finally {
             db.close()
         }
-        File(context.noBackupFilesDir, "submissions").deleteRecursively()
+    }
+
+    /** Remove only the row and files created from this test's synthetic photo. */
+    private fun cleanOwnedState() {
+        val hash = ownedPhotoHash ?: return
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val db = Room.databaseBuilder(context, ReportDatabase::class.java, "report-ledger.db").build()
+        try {
+            val record = runBlocking { db.reports().findPhoto(hash) } ?: return
+            db.openHelper.writableDatabase.execSQL(
+                "DELETE FROM reports WHERE stableId = ? AND originalSha256 = ?", arrayOf(record.stableId, hash))
+            File(context.noBackupFilesDir, record.originalRelativePath).delete()
+            File(context.noBackupFilesDir, "submissions/${record.stableId}.json").delete()
+        } finally {
+            db.close()
+            ownedPhotoHash = null
+        }
     }
 
     /** Synthetic directory injected in memory; never edits an installed file. */
@@ -77,7 +100,7 @@ class FullFlowE2eTest {
         """{"version":1,"streets":[{"StreetCode":"900001","StreetName":"רחוב בדיקה"}],"addresses":[[31.77,35.2137,"1","רחוב בדיקה"]]}""")
 
     private fun launchFlow(settings: ReporterSettings, factory: ((ReporterSettings) -> MunicipalClient)?) {
-        val uri = Uri.parse("content://il.sidewalks.reporter.testshare/shared-entry-synthetic.jpg")
+        val uri = sharedUri
         val signal = mutableStateOf(EntrySignal(1, EntryIntents.Request.SharedPhoto(uri.toString())))
         compose.setContent {
             MaterialTheme {
@@ -141,7 +164,7 @@ class FullFlowE2eTest {
     }
 
     @Test fun fullReportFlowStubbedServer() {
-        cleanState()
+        claimSyntheticPhoto()
         val settings = ReporterSettings(
             firstName = "ישראל", lastName = "ישראלי", phone = "+972501234567",
             idNumber = "000000018", email = "synthetic@example.com",
@@ -186,7 +209,7 @@ class FullFlowE2eTest {
                     jpeg.size > 2 && jpeg[0] == 0xFF.toByte() && jpeg[1] == 0xD8.toByte())
                 assertNotNull(attachBody.getString("caseIdInCRM"))
             } finally {
-                cleanState()
+                cleanOwnedState()
             }
         }
     }
