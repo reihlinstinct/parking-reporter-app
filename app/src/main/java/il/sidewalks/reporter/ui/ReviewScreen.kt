@@ -135,9 +135,11 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         Text(s.t(if (draft.isApproved()) "review.approved" else "review.not_approved"))
         Button(onClick = { onSave(draft) }, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.save_draft")) }
         onOutgoingPreview?.let { action -> Button(onClick = action, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.outgoing_preview")) } }
-        if (missingCredentialKeys.isNotEmpty()) {
+        if (onSubmit != null && missingCredentialKeys.isNotEmpty()) {
             // Owner 2026-11-09: when required municipal values are unset, say which
             // ones and grey out send (UI only; the unlock gate before submit is unchanged).
+            // Only where a live submit exists - a trial/disabled build shows the
+            // generic disabled button instead.
             Text(s.t("review.submit.missing_credentials") + " " + missingCredentialKeys.joinToString(", ") { s.t(it) }, style = MaterialTheme.typography.bodySmall)
         }
         if (onSubmit != null) {

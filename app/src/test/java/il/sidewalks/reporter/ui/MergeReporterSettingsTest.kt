@@ -54,4 +54,18 @@ class MergeReporterSettingsTest {
         val merged = mergeReporterSettings(ReporterSettings(" ", "", "", "", ""), stored)
         assertEquals("א", merged.firstName)
     }
+
+    @Test
+    fun untouchedMunicipalFieldsKeepStoredValues() {
+        // Only a field the user actually edited may clear a stored credential.
+        val cleared = ReporterSettings("", "", "", "", "")
+        val merged = mergeReporterSettings(cleared, stored, emptySet())
+        assertEquals("synthetic-key", merged.municipalSubscriptionKey)
+        assertEquals("synthetic-user", merged.municipalUsername)
+        assertEquals("synthetic-pass", merged.municipalPassword)
+        val touched = mergeReporterSettings(cleared, stored, setOf("api_password"))
+        assertEquals("", touched.municipalPassword)
+        assertEquals("synthetic-key", touched.municipalSubscriptionKey)
+        assertEquals("synthetic-user", touched.municipalUsername)
+    }
 }

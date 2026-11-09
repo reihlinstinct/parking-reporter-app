@@ -354,16 +354,19 @@ fun AppShell(
                 TextButton(onClick = { outgoing = null; page = "review" }, modifier = Modifier.fillMaxWidth()) { Text(strings.t("shell.outgoing.back_to_review")) }
             }
         }
-        "settings" -> SettingsScreen(profile, save = { value, cleared ->
+        "settings" -> SettingsScreen(profile, save = { value, touchedMunicipal, cleared ->
             authenticate(strings.t("shell.unlock.settings_title"), strings.t("shell.unlock.settings_subtitle")) {
                 try {
                     // The screen clears itself and profile is dropped after a save: blank
-                    // personal fields keep the stored values, blank municipal credentials
-                    // clear them; merge against a fresh read, then record which municipal
-                    // fields are unset (IDs only) so the review screen can grey out send.
-                    val merged = mergeReporterSettings(value, readSettings())
-                    saveSettings(merged)
+                    // personal fields keep the stored values; a municipal credential field
+                    // saves as typed only when the user touched it (blank = cleared), an
+                    // untouched one keeps its stored value. Merge against a fresh read.
+                    // The plaintext missing-fields record (IDs only, atomic write) goes
+                    // FIRST: if it fails, nothing was saved and no stale record can
+                    // grey out a later send.
+                    val merged = mergeReporterSettings(value, readSettings(), touchedMunicipal)
                     il.sidewalks.reporter.security.SettingsProfileStore(context).save(merged.missingMunicipalFields())
+                    saveSettings(merged)
                     profile = null; cleared(); status = strings.t("shell.status.settings_saved")
                 }
                 catch (_: Exception) { status = strings.t("shell.status.settings_save_failed") }
@@ -441,21 +444,20 @@ fun AppShell(
  * (issue #115). The mapping is #160's, one key per outcome; [SubmissionCoordinator]
  * never produces user-facing text itself.
  */
-internal fun municipalFieldLabelKey(id: String): String = when (id) {
+internal fun municipalFieldLabelKey(id: String): String? = when (id) {
     "subscription_key" -> "settings.field.subscription_key"
     "api_username" -> "settings.field.api_username"
-    else -> "settings.field.api_password"
+    "api_password" -> "settings.field.api_password"
+    else -> null
 }
 
-private const val MISSING_FIELDS_PREFIX = "municipal credentials absent: "
-
-/** Name the unset municipal fields when the detail carries their IDs (owner
- *  2026-11-09: an error must say exactly which values are missing). */
-internal fun missingCredentialsSuffix(strings: Strings, detail: String): String {
-    if (!detail.startsWith(MISSING_FIELDS_PREFIX)) return ""
-    val ids = detail.removePrefix(MISSING_FIELDS_PREFIX).split(",").map { it.trim() }.filter { it.isNotEmpty() }
-    if (ids.isEmpty()) return ""
-    return ": " + ids.joinToString(", ") { strings.t(municipalFieldLabelKey(it)) }
+/** Name the unset municipal fields from the typed ID list (owner
+ *  2026-11-09: an error must say exactly which values are missing). Unknown
+ *  IDs are dropped rather than mislabeled. */
+internal fun missingCredentialsSuffix(strings: Strings, missingFields: List<String>): String {
+    val labels = missingFields.mapNotNull { municipalFieldLabelKey(it) }
+    if (labels.isEmpty()) return ""
+    return ": " + labels.joinToString(", ") { strings.t(it) }
 }
 
 internal fun municipalOutcomeText(strings: Strings, outcome: SubmissionCoordinator.Outcome): String = when (outcome) {
@@ -467,7 +469,7 @@ internal fun municipalOutcomeText(strings: Strings, outcome: SubmissionCoordinat
     is SubmissionCoordinator.Outcome.Blocked -> when (outcome.reason) {
         SubmissionCoordinator.Reason.NOT_APPROVED -> strings.t("shell.submit.blocked.not_approved")
         SubmissionCoordinator.Reason.MISSING_CREDENTIALS ->
-            strings.t("shell.submit.blocked.missing_credentials") + missingCredentialsSuffix(strings, outcome.detail)
+            strings.t("shell.submit.blocked.missing_credentials") + missingCredentialsSuffix(strings, outcome.missingFields)
         SubmissionCoordinator.Reason.UNSUPPORTED_CATEGORY -> strings.t("shell.submit.blocked.unsupported_category")
         SubmissionCoordinator.Reason.ADDRESS_UNRESOLVED ->
             strings.t("shell.submit.blocked.address_unresolved", mapOf("detail" to outcome.detail))

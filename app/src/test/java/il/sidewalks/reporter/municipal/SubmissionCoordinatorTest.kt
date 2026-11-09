@@ -63,6 +63,7 @@ class SubmissionCoordinatorTest {
         assertEquals(SubmissionCoordinator.Reason.MISSING_CREDENTIALS, outcome.reason)
         // The detail names exactly which values are missing (constant IDs, never values).
         assertEquals("municipal credentials absent: api_password", outcome.detail)
+        assertEquals(listOf("api_password"), outcome.missingFields)
     }
 
     @Test fun unresolvableAddressBlockedBeforeAnyNetwork() {
