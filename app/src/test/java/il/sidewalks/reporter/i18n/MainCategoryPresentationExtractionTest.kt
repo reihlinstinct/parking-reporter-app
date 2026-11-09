@@ -36,6 +36,7 @@ class MainCategoryPresentationExtractionTest {
         "category.sidewalk_parking" to "חניה על המדרכה",
         "category.broken_sign" to "תמרור שבור",
         "category.faded_crosswalk" to "מעבר חציה דהוי",
+        "category.bollard_request" to "בקשה להתקנת עמוד חסימה",
         "category.needs_correction" to "נדרש תיקון קטגוריה",
     )
 
@@ -90,9 +91,9 @@ class MainCategoryPresentationExtractionTest {
     /** Stable codes: the ledger stores [ReportCategory.code], the city gets the subject code. */
     @Test
     fun categoryCodesAreStableAndEachHasItsOwnLabelKey() {
-        assertEquals(listOf("sidewalk_parking", "broken_sign", "faded_crosswalk"), ReportCategory.entries.map { it.code })
-        assertEquals(listOf("1145", "17841", "1137"), ReportCategory.entries.map { it.municipalSubjectCode })
-        assertEquals(listOf(true, false, false), ReportCategory.entries.map { it.needsPlate })
+        assertEquals(listOf("sidewalk_parking", "broken_sign", "faded_crosswalk", "bollard_request"), ReportCategory.entries.map { it.code })
+        assertEquals(listOf("1145", "17841", "1137", "5164"), ReportCategory.entries.map { it.municipalSubjectCode })
+        assertEquals(listOf(true, false, false, false), ReportCategory.entries.map { it.needsPlate })
         for (category in ReportCategory.entries) {
             assertEquals("category.${category.code}", category.labelKey)
             assertFalse(script.containsMatchIn(category.code + category.municipalSubjectCode + category.labelKey))
