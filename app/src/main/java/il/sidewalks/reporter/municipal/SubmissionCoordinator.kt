@@ -47,6 +47,7 @@ class SubmissionCoordinator(
         LOCAL_FAILURE,
         /** The private address lookup is not installed on this device. */
         LOOKUP_NOT_INSTALLED,
+        LOOKUP_MISMATCH,
         MUNICIPAL_REVIEW_NEEDED,
         MUNICIPAL_API_FAILURE,
     }
@@ -129,7 +130,7 @@ class SubmissionCoordinator(
     }
 
     companion object {
-        private val HOUSE_SUFFIX = Regex("^(.*\\S)\\s+([0-9]+[\\p{L}\\p{N} /\\-]*)$")
+        private val HOUSE_SUFFIX = Regex("^(.*\\S)\\s+(" + HOUSE_NUMBER.pattern + ")$")
 
         /**
          * Splits a confirmed "street house" line into (street, house). A line

@@ -6,6 +6,18 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.16.5] - 2026-11-09
+
+### Other changes
+
+- security: pin sha256 of the on-device address lookup (closes #165) (#184) (210d01c)
+
+## [0.16.4] - 2026-11-09
+
+### Other changes
+
+- ci: manual TRIAL_DATA_KEY rotation workflow (closes #181) (#182) (e3e8ce0)
+
 ## [0.16.3] - 2026-11-09
 
 ### Other changes
