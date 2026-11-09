@@ -326,7 +326,7 @@ fun AppShell(
             // null (never saved) keeps the old answer-after-unlock behavior.
             val missingCredentials = remember(value.evidence.stableId) {
                 il.sidewalks.reporter.security.SettingsProfileStore(context).read()
-                    ?.map(::municipalFieldLabelKey).orEmpty()
+                    ?.mapNotNull(::municipalFieldLabelKey).orEmpty()
             }
             ReviewScreen(value, image, ::saveDraft, onBack = { page = "home" },
                 onSubmit = { shown -> submitReport(shown) },
