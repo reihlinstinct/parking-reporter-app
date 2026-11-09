@@ -15,7 +15,9 @@ import org.junit.Rule
 import org.junit.Test
 
 /** Mirrors AppShell's settings save callback: after a save the screen clears itself
- *  and the stored profile is dropped, so the callback merges blanks against a fresh read. */
+ *  and the stored profile is dropped, so the callback merges blank personal fields
+ *  against a fresh read; blank municipal credential fields save as cleared
+ *  (owner 2026-11-09: clearing a credential field and saving removes its value). */
 class SettingsScreenSecondSaveTest {
     @get:Rule val compose = createComposeRule()
 
@@ -31,7 +33,7 @@ class SettingsScreenSecondSaveTest {
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().performClick()
         compose.runOnIdle {
             assertEquals("0500000001", saved?.phone)
-            assertEquals("synthetic-api-pass", saved?.municipalPassword)
+            assertEquals("", saved?.municipalPassword)
             assertEquals("בדיקה", saved?.firstName)
         }
     }
