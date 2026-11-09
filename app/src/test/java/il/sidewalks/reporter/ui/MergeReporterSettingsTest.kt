@@ -35,10 +35,12 @@ class MergeReporterSettingsTest {
 
     @Test
     fun typedFieldsWinOverStored() {
-        val merged = mergeReporterSettings(ReporterSettings("", "", "0500000001", "", ""), stored)
+        val merged = mergeReporterSettings(
+            ReporterSettings("", "", "0500000001", "", "", municipalPassword = "new-pass"), stored)
         assertEquals("0500000001", merged.phone)
         assertEquals("א", merged.firstName)
-        assertEquals("synthetic-pass", merged.municipalPassword)
+        assertEquals("new-pass", merged.municipalPassword)
+        assertEquals("", merged.municipalSubscriptionKey)
     }
 
     @Test
