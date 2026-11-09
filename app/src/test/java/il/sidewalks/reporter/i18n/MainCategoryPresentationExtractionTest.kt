@@ -102,10 +102,10 @@ class MainCategoryPresentationExtractionTest {
 
     @Test
     fun categoryLabelsAreTranslatedWhenShownAndFollowALanguageSwitch() {
-        val hebrew = categories.values.take(3)
+        val hebrew = categories.filterKeys { it != "category.needs_correction" }.values.toList()
         assertEquals(hebrew, ReportCategory.entries.map { HebrewPresentation.category(he, it.code) })
         assertEquals(
-            listOf("Parking on the sidewalk", "Broken traffic sign", "Faded crosswalk"),
+            listOf("Parking on the sidewalk", "Broken traffic sign", "Faded crosswalk", "Request a bollard"),
             ReportCategory.entries.map { HebrewPresentation.category(en, it.code) },
         )
         assertEquals("נדרש תיקון קטגוריה", HebrewPresentation.category(he, ""))
