@@ -6,9 +6,11 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
-### Added
+## [0.16.6] - 2026-11-09
 
-- Add a plate-free bollard request category using the established municipal subject 1280, with labels in all five languages.
+### Other changes
+
+- test: full report-flow E2E (stub default, opt-in live mode) (#185) (e63a112)
 
 ## [0.16.5] - 2026-11-09
 
