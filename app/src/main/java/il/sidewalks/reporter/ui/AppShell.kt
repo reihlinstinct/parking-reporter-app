@@ -39,6 +39,7 @@ import il.sidewalks.reporter.ledger.ReportDatabase
 import il.sidewalks.reporter.ledger.ReportRecord
 import il.sidewalks.reporter.municipal.FileSubmissionStateStore
 import il.sidewalks.reporter.municipal.OkHttpMunicipalClient
+import il.sidewalks.reporter.municipal.AddressLookupPin
 import il.sidewalks.reporter.municipal.MunicipalInputException
 import il.sidewalks.reporter.municipal.StreetDirectory
 import il.sidewalks.reporter.municipal.SubmissionCoordinator
@@ -109,7 +110,7 @@ fun AppShell(
         )
         for (candidate in candidates) {
             if (candidate.isFile) {
-                return StreetDirectory.load(candidate.readText(Charsets.UTF_8))
+                return StreetDirectory.load(AddressLookupPin.verifyPinned(candidate.readText(Charsets.UTF_8)))
             }
         }
         val bundled = try {
@@ -117,7 +118,7 @@ fun AppShell(
         } catch (_: Exception) {
             throw MunicipalInputException("address lookup not installed on device")
         }
-        return StreetDirectory.load(bundled)
+        return StreetDirectory.load(AddressLookupPin.verifyPinned(bundled))
     }
     fun submitReport(shown: ReviewDraft) {
         if (submitting) return
