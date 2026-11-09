@@ -47,6 +47,7 @@ fun SettingsScreen(
     selectedLanguage: String? = null,
     onLanguageSelected: ((String?) -> Unit)? = null,
     onLicenses: (() -> Unit)? = null,
+    onRemoveCredentials: (() -> Unit)? = null,
 ) {
     var firstName by remember { mutableStateOf(initial?.firstName.orEmpty()) }
     var lastName by remember { mutableStateOf(initial?.lastName.orEmpty()) }
@@ -74,6 +75,35 @@ fun SettingsScreen(
         OutlinedTextField(subscriptionKey, { subscriptionKey = it; saved = false }, label = { Text(s.t("settings.field.subscription_key")) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
         OutlinedTextField(apiUsername, { apiUsername = it; saved = false }, label = { Text(s.t("settings.field.api_username")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
         OutlinedTextField(apiPassword, { apiPassword = it; saved = false }, label = { Text(s.t("settings.field.api_password")) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
+        // Removing stored municipal credentials is a dedicated action (#147): blank
+        // fields can never delete them (see below). The same authentication the caller
+        // wraps a save in also wraps the removal callback, plus a confirm dialog here.
+        val hasStoredCredentials = listOf(
+            initial?.municipalSubscriptionKey.orEmpty(),
+            initial?.municipalUsername.orEmpty(),
+            initial?.municipalPassword.orEmpty(),
+        ).any { it.isNotBlank() }
+        var confirmRemove by remember { mutableStateOf(false) }
+        if (onRemoveCredentials != null && hasStoredCredentials && !saved) {
+            TextButton(onClick = { confirmRemove = true }, modifier = Modifier.fillMaxWidth()) { Text(s.t("settings.api.remove")) }
+        }
+        if (confirmRemove) {
+            AlertDialog(
+                onDismissRequest = { confirmRemove = false },
+                title = { Text(s.t("settings.api.remove_title")) },
+                text = { Text(s.t("settings.api.remove_body")) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmRemove = false
+                        subscriptionKey = ""; apiUsername = ""; apiPassword = ""
+                        onRemoveCredentials?.invoke()
+                    }) { Text(s.t("settings.api.remove_confirm")) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmRemove = false }) { Text(s.t("settings.api.remove_cancel")) }
+                },
+            )
+        }
         // Blank fields keep the stored values via mergeReporterSettings in the caller's
         // save callback, and the button stays disabled when every field is blank or right
         // after a save. Values are trimmed; blank can never mean "delete a stored value".

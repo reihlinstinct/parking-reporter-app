@@ -219,8 +219,8 @@ class ShellSettingsExtractionTest {
     fun unlockPromptsAreResolvedFromTheCatalog() {
         val shell = source("AppShell.kt")
         assertEquals(1, Regex("""authenticate\(strings\.t\("shell\.unlock\.submit_title"\),\s*strings\.t\("shell\.unlock\.submit_subtitle"\)\)""").findAll(shell).count())
-        assertEquals(2, Regex("""authenticate\(strings\.t\("shell\.unlock\.settings_title"\), strings\.t\("shell\.unlock\.settings_subtitle"\)\)""").findAll(shell).count())
-        assertEquals("every authenticate call uses catalog texts", 3, Regex("""authenticate\(""").findAll(shell).count())
+        assertEquals(3, Regex("""authenticate\(strings\.t\("shell\.unlock\.settings_title"\), strings\.t\("shell\.unlock\.settings_subtitle"\)\)""").findAll(shell).count())
+        assertEquals("every authenticate call uses catalog texts", 4, Regex("""authenticate\(""").findAll(shell).count())
     }
 
     private object SubmissionTokens {
