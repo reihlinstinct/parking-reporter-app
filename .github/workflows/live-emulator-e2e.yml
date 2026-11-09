@@ -247,7 +247,12 @@ jobs:
             adb pull /sdcard/live-rec-5.mp4 /tmp/live-e2e/seg5.mp4 || true
             adb pull /sdcard/live-rec-6.mp4 /tmp/live-e2e/seg6.mp4 || true
             adb shell rm -f /sdcard/live-rec-1.mp4 /sdcard/live-rec-2.mp4 /sdcard/live-rec-3.mp4 /sdcard/live-rec-4.mp4 /sdcard/live-rec-5.mp4 /sdcard/live-rec-6.mp4 || true
-            adb shell "run-as il.sidewalks.reporter cat files/live-e2e-log.txt" > /tmp/live-e2e/live-log.txt || true
+            if adb shell "run-as il.sidewalks.reporter cat files/live-e2e-log.txt" > /tmp/live-e2e/live-log.txt 2>/dev/null \
+              && [ -s /tmp/live-e2e/live-log.txt ]; then
+              # Positive proof the marker log was collected; the duplicate
+              # guard may relax only on this sentinel, never on a missing file.
+              touch /tmp/live-e2e/log.collected
+            fi
             adb shell "run-as il.sidewalks.reporter cat files/live-e2e-case-number.txt" > /tmp/live-e2e/live-e2e-case-number.txt || true
             adb shell "run-as il.sidewalks.reporter cat files/live-e2e-submission-state.json" > /tmp/live-e2e/live-e2e-submission-state.json || true
             adb shell "run-as il.sidewalks.reporter cat files/live-e2e-approved.png" > /tmp/live-e2e/approved.png || true
@@ -288,20 +293,28 @@ jobs:
         run: |
           set -euo pipefail
           cd /tmp/live-e2e
-          if [ -f staged.ok ] && grep -q 'LIVE_E2E SEND_TAPPED' live-log.txt 2>/dev/null; then
-            # The digest is burned only once the send tap happened - the
-            # point where a case may exist. A run that failed earlier (boot
-            # failure, gate refusal) filed nothing and stays re-runnable.
-            outcome=aborted_after_send_tap
-            if grep -q 'LIVE_E2E OUTCOME_UNKNOWN' live-log.txt 2>/dev/null; then outcome=outcome_unknown; fi
-            if grep -q 'LIVE_E2E SUBMITTED case=' live-log.txt 2>/dev/null; then outcome=submitted; fi
+          if [ -f staged.ok ] && [ -f log.collected ] \
+            && grep -q 'LIVE_E2E START' live-log.txt \
+            && ! grep -q 'LIVE_E2E SEND_TAPPED' live-log.txt; then
+            # Only a positively collected log that proves the test started but
+            # never tapped send may skip the burn. Anything else - a missing
+            # or empty log (timeout, cancel, dead adb), staging without a
+            # test start - burns the digest, because a case may exist.
+            echo 'collected log proves the send was never tapped; digest stays re-runnable'
+          elif [ -f staged.ok ]; then
+            outcome=aborted_unknown
+            if [ -f log.collected ]; then
+              if grep -q 'LIVE_E2E SEND_TAPPED' live-log.txt; then outcome=aborted_after_send_tap; fi
+              if grep -q 'LIVE_E2E OUTCOME_UNKNOWN' live-log.txt; then outcome=outcome_unknown; fi
+              if grep -q 'LIVE_E2E SUBMITTED case=' live-log.txt; then outcome=submitted; fi
+            fi
             jq -n --arg d "$APPROVED_SHA256_INPUT" --arg o "$outcome" --arg r "$GITHUB_RUN_ID" --arg a "$GITHUB_RUN_ATTEMPT" --arg t "$(date -u +%FT%TZ)" \
               '{approvedSha256:$d, outcome:$o, runId:$r, runAttempt:$a, recordedAt:$t}' > run-record.json
             openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
               -in run-record.json -out live-e2e-run-record.json.enc -pass env:TRIAL_DATA_KEY
             shred -u run-record.json
           else
-            echo 'the send was never tapped; this digest stays re-runnable, no run record'
+            echo 'params never staged; no run record needed'
           fi
       - name: Upload the encrypted evidence bundle
         if: always()
@@ -336,6 +349,10 @@ jobs:
         run: |
           if grep -q 'LIVE_E2E OUTCOME_UNKNOWN' /tmp/live-e2e/live-log.txt 2>/dev/null; then
             echo 'OUTCOME UNKNOWN: the case may already exist at the city. Do NOT re-dispatch and do NOT use Re-run jobs; check 106 first.' >&2
+            exit 1
+          fi
+          if [ -f /tmp/live-e2e/staged.ok ] && [ ! -f /tmp/live-e2e/log.collected ]; then
+            echo 'MARKER LOG NOT COLLECTED after staging: the outcome is unknown and the case may exist. Do NOT re-dispatch and do NOT use Re-run jobs; check 106 first.' >&2
             exit 1
           fi
           test "$(cat /tmp/live-e2e/instrumentation.rc)" = "0"

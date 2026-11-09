@@ -34,10 +34,12 @@ on a schedule.
    earlier runs' encrypted run records (`live-e2e-run-record-encrypted`
    artifacts, read with `actions: read` and decrypted with
    `TRIAL_DATA_KEY`). An undecryptable record fails the run closed. Runs are
-   serialized by the workflow concurrency group. A run record is written
-   only once the send tap happened - the point where a case may exist - so
-   a run that failed earlier (emulator boot, staging, a refused gate) burns
-   nothing and the same digest can be dispatched again. The records expire
+   serialized by the workflow concurrency group. The burn is fail-safe: a
+   run record is written unless the positively collected marker log proves
+   the test started and the send was never tapped, so a run that failed
+   early (emulator boot, staging, a refused gate) burns nothing and the
+   same digest can be dispatched again - while a missing or empty log
+   (timeout, cancel, dead adb) still burns. The records expire
    with their 14-day artifact retention: a re-dispatch of an older case
    needs the manual 106 check first, exactly like an ambiguous outcome
    (below).
@@ -67,6 +69,10 @@ block (403 / connect failure marker) does it bring up the owner L2TP tunnel
 - **Submitted**: marker `LIVE_E2E SUBMITTED case=present` (or `unparsed`).
   The municipal case number itself is written only into the encrypted
   bundle (`live-e2e-case-number.txt`), never the public log.
+- **Marker log not collected** (timeout of the job, cancellation, dead
+  emulator or adb): the verdict step treats a staged run without the
+  collected log exactly like an ambiguous outcome - the same do-not-
+  re-dispatch message - and the guard burns the digest.
 - **Outcome unknown** (a timeout or any other failure after the send tap):
   the request may already
   have reached the city. The test logs `LIVE_E2E OUTCOME_UNKNOWN`, keeps the

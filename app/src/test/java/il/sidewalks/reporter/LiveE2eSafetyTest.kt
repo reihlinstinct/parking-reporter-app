@@ -108,10 +108,14 @@ class LiveE2eSafetyTest {
         // A digest that already went through a live run is refused: the
         // cross-run duplicate guard reads prior runs' encrypted records.
         assertTrue(yaml.contains("actions: read"))
-        // Expired records are skipped (14-day memory), and a digest burns
-        // only once the send tap happened.
+        // Expired records are skipped (14-day memory), and the digest burn
+        // is fail-safe: it may be skipped only when a positively collected
+        // marker log (log.collected sentinel) proves the test started and
+        // the send was never tapped.
         assertTrue(yaml.contains("select(.expired | not)"))
         assertTrue(yaml.contains("LIVE_E2E SEND_TAPPED"))
+        assertTrue(yaml.contains("log.collected"))
+        assertTrue(yaml.contains("LIVE_E2E START"))
         assertTrue(yaml.contains("live-e2e-run-record"))
         assertTrue(yaml.contains("refusing to re-dispatch"))
         // An ambiguous outcome fails loudly with the check-106-first rule.
