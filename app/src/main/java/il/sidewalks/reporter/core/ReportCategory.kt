@@ -15,11 +15,16 @@ enum class ReportCategory(
     val labelKey: String,
     val needsPlate: Boolean,
     val municipalSubjectCode: String,
+    /** Catalog context only. The API payload sends the code, not this path. */
+    val municipalSubjectPath: List<String>? = null,
 ) {
     SIDEWALK_PARKING("sidewalk_parking", "category.sidewalk_parking", true, "1145"),
     BROKEN_SIGN("broken_sign", "category.broken_sign", false, "17841"),
     FADED_CROSSWALK("faded_crosswalk", "category.faded_crosswalk", false, "1137"),
-    BOLLARD_REQUEST("bollard_request", "category.bollard_request", false, "5164");
+    // Generic Other: the approved description must carry the installation request.
+    // This path records intent; it cannot guarantee a receiving department.
+    BOLLARD_REQUEST("bollard_request", "category.bollard_request", false, "5164",
+        listOf("גדרות, מעקות, עמודים", "אחר"));
 
     companion object { fun from(code: String): ReportCategory? = entries.firstOrNull { it.code == code } }
 }

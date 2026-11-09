@@ -68,6 +68,20 @@ class MunicipalSubjectsTest {
     }
 
     @Test
+    fun bollardUsesGenericOtherWithExplicitCatalogContext() {
+        val catalog = loadCatalog()
+        val category = ReportCategory.BOLLARD_REQUEST
+        assertEquals("5164", category.municipalSubjectCode)
+        assertEquals(listOf("גדרות, מעקות, עמודים", "אחר"), category.municipalSubjectPath)
+        assertEquals("אחר", catalog.byCode(category.municipalSubjectCode)
+            .single { it.path == category.municipalSubjectPath }.name)
+        assertEquals(12, catalog.byCode("5164").size)
+        // 1280 is repair of a fallen/leaning post, not installation.
+        assertNotEquals("1280", category.municipalSubjectCode)
+        assertEquals("עמוד מחסום ברזל נוטה ליפול / נפל", catalog.byCode("1280").single().name)
+    }
+
+    @Test
     fun repeatedSubjectCodesKeepEveryPath() {
         val catalog = loadCatalog()
         // 5164 אחר appears under many roots in the captured catalog.

@@ -2,9 +2,8 @@
 
 The app carries a captured snapshot of the Jerusalem 106 subject catalog
 (`GetSubjectCategories`) so that local categories can be mapped to municipal
-subjects offline, without any network call or municipal credential. This is
-groundwork for the DESIGN M4 parity goal and the future M5 payload design; it
-changes no submission behavior, and submission stays disabled.
+subjects offline, without any network call or municipal credential. The submission path sends the chosen code plus the approved Hebrew description.
+The snapshot itself makes no network calls.
 
 ## Asset
 
@@ -45,13 +44,27 @@ any platform. Expected fingerprint:
 | `sidewalk_parking` | 1145 | חנייה אסורה - חנייה על מדרכה |
 | `broken_sign` | 17841 | תמרור תנועה נפל / דהוי / שבור / נוטה ליפול |
 | `faded_crosswalk` | 1137 | חידוש סימון מעבר חצייה |
+| `bollard_request` | 5164 | אחר, contextual path: גדרות, מעקות, עמודים / אחר |
 
-The picker still shows only the three local categories. The mapping is data
-for future payload construction; nothing is sent.
+### Bollard requests use generic Other, not a dedicated installation code
+
+The captured catalog repeats `5164` under 12 paths. `ReportCategory` records
+`גדרות, מעקות, עמודים / אחר` as the intended context, but `CreateCase` sends
+only `CaseSubjectCode`. The path is not transmitted and does not guarantee a
+receiving department. The approved Hebrew description must explicitly state
+the installation request. `1280` is for a leaning or fallen iron barrier post,
+so it is not a substitute for a new installation.
+
+Offline inspection of the official 106+ v8.6.4 app found the same wire shape:
+selection assigns `CaseSubjectCode` from the selected subject, while
+`WebCaseSubjectCode` remains null. This establishes request-shape parity,
+not the city's internal routing. A live generic-Other filing needs an accepted
+text-based-triage route or separate routing confirmation; this mapping alone
+is not that confirmation. Do not probe routing by creating a test case.
 
 ## Boundaries
 
-- No live municipal calls, no endpoints, no credentials (unchanged).
+- The catalog loader makes no live municipal calls and uses no credentials.
 - No automatic classification: category choice remains manual.
 - The catalog is municipal public data captured from the 106 app; no user
   data is involved.
