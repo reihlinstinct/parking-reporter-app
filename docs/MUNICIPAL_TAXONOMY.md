@@ -48,7 +48,7 @@ any platform. Expected fingerprint:
 
 ### Bollard requests use generic Other, not a dedicated installation code
 
-The captured catalog repeats `5164` under 12 paths. `ReportCategory` records
+The captured catalog repeats `5164` under 12 paths. `MunicipalSubjectsTest` records
 `גדרות, מעקות, עמודים / אחר` as the intended context, but `CreateCase` sends
 only `CaseSubjectCode`. The path is not transmitted and does not guarantee a
 receiving department. The approved Hebrew description must explicitly state

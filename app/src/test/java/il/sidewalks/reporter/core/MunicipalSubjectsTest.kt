@@ -72,9 +72,9 @@ class MunicipalSubjectsTest {
         val catalog = loadCatalog()
         val category = ReportCategory.BOLLARD_REQUEST
         assertEquals("5164", category.municipalSubjectCode)
-        assertEquals(listOf("גדרות, מעקות, עמודים", "אחר"), category.municipalSubjectPath)
+        val intendedPath = listOf("גדרות, מעקות, עמודים", "אחר")
         assertEquals("אחר", catalog.byCode(category.municipalSubjectCode)
-            .single { it.path == category.municipalSubjectPath }.name)
+            .single { it.path == intendedPath }.name)
         assertEquals(12, catalog.byCode("5164").size)
         // 1280 is repair of a fallen/leaning post, not installation.
         assertNotEquals("1280", category.municipalSubjectCode)
