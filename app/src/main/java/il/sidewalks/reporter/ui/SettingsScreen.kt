@@ -87,10 +87,11 @@ fun SettingsScreen(
         // Blank personal fields keep the stored values via mergeReporterSettings in the
         // caller's save callback; a municipal credential field saves as typed only when
         // the user touched it (blank = cleared), otherwise its stored value is kept.
-        // The fields clear after a save so no credential lingers on screen; the button
-        // stays disabled when every field is blank or right after a save.
+        // The fields clear after a save so no credential lingers on screen; a touched-then-
+        // blanked credential still enables the button, so clearing works on a blank screen too.
+        // stays disabled when every field is blank (and nothing was touched) or right after a save.
         val anyField = listOf(firstName, lastName, id, phone, email, subscriptionKey, apiUsername, apiPassword).any { it.isNotBlank() }
-        Button(enabled = !saved && anyField, onClick = { save(ReporterSettings(firstName.trim(), lastName.trim(), phone.trim(), id.trim(), email.trim(),
+        Button(enabled = !saved && (anyField || touchedMunicipal.isNotEmpty()), onClick = { save(ReporterSettings(firstName.trim(), lastName.trim(), phone.trim(), id.trim(), email.trim(),
             municipalSubscriptionKey = subscriptionKey.trim(),
             municipalUsername = apiUsername.trim(),
             municipalPassword = apiPassword.trim()), touchedMunicipal) {

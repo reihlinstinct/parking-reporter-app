@@ -365,8 +365,20 @@ fun AppShell(
                     // FIRST: if it fails, nothing was saved and no stale record can
                     // grey out a later send.
                     val merged = mergeReporterSettings(value, readSettings(), touchedMunicipal)
-                    il.sidewalks.reporter.security.SettingsProfileStore(context).save(merged.missingMunicipalFields())
-                    saveSettings(merged)
+                    val profileStore = il.sidewalks.reporter.security.SettingsProfileStore(context)
+                    profileStore.save(merged.missingMunicipalFields())
+                    try {
+                        saveSettings(merged)
+                    } catch (failure: Exception) {
+                        // The record already says the new answer: restore it to the
+                        // previous stored one, else delete it to fall back to
+                        // "unknown" - neither failure direction may grey out Send wrongly.
+                        try {
+                            val previous = readSettings()
+                            if (previous != null) profileStore.save(previous.missingMunicipalFields()) else profileStore.clear()
+                        } catch (_: Exception) { profileStore.clear() }
+                        throw failure
+                    }
                     profile = null; cleared(); status = strings.t("shell.status.settings_saved")
                 }
                 catch (_: Exception) { status = strings.t("shell.status.settings_save_failed") }

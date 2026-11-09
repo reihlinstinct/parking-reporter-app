@@ -1,8 +1,9 @@
 package il.sidewalks.reporter.security
 
 import android.content.Context
-import android.util.AtomicFile
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 /** Plaintext record of WHICH municipal credential fields are unset - field IDs only,
  *  never values - so the review screen can disable send without an unlock-gated
@@ -11,18 +12,23 @@ import java.io.File
 class SettingsProfileStore(private val file: File) {
     constructor(context: Context) : this(File(context.noBackupFilesDir, "settings-profile.txt"))
 
-    /** Atomic write (as SecureSettings does): a failed save never leaves a
-     *  half-written record, and the previous answer stays intact. */
+    /** Temp file + atomic rename (plain java.nio, so the class stays JVM-testable):
+     *  a failed save never leaves a half-written record. */
     fun save(missing: List<String>) {
-        val atomic = AtomicFile(file)
-        val stream = atomic.startWrite()
+        val tmp = File(file.parentFile, file.name + ".tmp")
+        tmp.writeText(missing.joinToString("\n"))
         try {
-            stream.write(missing.joinToString("\n").toByteArray(Charsets.UTF_8))
-            atomic.finishWrite(stream)
+            Files.move(tmp.toPath(), file.toPath(),
+                StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
         } catch (failure: Exception) {
-            atomic.failWrite(stream)
+            tmp.delete()
             throw failure
         }
+    }
+
+    /** Remove the record: the review screen falls back to "unknown". */
+    fun clear() {
+        file.delete()
     }
 
     fun read(): List<String>? =

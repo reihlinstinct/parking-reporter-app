@@ -14,11 +14,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
-/** Mirrors AppShell's settings save callback: the screen keeps its fields after a
- *  save and the stored profile is dropped, so the callback merges blank personal
- *  fields against a fresh read; municipal credential fields save exactly as typed
- *  (owner 2026-11-09: clearing a credential field and saving removes its value,
- *  and a save that never touched them keeps them). */
+/** Mirrors AppShell's settings save callback: after a save the screen clears itself
+ *  and the stored profile is dropped, so the callback merges blank personal fields
+ *  against a fresh read; a municipal credential field saves as typed only when the
+ *  user touched it, and an untouched one keeps its stored value (owner 2026-11-09:
+ *  clearing a credential field and saving removes its value, and a save that never
+ *  touched it keeps it). */
 class SettingsScreenSecondSaveTest {
     @get:Rule val compose = createComposeRule()
 
