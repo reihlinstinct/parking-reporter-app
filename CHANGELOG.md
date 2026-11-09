@@ -10,6 +10,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 - One-time first-run welcome screen (#187). Upgrading installs have no flag yet, so they see the welcome once after the update.
 
+## [0.16.5] - 2026-11-09
+
+### Other changes
+
+- security: pin sha256 of the on-device address lookup (closes #165) (#184) (210d01c)
+
 ## [0.16.4] - 2026-11-09
 
 ### Other changes
