@@ -2,6 +2,7 @@ package il.sidewalks.reporter.ui
 
 import il.sidewalks.reporter.security.ReporterSettings
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class MergeReporterSettingsTest {
@@ -26,6 +27,29 @@ class MergeReporterSettingsTest {
     fun nullStoredKeepsSubmittedValues() {
         val edited = ReporterSettings("א", "", "", "", "")
         assertEquals(edited, mergeReporterSettings(edited, null))
+    }
+
+    @Test
+    fun removalClearsAllThreeCredentialsAndKeepsEverythingElse() {
+        val updated = removeMunicipalCredentials(stored)
+        assertEquals("", updated!!.municipalSubscriptionKey)
+        assertEquals("", updated.municipalUsername)
+        assertEquals("", updated.municipalPassword)
+        assertEquals(stored.firstName, updated.firstName)
+        assertEquals(stored.phone, updated.phone)
+        assertEquals(stored.email, updated.email)
+        assertEquals(stored.idNumber, updated.idNumber)
+    }
+
+    @Test
+    fun removalReportsNothingWhenStoreIsEmpty() {
+        assertNull(removeMunicipalCredentials(null))
+    }
+
+    @Test
+    fun removalReportsNothingWhenCredentialsWereAlreadyBlank() {
+        val personalOnly = ReporterSettings("א", "ב", "050", "0000000", "a@b.invalid")
+        assertNull(removeMunicipalCredentials(personalOnly))
     }
 
     @Test

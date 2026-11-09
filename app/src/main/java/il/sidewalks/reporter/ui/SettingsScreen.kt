@@ -37,6 +37,13 @@ internal fun mergeReporterSettings(value: ReporterSettings, stored: ReporterSett
     municipalUsername = value.municipalUsername.ifBlank { stored?.municipalUsername.orEmpty() },
     municipalPassword = value.municipalPassword.ifBlank { stored?.municipalPassword.orEmpty() })
 
+/** Removes the municipal credentials from a fresh copy of the stored settings, keeping
+ *  every other field (#147). Returns null when nothing was stored or the credentials
+ *  were already blank, so the caller can tell "removed" from "nothing to remove". */
+internal fun removeMunicipalCredentials(stored: ReporterSettings?): ReporterSettings? = stored
+    ?.takeIf { it.municipalSubscriptionKey.isNotBlank() || it.municipalUsername.isNotBlank() || it.municipalPassword.isNotBlank() }
+    ?.copy(municipalSubscriptionKey = "", municipalUsername = "", municipalPassword = "")
+
 /** Caller obtains fresh system authentication before opening and again before saving. */
 @Composable
 fun SettingsScreen(
@@ -47,7 +54,7 @@ fun SettingsScreen(
     selectedLanguage: String? = null,
     onLanguageSelected: ((String?) -> Unit)? = null,
     onLicenses: (() -> Unit)? = null,
-    onRemoveCredentials: (() -> Unit)? = null,
+    onRemoveCredentials: ((removed: Boolean) -> Unit)? = null,
 ) {
     var firstName by remember { mutableStateOf(initial?.firstName.orEmpty()) }
     var lastName by remember { mutableStateOf(initial?.lastName.orEmpty()) }
@@ -95,8 +102,15 @@ fun SettingsScreen(
                 confirmButton = {
                     TextButton(onClick = {
                         confirmRemove = false
-                        subscriptionKey = ""; apiUsername = ""; apiPassword = ""
-                        onRemoveCredentials?.invoke()
+                        // Blank the fields only after the caller confirms the stored
+                        // values are gone: a cancelled device unlock must not leave the
+                        // screen looking empty while the credentials persist (S1).
+                        onRemoveCredentials?.invoke { removed ->
+                            if (removed) {
+                                subscriptionKey = ""; apiUsername = ""; apiPassword = ""
+                                saved = true // hides the remove action; nothing is stored now
+                            }
+                        }
                     }) { Text(s.t("settings.api.remove_confirm")) }
                 },
                 dismissButton = {

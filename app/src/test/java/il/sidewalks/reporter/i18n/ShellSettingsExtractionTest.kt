@@ -80,6 +80,12 @@ class ShellSettingsExtractionTest {
         "settings.save.done" to "נשמר מוצפן, הפרטים הוסרו מהמסך",
         "settings.back" to "חזור",
         "settings.version" to "גרסה {version}",
+        "settings.api.remove" to "הסרת פרטי הגישה העירוניים מהמכשיר",
+        "settings.api.remove_title" to "להסיר את פרטי הגישה?",
+        "settings.api.remove_body" to "מפתח המנוי, שם המשתמש והסיסמה העירוניים יימחקו מהאחסון המוצפן במכשיר. לא נשמר עותק. שאר הפרטים האישיים נשארים.",
+        "settings.api.remove_confirm" to "הסרה",
+        "settings.api.remove_cancel" to "ביטול",
+        "shell.status.credentials_removed" to "פרטי הגישה הוסרו",
     )
 
     /**

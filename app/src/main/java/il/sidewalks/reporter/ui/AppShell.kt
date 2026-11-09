@@ -356,17 +356,22 @@ fun AppShell(
                 }
                 catch (_: Exception) { status = strings.t("shell.status.settings_save_failed") }
             }
-        }, back = { profile = null; page = "home" }, onRemoveCredentials = {
+        }, back = { profile = null; page = "home" }, onRemoveCredentials = { done ->
             // #147: explicit removal of the stored municipal credentials. Blank fields
             // can never delete them (mergeReporterSettings), so this writes a fresh copy
             // with the three fields emptied; the rest of the settings are untouched.
+            // The screen is told whether anything was removed only after the store
+            // write, so a cancelled unlock never leaves it looking empty (S1).
             authenticate(strings.t("shell.unlock.settings_title"), strings.t("shell.unlock.settings_subtitle")) {
                 try {
-                    val stored = readSettings()
-                    if (stored != null) saveSettings(stored.copy(municipalSubscriptionKey = "", municipalUsername = "", municipalPassword = ""))
-                    profile = null; status = strings.t("shell.status.credentials_removed")
+                    val updated = removeMunicipalCredentials(readSettings())
+                    if (updated != null) {
+                        saveSettings(updated)
+                        profile = null; status = strings.t("shell.status.credentials_removed")
+                    }
+                    done(updated != null)
                 }
-                catch (_: Exception) { status = strings.t("shell.status.settings_save_failed") }
+                catch (_: Exception) { status = strings.t("shell.status.settings_save_failed"); done(false) }
             }
         }, debugTools = if (BuildConfig.DEBUG) {
             {
