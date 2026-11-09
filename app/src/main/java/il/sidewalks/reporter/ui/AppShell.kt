@@ -38,6 +38,7 @@ import il.sidewalks.reporter.i18n.systemLanguageCode
 import il.sidewalks.reporter.ledger.ReportDatabase
 import il.sidewalks.reporter.ledger.ReportRecord
 import il.sidewalks.reporter.municipal.FileSubmissionStateStore
+import il.sidewalks.reporter.municipal.MunicipalClient
 import il.sidewalks.reporter.municipal.OkHttpMunicipalClient
 import il.sidewalks.reporter.municipal.MunicipalInputException
 import il.sidewalks.reporter.municipal.StreetDirectory
@@ -55,6 +56,10 @@ fun AppShell(
     readSettings: () -> ReporterSettings?,
     saveSettings: (ReporterSettings) -> Unit,
     entry: State<EntrySignal?> = mutableStateOf(null),
+    // Test-only seam (FullFlowE2eTest): instrumented tests point the
+    // submission client at an on-device loopback stub. App code passes
+    // nothing; the production client keeps its pinned municipal base URL.
+    municipalClientFactory: ((ReporterSettings) -> MunicipalClient)? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -147,10 +152,11 @@ fun AppShell(
                             ?: return@withContext SubmissionCoordinator.Outcome.Blocked(
                                 SubmissionCoordinator.Reason.INPUT_INVALID, "missing original")
                         SubmissionCoordinator(
-                            { s -> OkHttpMunicipalClient(
-                                subscriptionKey = s.municipalSubscriptionKey,
-                                username = s.municipalUsername,
-                                password = s.municipalPassword) },
+                            municipalClientFactory ?: { s ->
+                                OkHttpMunicipalClient(
+                                    subscriptionKey = s.municipalSubscriptionKey,
+                                    username = s.municipalUsername,
+                                    password = s.municipalPassword) },
                             directory,
                             { id -> FileSubmissionStateStore.forReport(
                                 File(context.noBackupFilesDir, "submissions"), id) },
