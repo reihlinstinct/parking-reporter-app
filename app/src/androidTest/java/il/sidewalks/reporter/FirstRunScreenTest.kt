@@ -1,6 +1,10 @@
 package il.sidewalks.reporter
 
-import androidx.compose.material3.MaterialTheme
+import il.sidewalks.reporter.ui.theme.AppTheme
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.graphics.asAndroidBitmap
+import java.io.File
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -39,7 +43,7 @@ class FirstRunScreenTest {
 
     @Test fun firstRunShowsWelcomeAndStartEntersTheShell() {
         val done = androidx.compose.runtime.mutableStateOf(false)
-        compose.setContent { MaterialTheme {
+        compose.setContent { AppTheme {
             AppShell(
                 authenticate = { _, _, action -> action() },
                 requestCamera = {},
@@ -51,6 +55,9 @@ class FirstRunScreenTest {
         } }
         compose.onNodeWithText("ברוכים הבאים למדרכות פנויות").assertExists()
         compose.onNodeWithText("מתחילים").assertExists()
+        File(context.filesDir, "first-run-welcome-synthetic.png").outputStream().use {
+            compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+        }
         // The plain shell is not underneath: no navigation bar yet.
         compose.onNodeWithText("הגדרות").assertDoesNotExist()
         compose.onNodeWithText("מתחילים").performClick()
