@@ -23,6 +23,8 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -173,8 +175,31 @@ class FullFlowE2eTest {
                 assertEquals("000000018", createBody.getJSONObject("contact").getString("ContactIdNumber"))
                 val attachBody = JSONObject(attach.body.readUtf8())
                 val jpeg = java.util.Base64.getDecoder().decode(attachBody.getString("fileContent"))
-                assertTrue("attached file must be the original JPEG",
+                assertTrue("attached file must be an outgoing JPEG",
                     jpeg.size > 2 && jpeg[0] == 0xFF.toByte() && jpeg[1] == 0xD8.toByte())
+                // #201: exercise the real AppShell -> coordinator -> HTTP attachment
+                // with a GPS/time-bearing source, not merely the image utility.
+                val context = InstrumentationRegistry.getInstrumentation().targetContext
+                val originalBytes = requireNotNull(context.contentResolver.openInputStream(sharedUri)).use { it.readBytes() }
+                val sourceExif = androidx.exifinterface.media.ExifInterface(java.io.ByteArrayInputStream(originalBytes))
+                assertNotNull(sourceExif.latLong)
+                assertNotNull(sourceExif.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL))
+                val attachedExif = androidx.exifinterface.media.ExifInterface(java.io.ByteArrayInputStream(jpeg))
+                assertNull(attachedExif.latLong)
+                assertNull(attachedExif.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL))
+                assertTrue("outgoing cap", jpeg.size <= 1_100_000)
+                assertTrue("no EXIF segment", !String(jpeg, Charsets.ISO_8859_1).contains("Exif\u0000\u0000"))
+                val db = Room.databaseBuilder(context, ReportDatabase::class.java, "report-ledger.db").build()
+                try {
+                    val row = requireNotNull(runBlocking { db.reports().findPhoto(requireNotNull(ownedPhotoHash)) })
+                    val original = File(context.noBackupFilesDir, row.originalRelativePath)
+                    assertArrayEquals(originalBytes, original.readBytes())
+                    val preview = il.sidewalks.reporter.evidence.OutgoingEvidence.prepare(original)
+                    assertArrayEquals(preview.jpeg, jpeg)
+                    val state = il.sidewalks.reporter.municipal.FileSubmissionStateStore.forReport(
+                        File(context.noBackupFilesDir, "submissions"), row.stableId).read()
+                    assertEquals(preview.hash, state?.get("photo_sha256"))
+                } finally { db.close() }
                 assertNotNull(attachBody.getString("caseIdInCRM"))
             } finally {
                 cleanOwnedState()

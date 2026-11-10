@@ -63,6 +63,16 @@ class SubmissionStateMachineTest {
         MunicipalPayloads.ReportFields("דיווח סינתטי.", "1145", "1630", "הפלמח", "900", 220000, 630500)
     )
 
+    @Test fun changedOutgoingDigestRefusesBeforeNetwork() {
+        val client = FakeClient()
+        val store = InMemorySubmissionStateStore()
+        store.write(mapOf("version" to 1, "status" to "created", "photo_sha256" to "a".repeat(64)))
+        assertThrows(MunicipalReviewNeededException::class.java) {
+            machine(client).submit(store, contact, report, byteArrayOf(1), photoSha256 = "b".repeat(64))
+        }
+        assertTrue(client.calls.isEmpty())
+    }
+
     private val jpeg = "synthetic-jpeg-bytes-not-a-photo".toByteArray()
 
     private fun machine(client: FakeClient) =

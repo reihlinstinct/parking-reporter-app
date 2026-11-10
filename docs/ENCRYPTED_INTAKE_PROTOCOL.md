@@ -57,4 +57,10 @@ Not yet release-ready: no receiving-worker interoperability, production key enro
 
 Dependency source: https://repo.maven.apache.org/maven2/com/google/crypto/tink/tink-android/1.24.0/tink-android-1.24.0.pom
 
-OutgoingEvidence creates a separately previewed JPEG, honors EXIF orientation, bounds decode dimensions/bytes and strips EXIF through re-encoding. It never changes the original. No implicit approval follows resizing. A synthetic instrumented test checks rotation, original-byte identity and missing EXIF time/GPS in the derivative. Live UI send remains disconnected.
+OutgoingEvidence creates a separately previewed JPEG, honors EXIF orientation, bounds decode dimensions/bytes and strips EXIF through re-encoding. It never changes the original. No implicit approval follows resizing. A synthetic instrumented test checks rotation, original-byte identity and missing EXIF time/GPS in the derivative. The PRPKG2 transport remains disconnected from live UI send.
+
+## Direct in-app municipal submission (#201)
+
+The live Android send path uses the exact OutgoingEvidence JPEG shown on the review screen. It strips all EXIF (including time/GPS) by re-encoding, honors orientation, and enforces the 1,100,000-byte cap. The original stays unchanged on the device. A missing/failed preview blocks sending; there is no fallback to the original. The coordinator checks the derivative's source hash against the draft and the current original before state writes or network calls. A snapshot of the reviewed JPEG is attached, and its SHA256 is saved as photo_sha256 in the submission state before the first network call. A changed outgoing hash on a resumable state refuses rather than attaching different bytes. Send is the single confirmation, not the former separate approval latch.
+
+This is separate from PRPKG2 package approval described above. The workflow-staged JVM 106 engine retains its original-photo handling; it calls submitOriginalForWorkflow explicitly. No change to that workflow or its approved input digest. The synthetic full-flow test uses a source with EXIF GPS/time and checks the actual HTTP attachment has no EXIF, equals the preview derivative, fits the cap, leaves the original unchanged and matches the persisted outgoing hash.

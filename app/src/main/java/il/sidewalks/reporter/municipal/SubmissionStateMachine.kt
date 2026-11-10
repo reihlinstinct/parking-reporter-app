@@ -60,6 +60,7 @@ class SubmissionStateMachine(
         report: LinkedHashMap<String, Any?>,
         jpeg: ByteArray,
         retryPhoto: Boolean = false,
+        photoSha256: String? = null,
     ): SubmissionResult = store.withSubmissionLock {
         // The helper mutates the caller's contact dict (Token, ContactIdInCRM);
         // the port works on a copy so a caller-side map never changes mid-flight.
@@ -96,6 +97,13 @@ class SubmissionStateMachine(
             throw MunicipalReviewNeededException(
                 "The report exists but its photo was not confirmed. Use retryPhoto after checking the municipal app."
             )
+        }
+        if (photoSha256 != null) {
+            val previous = state["photo_sha256"] as? String
+            if (previous != null && previous != photoSha256) {
+                throw MunicipalReviewNeededException("Outgoing photo differs from the saved submission.")
+            }
+            state["photo_sha256"] = photoSha256
         }
         if (state["status"] == "prepared") {
             store.write(state)

@@ -187,7 +187,12 @@ class M1ShellTest {
     @Test fun outgoingDerivativePreservesOriginalAndStripsExif() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val file = File(context.cacheDir, "synthetic-oriented.jpg")
-        val bitmap = Bitmap.createBitmap(80, 40, Bitmap.Config.ARGB_8888).apply { eraseColor(android.graphics.Color.GREEN) }
+        val bitmap = Bitmap.createBitmap(160, 80, Bitmap.Config.ARGB_8888).apply {
+            eraseColor(android.graphics.Color.GREEN)
+            val canvas = android.graphics.Canvas(this)
+            val paint = android.graphics.Paint().apply { color = android.graphics.Color.BLUE }
+            canvas.drawRect(0f, 0f, 80f, 80f, paint)
+        }
         file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }; bitmap.recycle()
         androidx.exifinterface.media.ExifInterface(file).apply {
             setAttribute(androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION, "6")
@@ -197,7 +202,24 @@ class M1ShellTest {
         val original = file.readBytes()
         val output = il.sidewalks.reporter.evidence.OutgoingEvidence.prepare(file)
         assertArrayEquals(original, file.readBytes())
-        assertEquals(40, output.width); assertEquals(80, output.height)
+        assertEquals(80, output.width); assertEquals(160, output.height)
+        // EXIF rotate90 must render the source's blue-left / green-right as
+        // blue-top / green-bottom, not merely swap dimensions.
+        val decoded = android.graphics.BitmapFactory.decodeByteArray(output.jpeg, 0, output.jpeg.size)
+        val top = decoded.getPixel(40, 40)
+        val bottom = decoded.getPixel(40, 120)
+        assertTrue(android.graphics.Color.blue(top) > 200 && android.graphics.Color.green(top) < 50)
+        assertTrue(android.graphics.Color.green(bottom) > 200 && android.graphics.Color.blue(bottom) < 50)
+        decoded.recycle()
+        File(context.filesDir, "outgoing-oriented-original.jpg").writeBytes(original)
+        File(context.filesDir, "outgoing-oriented-derivative.jpg").writeBytes(output.jpeg)
+        // CI exports PNG screenshots automatically; retain this exact JPEG's
+        // decoded pixels for visual inspection too.
+        val rendered = android.graphics.BitmapFactory.decodeByteArray(output.jpeg, 0, output.jpeg.size)
+        File(context.filesDir, "outgoing-oriented-derivative.png").outputStream().use {
+            rendered.compress(Bitmap.CompressFormat.PNG, 100, it)
+        }
+        rendered.recycle()
         val stripped = androidx.exifinterface.media.ExifInterface(java.io.ByteArrayInputStream(output.jpeg))
         assertNull(stripped.latLong)
         assertNull(stripped.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL))
