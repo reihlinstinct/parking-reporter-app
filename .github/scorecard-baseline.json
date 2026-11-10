@@ -40,9 +40,7 @@
       "evidence": "contents: write",
       "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/71",
       "reason": "sync job only (push to main on docs/wiki/** or dispatch): pushes top-level docs/wiki/*.md to this repo's own .wiki.git, no PAT; top level stays contents: read; see docs/WRITE_GRANTS.md."
-    }
-  ],
-  "entries": [
+    },
     {
       "path": ".github/workflows/gemini-review.yml",
       "rule": "job-write",
