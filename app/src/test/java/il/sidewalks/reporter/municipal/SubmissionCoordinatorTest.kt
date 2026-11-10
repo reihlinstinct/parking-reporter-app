@@ -73,6 +73,24 @@ class SubmissionCoordinatorTest {
         assertEquals("0501234567", PassportSubmission.phoneForPayload(settings.copy(phone = "972501234567")))
     }
 
+    @Test fun staleDisclosureIsBlockedAndReplacedForPhonePassportAndModeChanges() {
+        val old = settings.copy(passportMode = true, passportNumber = "SYNTHETIC-OLD", phone = "+12025550123")
+        val oldText = PassportSubmission.reconcileDisclosure(approvedDraft().exactHebrewText, old)
+        for (current in listOf(old.copy(phone = "+12025550124"), old.copy(passportNumber = "SYNTHETIC-NEW"), settings)) {
+            val client = RecordingClient()
+            assertTrue(!PassportSubmission.hasReviewedDisclosure(oldText, current))
+            val outcome = coordinator(client).submitApproved(approvedDraft().edit(text = oldText).approve(), current, jpegFile())
+            assertEquals(SubmissionCoordinator.Reason.PASSPORT_DISCLOSURE_REQUIRED, (outcome as SubmissionCoordinator.Outcome.Blocked).reason)
+            assertEquals(0, client.logins)
+            val fixed = PassportSubmission.reconcileDisclosure(oldText, current)
+            assertTrue(PassportSubmission.hasReviewedDisclosure(fixed, current))
+            assertEquals(fixed, PassportSubmission.reconcileDisclosure(fixed, current))
+            if (current.phone != old.phone) assertTrue(!fixed.contains("+12025550123"))
+            if (!current.passportMode || current.passportNumber != old.passportNumber) assertTrue(!fixed.contains("xxxxxOLD"))
+            assertTrue(coordinator(client).submitApproved(approvedDraft().edit(text = fixed).approve(), current, jpegFile()) is SubmissionCoordinator.Outcome.Submitted)
+        }
+    }
+
     @Test fun happyPathSubmitsWithPipelinePayloadShape() {
         val client = RecordingClient()
         val outcome = coordinator(client).submitApproved(approvedDraft(), settings, jpegFile())

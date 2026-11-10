@@ -159,10 +159,9 @@ fun AppShell(
                         val settings = readSettings()
                             ?: return@withContext SubmissionCoordinator.Outcome.Blocked(
                                 SubmissionCoordinator.Reason.MISSING_CREDENTIALS, "settings unreadable")
-                        if (il.sidewalks.reporter.municipal.PassportSubmission.requiresDisclosure(settings) && !il.sidewalks.reporter.municipal.PassportSubmission.hasReviewedDisclosure(shown.exactHebrewText, settings)) {
+                        if (!il.sidewalks.reporter.municipal.PassportSubmission.hasReviewedDisclosure(shown.exactHebrewText, settings)) {
                             if (il.sidewalks.reporter.municipal.PassportSubmission.validProfile(settings)) {
-                                val disclosure = il.sidewalks.reporter.municipal.PassportSubmission.disclosure(settings)
-                                val updated = shown.edit(text = shown.exactHebrewText.trimEnd() + "\n\n" + disclosure)
+                                val updated = shown.edit(text = il.sidewalks.reporter.municipal.PassportSubmission.reconcileDisclosure(shown.exactHebrewText, settings))
                                 check(database.reports().store(updated.evidence.stableId, revision,
                                     il.sidewalks.reporter.ledger.DraftCodec.encode(updated), null) == 1)
                                 passportReviewDraft = updated

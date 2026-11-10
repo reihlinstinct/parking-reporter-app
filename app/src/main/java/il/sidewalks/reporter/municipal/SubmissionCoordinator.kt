@@ -66,7 +66,7 @@ class SubmissionCoordinator(
         originalJpeg: File,
     ): Outcome {
         if (!draft.isApproved()) return Outcome.Blocked(Reason.NOT_APPROVED, "draft not approved")
-        if (PassportSubmission.requiresDisclosure(settings) && !PassportSubmission.hasReviewedDisclosure(draft.exactHebrewText, settings))
+        if (!PassportSubmission.hasReviewedDisclosure(draft.exactHebrewText, settings))
             return Outcome.Blocked(Reason.PASSPORT_DISCLOSURE_REQUIRED, "passport disclosure must be saved and approved")
         if (!settings.hasMunicipalCredentials()) {
             // Name exactly which values are missing (constant field IDs, never

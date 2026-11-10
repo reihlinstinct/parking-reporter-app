@@ -11,7 +11,14 @@ object PassportSubmission {
     fun isIsraeliPhone(phone: String): Boolean = try {
         MunicipalPayloads.normalizePhone(phone).matches(Regex("05[0-9]{8}"))
     } catch (_: Exception) { false }
-    fun requiresDisclosure(settings: ReporterSettings): Boolean = settings.passportMode || !isIsraeliPhone(settings.phone)
+    private val disclosurePrefixes = listOf("הדיווח נשלח על ידי בעל/ת דרכון שמספרו ", "מספר הטלפון של המדווח/ת ליצירת קשר הוא ")
+    private fun isDisclosureLine(line: String): Boolean = disclosurePrefixes.any { line.startsWith(it) }
+    fun reconcileDisclosure(text: String, settings: ReporterSettings): String {
+        require(validProfile(settings))
+        val base = text.lines().filterNot(::isDisclosureLine).joinToString("\n").trimEnd()
+        val current = disclosure(settings)
+        return if (current.isEmpty()) base else base + "\n\n" + current
+    }
     fun validProfile(settings: ReporterSettings): Boolean =
         (!settings.passportMode || validPassport(settings.passportNumber)) &&
         try { MunicipalPayloads.normalizePhone(settings.phone); true } catch (_: Exception) { false }
@@ -28,5 +35,9 @@ object PassportSubmission {
         return listOf(passportLine, phoneLine).filter { it.isNotEmpty() }.joinToString("\n")
     }
     fun hasReviewedDisclosure(text: String, settings: ReporterSettings): Boolean =
-        validProfile(settings) && disclosure(settings).lines().all { it in text.lines() }
+        validProfile(settings) && run {
+            val expected = disclosure(settings).lines().filter { it.isNotEmpty() }
+            val actual = text.lines().filter(::isDisclosureLine)
+            actual.size == expected.size && actual.toSet() == expected.toSet()
+        }
 }
