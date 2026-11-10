@@ -6,7 +6,8 @@ import il.sidewalks.reporter.security.ReporterSettings
 object PassportSubmission {
     // TODO: remove once a verified municipal passport contact type is supported.
     const val COMPATIBILITY_ID = "123456782"
-    // User-chosen; unassigned status is unverified. TODO remove with native international support.
+    // User-chosen: user states the 057 prefix is unassigned; unverified by us.
+    // TODO remove with native international support.
     const val INTERNATIONAL_PHONE_PLACEHOLDER = "0571234567"
     fun isIsraeliPhone(phone: String): Boolean = try {
         MunicipalPayloads.normalizePhone(phone).matches(Regex("05[0-9]{8}"))
