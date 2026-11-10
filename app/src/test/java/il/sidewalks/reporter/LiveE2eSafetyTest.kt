@@ -66,8 +66,12 @@ class LiveE2eSafetyTest {
         assertTrue(source.contains("live-e2e-submission-state.json"))
         assertTrue(source.contains("if (!cleaned && !preserveState)"))
         assertTrue(source.contains("do not re-dispatch; check 106 first"))
-        // Only a refused send (nothing reached the city) may be retried.
-        assertTrue(source.contains("DRAFT_NOT_SAVED && sendAttempts < 3"))
+        // Only provable pre-network outcomes may be retried: the gate
+        // refused the send (DRAFT_NOT_SAVED) or the tap never reached the
+        // submit path (SEND_NOT_FIRED) - both still under the retry cap.
+        // Anything after a real send tap is never part of the retry set.
+        assertTrue(source.contains("FlowDriver.SendOutcome.DRAFT_NOT_SAVED ||"))
+        assertTrue(source.contains("FlowDriver.SendOutcome.SEND_NOT_FIRED) && sendAttempts < 3"))
     }
 
     @Test fun liveProviderServesOnlyAStagedPhoto() {
