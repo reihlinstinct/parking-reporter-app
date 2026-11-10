@@ -95,7 +95,6 @@ fun SettingsScreen(
             Text(s.t("settings.passport.mode"))
         }
         if (passportMode) {
-            Text(s.t("settings.passport.explanation", mapOf("placeholder" to il.sidewalks.reporter.municipal.PassportSubmission.COMPATIBILITY_ID)))
             OutlinedTextField(passport, { passport = it; saved = false }, label = { Text(s.t("settings.passport.number")) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
         } else OutlinedTextField(id, { id = ReporterInput.digits(it); saved = false }, label = { Text(s.t("settings.field.id_number")) }, isError = id.isNotBlank() && !ReporterInput.validId(id), supportingText = { if (id.isNotBlank() && !ReporterInput.validId(id)) Text(s.t("settings.id.invalid")) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
         OutlinedTextField(phone, { phone = ReporterInput.phoneInput(it); saved = false },
