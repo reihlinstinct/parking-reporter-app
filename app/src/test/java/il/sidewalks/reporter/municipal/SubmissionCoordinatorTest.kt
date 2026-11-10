@@ -70,6 +70,7 @@ class SubmissionCoordinatorTest {
         assertEquals(PassportSubmission.INTERNATIONAL_PHONE_PLACEHOLDER, client.seenContact?.get("MobilePhoneNumber"))
         assertTrue(client.seenReport!!["CaseDescription"].toString().contains("+12025550123"))
         assertEquals("0501234567", PassportSubmission.phoneForPayload(settings.copy(phone = "+972501234567")))
+        assertEquals("0501234567", PassportSubmission.phoneForPayload(settings.copy(phone = "972501234567")))
     }
 
     @Test fun happyPathSubmitsWithPipelinePayloadShape() {
