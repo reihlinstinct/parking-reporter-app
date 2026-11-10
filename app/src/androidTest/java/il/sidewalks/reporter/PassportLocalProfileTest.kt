@@ -24,7 +24,7 @@ class PassportLocalProfileTest {
         compose.onNode(isToggleable()).performClick()
         compose.onNodeWithText("מספר דרכון").performScrollTo().performTextInput("SYNTHETIC-PASSPORT")
         compose.onNodeWithText("במצב דרכון נשלח בממשק", substring = true).performScrollTo().assertExists()
-        File(context.filesDir, "passport-local-profile-synthetic.png").outputStream().use { compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        File(context.filesDir, "passport-local-profile-synthetic.png").outputStream().use { compose.onNode(isRoot() and hasAnyDescendant(hasText("טלפון"))).captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
         compose.onNodeWithText("שמור והמשך").performScrollTo().performClick()
         compose.runOnIdle { assertTrue(saved!!.passportMode); assertEquals("SYNTHETIC-PASSPORT", saved?.passportNumber); assertEquals("", saved?.idNumber) }
     }
