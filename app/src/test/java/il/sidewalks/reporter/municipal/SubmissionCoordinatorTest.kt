@@ -59,6 +59,19 @@ class SubmissionCoordinatorTest {
         assertTrue(!text.contains(profile.passportNumber))
     }
 
+    @Test fun foreignPhoneRequiresReviewedRealNumberAndUsesOnlyPlaceholderInContact() {
+        val client = RecordingClient()
+        val profile = settings.copy(phone = "+12025550123")
+        val blocked = coordinator(client).submitApproved(approvedDraft(), profile, jpegFile()) as SubmissionCoordinator.Outcome.Blocked
+        assertEquals(SubmissionCoordinator.Reason.PASSPORT_DISCLOSURE_REQUIRED, blocked.reason)
+        assertEquals(0, client.logins)
+        val text = approvedDraft().exactHebrewText + "\n\n" + PassportSubmission.disclosure(profile)
+        assertTrue(coordinator(client).submitApproved(approvedDraft().edit(text = text).approve(), profile, jpegFile()) is SubmissionCoordinator.Outcome.Submitted)
+        assertEquals(PassportSubmission.INTERNATIONAL_PHONE_PLACEHOLDER, client.seenContact?.get("MobilePhoneNumber"))
+        assertTrue(client.seenReport!!["CaseDescription"].toString().contains("+12025550123"))
+        assertEquals("0501234567", PassportSubmission.phoneForPayload(settings.copy(phone = "+972501234567")))
+    }
+
     @Test fun happyPathSubmitsWithPipelinePayloadShape() {
         val client = RecordingClient()
         val outcome = coordinator(client).submitApproved(approvedDraft(), settings, jpegFile())

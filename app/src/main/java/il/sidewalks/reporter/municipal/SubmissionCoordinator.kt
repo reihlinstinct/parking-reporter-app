@@ -66,7 +66,7 @@ class SubmissionCoordinator(
         originalJpeg: File,
     ): Outcome {
         if (!draft.isApproved()) return Outcome.Blocked(Reason.NOT_APPROVED, "draft not approved")
-        if (settings.passportMode && !PassportSubmission.hasReviewedDisclosure(draft.exactHebrewText, settings))
+        if (PassportSubmission.requiresDisclosure(settings) && !PassportSubmission.hasReviewedDisclosure(draft.exactHebrewText, settings))
             return Outcome.Blocked(Reason.PASSPORT_DISCLOSURE_REQUIRED, "passport disclosure must be saved and approved")
         if (!settings.hasMunicipalCredentials()) {
             // Name exactly which values are missing (constant field IDs, never
@@ -95,7 +95,7 @@ class SubmissionCoordinator(
         }
         val contact = try {
             MunicipalPayloads.buildContact(MunicipalPayloads.Reporter(
-                settings.firstName, settings.lastName, settings.phone, if (settings.passportMode) PassportSubmission.COMPATIBILITY_ID else settings.idNumber, settings.email))
+                settings.firstName, settings.lastName, PassportSubmission.phoneForPayload(settings), if (settings.passportMode) PassportSubmission.COMPATIBILITY_ID else settings.idNumber, settings.email))
         } catch (e: MunicipalInputException) {
             return Outcome.Blocked(Reason.INPUT_INVALID, e.message ?: "reporter invalid")
         }
