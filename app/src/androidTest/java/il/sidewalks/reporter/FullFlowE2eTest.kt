@@ -100,6 +100,28 @@ class FullFlowE2eTest {
         }
     }
 
+    @Test fun localInputRefusalIsReportedAsFailureNotMissedTap() {
+        claimSyntheticPhoto()
+        try {
+            // A valid review with an unsupported reporter phone is refused
+            // before state/network. This note lacks the old driver phrases.
+            val settings = ReporterSettings(
+                firstName = "ישראל", lastName = "ישראלי", phone = "123",
+                idNumber = "000000018", email = "synthetic@example.com",
+                municipalSubscriptionKey = "synthetic-key",
+                municipalUsername = "synthetic-user", municipalPassword = "synthetic-pass")
+            var clientCalls = 0
+            launchFlow(settings) { _ -> clientCalls++; error("must not create a client") }
+            val driver = FlowDriver(compose)
+            driver.driveToSaved(FlowFields(
+                text = "רכב חונה על המדרכה בתרחיש בדיקה סינתטי", plate = "1234567",
+                address = "רחוב בדיקה 1", capturedAtIso = "2026-01-01T12:00:00+02:00",
+                latitude = "31.77", longitude = "35.2137", categoryLabel = "חניה על המדרכה"))
+            assertEquals(FlowDriver.SendOutcome.SUBMIT_FAILED, driver.tapSendAndAwaitOnce(5_000))
+            assertEquals(0, clientCalls)
+        } finally { cleanOwnedState() }
+    }
+
     @Test fun fullReportFlowStubbedServer() {
         claimSyntheticPhoto()
         val settings = ReporterSettings(

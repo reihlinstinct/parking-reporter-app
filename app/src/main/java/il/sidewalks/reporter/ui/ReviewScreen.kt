@@ -15,6 +15,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -284,7 +285,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 Log.i("SUBMIT_FLOW", "send onClick reached: ready=${draft.isReady()} submitting=$submitting")
                 onSubmit(draft)
             }, modifier = sendModifier) { Text(s.t(if (submitting) "review.submit.sending" else "review.submit.button")) }
-            if (submissionNote.isNotEmpty()) Text(submissionNote, style = MaterialTheme.typography.bodySmall)
+            if (submissionNote.isNotEmpty()) Text(submissionNote, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("submission-note"))
         } else {
             Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.submit.disabled_button")) }
             Text(s.t("review.submit.unavailable"), style = MaterialTheme.typography.bodySmall)

@@ -10,6 +10,8 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.junit4.ComposeTestRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -225,6 +227,14 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
      * record by the caller, not here.
      */
     private fun failureNoteShown(): Boolean =
+        // Every local refusal is terminal too, even when it does not contain
+        // one of the old municipal-error phrases (lookup, profile, address).
+        // Sending may finish before the driver samples its transient label.
+        compose.onAllNodesWithTag("submission-note").fetchSemanticsNodes().any { node ->
+            val text = if (SemanticsProperties.Text in node.config) node.config[SemanticsProperties.Text].joinToString("") { it.text } else ""
+            text.isNotBlank() && !text.contains("שולח לעירייה") &&
+                !text.contains("נשלח לעירייה") && !text.contains("הטיוטה לא נשמרה")
+        } ||
         compose.onAllNodesWithText("העירייה ענתה", substring = true)
             .fetchSemanticsNodes().isNotEmpty() ||
             compose.onAllNodesWithText("שגיאה מקומית", substring = true)
@@ -352,6 +362,9 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
             }
             println("FLOW_DRIVER send tap $tap no-opped (no sending state, provably no record) - re-tapping after re-proof")
         }
+        // Bring a fast terminal note into the captured pixels, rather than
+        // leaving it below the saved review form. No extra submit is made.
+        if (failureNoteShown()) runCatching { compose.onNodeWithTag("submission-note").performScrollTo() }
         screenshot("live-e2e-after-send-tap.png")
         val startedAt = System.currentTimeMillis()
         var shot = 0

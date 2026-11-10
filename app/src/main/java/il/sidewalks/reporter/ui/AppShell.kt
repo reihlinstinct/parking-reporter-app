@@ -187,6 +187,7 @@ fun AppShell(
                         } catch (_: Exception) { false }
                     }
                     if (!stored) {
+                        Log.i("SUBMIT_FLOW", "submitReport blocked: DRAFT_NOT_SAVED")
                         submissionNote = strings.t("shell.submit.draft_not_saved")
                         submitting = false
                         return@launch
@@ -195,6 +196,7 @@ fun AppShell(
                     draft = shown
                     reload()
                 }
+                Log.i("SUBMIT_FLOW", "submitReport shown draft persisted")
                 var passportReviewDraft: ReviewDraft? = null
                 val outcome = withContext(Dispatchers.IO) {
                     try {
@@ -248,6 +250,12 @@ fun AppShell(
                     }
                 }
                 passportReviewDraft?.let { updated -> revision += 1; draft = updated; reload() }
+                // Fixed reason codes only, never reporter values or municipal details.
+                Log.i("SUBMIT_FLOW", "submitReport outcome=" + when (outcome) {
+                    is SubmissionCoordinator.Outcome.Blocked -> outcome.reason.name
+                    is SubmissionCoordinator.Outcome.Submitted -> "SUBMITTED"
+                    is SubmissionCoordinator.Outcome.AlreadySubmitted -> "ALREADY_SUBMITTED"
+                })
                 submissionNote = municipalOutcomeText(strings, outcome)
                 if (outcome is SubmissionCoordinator.Outcome.Submitted ||
                     outcome is SubmissionCoordinator.Outcome.AlreadySubmitted) {
