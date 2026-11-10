@@ -32,6 +32,7 @@ class PrivateOcrSafetyTest {
         assertTrue(isolation.indexOf("svc data disable") < isolation.indexOf("if adb shell 'echo | toybox nc"))
         assertTrue(isolation.contains("if adb shell 'echo | toybox nc -w 3 1.1.1.1 443'"))
         assertTrue(isolation.contains("network isolation check failed - refusing OCR"))
+        assertTrue(script.contains("OCR_BENCH_INPUT_SHA256"))
         assertTrue(script.contains("trap finish_private_benchmark EXIT"))
         assertTrue(script.indexOf("ocr_network_isolation") < script.indexOf("adb shell run-as il.sidewalks.reporter mkdir"))
         assertTrue(script.contains("openssl enc -aes-256-cbc"))
