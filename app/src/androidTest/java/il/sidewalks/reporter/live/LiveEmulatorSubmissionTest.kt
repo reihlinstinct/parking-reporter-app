@@ -152,12 +152,17 @@ class LiveEmulatorSubmissionTest {
             // 300s: the municipal API through the owner tunnel can answer
             // slowly; a slow-but-successful response must still be caught.
             // The 120s wait is what turned run 42762339581 OUTCOME_UNKNOWN.
-            var outcome = driver.tapSendAndAwaitOnce(300_000)
+            var outcome = driver.tapSendAndAwaitOnce(300_000, screenshotEveryMs = 20_000)
             var sendAttempts = 1
-            while (outcome == FlowDriver.SendOutcome.DRAFT_NOT_SAVED && sendAttempts < 3) {
+            // Both retry-safe outcomes: DRAFT_NOT_SAVED (the gate refused, no
+            // request made) and SEND_NOT_FIRED (the tap never reached the
+            // submit path - no sending state, no state record, nothing sent).
+            while ((outcome == FlowDriver.SendOutcome.DRAFT_NOT_SAVED ||
+                outcome == FlowDriver.SendOutcome.SEND_NOT_FIRED) && sendAttempts < 3) {
+                if (outcome == FlowDriver.SendOutcome.SEND_NOT_FIRED) marker("SEND_NOT_FIRED")
                 Thread.sleep(500)
                 sendAttempts += 1
-                outcome = driver.tapSendAndAwaitOnce(300_000)
+                outcome = driver.tapSendAndAwaitOnce(300_000, screenshotEveryMs = 20_000)
             }
             when (outcome) {
                 FlowDriver.SendOutcome.SUBMITTED -> {
@@ -177,6 +182,14 @@ class LiveEmulatorSubmissionTest {
                 FlowDriver.SendOutcome.DRAFT_NOT_SAVED -> {
                     outcomeKnown = true
                     throw AssertionError("draft-not-saved persisted across retries")
+                }
+                FlowDriver.SendOutcome.SEND_NOT_FIRED -> {
+                    // Provably nothing reached the city (no sending state, no
+                    // submission record): fixing the driver and re-running is
+                    // safe, unlike any post-send outcome.
+                    outcomeKnown = true
+                    marker("SEND_NOT_FIRED")
+                    throw AssertionError("send tap never fired - nothing reached the city")
                 }
                 FlowDriver.SendOutcome.TIMEOUT -> {
                     // The request may already have reached the city: the case
