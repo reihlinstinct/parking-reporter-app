@@ -10,6 +10,36 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 - One-time first-run welcome screen (#187). Upgrading installs have no flag yet, so they see the welcome once after the update.
 
+## [0.18.5] - 2026-11-10
+
+### Other changes
+
+- settings: clear-and-save municipal credentials + greyed-out send naming missing values (#180) (7546fdd)
+
+## [0.18.4] - 2026-11-10
+
+### Fixes
+
+- fix: use shipped theme in live emulator recording (#205) (76c2bd0)
+
+## [0.18.3] - 2026-11-10
+
+### Other changes
+
+- live-e2e: fix outcome-unknown hang + keep heavy downloads off the owner tunnel (#203) (174074a)
+
+## [0.18.2] - 2026-11-10
+
+### Other changes
+
+- live-e2e: fix device staging (mkdir files dir) + fail-fast preflight (#202) (da62573)
+
+## [0.18.1] - 2026-11-10
+
+### Other changes
+
+- trial: restage photo for the next owner-approved live filing + photo-digest gate (#200) (ca41db3)
+
 ## [0.18.0] - 2026-11-09
 
 ### Features
