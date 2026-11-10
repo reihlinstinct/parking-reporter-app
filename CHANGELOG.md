@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.26.12] - 2026-11-10
+
+### Fixes
+
+- fix(live-driver): re-tap a no-op send click only while pre-network (#264) (ea40127)
+
 ## [0.26.11] - 2026-11-10
 
 ### Other changes
