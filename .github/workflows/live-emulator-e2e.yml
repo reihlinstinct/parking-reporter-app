@@ -304,7 +304,7 @@ jobs:
             sh scripts/stage-live-files.sh /tmp/live-e2e/photo.jpg /tmp/live-e2e/params.json
             echo "TIMING staging-preflight-ok $(date -u +%FT%TZ)"
             ( for i in 1 2 3 4 5 6; do if [ -f /tmp/live-e2e/stop-rec ]; then break; fi; adb shell screenrecord --time-limit 170 /sdcard/live-rec-$i.mp4 >/dev/null 2>&1; done ) &
-            adb shell am instrument -w -r -e class il.sidewalks.reporter.live.LiveEmulatorSubmissionTest il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > /tmp/live-e2e/instrumentation.txt 2>&1; echo $? > /tmp/live-e2e/instrumentation.rc
+            sh scripts/capture-live-instrumentation.sh /tmp/live-e2e
             echo "TIMING instrumentation-done rc=$(cat /tmp/live-e2e/instrumentation.rc) $(date -u +%FT%TZ)"
             touch /tmp/live-e2e/stop-rec
             adb shell pkill -INT screenrecord || true
@@ -362,12 +362,13 @@ jobs:
             cp "$first" recording.mp4
           fi
           test -s instrumentation.txt
-          tar czf private-bundle.tgz $(for f in recording.mp4 instrumentation.txt live-e2e-*.png live-e2e-case-number.txt live-e2e-submission-state.json live-e2e-response-log.jsonl files-app.txt files-test.txt; do if [ -s "$f" ]; then printf '%s ' "$f"; fi; done)
+          # Raw device logs and process observations stay inside this encrypted bundle.
+          tar czf private-bundle.tgz $(for f in logcat.txt logcat.stderr process-lifecycle.txt process-lifecycle.stderr process-exit-info.txt process-memory.txt recording.mp4 instrumentation.txt live-e2e-*.png live-e2e-case-number.txt live-e2e-submission-state.json live-e2e-response-log.jsonl files-app.txt files-test.txt; do if [ -s "$f" ]; then printf '%s ' "$f"; fi; done)
           test -s private-bundle.tgz
           openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
             -in private-bundle.tgz -out live-e2e-private-bundle.tgz.enc -pass env:TRIAL_DATA_KEY
           test -s live-e2e-private-bundle.tgz.enc
-          shred -u private-bundle.tgz recording.mp4 seg1.mp4 seg2.mp4 seg3.mp4 seg4.mp4 seg5.mp4 seg6.mp4 live-e2e-*.png live-e2e-case-number.txt live-e2e-submission-state.json live-e2e-response-log.jsonl instrumentation.txt files-app.txt files-test.txt shots.txt 2>/dev/null || true
+          shred -u logcat.txt logcat.stderr process-lifecycle.txt process-lifecycle.stderr process-exit-info.txt process-memory.txt private-bundle.tgz recording.mp4 seg1.mp4 seg2.mp4 seg3.mp4 seg4.mp4 seg5.mp4 seg6.mp4 live-e2e-*.png live-e2e-case-number.txt live-e2e-submission-state.json live-e2e-response-log.jsonl instrumentation.txt files-app.txt files-test.txt shots.txt 2>/dev/null || true
       - name: Record this run's digest (encrypted, for the duplicate guard)
         if: always()
         env:

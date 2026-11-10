@@ -40,6 +40,8 @@ jobs:
       # adb; guards the fix for run 42755730613's pre-launch staging failure.
       - name: Run the staging regression test
         run: bash scripts/test-stage-live-files.sh
+      - name: Test encrypted live process diagnostics (mock adb only)
+        run: python3 scripts/test_live_instrumentation_capture.py
   python-smoke:
     name: Python tooling smoke test
     runs-on: ubuntu-24.04
