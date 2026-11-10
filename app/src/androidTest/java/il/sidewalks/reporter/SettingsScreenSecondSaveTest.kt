@@ -23,7 +23,7 @@ import org.junit.Test
 class SettingsScreenSecondSaveTest {
     @get:Rule val compose = createComposeRule()
 
-    private val stored = ReporterSettings("בדיקה", "מדווח", "0500000000", "000000000", "synthetic@example.invalid",
+    private val stored = ReporterSettings("בדיקה", "מדווח", "0500000000", "000000018", "synthetic@example.invalid",
         municipalSubscriptionKey = "synthetic-subscription-key", municipalUsername = "synthetic-api-user", municipalPassword = "synthetic-api-pass")
 
     @Test
