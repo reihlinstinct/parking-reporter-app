@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.26.7] - 2026-11-10
+
+### Other changes
+
+- test(driver): wait for OCR idle + enabled send, dismiss IME before send tap (#259) (3ee0625)
+
 ## [0.26.6] - 2026-11-10
 
 ### Fixes
