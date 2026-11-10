@@ -132,8 +132,11 @@ empty. An existing but empty v1 file is therefore a migration, not
 no `report-ledger-migration*` journal), custody must be created before the
 first Room open. On this fresh-install path, after the custody commit and
 read-back and before the first Room open, the journal is written durably as
-`complete`: a fresh install has nothing to migrate, and Room then creates
-the database directly at v2. A fresh install that skipped this write would
+`fresh-creating`: a fresh install has nothing to migrate, but the database
+does not exist yet, and "database never created" must be a durable fact of
+its own, not something inferred from how the ledger was created. The
+journal advances to `complete` only after Room's create has committed and
+the database has opened once. A fresh install that skipped this write would
 be indistinguishable from the stopped "v2 schema, no journal" state, so the
 journal write is part of custody creation, not an optional step.
 
@@ -173,8 +176,9 @@ Marker convention: a strict versioned journal file under `noBackupFilesDir`
 detects `report-ledger-migration*`. Not an in-database table: the marker must
 be visible to custody history checks without opening the database. The
 journal records whether the ledger was created fresh at v2 or migrated from
-v1, which is what distinguishes the two "complete, no database" rows in the
-restart table. Journal
+v1. That mark never authorizes creating a database: once the journal says
+`complete`, a missing database is a fixed stopped state for both kinds
+(section 4 restart table); only `fresh-creating` may create one. Journal
 writes use explicit sync/rename/directory-sync plus authenticated read-back
 (the same durability discipline as key custody, not AtomicFile's
 logged-error success).
@@ -186,7 +190,9 @@ the version-2 entities and writes its identity hash - so no per-record work
 outside that transaction is possible, and a partial result can never be
 committed. The `Migration` creates a new `reports_v2` table with BLOB
 `draftJson`/`reviewedDigest` columns, a plaintext
-`tombstoned INTEGER NOT NULL DEFAULT 0` column (0 for every migrated row),
+`tombstoned INTEGER NOT NULL DEFAULT 0` column (0 for every migrated row;
+the v2 entity field carries `@ColumnInfo(defaultValue = "0")` so Room's
+TableInfo default-value validation agrees with the migrated table),
 the same unique index on `originalSha256`, and the other columns unchanged.
 The fresh-install v2 schema Room creates from the entity is the same table,
 so the `tombstoned` column exists from the start on every v2 database and
@@ -256,10 +262,10 @@ Restart table:
 | Journal `migrating`, v1 file | crash before or during the upgrade transaction: nothing was committed; revalidate the proof under lock, re-run the whole data pass | replace the key, reopen v1 for writes, or resume mid-copy (there is no resume cursor) |
 | Journal `migrating`, v2 schema | the upgrade committed before the journal write: skip the data pass, journal `cleaning`, resume at the VACUUM step | re-run the data pass or skip the byte scan |
 | Journal `cleaning` | decrypt-verify every v2 row (GCM authenticates each one; the v1 table no longer exists); resume at VACUUM/checkpoint step | re-run the data pass or skip the byte scan |
-| Journal `complete` (fresh-created), no database | fresh-install crash after the journal write: open Room, creating the v2 database | treat it as a migration |
-| Journal `complete` (migrated), no database | fixed stopped state, retain data | recreate an empty ledger (that would silently lose the duplicate guard) |
+| Journal `fresh-creating`, no database | fresh-install crash before Room's create committed: open Room, creating the v2 database, then journal `complete` | treat it as a migration |
+| Journal `complete` (fresh-created or migrated), no database | fixed stopped state, retain data | recreate an empty ledger (that would silently lose the duplicate guard) |
 | Journal `complete`, database present | authenticated encrypted open only | reclassify wrong key/corruption as plaintext |
-| Committed key, no journal, no database | fresh-install crash point: write journal `complete` durably, open Room creating the v2 database | treat it as a migration (there is no source) |
+| Committed key, no journal, no database | fresh-install crash point: write journal `fresh-creating` durably, open Room creating the v2 database, then journal `complete` | treat it as a migration (there is no source) |
 | v2 schema, no journal (not the fresh-install row above) | fixed stopped state, retain data | infer state by mtime or delete anything |
 | Missing/corrupt/contradictory journal or files | fixed stopped state, retain data | reset, recover by guessing, destructive migration |
 
@@ -298,6 +304,17 @@ throws in Room. Every `fallbackToDestructiveMigration*` variant is forbidden
 in any build - a destructive fallback would delete the duplicate guard.
 Pinned by a source test that scans the Room database builder configuration.
 
+Corruption handling is overridden for the same reason. The default
+`SupportSQLiteOpenHelper.Callback.onCorruption`, called on SQLITE_CORRUPT or
+NOTADB during open or any later statement, deletes the database file; the
+next open would then create an empty v2 ledger and every photo already filed
+could be filed again. The ledger's builder therefore installs a custom
+`SupportSQLiteOpenHelper.Factory`/`Callback` (or the Room driver API
+equivalent) that never deletes or recreates the file and moves the ledger to
+the fixed stopped state instead. Pinned by the same source test, plus a test
+that corrupts the SQLite header of a v2 file with rows, opens it, and
+expects the stopped state with the file's bytes unchanged.
+
 ### 7. Key invalidation versus the duplicate guard (DECIDED: option (a))
 
 Removing or force-resetting the lock screen permanently invalidates the
@@ -331,7 +348,10 @@ state. The tombstoned flag means:
   them as unreadable; the startup sweep's referenced set includes their
   `originalRelativePath`, so their evidence photos are kept, not deleted
   as "unreferenced".
-- Open, approve and send are permanently refused for tombstoned rows
+- Open, approve and send are permanently refused for tombstoned rows; as
+  defense in depth, the `store` and `approve` UPDATE statements carry
+  `AND tombstoned = 0`, so even a repository bug cannot overwrite a
+  tombstoned row's ciphertext with new-key data while the flag is set
   (fail closed). If a tombstoned row's `submissions/<stableId>.json`
   records an in-flight or uncertain municipal submission, send stays
   refused, but the case data from that plaintext file is still shown so
@@ -372,7 +392,11 @@ plaintext content exposure.
   interrupted migration (kill mid-data-pass, between the upgrade commit
   and the `cleaning` journal write, between VACUUM and checkpoint, before
   `complete`) resumes per the restart table; post-migration raw file, WAL and SHM contain no plaintext
-  fragments; "v2 schema, no journal" stops and retains data.
+  fragments; "v2 schema, no journal" stops and retains data. Restart rows:
+  `fresh-creating` with no database creates the v2 database once and
+  journals `complete`; `complete` (fresh-created or migrated) with no
+  database stops and retains data; a header-corrupted v2 file opens to the
+  stopped state with its bytes unchanged.
 - Fail-closed consumers: corrupt one row; `all()` throws, the sweep deletes
   nothing, and the photo files are untouched. `reserve` of an existing hash
   still aborts without any decryption.
