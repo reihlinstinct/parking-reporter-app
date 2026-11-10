@@ -38,7 +38,7 @@ class OfflinePlateOcr(private val context: Context) {
         try { return recognize(bitmap) } finally { bitmap.recycle() }
     }
     fun recognize(bitmap: Bitmap): List<String> = PlateCandidates.fromText(recognizeText(bitmap))
-    /** Raw text for encrypted private diagnostics only; never log or display without review. */
+    /** Raw text for encrypted private diagnostics only; no logs or public output. */
     internal fun recognizeText(bitmap: Bitmap): String {
         require(bitmap.width in 1..2560 && bitmap.height in 1..2560)
         val tess = TessBaseAPI()
