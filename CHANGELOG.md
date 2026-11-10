@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.26.6] - 2026-11-10
+
+### Fixes
+
+- fix: remove redundant review time and address notes (#258) (da61cc8)
+
 ## [0.26.5] - 2026-11-10
 
 ### Other changes
