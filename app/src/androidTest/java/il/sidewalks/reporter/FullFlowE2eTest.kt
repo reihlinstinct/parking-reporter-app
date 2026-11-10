@@ -184,6 +184,14 @@ class FullFlowE2eTest {
             if (compose.onAllNodesWithText("נמצא מיקום בתמונה").fetchSemanticsNodes().isNotEmpty()) {
                 compose.onNodeWithText("השתמש במיקום").performClick()
             }
+            // Location consent starts an async import/reserve. The absence of
+            // an enabled Send button during that import is NOT the negative
+            // send path under test. Wait for review, which is published only
+            // after the synthetic photo's row has been reserved, so finally
+            // cannot clean too early and leave a late row for the next test.
+            compose.waitUntil(15_000) {
+                compose.onAllNodesWithText("בדיקת הדיווח").fetchSemanticsNodes().isNotEmpty()
+            }
             if (compose.onAllNodesWithText("למצוא רחוב ומספר בית?").fetchSemanticsNodes().isNotEmpty()) {
                 compose.onNodeWithText("לא עכשיו").performClick()
             }
