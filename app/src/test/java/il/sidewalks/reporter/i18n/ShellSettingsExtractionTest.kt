@@ -21,7 +21,7 @@ class ShellSettingsExtractionTest {
 
     /** Key -> the Hebrew literal it replaced. */
     private val extracted = linkedMapOf(
-        "settings.passport.mode" to "ללא תעודת זהות ישראלית",
+        "settings.passport.mode" to "אין לי תעודת זהות",
         "settings.passport.number" to "מספר דרכון",
         "shell.passport.review_required" to "נדרש גילוי על פרטי הקשר ומספרי מצייני המקום בנוסח הדיווח. בדוק את הנוסח המלא, שמור ואשר מחדש לפני שליחה. אם פרטי הקשר חסרים או אינם תקינים, תקן אותם בהגדרות.",
         "settings.api.advanced" to "חיבור 106 מתקדם",

@@ -21,7 +21,7 @@ class PassportLocalProfileTest {
         UiPrefsLanguageStore.of(context).set(requireNotNull(AppCatalog.get(InstrumentationRegistry.getInstrumentation().targetContext).defaultLanguage).code)
         var saved: ReporterSettings? = null
         compose.setContent { AppTheme { SettingsScreen(null, save = { value, _, clear -> saved = value; clear() }, back = {}, basicSetup = true) } }
-        compose.onNodeWithText("ללא תעודת זהות ישראלית").performScrollTo()
+        compose.onNodeWithText("אין לי תעודת זהות").performScrollTo()
         compose.onNode(isToggleable()).performClick()
         compose.onNodeWithText("מספר דרכון").performScrollTo().performTextInput("SYNTHETIC-PASSPORT")
         compose.onNodeWithText("במצב דרכון נשלח בממשק", substring = true).assertDoesNotExist()
