@@ -10,6 +10,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.platform.LocalContext
@@ -234,7 +236,9 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         }
         if (onSubmit != null) {
             // Send the draft this screen actually shows, not some other copy.
-            Button(enabled = draft.isApproved() && !submitting && missingCredentialKeys.isEmpty() && !noDeviceCredential, onClick = { onSubmit(draft) }, modifier = Modifier.fillMaxWidth()) { Text(s.t(if (submitting) "review.submit.sending" else "review.submit.button")) }
+            // N4: when the lock state disables send, TalkBack announces why.
+            val sendModifier = if (noDeviceCredential) Modifier.fillMaxWidth().semantics { stateDescription = s.t("review.submit.no_device_lock") } else Modifier.fillMaxWidth()
+            Button(enabled = draft.isApproved() && !submitting && missingCredentialKeys.isEmpty() && !noDeviceCredential, onClick = { onSubmit(draft) }, modifier = sendModifier) { Text(s.t(if (submitting) "review.submit.sending" else "review.submit.button")) }
             if (submissionNote.isNotEmpty()) Text(submissionNote, style = MaterialTheme.typography.bodySmall)
         } else {
             Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.submit.disabled_button")) }

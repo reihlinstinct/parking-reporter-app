@@ -56,7 +56,8 @@ import java.io.File
 fun AppShell(
     authenticate: (title: String, subtitle: String, action: () -> Unit) -> Unit,
     // Issue #260: true when the device has a lockscreen credential, so the
-    // unlock gate can actually run. Default true keeps test shells unchanged.
+    // unlock gate can actually run. Default true keeps test shells unchanged;
+    // production (MainActivity) passes the real KeyguardManager check.
     hasDeviceCredential: () -> Boolean = { true },
     requestCamera: (() -> Unit) -> Unit,
     readSettings: () -> ReporterSettings?,
@@ -428,12 +429,18 @@ fun AppShell(
                 il.sidewalks.reporter.security.SettingsProfileStore(context).read()
                     ?.mapNotNull(::municipalFieldLabelKey).orEmpty()
             }
+            // Issue #260 review: one read per composition; a stale backstop
+            // lock note is obsolete once a lockscreen exists.
+            val noDeviceCredential = !hasDeviceCredential()
+            LaunchedEffect(noDeviceCredential) {
+                if (!noDeviceCredential && submissionNote == strings.t("shell.submit.no_device_lock")) submissionNote = null
+            }
             ReviewScreen(value, image, ::saveDraft, manualAddressLookup = { street, house ->
                 val directory = streetsDirectory ?: (streetDirectoryLoader?.invoke() ?: loadStreetDirectory(context)).also { streetsDirectory = it }
                 directory.findConfirmedAddress(street, house)
             }, onBack = { page = "home" },
                 onSubmit = { shown -> submitReport(shown) },
-                submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, noDeviceCredential = !hasDeviceCredential(), onOutgoingPreview = {
+                submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, noDeviceCredential = noDeviceCredential, onOutgoingPreview = {
                 scope.launch {
                     try {
                         val derivative = withContext(Dispatchers.IO) {

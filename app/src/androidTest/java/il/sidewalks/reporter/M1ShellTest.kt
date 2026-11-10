@@ -1,6 +1,9 @@
 package il.sidewalks.reporter
 
 import android.graphics.Bitmap
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.test.*
@@ -52,6 +55,22 @@ class M1ShellTest {
         compose.onNodeWithText("שלח לעירייה").assertIsNotEnabled()
         compose.onNodeWithText("שלח לעירייה").performScrollTo().performClick()
         compose.runOnIdle { assertNull(submitted) }
+    }
+    @Test fun lockscreenStateFlipUpdatesSendAndNote() {
+        // Issue #260 review blocker 3: the screen must follow the state, so
+        // returning from Settings after setting a lock refreshes it (the
+        // production wiring re-reads isDeviceSecure in MainActivity.onResume).
+        val approved = draft().approve()
+        var noLock by mutableStateOf(true)
+        compose.setContent { AppTheme { ReviewScreen(approved, null, {}, onBack = {}, onSubmit = {}, noDeviceCredential = noLock) } }
+        compose.onNodeWithText("הגדר נעילת מסך").assertIsDisplayed()
+        compose.onNodeWithText("שלח לעירייה").assertIsNotEnabled()
+        compose.runOnIdle { noLock = false }
+        compose.onNodeWithText("הגדר נעילת מסך").assertDoesNotExist()
+        compose.onNodeWithText("שלח לעירייה").assertIsEnabled()
+        compose.runOnIdle { noLock = true }
+        compose.onNodeWithText("הגדר נעילת מסך").assertIsDisplayed()
+        compose.onNodeWithText("שלח לעירייה").assertIsNotEnabled()
     }
     @Test fun lockscreenKeepsSendEnabledWithoutNote() {
         // Issue #260: with a lockscreen nothing changes - no note, send enabled.
