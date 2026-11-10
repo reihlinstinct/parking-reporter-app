@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.26.9] - 2026-11-10
+
+### Fixes
+
+- fix: block send with a note when the device has no lockscreen (#262) (44e4f0a)
+
 ## [0.26.8] - 2026-11-10
 
 ### Fixes
