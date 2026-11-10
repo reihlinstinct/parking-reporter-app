@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.26.10] - 2026-11-10
+
+### Other changes
+
+- docs: ledger encryption design (#88) (#255) (06f8350)
+
 ## [0.26.9] - 2026-11-10
 
 ### Fixes
