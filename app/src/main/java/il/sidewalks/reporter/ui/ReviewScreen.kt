@@ -1,5 +1,6 @@
 package il.sidewalks.reporter.ui
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
@@ -238,7 +239,13 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             // Send the draft this screen actually shows, not some other copy.
             // N4: when the lock state disables send, TalkBack announces why.
             val sendModifier = if (noDeviceCredential) Modifier.fillMaxWidth().semantics { stateDescription = s.t("review.submit.no_device_lock") } else Modifier.fillMaxWidth()
-            Button(enabled = draft.isApproved() && !submitting && missingCredentialKeys.isEmpty() && !noDeviceCredential, onClick = { onSubmit(draft) }, modifier = sendModifier) { Text(s.t(if (submitting) "review.submit.sending" else "review.submit.button")) }
+            Button(enabled = draft.isApproved() && !submitting && missingCredentialKeys.isEmpty() && !noDeviceCredential, onClick = {
+                // Runs 42853563754 / 42880867432: an ENABLED send button's
+                // semantics click no-opped silently. First proof point:
+                // does the click reach this lambda at all?
+                Log.i("SUBMIT_FLOW", "send onClick reached: approved=${draft.isApproved()} submitting=$submitting")
+                onSubmit(draft)
+            }, modifier = sendModifier) { Text(s.t(if (submitting) "review.submit.sending" else "review.submit.button")) }
             if (submissionNote.isNotEmpty()) Text(submissionNote, style = MaterialTheme.typography.bodySmall)
         } else {
             Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.submit.disabled_button")) }
