@@ -1,8 +1,8 @@
-# Launcher icon proposal: 106 + AI
+# Launcher icon: Ai06
 
-Owner selection pending. This PR must stay unmerged until the owner picks a concept.
+Owner selected Ai06 variant 1 on 2026-11-10. Merge still requires normal exact-head CI and independent review.
 
-Option 1 is prepared: a hand-drawn white 106, gold AI and a small four-point spark on the existing navy background. No font, municipal logo, coat of arms or external asset is used. Geometry was drawn for this project and is covered by this repository's license. This is not an official municipal app or an official municipal mark.
+Selected concept: a hand-drawn gold A, white lowercase i replacing the digit 1, a gold four-point spark as its dot, followed by white 0 and 6 on the existing navy background. At small sizes the mark reads Ai06, not literally 106; the owner chose this after viewing 32px and 48px previews. No font, municipal logo, coat of arms or external asset is used. Geometry was drawn for this project and is covered by this repository's license. This is not an official municipal app or an official municipal mark.
 
 - Navy: #2C537E. Gold: #D8A038. White: #FFFFFF.
 - Adaptive icon: foreground and solid navy background in a 108dp viewport.
