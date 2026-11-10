@@ -27,7 +27,7 @@ import il.sidewalks.reporter.i18n.ProvideStringsIfMissing
 private const val LOCAL_TIME_EXAMPLE = "\u206601/01/2026 12:00\u2069"
 
 @Composable
-fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft) -> Unit, onBack: () -> Unit, onOutgoingPreview: (() -> Unit)? = null, onSubmit: ((ReviewDraft) -> Unit)? = null, submitting: Boolean = false, submissionNote: String = "", missingCredentialKeys: List<String> = emptyList(), addressLookup: (suspend (Double, Double) -> List<il.sidewalks.reporter.evidence.AddressSuggestion>)? = null, plateRecognizer: (suspend () -> List<String>)? = null) {
+fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft) -> Unit, onBack: () -> Unit, onOutgoingPreview: (() -> Unit)? = null, onSubmit: ((ReviewDraft) -> Unit)? = null, submitting: Boolean = false, submissionNote: String = "", missingCredentialKeys: List<String> = emptyList(), addressLookup: (suspend (Double, Double) -> List<il.sidewalks.reporter.evidence.AddressSuggestion>)? = null, plateRecognizer: (suspend () -> List<String>)? = null, manualAddressLookup: (suspend (String, String) -> il.sidewalks.reporter.municipal.StreetDirectory.ConfirmableAddress)? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var plates by remember(initial.evidence.stableId) { mutableStateOf<List<String>>(emptyList()) }
@@ -44,6 +44,12 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var latitude by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedLatitude?.toString().orEmpty()) }
     var longitude by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedLongitude?.toString().orEmpty()) }
     var editing by remember(initial.evidence.stableId) { mutableStateOf(false) }
+    var manualStreet by remember(initial.evidence.stableId) { mutableStateOf("") }
+    var manualHouse by remember(initial.evidence.stableId) { mutableStateOf("") }
+    var manualResult by remember(initial.evidence.stableId) { mutableStateOf<il.sidewalks.reporter.municipal.StreetDirectory.ConfirmableAddress?>(null) }
+    var manualBusy by remember { mutableStateOf(false) }
+    var manualError by remember { mutableStateOf(false) }
+    var manualGeneration by remember { mutableIntStateOf(0) }
     var categoryMenu by remember { mutableStateOf(false) }
     suspend fun findAddress() {
         val lat = latitude.toDoubleOrNull() ?: return
@@ -146,7 +152,14 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             textStyle = MaterialTheme.typography.titleLarge.copy(textDirection = TextDirection.Ltr),
             label = { Text(s.t("review.edit.plate_field")) }, modifier = Modifier.width(216.dp))
         }
-        OutlinedTextField(draft.address, { draft = draft.edit(address = it) }, label = { Text(s.t("review.edit.address_field")) }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(draft.address, {
+            draft = draft.edit(address = it)
+            if (draft.evidence.latitude == null || draft.evidence.longitude == null) {
+                latitude = ""; longitude = ""; manualResult = null; manualGeneration++
+                draft = draft.copy(confirmedLatitude = null, confirmedLongitude = null,
+                    unresolved = draft.unresolved + ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code)
+            }
+        }, label = { Text(s.t("review.edit.address_field")) }, modifier = Modifier.fillMaxWidth())
         Text(s.t("review.edit.geocode_note"))
         Button(enabled = !geocoding && latitude.toDoubleOrNull() != null && longitude.toDoubleOrNull() != null, onClick = {
             scope.launch { findAddress() }
@@ -171,6 +184,36 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         }
         if (latitude.toDoubleOrNull() == null || longitude.toDoubleOrNull() == null) {
             Text(s.t("review.location.missing_plain"))
+            OutlinedTextField(manualStreet, { manualStreet = it; manualResult = null; manualGeneration++ }, label = { Text(s.t("review.location.street")) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(manualHouse, { manualHouse = it; manualResult = null; manualGeneration++ }, label = { Text(s.t("review.location.house")) }, modifier = Modifier.fillMaxWidth())
+            Text(s.t("review.location.offline_note"), style = MaterialTheme.typography.bodySmall)
+            Button(enabled = !manualBusy && manualAddressLookup != null && manualStreet.isNotBlank() && manualHouse.isNotBlank(), onClick = {
+                val generation = manualGeneration
+                val street = manualStreet
+                val house = manualHouse
+                manualBusy = true; manualError = false; manualResult = null
+                scope.launch {
+                    try {
+                        val result = withContext(Dispatchers.IO) { manualAddressLookup!!.invoke(street, house) }
+                        if (generation == manualGeneration) manualResult = result
+                    } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                    catch (_: Exception) { if (generation == manualGeneration) manualError = true }
+                    finally { manualBusy = false }
+                }
+            }, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.location.find_address")) }
+            if (manualAddressLookup == null || manualError) Text(s.t("review.location.lookup_failed"))
+            manualResult?.let { result ->
+                Text(reviewAddressSuggestionText(s, result.address))
+                Text(s.t("review.location.confirm_note"))
+                Button(onClick = {
+                    latitude = result.latitude.toString(); longitude = result.longitude.toString()
+                    draft = draft.edit(address = result.address).copy(confirmedLatitude = result.latitude,
+                        confirmedLongitude = result.longitude,
+                        unresolved = draft.unresolved - ReviewWarning.MISSING_GPS.code - ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code,
+                        approvedDigest = null)
+                    manualResult = null
+                }, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.location.confirm_address")) }
+            }
         }
         Button(enabled = draft.isReady(), onClick = { draft = draft.approve(); onSave(draft) }, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.approve_button")) }
         Text(s.t(if (draft.isApproved()) "review.approved" else "review.not_approved"))
