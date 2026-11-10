@@ -84,6 +84,7 @@ class MainActivity : ComponentActivity() {
             var showFirstRun by remember { mutableStateOf(!firstRun.seen()) }
             AppShell(
                 authenticate = ::authenticate,
+                hasDeviceCredential = { (getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager).isDeviceSecure },
                 requestCamera = ::camera,
                 readSettings = { SecureSettings(this).read() },
                 saveSettings = { settings -> SecureSettings(this).save(settings) },
