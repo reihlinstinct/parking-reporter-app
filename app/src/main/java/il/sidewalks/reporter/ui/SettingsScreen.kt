@@ -79,7 +79,7 @@ fun SettingsScreen(
             if (setupError.isNotBlank()) Text(setupError, color = MaterialTheme.colorScheme.error)
         } else Text(s.t("settings.privacy.mlkit_note"))
         Text(s.t("settings.privacy.title"), style = MaterialTheme.typography.titleLarge)
-        Text(s.t("settings.privacy.description"))
+        if (!basicSetup) Text(s.t("settings.privacy.description"))
         OutlinedTextField(firstName, { firstName = it; saved = false }, label = { Text(s.t("settings.field.first_name")) }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(lastName, { lastName = it; saved = false }, label = { Text(s.t("settings.field.last_name")) }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(id, { id = it; saved = false }, label = { Text(s.t("settings.field.id_number")) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
