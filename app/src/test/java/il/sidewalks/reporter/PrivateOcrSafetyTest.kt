@@ -25,7 +25,7 @@ class PrivateOcrSafetyTest {
         assertTrue(isolation.contains("if ! adb shell 'echo | toybox nc -w 3 1.1.1.1 443'"))
         assertTrue(isolation.contains("svc wifi disable"))
         assertTrue(isolation.contains("svc data disable"))
-        assertFalse(script.contains("ocr_network_isolation \"$work/output\" ||"))
+        assertFalse(script.contains("ocr_network_isolation \"\$work/output\" ||"))
         assertTrue(isolation.contains("adb get-state"))
         assertTrue(isolation.contains("network positive control failed - refusing OCR"))
         assertTrue(isolation.indexOf("if ! adb shell 'echo | toybox nc") < isolation.indexOf("svc wifi disable"))
