@@ -15,3 +15,7 @@ uninstall clears files/key. No new server requests, retries or status/list calls
 Only the manual live instrumented test can decrypt logs into a transient evidence
 file. The live workflow pulls it into the existing encrypted private bundle and
 removes plaintext. It never appears in public output or ordinary CI artifacts.
+
+Redacted responses may retain personal contact data (name, ID, phone, email)
+returned by the municipality. It remains encrypted locally and in private live
+evidence only, subject to the same caps and retention.

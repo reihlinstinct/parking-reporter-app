@@ -24,15 +24,18 @@ class EncryptedResponseLog(context: Context) {
             generateKey()
         }
     }
-    @Synchronized fun append(reportId: String, entry: ResponseDiagnostic) {
+    fun append(reportId: String, entry: ResponseDiagnostic) = synchronized(LOCK) {
         require(reportId.matches(Regex("[A-Za-z0-9-]+")))
         check(directory.mkdirs() || directory.isDirectory)
         val now = System.currentTimeMillis()
         prune(now)
-        val payload = JSONObject().put("report_id", reportId).put("at", now)
+        val envelope = JSONObject().put("report_id", reportId).put("at", now)
             .put("endpoint", entry.endpoint).put("status", entry.status ?: JSONObject.NULL)
             .put("headers", JSONObject(entry.headers)).put("body", entry.body)
-            .put("failure", entry.failure ?: JSONObject.NULL).toString().toByteArray(Charsets.UTF_8)
+            .put("failure", entry.failure ?: JSONObject.NULL).toString()
+        val json = JSONObject(envelope)
+        if (envelope.toByteArray(Charsets.UTF_8).size > 80_000) json.put("body", "[body omitted: envelope size limit]")
+        val payload = json.toString().toByteArray(Charsets.UTF_8)
         try {
             require(payload.size <= 80_000)
             val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key()) }
@@ -52,5 +55,5 @@ class EncryptedResponseLog(context: Context) {
             if (i >= 20 || total > 2_000_000 || now - file.lastModified() > 7L * 24 * 60 * 60 * 1000) file.delete()
         }
     }
-    companion object { private const val ALIAS = "parking-response-diagnostics-v1" }
+    companion object { private val LOCK = Any(); private const val ALIAS = "parking-response-diagnostics-v1" }
 }

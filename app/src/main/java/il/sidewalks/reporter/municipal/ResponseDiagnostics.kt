@@ -8,7 +8,7 @@ data class ResponseDiagnostic(val endpoint: String, val status: Int?, val header
 
 object ResponseDiagnostics {
     const val MAX_BODY_BYTES = 65_536
-    private val sensitive = Regex("(?i).*(token|password|passwd|secret|authorization|cookie|subscription|api.?key|username|credential).*")
+    private val sensitive = Regex("(?i).*(token|password|passwd|secret|authorization|cookie|subscription|api.?key|username|credential|auth|sid|jwt|otp).*")
     fun redactBody(raw: String, secrets: List<String>): String {
         val foundSecrets = secrets.toMutableList()
         fun collect(value: Any?) {
@@ -28,7 +28,7 @@ object ResponseDiagnostics {
             is JSONArray -> JSONArray().also { out -> for (i in 0 until value.length()) out.put(scrub(value.opt(i))) }
             is String -> foundSecrets.filter { it.isNotEmpty() }.fold(value) { text, secret -> text.replace(secret, "[REDACTED]") }
             null -> JSONObject.NULL
-            else -> value
+            else -> if (value.toString() in foundSecrets) "[REDACTED]" else value
         }
         if (raw.toByteArray(Charsets.UTF_8).size > MAX_BODY_BYTES) return "[body omitted: size limit]"
         return try { val parsed = JSONObject(raw); collect(parsed); scrub(parsed).toString() } catch (_: Exception) { "[body omitted: non-JSON]" }

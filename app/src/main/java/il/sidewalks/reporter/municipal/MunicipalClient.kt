@@ -142,14 +142,16 @@ class OkHttpMunicipalClient private constructor(
         val raw: ByteArray
         try {
             http.newCall(request).execute().use { response ->
+                runCatching { if (diagnostic != null) {
                 val privateSecrets = listOf(subscriptionKey, username, password, body["Token"] as? String ?: body["token"] as? String ?: "")
                 val preview = response.peekBody(ResponseDiagnostics.MAX_BODY_BYTES.toLong() + 1).string()
                 val headers = listOf("Content-Type", "Date", "Retry-After").mapNotNull { name ->
                     response.header(name)?.take(256)?.let { name to it }
                 }.toMap()
                 // Diagnostics must never turn a successful case creation into a retry.
-                runCatching { diagnostic?.invoke(ResponseDiagnostic(endpoint, response.code, headers,
-                    ResponseDiagnostics.redactBody(preview, privateSecrets), null)) }
+                diagnostic.invoke(ResponseDiagnostic(endpoint, response.code, headers,
+                    ResponseDiagnostics.redactBody(preview, privateSecrets), null))
+                } }
                 if (!response.isSuccessful) {
                     throw MunicipalApiException("$endpoint: HTTP ${response.code}.")
                 }
@@ -196,7 +198,8 @@ class OkHttpMunicipalClient private constructor(
             subscriptionKey: String,
             username: String,
             password: String,
-        ): OkHttpMunicipalClient = OkHttpMunicipalClient(baseUrl, subscriptionKey, username, password)
+            diagnostic: ((ResponseDiagnostic) -> Unit)? = null,
+        ): OkHttpMunicipalClient = OkHttpMunicipalClient(baseUrl, subscriptionKey, username, password, diagnostic)
 
         private const val TIMEOUT_SECONDS = 45L
         private const val MAX_RESPONSE_BYTES = 16L * 1024 * 1024
