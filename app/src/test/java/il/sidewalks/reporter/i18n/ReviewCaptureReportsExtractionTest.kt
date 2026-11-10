@@ -196,8 +196,21 @@ class ReviewCaptureReportsExtractionTest {
         }
         val retired = setOf("review.approval_note", "review.edit.latitude_field", "review.edit.longitude_field", "review.edit.timezone_toggle", "review.edit.timezone_field", "review.edit.timezone_note", "review.location.show_advanced", "review.location.hide_advanced", "review.location.advanced_note", "review.location.missing", "review.location.enter_missing")
         val screenKeys = catalog.keys.filter { it.startsWith("review.") || it.startsWith("capture.") || it.startsWith("reports.") }.toSet() - retired
-        assertEquals("review./capture./reports. keys in the catalog vs the keys the screens use", screenKeys, used)
-        assertEquals(all.keys - retired, screenKeys)
+        // The expected key set is derived - catalog keys versus keys the screens
+        // use - so adding a catalog key and using it needs no test edit. The `all`
+        // map is now a golden-wording spot check for keys that predate the
+        // catalog, not the key list. Both directions are checked with the mismatch
+        // named, sorted, one per line (the one long set diff hid #175's six keys).
+        val notUsed = (screenKeys - used).sorted()
+        assertTrue(
+            "catalog review./capture./reports. keys not used by the screens:\n" + notUsed.joinToString("\n"),
+            notUsed.isEmpty(),
+        )
+        val notInCatalog = (used - screenKeys).sorted()
+        assertTrue(
+            "keys used by the review/capture/reports screens but not in the catalog (or retired):\n" + notInCatalog.joinToString("\n"),
+            notInCatalog.isEmpty(),
+        )
         assertTrue(keysNamedIn("CaptureScreen.kt").all { it.startsWith("capture.") })
         assertTrue(keysNamedIn("ReportsScreen.kt").all { it.startsWith("reports.") })
         assertTrue((keysNamedIn("ReviewScreen.kt") + keysNamedIn("ReviewTexts.kt")).all { it.startsWith("review.") })
