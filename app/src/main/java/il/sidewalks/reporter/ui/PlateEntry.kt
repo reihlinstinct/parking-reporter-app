@@ -8,7 +8,12 @@ import il.sidewalks.reporter.core.ReviewDraft
 
 /** Formatting is display-only. Draft, digest, OCR and transport keep ASCII digits. */
 object PlateEntry : VisualTransformation {
-    fun digits(value: String) = value.filter { it in '0'..'9' }.take(8)
+    fun digits(value: String) = buildString {
+        value.forEach { c -> if (Character.getType(c) == Character.DECIMAL_DIGIT_NUMBER.toInt()) {
+            val digit = Character.digit(c, 10)
+            if (digit in 0..9) append(('0'.code + digit).toChar())
+        } }
+    }
     private fun breaks(length: Int) = if (length > 7) listOf(3, 5) else listOf(2, 5)
     fun format(value: String): String = buildString {
         value.forEachIndexed { index, digit ->

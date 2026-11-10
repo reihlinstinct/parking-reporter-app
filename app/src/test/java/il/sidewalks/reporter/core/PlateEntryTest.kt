@@ -7,8 +7,9 @@ import org.junit.Test
 
 class PlateEntryTest {
     @Test fun digitsOnlyAndBothLengths() {
-        assertEquals("12345678", PlateEntry.digits("12-345-678x9"))
-        assertEquals("123", PlateEntry.digits("abc١٢123"))
+        assertEquals("123456789", PlateEntry.digits("12-345-678x9"))
+        assertEquals("12123", PlateEntry.digits("abc١٢123"))
+        assertEquals("12345678", PlateEntry.digits("۱۲۳۴۵۶۷۸"))
         assertEquals("12-345-67", PlateEntry.format("1234567"))
         assertEquals("123-45-678", PlateEntry.format("12345678"))
         assertEquals("12-3", PlateEntry.format("123"))
@@ -29,6 +30,17 @@ class PlateEntryTest {
     private fun draft(plate: String = "") = ReviewDraft(
         Evidence("plate-test", "a".repeat(64), "2026-01-01T12:00:00+02:00", 31.0, 35.0),
         plate, "test 1", "sidewalk_parking", "synthetic", emptySet())
+    @Test fun overlongInputNeverBecomesDifferentValidPlate() {
+        val value = PlateEntry.digits("123456789")
+        assertEquals("123456789", value)
+        assertFalse(draft(value).isReady())
+    }
+    @Test fun nonPlateCategoryNeverPrefills() {
+        val d = draft().copy(subject = "red_white_parking")
+        // Explicit plate-less category below, independent of parking category names.
+        val noPlate = d.copy(subject = ReportCategory.entries.first { !it.needsPlate }.code)
+        assertEquals(noPlate, PlateEntry.prefill(noPlate, listOf("1234567"), ""))
+    }
     @Test fun oneOcrCandidatePrefillsDigitsButNeverApprovesOrOverwritesTyping() {
         val d = draft()
         val prefilled = PlateEntry.prefill(d, listOf("1234567"), "")
