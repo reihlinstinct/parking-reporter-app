@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.26.3] - 2026-11-10
+
+### Other changes
+
+- Wait for synthetic import before negative-send cleanup (#253) (463b4f3)
+
 ## [0.26.2] - 2026-11-10
 
 ### Other changes
