@@ -1508,13 +1508,6 @@
       "ru": "Номер паспорта",
       "am": "የፓስፖርት ቁጥር"
     },
-    "settings.passport.local_only": {
-      "he": "ממשק 106 הנתמך באפליקציה דורש כרגע תעודת זהות ישראלית. במצב דרכון אין שליחה לעירייה. אפשר לשמור את הדיווח במכשיר ולהגיש ידנית בערוץ אחר.",
-      "en": "The 106 interface supported by this app currently requires an Israeli ID. Passport mode cannot send to the municipality. Save the report on this device and submit manually through another channel.",
-      "ar": "واجهة 106 المدعومة في التطبيق تتطلب حاليًا هوية إسرائيلية. وضع جواز السفر لا يرسل للبلدية. احفظ البلاغ على الجهاز وقدّمه يدويًا عبر قناة أخرى.",
-      "ru": "Поддерживаемый интерфейс 106 требует израильское удостоверение. В режиме паспорта отправка в муниципалитет недоступна. Сохраните отчёт на устройстве и подайте вручную другим способом.",
-      "am": "በመተግበሪያው የሚደገፈው 106 አሁን የእስራኤል መታወቂያ ይፈልጋል። በፓስፖርት ሁኔታ ወደ ማዘጋጃ ቤት አይላክም። ሪፖርቱን በመሣሪያው ያስቀምጡና በሌላ መንገድ በእጅ ያስገቡ።"
-    },
     "settings.passport.explanation": {
       "he": "במצב דרכון נשלח בממשק מספר מציין מקום {placeholder} במקום תעודת זהות. נוסח הדיווח מציין זאת במפורש, מציג xxxxx ושלושה תווים אחרונים של הדרכון, ומציין שאין למדווח תעודת זהות ישראלית. הנוסח ידרוש בדיקה ואישור לפני שליחה.",
       "en": "Passport mode sends placeholder {placeholder} in the ID field. The report explicitly discloses this, shows xxxxx plus the last three passport characters, and states the reporter has no Israeli ID. Review and approval are required before sending.",
@@ -1522,7 +1515,7 @@
       "ru": "В режиме паспорта поле удостоверения содержит заполнитель {placeholder}. Текст отчёта прямо указывает это, показывает xxxxx и последние три символа паспорта и сообщает об отсутствии израильского удостоверения. Перед отправкой нужно проверить и подтвердить текст.",
       "am": "በፓስፖርት ሁኔታ በመታወቂያ መስክ {placeholder} የሚል ቦታ ያዥ ይላካል። ሪፖርቱ ይህን ይገልጻል፣ xxxxx እና የፓስፖርቱን የመጨረሻ ሶስት ፊደሎች ያሳያል፣ የእስራኤል መታወቂያ እንደሌለ ይገልጻል። ከመላክ በፊት መፈተሽና ማጽደቅ ያስፈልጋል።"
     },
-    "settings.passport.review_required": {
+    "shell.passport.review_required": {
       "he": "נוסף לנוסח הדיווח גילוי על הדרכון ומספר מציין המקום. בדוק את הנוסח המלא, שמור ואשר מחדש לפני שליחה. אם מספר הדרכון חסר או אינו תקין, תקן אותו בהגדרות.",
       "en": "Passport and placeholder disclosure must appear in the report. Check the full text, save and approve again before sending. If the passport number is missing or invalid, fix it in Settings.",
       "ar": "يجب أن يظهر توضيح الجواز والرقم البديل في البلاغ. راجع النص واحفظه وأكده مجددًا قبل الإرسال. صحح رقم الجواز في الإعدادات إذا كان مفقودًا أو غير صالح.",
