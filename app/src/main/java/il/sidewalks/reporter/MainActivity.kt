@@ -36,6 +36,11 @@ import kotlinx.coroutines.withContext
 class MainActivity : ComponentActivity() {
     private var entryNonce = 0L
     private val entrySignal = mutableStateOf<EntrySignal?>(null)
+    // Issue #260: observable device-lock state, refreshed on every resume so
+    // the send gate follows a lock the user just set in Settings (returning
+    // fires onResume). Composition reads it through the hasDeviceCredential
+    // lambda, so a change recomposes the review screen.
+    private val deviceCredential = mutableStateOf(true)
     private var authenticatedAction: (() -> Unit)? = null
     private var cameraAction: (() -> Unit)? = null
     private val authentication = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -66,6 +71,10 @@ class MainActivity : ComponentActivity() {
         entryNonce += 1
         entrySignal.value = EntrySignal(entryNonce, request)
     }
+    override fun onResume() {
+        super.onResume()
+        deviceCredential.value = (getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager).isDeviceSecure
+    }
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -77,6 +86,7 @@ class MainActivity : ComponentActivity() {
         // Only the first creation consumes the entry intent: after a rotation
         // the request has already routed (its draft is reserved in the ledger)
         // and re-firing it would steal the screen mid-flow.
+        deviceCredential.value = (getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager).isDeviceSecure
         if (savedInstanceState == null) handleEntryIntent(intent)
         // Issue #187: one-time first-run welcome before the main flow.
         val firstRun = FirstRunStore(this)
@@ -84,6 +94,7 @@ class MainActivity : ComponentActivity() {
             var showFirstRun by remember { mutableStateOf(!firstRun.seen()) }
             AppShell(
                 authenticate = ::authenticate,
+                hasDeviceCredential = { deviceCredential.value },
                 requestCamera = ::camera,
                 readSettings = { SecureSettings(this).read() },
                 saveSettings = { settings -> SecureSettings(this).save(settings) },

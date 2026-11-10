@@ -94,6 +94,7 @@ class ReviewCaptureReportsExtractionTest {
         "review.submit.missing_credentials" to "לא ניתן לשלוח - יש להגדיר בהגדרות את הערכים:",
         "review.submit.disabled_button" to "שלח",
         "review.submit.unavailable" to "שליחה אינה זמינה בגרסת הבדיקה",
+        "review.submit.no_device_lock" to "הגדר נעילת מסך", // twin of shell.submit.no_device_lock; shell and review keys are prefix-checked separately
         "review.back" to "חזור",
         "review.geocode.loading" to "מחפש רחוב ומספר בית לפי מיקום התמונה…",
         "review.location.hide_advanced" to "הסתר תיקון מיקום מתקדם",

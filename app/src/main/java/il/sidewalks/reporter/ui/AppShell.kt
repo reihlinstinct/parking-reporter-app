@@ -55,6 +55,10 @@ import java.io.File
 @Composable
 fun AppShell(
     authenticate: (title: String, subtitle: String, action: () -> Unit) -> Unit,
+    // Issue #260: true when the device has a lockscreen credential, so the
+    // unlock gate can actually run. Default true keeps test shells unchanged;
+    // production (MainActivity) passes the real KeyguardManager check.
+    hasDeviceCredential: () -> Boolean = { true },
     requestCamera: (() -> Unit) -> Unit,
     readSettings: () -> ReporterSettings?,
     saveSettings: (ReporterSettings) -> Unit,
@@ -143,6 +147,12 @@ fun AppShell(
         // never send stale text.
         if (!SendGate.readyToSend(shown, draft)) {
             submissionNote = strings.t("shell.submit.draft_not_saved")
+            return
+        }
+        // Issue #260: without a device credential the unlock intent is null
+        // and the gate would swallow the tap silently; block with a note.
+        if (!hasDeviceCredential()) {
+            submissionNote = strings.t("shell.submit.no_device_lock")
             return
         }
         // Device unlock gates every submit (owner 19:49), reusing the same
@@ -419,12 +429,18 @@ fun AppShell(
                 il.sidewalks.reporter.security.SettingsProfileStore(context).read()
                     ?.mapNotNull(::municipalFieldLabelKey).orEmpty()
             }
+            // Issue #260 review: one read per composition; a stale backstop
+            // lock note is obsolete once a lockscreen exists.
+            val noDeviceCredential = !hasDeviceCredential()
+            LaunchedEffect(noDeviceCredential) {
+                if (!noDeviceCredential && submissionNote == strings.t("shell.submit.no_device_lock")) submissionNote = ""
+            }
             ReviewScreen(value, image, ::saveDraft, manualAddressLookup = { street, house ->
                 val directory = streetsDirectory ?: (streetDirectoryLoader?.invoke() ?: loadStreetDirectory(context)).also { streetsDirectory = it }
                 directory.findConfirmedAddress(street, house)
             }, onBack = { page = "home" },
                 onSubmit = { shown -> submitReport(shown) },
-                submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, onOutgoingPreview = {
+                submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, noDeviceCredential = noDeviceCredential, onOutgoingPreview = {
                 scope.launch {
                     try {
                         val derivative = withContext(Dispatchers.IO) {
