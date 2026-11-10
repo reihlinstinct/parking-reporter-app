@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.test.platform.app.InstrumentationRegistry
 import il.sidewalks.reporter.ui.SettingsScreen
 import il.sidewalks.reporter.ui.theme.AppTheme
+import il.sidewalks.reporter.i18n.AppCatalog
 import il.sidewalks.reporter.i18n.UiPrefsLanguageStore
 import il.sidewalks.reporter.security.ReporterSettings
 import java.io.File
@@ -17,7 +18,7 @@ class PassportLocalProfileTest {
     @get:Rule val compose = createComposeRule()
     @Test fun passportSavesLocalProfileWithoutAnIdAndNoInventedIdentity() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        UiPrefsLanguageStore.of(context).set("he")
+        UiPrefsLanguageStore.of(context).set(requireNotNull(AppCatalog.get(InstrumentationRegistry.getInstrumentation().targetContext).defaultLanguage).code)
         var saved: ReporterSettings? = null
         compose.setContent { AppTheme { SettingsScreen(null, save = { value, _, clear -> saved = value; clear() }, back = {}, basicSetup = true) } }
         compose.onNodeWithText("ללא תעודת זהות ישראלית").performScrollTo()
