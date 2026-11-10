@@ -72,7 +72,6 @@ class ReviewCaptureReportsExtractionTest {
         "review.geocode.check_house_number" to "בדוק ואשר את מספר הבית בעצמך",
         "review.address_suggestion" to "הצעה בלבד: {address}",
         "review.edit.text_field" to "הטקסט המדויק לבדיקה",
-        "review.edit.confirm_note" to "בדוק את הרחוב ומספר הבית ואשר את זמן הצילום. אין לנחש מידע חסר. מיקום התמונה המקורי נשמר בנפרד.",
         "review.location.missing_plain" to "לא נמצא מיקום בתמונה. אפשר לבחור כתובת מדויקת בירושלים ולאשר אותה בנפרד.",
         "review.location.street" to "רחוב בירושלים",
         "review.location.house" to "מספר בית",
@@ -81,7 +80,6 @@ class ReviewCaptureReportsExtractionTest {
         "review.location.lookup_failed" to "לא נמצאה כתובת יחידה, או שמאגר הכתובות אינו מותקן. בדוק רחוב ומספר בית. אין לנחש מיקום.",
         "review.location.confirm_note" to "אשר רק אם זו כתובת האירוע שבדקת. המיקום יישמר כאישור שלך, בנפרד מנתוני התמונה המקוריים.",
         "review.location.confirm_address" to "אשר את כתובת האירוע",
-        "review.edit.jerusalem_time_note" to "הזמן מוצג לפי השעון המקומי בירושלים. אשר רק זמן שבדקת.",
         "review.edit.time_field" to "זמן הצילום (24 שעות)",
         "review.edit.latitude_field" to "קו רוחב",
         "review.edit.longitude_field" to "קו אורך",
@@ -305,6 +303,21 @@ class ReviewCaptureReportsExtractionTest {
         assertNull(ReviewWarning.fromStored("plate", catalog))
         assertEquals(listOf("GPS missing", "plate", "שאלה ידנית"), reviewWarningLabels(en, linkedSetOf("plate", "missing_gps", "שאלה ידנית")))
         assertEquals("Needs checking: something else", unresolvedText(en, setOf("something else")))
+    }
+
+    @Test
+    fun redundantReviewNotesAreRemovedWithoutChangingConfirmationControls() {
+        val screen = source("ReviewScreen.kt")
+        for (key in listOf("review.edit.confirm_note", "review.edit.jerusalem_time_note")) {
+            assertFalse("removed note must not render: $key", screen.contains(key))
+            assertFalse("removed note must not remain in the catalog: $key", raw.has(key))
+        }
+        for (key in listOf("review.edit.time_field", "review.edit.confirm_button")) {
+            assertTrue("confirmation control remains: $key", screen.contains(key))
+            assertTrue("confirmation label remains: $key", raw.has(key))
+        }
+        assertTrue(screen.contains("ReviewTime.toJerusalemIso(time, draft.confirmedTime)"))
+        assertTrue(screen.contains("draft.confirmEvidence(iso,"))
     }
 
     /** Source tripwire: each two-way text keeps its branches (a swap shows the wrong state). */
