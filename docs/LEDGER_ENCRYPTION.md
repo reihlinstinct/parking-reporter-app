@@ -1,120 +1,149 @@
-# Encrypted report ledger (#88)
+# Ledger encryption design (#88)
 
-Status: proposed security design. No encryption is installed by this PR. Current
-Room v1 stores private draft JSON in plaintext at the application layer. Device
-sandbox and device encryption still protect it; no public exposure is asserted.
+Status: design for review. No implementation in this change.
 
-## Decision and boundaries
+## Gap and threat model
 
-Encrypt the whole Room database with SQLCipher, not only draftJson. Original
-paths, hashes, approval digests and stable identifiers are also sensitive. Keep
-DraftCodec a serialization-only component. No API, filing, network, settings or
-external-distribution change. Original image encryption is a separate inventory
-item; this database change must not claim to protect image files.
+The Room report ledger (`report-ledger.db`, version 1) stores `draftJson`
+(plate, address, exact report text, original and confirmed coordinates/time)
+and `reviewedDigest` without application-layer encryption. Reporter settings
+are already protected by SecureSettings; the ledger is not. Android sandbox
+and device encryption still apply; no public leak is established. This design
+adds application-layer encryption at rest so that a database file read outside
+the app (rooted device, backup extraction, forensic image) yields no report
+content.
 
-Use the maintained sqlcipher-android API with SupportOpenHelperFactory, not the
-retired android-database-sqlcipher package. Pin a verified compatible release in
-the implementation PR and prove Room/16-KB native-page compatibility. This design
-does not approve a dependency merely because it is the latest. No hash-locked
-pip install or paid service is involved.
+Out of scope: network, filing, release distribution, production data access,
+and the original photo files under the app sandbox (tracked separately; the
+ledger is the metadata store the issue names).
 
-## Placement and dependency direction
+## Existing pieces (reused, not redesigned)
 
-Add ledger/EncryptedLedgerFactory and security/LedgerKeyStore, with a small
-injected migration filesystem/key boundary for tests. AppShell depends on a
-ready/locked/unavailable ledger state, never directly constructs plaintext Room.
-Keep ReportDao revision-CAS, duplicate-photo constraints and digest semantics.
-Update existing ledger tests and add dedicated unit/instrumentation tests under
-matching test packages. No new root code.
+- `LedgerEnvelope` (#90): versioned AES-256-GCM wrap/unwrap of a 32-byte data
+  key under a Keystore wrapping key, with fixed AAD.
+- `LedgerKeyCustody` (#90): fail-closed custody - durable commit, read-back
+  verification, OS-process and cross-instance locking, and no API that can
+  create replacement custody for existing data.
+- `LedgerKeyStore` (#90): Keystore wrapping-key lifecycle.
+- Backup exclusions: `backup_rules.xml` and `data_extraction_rules.xml`
+  already exclude every domain (root, file, database, sharedpref, external)
+  for cloud backup and device transfer. They must stay exactly this broad;
+  the new tests pin them.
 
-```mermaid
-flowchart TD
-    UI[AppShell: unavailable until ready] --> Init[EncryptedLedgerFactory]
-    Init --> K[LedgerKeyStore]
-    K --> W[Keystore AES-GCM wrapping key]
-    K --> E[Wrapped random DB key in noBackupFilesDir]
-    Init --> M[Exclusive crash-safe migration]
-    M --> C[SQLCipher Room database]
-    C --> D[Existing DAO revision and duplicate constraints]
-    Init -->|locked or key missing or corrupt| Stop[Fixed local stopped state, no fallback]
-```
+## Design
 
-## Keys and locked-device lifecycle
+### 1. What is encrypted
 
-Generate a random 256-bit database key once; wrap it with an independent
-non-exportable Android Keystore AES-GCM key, random nonce and versioned AAD.
-Wrapped material belongs in an AtomicFile in noBackupFilesDir, never preferences,
-logs, saved UI state or arguments. Separate alias from reporter settings.
-Only generate on proven first initialization with no existing key/database or
-migration marker. Existing database plus missing/invalid key stops. Never delete
-or regenerate to make an open succeed. No destructive Room fallback.
+Field-level encryption of the sensitive columns, not whole-database
+encryption:
 
-Use secure-device authentication for unwrap with a short validity window, using
-the existing credential prompt pattern. Missing secure lock stops with setup
-instructions. Authentication expiry, biometric enrollment/key invalidation and
-lock-screen removal do not erase data automatically. Clear mutable key buffers
-when possible and close database handles when backgrounded/locked. A closed key
-store alone does not revoke an already-open SQLCipher connection, so lifecycle
-closure and subsequent reauthentication are acceptance requirements. Do not rely
-only on setUnlockedDeviceRequired on API 34 and below due to documented platform
-bugs. Recovery means explicit user-visible local reset/export policy later,
-never hidden plaintext fallback or automatic data destruction.
+- Encrypted: `draftJson`, `reviewedDigest` (both become `ByteArray`
+  ciphertext columns).
+- Plaintext: `stableId`, `originalSha256`, `originalRelativePath`,
+  `revision`. These carry no report content (a content hash, a stable id, a
+  path, a counter) and are required for the uniqueness index
+  (`originalSha256`), the duplicate guard, and optimistic-concurrency checks.
 
-## Migration v1: separate file, explicit journal
+Whole-database encryption (SQLCipher) was rejected: it adds a native
+dependency ahead of the 16 KB page-size Play gate (#84), re-encrypts columns
+that must stay queryable, and duplicates what #90 already built.
 
-Run before exposing any DAO/UI write. Serialize initialization within process
-and acquire an OS file lock for migration. Distinguish legacy plaintext by the
-known header plus successful v1 schema validation; wrong-key encrypted databases
-must not be reclassified as plaintext after a failed open.
+Record envelope: AES-256-GCM under the ledger data key, random 12-byte nonce
+per write, AAD = `stableId || 0x00 || revision`. Binding the AAD to the
+record identity and revision prevents ciphertext swap between records and
+rollback of an encrypted field to an older revision. Format mirrors
+`LedgerEnvelope` (version byte || nonce || ciphertext||tag) with its own AAD
+label `parking-reporter/ledger-record/v1`.
 
-1. Authenticate and durably save the wrapped new key and a value-free migration
-   marker. Refuse ambiguous combinations or unexpected schema versions.
-2. With legacy database exclusively quiescent, checkpoint its WAL and close all
-   ordinary Room/SQLite handles. Treat database, WAL and SHM as one source set.
-3. Export to a separate encrypted temporary database using sqlcipher_export;
-   copy user_version explicitly because the export does not transfer it.
-4. Validate schema/Room identity, row counts and all row values through a private
-   in-memory comparison. Exercise constraints and SQLCipher integrity checks.
-   Never log those values, hashes or database keys.
-5. Fsync the encrypted destination and directory; atomically select it as the
-   canonical encrypted file with a durable phase marker. Reopen with the wrapped
-   key and verify it before deleting the legacy database and sidecars.
-6. Remove legacy source/sidecars and migration temporary files, fsync directory,
-   then mark complete. No ledger access while cleanup is incomplete.
+### 2. Key lifecycle
 
-Crash phases must be recoverable without selecting an unverified copy or writing
-to both. Before verification retain the legacy source and resume/rebuild only
-the encrypted temporary copy. After canonical selection, verify encrypted copy
-and finish cleanup, never reopen plaintext for normal operation. Fail on disk
-full, sync/rename failure or malformed marker. Logical deletion cannot guarantee
-forensic erasure on flash; document that limit, do not promise secure overwrite.
+- One 32-byte data key encrypts all records. It exists in memory only while
+  the ledger is open and is zeroed on close.
+- The data key is wrapped by the Keystore wrapping key and persisted through
+  `LedgerKeyCustody`, exactly as #90 implements: exclusive store, durable
+  commit, read-back verify.
+- The Keystore wrapping key follows the SecureSettings pattern: device
+  credential authentication required for use. On a locked or
+  credential-changed device the key is unusable and the ledger fails closed
+  (section 5).
+- Key loss, corrupted envelope, or a custody-history/custody mismatch is
+  unrecoverable by design. There is no destructive fallback: the app must
+  never delete or re-initialize a ledger it cannot decrypt. The UI shows the
+  stopped state and keeps the file untouched.
 
-## Backup and transfer
+### 3. Migration from v1 (plaintext) to v2 (encrypted)
 
-Existing allowBackup=false, legacy backup_rules and modern data_extraction_rules
-already exclude databases and private files for cloud and device transfer.
-Preserve and regression-test all three, including both extraction sections.
-No new backup channel or recoverable key export. Restored database without key
-must fail closed. Data loss after uninstall/key loss is an explicit limitation.
+Crash-safe, resumable, one-way:
 
-## Acceptance before implementation merge
+1. Migration runs inside `LedgerCustodyStore.exclusive` before the ledger
+   opens for normal use. UI is stopped until it completes.
+2. A migration marker row (new `ledger_meta` table) records
+   `state = migrating`. Absence of the marker with a v1 file means
+   not-started; presence means resume.
+3. Records are encrypted one transaction per record: read plaintext, write
+   ciphertext, advance a `last_migrated_stableId` cursor in the same
+   transaction. A crash anywhere leaves a consistent per-record state; the
+   resume pass skips already-encrypted rows (detected by format version
+   byte, not by a flag that could lie).
+4. A record is recognized as ciphertext by the envelope version byte and
+   GCM verification; anything else in a v2 column is a hard failure, never a
+   silent plaintext passthrough.
+5. After the last record: `PRAGMA secure_delete = ON` was set before the
+   first overwrite, then the marker advances to `state = complete` and the
+   database is checkpointed (WAL truncate). Freelist pages holding old
+   plaintext are returned by `VACUUM` in the final transaction.
+6. Only after `state = complete` does normal operation open the ledger.
+   Per #90, the migration proof (marker + spot verification) is what
+   authorizes custody use for a ledger with history.
 
-- Synthetic real-v1 database migration preserves every record/revision/digest,
-  uniqueness and DAO CAS behavior; reopen and interrupted-phase tests on device.
-- Scan database/WAL/SHM/temp bytes for synthetic distinctive plaintext after
-  successful cleanup; ordinary SQLite cannot read the encrypted database.
-- Wrong key, ciphertext/header tampering, missing wrapper, corrupt journal,
-  authentication expiry, lock/background and invalidated key stop without reset.
-- Failure injection at every sync/rename/delete phase, disk-full and concurrent
-  initialization; no plaintext fallback, loss or duplicate approved operation.
-- Backup/transfer rules tested; build/lint/unit and emulator tests actually run.
-  Mutation tests remove encryption, no-fallback, verification-before-delete,
-  backup exclusion and revision checks; all must be killed or explicitly blocked.
-- Independent exact-head review and green CI, normal signed merge. A docs-only
-  check passing is not evidence that migration/encryption already works.
+Room schema version moves 1 to 2; the Room `Migration` is a schema stub
+(new columns/meta table), with the data transformation owned by the
+migration pass above, not by Room's callback ordering.
 
-## References
+### 4. Semantics preserved
 
-- https://www.zetetic.net/sqlcipher/sqlcipher-api/ (export and user_version)
-- https://www.zetetic.net/sqlcipher/sqlcipher-for-android-migration/ (current API)
-- https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.Builder
+- `reserve` (insert-ABORT on duplicate `originalSha256`), `find`,
+  `findPhoto`, `all`, `store` (expected-revision conditional update), and
+  `approve` keep their exact signatures and conflict behavior; encryption
+  and decryption happen at the DAO boundary.
+- Concurrent writers still serialize on `exclusive`; revision checks are
+  evaluated on plaintext columns before any decryption.
+- No behavior change when the ledger is empty (fresh install): custody
+  creation follows #90's existing `loadOrCreateEmpty`.
+
+### 5. Stopped states (UI)
+
+The UI blocks on ledger initialization with a dedicated stopped state for:
+migration in progress (with progress), locked device / authentication
+required (with an unlock action), and unrecoverable key loss (explains the
+data is unreadable, offers no destructive action). No state auto-clears
+without the underlying condition clearing.
+
+### 6. Backup and device transfer
+
+No change to the existing full exclusions. New instrumentation tests pin
+both XML files (legacy and modern, cloud and device-transfer) so a future
+edit that narrows the exclusions fails CI.
+
+### 7. Tests
+
+- Encryption at rest: write a draft with known plate/text, read the raw
+  database file bytes, assert neither the plate nor text fragments appear;
+  assert ciphertext round-trips.
+- Tamper: flip one ciphertext byte; read fails closed with a GCM error and
+  no partial plaintext.
+- Wrong key: unwrap/record decrypt under a different key fails closed.
+- Migration: golden v1 database migrates to identical logical content;
+  interrupted migration (kill between records) resumes and completes;
+  post-migration raw file contains no plaintext fragments.
+- Locked device / invalidated key: read refuses, UI stopped state shown,
+  file unchanged.
+- Backup: both XML rules exclude all domains (parsed and asserted).
+- Ledger behavior: revision conflicts, duplicate reserve, ordering, and the
+  duplicate guard behave exactly as before across reopen.
+
+### 8. Explicit non-goals
+
+No network, filing, release distribution, or production data access. No
+change to what is filed or to the 106 pipeline. No key escrow, no recovery
+service, no plaintext debug escape hatch.
