@@ -7,10 +7,9 @@ import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.ComposeTestRule
-import androidx.compose.ui.test.onAllNodes
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -68,19 +67,23 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
      * never an injected motion event. The approval and send buttons sit where
      * an open soft keyboard can cover them; a coordinate tap there is eaten
      * by the IME window and nothing happens (run 42769339528: the send tap
-     * never reached the app and the run read as a municipal timeout). Throws
-     * when no clickable node exists, which is how a disabled button surfaces
-     * immediately instead of as a silent miss.
+     * never reached the app and the run read as a municipal timeout). The
+     * matcher requires an ENABLED node: a disabled button keeps its click
+     * action in semantics, so without isEnabled a click there would silently
+     * no-op. Waits briefly, then throws when no enabled clickable node
+     * exists, which is how a disabled button surfaces instead of a miss.
      */
     private fun clickButton(text: String) {
-        compose.onNode(hasText(text) and hasClickAction())
+        compose.waitUntil(SEND_FIRED_WAIT_MS) { hasClickableButton(text) }
+        compose.onNode(hasText(text) and hasClickAction() and isEnabled())
             .performScrollTo()
             .performSemanticsAction(SemanticsActions.OnClick)
     }
 
     /** True when an ENABLED (clickable) button carrying [text] exists. */
     private fun hasClickableButton(text: String): Boolean =
-        compose.onAllNodes(hasText(text) and hasClickAction()).fetchSemanticsNodes().isNotEmpty()
+        compose.onAllNodes(hasText(text) and hasClickAction() and isEnabled())
+            .fetchSemanticsNodes().isNotEmpty()
 
     /** Shared-photo entry through a locally approved draft. */
     fun driveToApproved(fields: FlowFields) {
@@ -130,11 +133,13 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
      * request may already have reached the city) and the caller decides what
      * that means - the stub fails, the live run keeps its evidence.
      *
-     * SEND_NOT_FIRED is the retry-safe opposite: the button had no enabled
-     * click action (approval/save gate closed) or the app never entered its
-     * sending state, so provably no request was made. When
-     * [screenshotEveryMs] > 0 the long outcome wait is captured every that
-     * many ms into live-e2e-wait-NN.png files.
+     * SEND_NOT_FIRED is a UI-only signal (no enabled button, or the sending
+     * label never showed): it is a strong lead that nothing was sent, but
+     * label absence alone is not proof. The live caller MUST corroborate it
+     * against the app's submission-state record (written before the first
+     * network call) before treating a re-run as safe, and must never retry
+     * it in-run. When [screenshotEveryMs] > 0 the long outcome wait is
+     * captured every that many ms into live-e2e-wait-NN.png files.
      */
     fun tapSendAndAwaitOnce(outcomeWaitMs: Long, screenshotEveryMs: Long = 0): SendOutcome {
         if (!hasClickableButton("שלח לעירייה")) return SendOutcome.SEND_NOT_FIRED

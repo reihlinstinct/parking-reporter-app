@@ -115,7 +115,7 @@ jobs:
           # Also verify the emulator/build-tools/platform-tools packages while
           # egress is still direct (a runner-image change must never push
           # those downloads through the owner tunnel either).
-          "$sdkmanager_bin" 'platforms;android-30' 'system-images;android-30;default;x86_64' 'emulator' 'platform-tools' 'build-tools;30.0.3' > /tmp/image-predownload.log 2>&1 || {
+          "$sdkmanager_bin" 'platforms;android-30' 'system-images;android-30;default;x86_64' 'emulator' 'platform-tools' 'build-tools;37.0.0' > /tmp/image-predownload.log 2>&1 || {
             tail -5 /tmp/image-predownload.log
             exit 1
           }
