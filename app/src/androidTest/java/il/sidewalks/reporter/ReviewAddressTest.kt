@@ -50,11 +50,17 @@ class ReviewAddressTest {
             compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
         }
         compose.onNodeWithText("אשר את כתובת האירוע").performClick()
+        compose.onNodeWithText("ערוך").performScrollTo().performClick()
+        compose.onNodeWithText("חפש הצעות כתובת לפי המיקום").assertDoesNotExist()
+        compose.onNodeWithText("רחוב ומספר בית שאישרת").performScrollTo().performTextReplacement("רחוב בדיקה 14")
+        compose.onNodeWithText("אשר זמן, מיקום וכתובת שבדקת").performScrollTo().performClick()
+        compose.onNodeWithText("אשר את התוכן לבדיקה").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
         compose.runOnIdle {
             assertEquals(initial.evidence, saved?.evidence)
-            assertEquals("רחוב בדיקה 12", saved?.address)
-            assertEquals(31.77, saved!!.confirmedLatitude!!, 0.0)
+            assertEquals("רחוב בדיקה 14", saved?.address)
+            assertNull(saved?.confirmedLatitude)
+            assertNull(saved?.confirmedLongitude)
             assertNull(saved?.approvedDigest)
         }
     }
