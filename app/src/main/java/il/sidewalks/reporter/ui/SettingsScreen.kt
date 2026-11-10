@@ -131,7 +131,7 @@ fun SettingsScreen(
         // blanked credential still enables the button, so clearing works on a blank screen too.
         // stays disabled when every field is blank (and nothing was touched) or right after a save.
         val anyField = listOf(firstName, lastName, id, passport, phone, email, subscriptionKey, apiUsername, apiPassword).any { it.isNotBlank() }
-        Button(enabled = !saved && (anyField || touchedMunicipal.isNotEmpty()) && (if (passportMode) passport.isNotBlank() || (saved && initial?.passportNumber?.isNotBlank() == true) else id.isBlank() || ReporterInput.validId(id)) && (phone.isBlank() || ReporterInput.validPhone(phone)) && (email.isBlank() || ReporterInput.validEmail(email)), onClick = { save(ReporterSettings(firstName.trim(), lastName.trim(), ReporterInput.canonicalPhone(phone), id.trim(), email.trim(),
+        Button(enabled = !saved && (anyField || touchedMunicipal.isNotEmpty()) && (if (passportMode) passport.isNotBlank() || initial?.passportNumber?.isNotBlank() == true else id.isBlank() || ReporterInput.validId(id)) && (phone.isBlank() || ReporterInput.validPhone(phone)) && (email.isBlank() || ReporterInput.validEmail(email)), onClick = { save(ReporterSettings(firstName.trim(), lastName.trim(), ReporterInput.canonicalPhone(phone), id.trim(), email.trim(),
             passportLocalOnly = passportMode, passportNumber = passport.trim(),
             municipalSubscriptionKey = subscriptionKey.trim(),
             municipalUsername = apiUsername.trim(),

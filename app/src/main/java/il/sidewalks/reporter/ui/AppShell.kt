@@ -158,6 +158,8 @@ fun AppShell(
                         val settings = readSettings()
                             ?: return@withContext SubmissionCoordinator.Outcome.Blocked(
                                 SubmissionCoordinator.Reason.MISSING_CREDENTIALS, "settings unreadable")
+                        if (settings.passportLocalOnly) return@withContext SubmissionCoordinator.Outcome.Blocked(
+                            SubmissionCoordinator.Reason.PASSPORT_LOCAL_ONLY, "passport local profile cannot submit")
                         val directory = streetsDirectory
                             ?: (streetDirectoryLoader?.invoke() ?: loadStreetDirectory(context))
                                 .also { streetsDirectory = it }
