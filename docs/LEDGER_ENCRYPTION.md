@@ -230,8 +230,8 @@ Data pass, under the exclusive lock:
 
 1. `PRAGMA secure_delete = ON` as the first statement of the Migration's
    `migrate()` (a step, not an assumption; SQLite accepts this pragma
-   inside the upgrade transaction, so no custom open-helper factory is
-   needed).
+   inside the upgrade transaction, so no open-helper hook is needed for
+   this pragma - the section 6 hook exists for corruption handling).
 2. Inside the one upgrade transaction, in `stableId` order: encrypt each v1
    row's `draftJson`/`reviewedDigest` into `reports_v2` and immediately
    decrypt-verify the written envelope against the source values, privately
@@ -262,7 +262,8 @@ Restart table:
 | Journal `migrating`, v1 file | crash before or during the upgrade transaction: nothing was committed; revalidate the proof under lock, re-run the whole data pass | replace the key, reopen v1 for writes, or resume mid-copy (there is no resume cursor) |
 | Journal `migrating`, v2 schema | the upgrade committed before the journal write: skip the data pass, journal `cleaning`, resume at the VACUUM step | re-run the data pass or skip the byte scan |
 | Journal `cleaning` | decrypt-verify every v2 row (GCM authenticates each one; the v1 table no longer exists); resume at VACUUM/checkpoint step | re-run the data pass or skip the byte scan |
-| Journal `fresh-creating`, no database | fresh-install crash before Room's create committed: open Room, creating the v2 database, then journal `complete` | treat it as a migration |
+| Journal `fresh-creating`, no database file | fresh-install crash before or at the very start of Room's create: open Room, creating the v2 database, then journal `complete` | treat it as a migration |
+| Journal `fresh-creating`, database file present | crash inside the create transaction or after it but before the `complete` write; the ledger was never ready, so the file cannot hold a filed report: open through the normal v2 path (Room creates the schema when `user_version` is 0, validates it when it is 2), verify the v2 identity hash and that the table has zero rows, then journal `complete`; any row or any other schema stops | treat it as a migration, or delete the file |
 | Journal `complete` (fresh-created or migrated), no database | fixed stopped state, retain data | recreate an empty ledger (that would silently lose the duplicate guard) |
 | Journal `complete`, database present | authenticated encrypted open only | reclassify wrong key/corruption as plaintext |
 | Committed key, no journal, no database | fresh-install crash point: write journal `fresh-creating` durably, open Room creating the v2 database, then journal `complete` | treat it as a migration (there is no source) |
@@ -308,12 +309,27 @@ Corruption handling is overridden for the same reason. The default
 `SupportSQLiteOpenHelper.Callback.onCorruption`, called on SQLITE_CORRUPT or
 NOTADB during open or any later statement, deletes the database file; the
 next open would then create an empty v2 ledger and every photo already filed
-could be filed again. The ledger's builder therefore installs a custom
-`SupportSQLiteOpenHelper.Factory`/`Callback` (or the Room driver API
-equivalent) that never deletes or recreates the file and moves the ledger to
-the fixed stopped state instead. Pinned by the same source test, plus a test
-that corrupts the SQLite header of a v2 file with rows, opens it, and
-expects the stopped state with the file's bytes unchanged.
+could be filed again. The ledger's builder therefore wires
+`RoomDatabase.Builder.openHelperFactory(...)` with a factory whose callback
+wraps Room's own callback - delegating `onConfigure`, `onCreate`,
+`onUpgrade`, `onDowngrade` and `onOpen` (a callback that replaces Room's
+would skip the Migration and the schema validation) - and overrides only
+`onCorruption`, so it never deletes or recreates the file. The framework
+still throws `SQLiteDatabaseCorruptException` to the caller after
+`onCorruption`, so the fixed stopped state is set where that exception is
+caught. If the Room driver API is chosen instead, the implementer must
+first confirm the chosen driver has no delete-on-corruption behavior - the
+driver API may offer no such hook at all.
+
+The same callback's `onCreate` refuses (stopped state) unless the journal is
+`fresh-creating`: Room silently runs its create step in a present but
+zero-length or `user_version` 0 file without raising SQLITE_CORRUPT or
+NOTADB, which under journal `complete` would otherwise produce the same
+empty ledger. This makes "only `fresh-creating` may create one" (section 4)
+a structural rule, not a pre-open file check. Pinned by the same source
+test, plus two tests: corrupt the SQLite header of a v2 file with rows,
+open, and expect the stopped state with the file's bytes unchanged; and open
+a zero-length file under journal `complete` and expect the stopped state.
 
 ### 7. Key invalidation versus the duplicate guard (DECIDED: option (a))
 
@@ -393,10 +409,14 @@ plaintext content exposure.
   and the `cleaning` journal write, between VACUUM and checkpoint, before
   `complete`) resumes per the restart table; post-migration raw file, WAL and SHM contain no plaintext
   fragments; "v2 schema, no journal" stops and retains data. Restart rows:
-  `fresh-creating` with no database creates the v2 database once and
-  journals `complete`; `complete` (fresh-created or migrated) with no
-  database stops and retains data; a header-corrupted v2 file opens to the
-  stopped state with its bytes unchanged.
+  `fresh-creating` with no database file creates the v2 database once and
+  journals `complete`; `fresh-creating` with a database file present - both
+  kill points, inside the create transaction and after it but before the
+  `complete` write - verifies the v2 identity hash and zero rows before
+  journaling `complete`, and stops on any row or other schema; `complete`
+  (fresh-created or migrated) with no database stops and retains data; a
+  header-corrupted v2 file opens to the stopped state with its bytes
+  unchanged; a zero-length file under `complete` stops.
 - Fail-closed consumers: corrupt one row; `all()` throws, the sweep deletes
   nothing, and the photo files are untouched. `reserve` of an existing hash
   still aborts without any decryption.
