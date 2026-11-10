@@ -1,6 +1,5 @@
 package il.sidewalks.reporter
 
-import android.view.KeyEvent
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -174,16 +173,28 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         // resets the approval digest), so the button was disabled again by
         // the time the semantics click landed - and a disabled button keeps
         // its click action, which then no-ops silently (see clickButton).
-        // Wait for OCR to go idle and for an ENABLED send button before
-        // tapping; if it never enables, the tap provably never happened.
-        awaitPlateIdIdle()
-        dismissImeIfVisible()
+        // Every pre-tap gate below fails loudly (instrumentation line +
+        // screenshot) and returns SEND_NOT_FIRED: the tap provably never
+        // happened, which the live caller arbitrates like any SEND_NOT_FIRED.
+        if (!awaitPlateIdIdle()) {
+            println("FLOW_DRIVER OCR still active after ${PLATE_ID_WAIT_MS}ms - refusing to tap send")
+            screenshot("live-e2e-send-ocr-stuck.png")
+            return SendOutcome.SEND_NOT_FIRED
+        }
+        if (!hideImeAndAwaitHidden()) {
+            println("FLOW_DRIVER IME still visible after ${IME_HIDE_WAIT_MS}ms - refusing to tap send")
+            screenshot("live-e2e-send-ime-stuck.png")
+            return SendOutcome.SEND_NOT_FIRED
+        }
         val enabled = try {
             compose.waitUntil(SEND_ENABLED_WAIT_MS) { hasClickableButton("שלח לעירייה") }
             true
         } catch (e: ComposeTimeoutException) { false }
-        if (!enabled) return SendOutcome.SEND_NOT_FIRED
-        dismissImeIfVisible()
+        if (!enabled) {
+            println("FLOW_DRIVER send button never enabled within ${SEND_ENABLED_WAIT_MS}ms - no tap")
+            screenshot("live-e2e-send-never-enabled.png")
+            return SendOutcome.SEND_NOT_FIRED
+        }
         clickButton("שלח לעירייה")
         // The button must flip to its sending label (or an outcome must
         // appear) within a few seconds; otherwise the tap never reached the
@@ -223,36 +234,39 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
      * Waits until on-device OCR is idle. "מזהה במכשיר..." (the suggest-plate
      * button while recognizing) and "מנתח את הצילום במכשיר..." (the analyzing
      * note) mark OCR in flight; its completion recomposes the review screen
-     * and can flip the send button back to disabled mid-tap. A stuck OCR must
-     * not block the flow: the enabled-button wait in the caller is the gate.
+     * and can flip the send button back to disabled mid-tap. False on timeout
+     * (OCR stuck): the caller refuses the tap with SEND_NOT_FIRED.
      */
-    private fun awaitPlateIdIdle() {
-        try {
-            compose.waitUntil(PLATE_ID_WAIT_MS) {
-                compose.onAllNodesWithText("מזהה במכשיר", substring = true).fetchSemanticsNodes().isEmpty() &&
-                    compose.onAllNodesWithText("מנתח את הצילום במכשיר", substring = true).fetchSemanticsNodes().isEmpty()
-            }
-        } catch (e: ComposeTimeoutException) { /* OCR stuck: proceed to the enabled-button gate */ }
-    }
+    private fun awaitPlateIdIdle(): Boolean = try {
+        compose.waitUntil(PLATE_ID_WAIT_MS) {
+            compose.onAllNodesWithText("מזהה במכשיר", substring = true).fetchSemanticsNodes().isEmpty() &&
+                compose.onAllNodesWithText("מנתח את הצילום במכשיר", substring = true).fetchSemanticsNodes().isEmpty()
+        }
+        true
+    } catch (e: ComposeTimeoutException) { false }
 
     /**
-     * Best-effort IME dismissal (issue #256 tracks the app hiding it itself).
-     * A Back key event is consumed by the IME when it is open, so it is only
-     * sent when the IME is actually visible - it can never navigate away
-     * mid-flow. Semantics clicks are keyboard-proof, but the app should see a
-     * closed keyboard at send and performScrollTo behaves better without the
-     * IME shrinking the viewport.
+     * Hides the IME through the window insets controller - never a Back key,
+     * so it can never navigate away from the flow - then waits (bounded) for
+     * the IME to report hidden. Called exactly once per tap attempt: a
+     * check-then-act repeat against the hide animation was the #259 review
+     * blocker. False when the IME is still visible after the bounded wait.
+     * App-side IME handling is #256.
      */
-    private fun dismissImeIfVisible() {
-        val rule = compose as? AndroidComposeTestRule<*, *> ?: return
-        val imeVisible = rule.runOnUiThread {
-            ViewCompat.getRootWindowInsets(rule.activity.window.decorView)
-                ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+    private fun hideImeAndAwaitHidden(): Boolean {
+        val rule = compose as? AndroidComposeTestRule<*, *> ?: return true
+        val decorView = rule.activity.window.decorView
+        rule.runOnUiThread {
+            ViewCompat.getWindowInsetsController(decorView)?.hide(WindowInsetsCompat.Type.ime())
         }
-        if (imeVisible) {
-            InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-            compose.waitForIdle()
-        }
+        return try {
+            compose.waitUntil(IME_HIDE_WAIT_MS) {
+                rule.runOnUiThread {
+                    ViewCompat.getRootWindowInsets(decorView)?.isVisible(WindowInsetsCompat.Type.ime()) != true
+                }
+            }
+            true
+        } catch (e: ComposeTimeoutException) { false }
     }
 
     fun tapSendAndAwaitCaseNumber() {
@@ -292,5 +306,7 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         const val SEND_ENABLED_WAIT_MS = 30_000L
         /** How long to wait for on-device OCR to go idle before arming the send tap. ML Kit on an emulator can be slow. */
         const val PLATE_ID_WAIT_MS = 120_000L
+        /** How long the IME may take to report hidden after an insets-controller hide. */
+        const val IME_HIDE_WAIT_MS = 5_000L
     }
 }
