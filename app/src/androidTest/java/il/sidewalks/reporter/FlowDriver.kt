@@ -1,5 +1,6 @@
 package il.sidewalks.reporter
 
+import android.view.KeyEvent
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -8,6 +9,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
+import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -16,6 +18,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextReplacement
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import org.junit.Assert.fail
@@ -164,7 +168,22 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
      * captured every that many ms into live-e2e-wait-NN.png files.
      */
     fun tapSendAndAwaitOnce(outcomeWaitMs: Long, screenshotEveryMs: Long = 0): SendOutcome {
-        if (!hasClickableButton("שלח לעירייה")) return SendOutcome.SEND_NOT_FIRED
+        // Run 42821291508: the tap raced the tail of on-device OCR. OCR was
+        // still running when the send button was matched as enabled; its
+        // completion recomposes the review screen (and a plate auto-fill
+        // resets the approval digest), so the button was disabled again by
+        // the time the semantics click landed - and a disabled button keeps
+        // its click action, which then no-ops silently (see clickButton).
+        // Wait for OCR to go idle and for an ENABLED send button before
+        // tapping; if it never enables, the tap provably never happened.
+        awaitPlateIdIdle()
+        dismissImeIfVisible()
+        val enabled = try {
+            compose.waitUntil(SEND_ENABLED_WAIT_MS) { hasClickableButton("שלח לעירייה") }
+            true
+        } catch (e: ComposeTimeoutException) { false }
+        if (!enabled) return SendOutcome.SEND_NOT_FIRED
+        dismissImeIfVisible()
         clickButton("שלח לעירייה")
         // The button must flip to its sending label (or an outcome must
         // appear) within a few seconds; otherwise the tap never reached the
@@ -200,6 +219,42 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         return if (failureNoteShown()) SendOutcome.SUBMIT_FAILED else SendOutcome.DRAFT_NOT_SAVED
     }
 
+    /**
+     * Waits until on-device OCR is idle. "מזהה במכשיר..." (the suggest-plate
+     * button while recognizing) and "מנתח את הצילום במכשיר..." (the analyzing
+     * note) mark OCR in flight; its completion recomposes the review screen
+     * and can flip the send button back to disabled mid-tap. A stuck OCR must
+     * not block the flow: the enabled-button wait in the caller is the gate.
+     */
+    private fun awaitPlateIdIdle() {
+        try {
+            compose.waitUntil(PLATE_ID_WAIT_MS) {
+                compose.onAllNodesWithText("מזהה במכשיר", substring = true).fetchSemanticsNodes().isEmpty() &&
+                    compose.onAllNodesWithText("מנתח את הצילום במכשיר", substring = true).fetchSemanticsNodes().isEmpty()
+            }
+        } catch (e: ComposeTimeoutException) { /* OCR stuck: proceed to the enabled-button gate */ }
+    }
+
+    /**
+     * Best-effort IME dismissal (issue #256 tracks the app hiding it itself).
+     * A Back key event is consumed by the IME when it is open, so it is only
+     * sent when the IME is actually visible - it can never navigate away
+     * mid-flow. Semantics clicks are keyboard-proof, but the app should see a
+     * closed keyboard at send and performScrollTo behaves better without the
+     * IME shrinking the viewport.
+     */
+    private fun dismissImeIfVisible() {
+        val rule = compose as? AndroidComposeTestRule<*, *> ?: return
+        val imeVisible = rule.runOnUiThread {
+            ViewCompat.getRootWindowInsets(rule.activity.window.decorView)
+                ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+        }
+        if (imeVisible) {
+            InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+            compose.waitForIdle()
+        }
+    }
+
     fun tapSendAndAwaitCaseNumber() {
         // The send gate compares the shown draft to the last SAVED one and
         // the post-approval save is asynchronous; retry the tap if the gate
@@ -233,5 +288,9 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         const val SHOTS_MANIFEST = "live-e2e-shots.txt"
         /** How long the app may take to enter its sending state after the tap before we call the tap missed. */
         const val SEND_FIRED_WAIT_MS = 10_000L
+        /** How long to wait for an ENABLED send button before calling the tap missed. Covers async approval/save. */
+        const val SEND_ENABLED_WAIT_MS = 30_000L
+        /** How long to wait for on-device OCR to go idle before arming the send tap. ML Kit on an emulator can be slow. */
+        const val PLATE_ID_WAIT_MS = 120_000L
     }
 }
