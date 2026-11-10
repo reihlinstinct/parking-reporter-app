@@ -8,6 +8,28 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ResponseDiagnosticClientTest {
+    @Test fun networkDurationIsMeasuredBeforeThePrivateDiagnosticHook() {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AFTER_REQUEST))
+            server.start()
+            var hookMs = 0L
+            val client = OkHttpMunicipalClient.forTesting(server.url("/"), "key", "user", "pass") {
+                if (it.failure != null) {
+                    val started = System.nanoTime()
+                    Thread.sleep(300)
+                    hookMs = (System.nanoTime() - started) / 1_000_000
+                }
+            }
+            val started = System.nanoTime()
+            val error = assertThrows(MunicipalApiException::class.java) { client.login() }
+            val totalMs = (System.nanoTime() - started) / 1_000_000
+            val networkMs = Regex("after ([0-9]+)ms").find(requireNotNull(error.message))!!.groupValues[1].toLong()
+            assertTrue(hookMs >= 250)
+            assertTrue("diagnostic latency must be excluded", totalMs - networkMs >= hookMs - 25)
+            assertEquals(1, server.requestCount)
+        }
+    }
+
     @Test fun throwingDiagnosticNeverChangesSuccessfulCase() {
         MockWebServer().use { server ->
             server.enqueue(MockResponse().setBody("""{"Success":true,"CaseIdInCRM":"case","WebCaseIdInCRM":"web"}""")); server.start()

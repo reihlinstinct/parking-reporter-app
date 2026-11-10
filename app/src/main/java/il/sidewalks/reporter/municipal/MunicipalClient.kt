@@ -177,8 +177,9 @@ class OkHttpMunicipalClient private constructor(
         } catch (e: MunicipalApiException) {
             throw e
         } catch (e: IOException) {
-            runCatching { diagnostic?.invoke(ResponseDiagnostic(endpoint, null, emptyMap(), "", e.javaClass.simpleName)) }
+            // Measure before a potentially slow encrypted append/Keystore hook.
             val elapsedMs = System.currentTimeMillis() - startedAt
+            runCatching { diagnostic?.invoke(ResponseDiagnostic(endpoint, null, emptyMap(), "", e.javaClass.simpleName)) }
             throw MunicipalApiException(
                 "$endpoint: network failure or invalid response " +
                     "(${e.javaClass.simpleName} after ${elapsedMs}ms).")
