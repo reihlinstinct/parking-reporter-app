@@ -38,7 +38,12 @@ class StreetDirectoryTest {
         assertEquals(null, approved.evidence.latitude)
         assertTrue(approved.isApproved())
         assertTrue(!approved.copy(confirmedLatitude = 31.77).isApproved())
-        assertTrue(!approved.edit(address = "another address").isApproved())
+        val edited = approved.edit(address = "another address")
+        assertTrue(!edited.isApproved())
+        assertEquals(null, edited.confirmedLatitude)
+        assertEquals(null, edited.confirmedLongitude)
+        assertTrue(!edited.isReady())
+        assertTrue("location_needs_confirmation" in edited.unresolved)
     }
 
     @Test fun missingOrAmbiguousAddressCannotSupplyConfirmedLocation() {

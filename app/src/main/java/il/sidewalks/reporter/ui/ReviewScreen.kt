@@ -122,7 +122,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate) }) { Text(reviewPlateSuggestionText(s, plate)) } }
             }
             Text(reviewAddressText(s, draft.address))
-            if (draft.address.isBlank()) {
+            if (draft.address.isBlank() && draft.evidence.latitude != null && draft.evidence.longitude != null) {
                 Text(s.t("review.edit.geocode_note"), style = MaterialTheme.typography.bodySmall)
                 if (geocoding) Text(s.t("review.geocode.loading"))
                 Text(geocodeStatus?.let { s.t(it) }.orEmpty())
@@ -160,6 +160,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                     unresolved = draft.unresolved + ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code)
             }
         }, label = { Text(s.t("review.edit.address_field")) }, modifier = Modifier.fillMaxWidth())
+        if (draft.evidence.latitude != null && draft.evidence.longitude != null) {
         Text(s.t("review.edit.geocode_note"))
         Button(enabled = !geocoding && latitude.toDoubleOrNull() != null && longitude.toDoubleOrNull() != null, onClick = {
             scope.launch { findAddress() }
@@ -170,6 +171,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             TextButton(onClick = { draft = draft.edit(address = suggestion.streetAndHouse).copy(unresolved = draft.unresolved + ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code) }) {
                 Text(reviewAddressSuggestionText(s, suggestion.streetAndHouse))
             }
+        }
         }
         OutlinedTextField(draft.exactHebrewText, { draft = draft.edit(text = it) }, label = { Text(s.t("review.edit.text_field")) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
         Text(s.t("review.edit.confirm_note"))
