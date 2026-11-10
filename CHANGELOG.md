@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.27.5] - 2026-11-10
+
+### Fixes
+
+- fix: exclude private diagnostic append from network duration (#238) (#277) (17eb271)
+
 ## [0.27.4] - 2026-11-10
 
 ### Other changes
