@@ -13,6 +13,41 @@ class PrivateOcrSafetyTest {
         for (forbidden in listOf("MunicipalClient", "SubmissionCoordinator", "SecureSettings", "android.util.Log", "println(", "assertEquals("))
             assertFalse(forbidden, test.contains(forbidden))
     }
+    @Test fun actualInputHashComparisonRefusesBeforeDecryptionOrDeviceStaging() {
+        val script = read("../scripts/run-private-ocr-benchmark.sh", "scripts/run-private-ocr-benchmark.sh")
+        val start = script.indexOf("curl --fail")
+        val end = script.indexOf("openssl enc -d")
+        assertTrue(start >= 0 && end > start)
+        // Execute the real download/hash gate, not a copy of its comparison.
+        // Curl is replaced locally; no URL is fetched and no adb/decrypt runs.
+        val gate = script.substring(start, end)
+        val directory = java.nio.file.Files.createTempDirectory("ocr-integrity-test").toFile()
+        try {
+            val bytes = "synthetic ciphertext only".toByteArray()
+            val expected = java.security.MessageDigest.getInstance("SHA-256").digest(bytes)
+                .joinToString("") { "%02x".format(it) }
+            for ((pin, accepted) in listOf(expected to true, "0".repeat(64) to false, "" to false)) {
+                val runner = """
+                    set -euo pipefail
+                    curl() { printf '%s' 'synthetic ciphertext only' > "${'$'}work/input.enc"; }
+                    $gate
+                    printf '%s' REACHED_DECRYPT_BOUNDARY
+                """.trimIndent()
+                val process = ProcessBuilder("bash", "-c", runner).redirectErrorStream(true).apply {
+                    environment()["work"] = directory.path
+                    environment()["OCR_BENCH_INPUT_URL"] = "synthetic-not-a-network-url"
+                    environment()["OCR_BENCH_INPUT_SHA256"] = pin
+                }.start()
+                val output = process.inputStream.bufferedReader().readText()
+                val status = process.waitFor()
+                assertEquals(accepted, status == 0)
+                assertEquals(accepted, output.contains("REACHED_DECRYPT_BOUNDARY"))
+                assertFalse(output.contains("synthetic ciphertext only"))
+                if (!accepted) assertTrue(output.contains("input integrity check failed"))
+            }
+        } finally { directory.deleteRecursively() }
+    }
+
     @Test fun workflowUploadsOnlyEncryptedResultsAndUsesNoLiveSecrets() {
         val workflow = read("../.github/workflows/private-ocr-benchmark.yml", ".github/workflows/private-ocr-benchmark.yml")
         assertTrue(workflow.contains("github.ref == 'refs/heads/main'"))
