@@ -345,7 +345,7 @@ fun AppShell(
             BackHandler { onFirstRunDone() }
             SettingsScreen(null, basicSetup = true, setupError = setupError,
                 selectedLanguage = selectedLanguage,
-                onLanguageSelected = { languageController.select(it) },
+                onLanguageSelected = languageController::select,
                 save = { value, touched, cleared ->
                     setupError = ""
                     persistSettings(value, touched, { cleared(); onFirstRunDone() },
