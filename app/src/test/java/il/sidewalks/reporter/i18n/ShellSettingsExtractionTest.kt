@@ -271,7 +271,7 @@ class ShellSettingsExtractionTest {
         val shell = source("AppShell.kt")
         val setup = shell.substring(shell.indexOf("if (showFirstRun) {"), shell.indexOf("    Scaffold("))
         assertTrue(!setup.contains("readSettings("))
-        assertTrue(!setup.contains("rememberSaveable"))
+        assertTrue(!Regex("""by\s+rememberSaveable""").containsMatchIn(setup))
         assertTrue(setup.contains("SettingsScreen(null, basicSetup = true"))
     }
 

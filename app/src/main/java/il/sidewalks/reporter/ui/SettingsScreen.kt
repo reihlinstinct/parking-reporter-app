@@ -107,7 +107,7 @@ fun SettingsScreen(
             firstName = ""; lastName = ""; id = ""; phone = ""; email = ""
             subscriptionKey = ""; apiUsername = ""; apiPassword = ""
             touchedMunicipal = setOf(); saved = true
-        } }, modifier = Modifier.fillMaxWidth()) { Text(s.t(if (basicSetup) "setup.save_continue" else "settings.save.button")) }
+        } }, modifier = Modifier.fillMaxWidth()) { Text(if (basicSetup) s.t("setup.save_continue") else s.t("settings.save.button")) }
         if (saved) Text(s.t("settings.save.done"))
         // The UI language lives in "ui-prefs": picking one never calls save, never asks for
         // authentication and never touches the fields above or the encrypted settings.
@@ -122,7 +122,7 @@ fun SettingsScreen(
         onLicenses?.let { open ->
             TextButton(onClick = open, modifier = Modifier.fillMaxWidth()) { Text(s.t("licenses.screen.title")) }
         }
-        TextButton(onClick = back, modifier = Modifier.fillMaxWidth()) { Text(s.t(if (basicSetup) "setup.later" else "settings.back")) }
+        TextButton(onClick = back, modifier = Modifier.fillMaxWidth()) { Text(if (basicSetup) s.t("setup.later") else s.t("settings.back")) }
         Text(s.t("settings.version", mapOf("version" to BuildConfig.VERSION_NAME)), style = MaterialTheme.typography.bodySmall)
     }
     }
