@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.26.11] - 2026-11-10
+
+### Other changes
+
+- Add event-driven advisory Gemini review caller (#254) (6711d49)
+
 ## [0.26.10] - 2026-11-10
 
 ### Other changes
