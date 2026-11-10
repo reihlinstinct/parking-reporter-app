@@ -105,8 +105,12 @@ jobs:
           umask 077
           test -n "$PRIVATE_LOOKUP_READ_TOKEN" || { echo 'private lookup read token missing'; exit 1; }
           mkdir -p /tmp/live-private
+          header=$(mktemp /tmp/live-private/header.XXXXXX)
+          trap 'shred -u "$header" 2>/dev/null || true' EXIT
+          printf 'Authorization: Bearer %s\n' "$PRIVATE_LOOKUP_READ_TOKEN" > "$header"
+          unset PRIVATE_LOOKUP_READ_TOKEN
           curl -fsSL --retry 2 \
-            -H "Authorization: Bearer $PRIVATE_LOOKUP_READ_TOKEN" \
+            -H "@$header" \
             -H 'Accept: application/vnd.github.raw+json' \
             'https://api.github.com/repos/reihlinstinct/parking-reports/contents/addresses.json?ref=main' \
             -o /tmp/live-private/addresses.json
@@ -380,8 +384,9 @@ jobs:
             # produced empty files silently).
             adb shell "run-as il.sidewalks.reporter cat files/live-e2e-shots.txt" > /tmp/live-e2e/shots.txt 2>/dev/null || true
             while read -r shot; do case "$shot" in live-e2e-*.png) adb shell "run-as il.sidewalks.reporter cat 'files/$shot'" > "/tmp/live-e2e/$shot" 2>/dev/null || true;; esac; done < /tmp/live-e2e/shots.txt
-            adb shell "run-as il.sidewalks.reporter rm -f no_backup/addresses.json files/live-params.json files/live-e2e-*.png files/live-e2e-shots.txt files/live-e2e-case-number.txt files/live-e2e-submission-state.json" || true
+            adb shell "run-as il.sidewalks.reporter rm -f files/live-params.json files/live-e2e-*.png files/live-e2e-shots.txt files/live-e2e-case-number.txt files/live-e2e-submission-state.json" || true
             adb shell "run-as il.sidewalks.reporter.test rm -f files/live-photo.jpg" || true
+            adb shell "run-as il.sidewalks.reporter rm -f no_backup/addresses.json" || true
       - name: Encrypt the recording and raw output
         if: always()
         env:
@@ -483,6 +488,9 @@ jobs:
       - name: Always remove the tunnel and staged plaintext
         if: always()
         run: |
+          # Best-effort device cleanup even when instrumentation/action failed.
+          # The emulator action may already have destroyed the ephemeral device.
+          timeout 10 adb shell "run-as il.sidewalks.reporter rm -f no_backup/addresses.json files/live-params.json" || true
           sudo python3 trial/l2tp.py down || true
           rm -f /tmp/egress-blocked
           rm -rf /tmp/trial-state /tmp/trial-result.txt /tmp/live-e2e/prior

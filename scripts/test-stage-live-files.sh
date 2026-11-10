@@ -19,6 +19,7 @@ cat > "$tmp/adb" <<'SH'
 # passthrough, executing CMD inside the mock package dir. Any other call
 # fails loudly so the staging script cannot silently pass on a stub.
 set -u
+printf 'adb-call\n' >> "$MOCK_CALL_LOG"
 [ "${1:-}" = "shell" ] || { echo "mock adb: unsupported call: $*" >&2; exit 2; }
 quoted=$2
 pkg=$(printf '%s' "$quoted" | sed -n "s/^run-as \([^ ]*\) .*/\1/p")
@@ -31,6 +32,7 @@ chmod +x "$tmp/adb"
 
 export PATH="$tmp:$PATH"
 export MOCK_DEVICE="$tmp/device"
+export MOCK_CALL_LOG="$tmp/adb-calls"
 
 printf 'fake photo bytes\n' > "$tmp/photo.jpg"
 printf '{"plate":"00000000"}\n' > "$tmp/params.json"
@@ -47,12 +49,15 @@ test -s "$tmp/device/il.sidewalks.reporter/files/live-params.json"
 cmp "$tmp/photo.jpg" "$tmp/device/il.sidewalks.reporter.test/files/live-photo.jpg"
 
 cmp "$tmp/addresses.json" "$tmp/device/il.sidewalks.reporter/no_backup/addresses.json"
+: > "$MOCK_CALL_LOG"
 printf 'tampered' > "$tmp/addresses.json"
 if sh "$tmp/repo/scripts/stage-live-files.sh" "$tmp/photo.jpg" "$tmp/params.json" "$tmp/addresses.json" >/dev/null 2>&1; then
   echo 'mismatched directory was accepted' >&2; exit 1
 fi
+test ! -s "$MOCK_CALL_LOG" # runner pin refusal must precede EVERY device write
 rm "$tmp/addresses.json"
 if sh "$tmp/repo/scripts/stage-live-files.sh" "$tmp/photo.jpg" "$tmp/params.json" "$tmp/addresses.json" >/dev/null 2>&1; then
   echo 'missing directory was accepted' >&2; exit 1
 fi
+test ! -s "$MOCK_CALL_LOG"
 echo 'staging regression test passed: first-install (no files/ dir) handled'
