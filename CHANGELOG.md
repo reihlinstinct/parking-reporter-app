@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.27.2] - 2026-11-10
+
+### Fixes
+
+- fix: install pinned directory before live emulator filing (#272) (56b6e09)
+
 ## [0.27.1] - 2026-11-10
 
 ### Fixes
