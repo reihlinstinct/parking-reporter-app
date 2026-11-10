@@ -171,7 +171,10 @@ authenticate against.
 Marker convention: a strict versioned journal file under `noBackupFilesDir`
 (`report-ledger-migration-journal`), matching how `hasHistory()` already
 detects `report-ledger-migration*`. Not an in-database table: the marker must
-be visible to custody history checks without opening the database. Journal
+be visible to custody history checks without opening the database. The
+journal records whether the ledger was created fresh at v2 or migrated from
+v1, which is what distinguishes the two "complete, no database" rows in the
+restart table. Journal
 writes use explicit sync/rename/directory-sync plus authenticated read-back
 (the same durability discipline as key custody, not AtomicFile's
 logged-error success).
@@ -182,28 +185,47 @@ transaction and, before committing, validates the resulting schema against
 the version-2 entities and writes its identity hash - so no per-record work
 outside that transaction is possible, and a partial result can never be
 committed. The `Migration` creates a new `reports_v2` table with BLOB
-`draftJson`/`reviewedDigest` columns, the same unique index on
-`originalSha256`, and the other columns unchanged. SQLite cannot ALTER a
+`draftJson`/`reviewedDigest` columns, a plaintext
+`tombstoned INTEGER NOT NULL DEFAULT 0` column (0 for every migrated row),
+the same unique index on `originalSha256`, and the other columns unchanged.
+The fresh-install v2 schema Room creates from the entity is the same table,
+so the `tombstoned` column exists from the start on every v2 database and
+recovery (section 7) is an UPDATE of existing rows, never a schema change.
+SQLite index names are database-wide, so the `reports_v2` unique index
+cannot reuse `index_reports_originalSha256` while the old table exists: it
+is created after the rename, or under a fresh `index_`-prefixed name. SQLite cannot ALTER a
 column's type and the SQLite shipped with minSdk 26 has no DROP COLUMN, so
 the data pass rebuilds rather than alters: copy-encrypt every row into
 `reports_v2`, verify, drop the old table, rename - all inside the one
 upgrade transaction.
-The Kotlin-facing ledger API keeps today's String-in/String-out shape in a
-repository layer above the `ByteArray` Room entity; DAO signatures for
-`reserve`, `find`, `findPhoto`, `all`, `store`, `approve` are unchanged at
-the repository boundary.
+The Kotlin-facing ledger API keeps today's String-in/String-out shape for
+ordinary rows in a repository layer above the `ByteArray` Room entity, and
+the repository record type additionally carries an explicit tombstoned
+state with no draft and no digest (never a fake empty string). `all`,
+`find` and `findPhoto` return a tombstoned row marked as such - never null
+and never "not found", so no caller can mistake it for absence; `reserve`,
+`store`, `approve` are unchanged at the repository boundary.
 
 Who opens the database during migration: the migration factory is the sole
 opener. It writes journal `state = migrating` durably first, then opens
 through Room's `openHelper` (a raw `SupportSQLiteDatabase`) in migration
 mode so the `Migration` runs; the normal Room DAO path never opens a v1 or
 partially migrated file. Existing Room handles must close before migration;
-UI is stopped until it completes.
+UI is stopped until it completes. The factory opens on a background
+dispatcher (today the first database access is already on Dispatchers.IO)
+while the UI shows the stopped or migrating state; the whole
+encrypt-everything `Migration` must never run on the main thread. The
+ON_STOP/screen-off close rule waits for an open upgrade transaction to
+finish or roll back rather than closing under it. The 30-second
+authentication window applies only to unwrapping the data key, before the
+pass; the data pass itself does not re-authenticate per row.
 
 Data pass, under the exclusive lock:
 
-1. `PRAGMA secure_delete = ON` on the raw connection before the upgrade
-   transaction begins (a step, not an assumption).
+1. `PRAGMA secure_delete = ON` as the first statement of the Migration's
+   `migrate()` (a step, not an assumption; SQLite accepts this pragma
+   inside the upgrade transaction, so no custom open-helper factory is
+   needed).
 2. Inside the one upgrade transaction, in `stableId` order: encrypt each v1
    row's `draftJson`/`reviewedDigest` into `reports_v2` and immediately
    decrypt-verify the written envelope against the source values, privately
@@ -232,9 +254,11 @@ Restart table:
 | No journal, v1 file, no committed key | validate proof under lock, create/commit custody, write journal `migrating`, start | treat any database as a known v1 source |
 | No journal, v1 file, committed key | re-issue the proof against the current source file (its bound identity was never persisted, so it is simply re-validated against the file now present), write journal `migrating`, start | create custody again (`commitDurably` refuses when a committed file exists) or reopen v1 for writes |
 | Journal `migrating`, v1 file | crash before or during the upgrade transaction: nothing was committed; revalidate the proof under lock, re-run the whole data pass | replace the key, reopen v1 for writes, or resume mid-copy (there is no resume cursor) |
-| Journal `migrating`, v2 schema | the upgrade committed before the journal write: skip the data pass, journal `cleaning`, resume at the VACUUM step | re-copy from a stale v1 or skip the byte scan |
-| Journal `cleaning` | reverify v2 against v1; resume at VACUUM/checkpoint step | re-copy from a stale v1 or skip the byte scan |
-| Journal `complete` | authenticated encrypted open only | reclassify wrong key/corruption as plaintext |
+| Journal `migrating`, v2 schema | the upgrade committed before the journal write: skip the data pass, journal `cleaning`, resume at the VACUUM step | re-run the data pass or skip the byte scan |
+| Journal `cleaning` | decrypt-verify every v2 row (GCM authenticates each one; the v1 table no longer exists); resume at VACUUM/checkpoint step | re-run the data pass or skip the byte scan |
+| Journal `complete` (fresh-created), no database | fresh-install crash after the journal write: open Room, creating the v2 database | treat it as a migration |
+| Journal `complete` (migrated), no database | fixed stopped state, retain data | recreate an empty ledger (that would silently lose the duplicate guard) |
+| Journal `complete`, database present | authenticated encrypted open only | reclassify wrong key/corruption as plaintext |
 | Committed key, no journal, no database | fresh-install crash point: write journal `complete` durably, open Room creating the v2 database | treat it as a migration (there is no source) |
 | v2 schema, no journal (not the fresh-install row above) | fixed stopped state, retain data | infer state by mtime or delete anything |
 | Missing/corrupt/contradictory journal or files | fixed stopped state, retain data | reset, recover by guessing, destructive migration |
@@ -291,8 +315,14 @@ Owner decision (user-approved 2026-11-10 15:35 IST, relayed via Instinct):
 option (a), tombstone-preserving recovery. A user-confirmed key-loss
 recovery keeps every row's plaintext columns (`stableId`, `originalSha256`,
 `originalRelativePath`, `revision`) and its ciphertext bytes untouched, and
-sets a new plaintext `tombstoned` flag column in the same transaction that
-commits the recovery proof. The tombstoned flag means:
+sets the row's existing plaintext `tombstoned` flag column (the column is
+part of the v2 schema from the start, section 4) to 1 in one database
+transaction. The custody envelope is a file, not part of SQLite, so no
+single transaction can cover both the flag update and the new custody
+commit: their ordering, and the crash states between them (flag set but
+custody not committed, and the reverse), belong to the separately reviewed
+recovery proof; until both are durable the ledger stays in its stopped
+state. The tombstoned flag means:
 
 - The row is never decrypted, and its undecryptable ciphertext is not a
   GCM failure: the section-5 rule stops the ledger only for a
@@ -333,6 +363,11 @@ plaintext content exposure.
 - Wrong key: unwrap/record decrypt under a different key fails closed.
 - AAD binding: a `draftJson` ciphertext copied into `reviewedDigest` (same
   row) fails verification; a ciphertext copied to another row fails.
+- Schema: the v2 entity, the Migration's `reports_v2` and the fresh-install
+  schema all include `tombstoned INTEGER NOT NULL DEFAULT 0`; the exported
+  schema 2.json records it; a Room migration test upgrades a golden v1
+  database to v2 against that exported schema and asserts every migrated
+  row has tombstoned = 0.
 - Migration: golden v1 database migrates to identical logical content;
   interrupted migration (kill mid-data-pass, between the upgrade commit
   and the `cleaning` journal write, between VACUUM and checkpoint, before
