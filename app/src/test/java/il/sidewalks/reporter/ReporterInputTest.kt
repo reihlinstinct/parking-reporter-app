@@ -12,6 +12,10 @@ class ReporterInputTest {
         assertEquals("+972501234567", ReporterInput.phoneInput("+٩٧٢٥٠١٢٣٤٥٦٧"))
         assertFalse(ReporterInput.validPhone("123"))
         assertTrue(ReporterInput.validPhone("+14155552671"))
+        assertTrue(ReporterInput.validPhone("14155552671"))
+        assertEquals("+14155552671", ReporterInput.phoneInput(" +1 415 555 2671"))
+        assertEquals("+14155552671", il.sidewalks.reporter.municipal.MunicipalPayloads.normalizePhone("+1 415 555 2671"))
+        assertEquals("14155552671", il.sidewalks.reporter.municipal.MunicipalPayloads.normalizePhone("14155552671"))
     }
     @Test fun namesAllowLanguagesButNotDigitsAndEmailRejectsMalformedAddresses() {
         assertEquals("בדיקה John محمد 李", ReporterInput.nameInput("בדיקה1 John٢ محمد۳ 李"))
