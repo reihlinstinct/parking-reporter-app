@@ -83,8 +83,8 @@ object MunicipalPayloads {
         if (Regex("05[0-9]{8}").matches(phone)) return phone
         if (Regex("\\+9725[0-9]{8}").matches(phone)) return "0" + phone.substring(4)
         if (Regex("9725[0-9]{8}").matches(phone)) return "0" + phone.substring(3)
-        if (!Regex("\\+?[1-9][0-9]{6,14}").matches(phone))
-            throw MunicipalInputException("Supply a phone number with digits and an optional leading country-code plus.")
+        if (!Regex("\\+[1-9][0-9]{7,14}").matches(phone))
+            throw MunicipalInputException("Supply an Israeli mobile or an international number with + and 8 to 15 digits.")
         return phone
     }
 

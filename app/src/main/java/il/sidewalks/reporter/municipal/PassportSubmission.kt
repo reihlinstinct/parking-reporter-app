@@ -22,7 +22,7 @@ object PassportSubmission {
     }
     fun isSupportedPhone(phone: String): Boolean = try {
         val normalized = MunicipalPayloads.normalizePhone(phone)
-        isIsraeliPhone(normalized) || (!normalized.removePrefix("+").startsWith("972") && !normalized.startsWith("0"))
+        isIsraeliPhone(normalized) || (normalized.matches(Regex("\\+[1-9][0-9]{7,14}")) && !normalized.startsWith("+972"))
     } catch (_: Exception) { false }
     fun validProfile(settings: ReporterSettings): Boolean =
         (!settings.passportMode || validPassport(settings.passportNumber)) &&

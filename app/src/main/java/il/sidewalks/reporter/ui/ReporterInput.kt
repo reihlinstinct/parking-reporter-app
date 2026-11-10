@@ -30,7 +30,7 @@ object ReporterInput {
     }
     fun isIsraeliMobile(value: String) = canonicalPhone(value).matches(Regex("\\+9725[0-9]{8}"))
     fun validId(value: String): Boolean = try { MunicipalPayloads.normalizeNationalId(value); true } catch (_: Exception) { false }
-    fun validPhone(value: String): Boolean = canonicalPhone(value).matches(Regex("\\+?[1-9][0-9]{6,14}"))
+    fun validPhone(value: String): Boolean = il.sidewalks.reporter.municipal.PassportSubmission.isSupportedPhone(canonicalPhone(value))
     fun formattedPhone(value: String): String {
         val canonical = canonicalPhone(value)
         if (canonical.matches(Regex("\\+9725[0-9]{8}")))
