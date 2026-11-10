@@ -83,6 +83,67 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
             .performSemanticsAction(SemanticsActions.OnClick)
     }
 
+    /**
+     * Live runs only: completes the system ConfirmDeviceCredential screen the
+     * submit gate raises (MainActivity.authenticate). The live workflow sets
+     * a throwaway PIN on the ephemeral emulator (`adb shell locksettings
+     * set-pin`, live-emulator-e2e.yml); nothing here bypasses the gate - the
+     * PIN is entered into the real system prompt. Without a credential the
+     * KeyguardManager intent is null and the gate swallows the tap silently
+     * (run 42829175477). Polls for the credential window, types the PIN into
+     * the system-focused field via the instrumentation UiAutomation shell
+     * (digits only - no shell metacharacters), confirms, and waits for the
+     * app window to return. False when the prompt appeared but did not
+     * clear; when no prompt appears at all the gate is already satisfied
+     * and the caller proceeds unchanged.
+     */
+    private fun completeDeviceCredential(pin: String): Boolean {
+        val uiAutomation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        var promptSeen = false
+        val appeared = System.currentTimeMillis() + CREDENTIAL_WAIT_MS
+        while (System.currentTimeMillis() < appeared) {
+            val root = uiAutomation.rootInActiveWindow
+            val pkg = root?.packageName?.toString()
+            root?.recycle()
+            if (pkg != null && pkg in CREDENTIAL_PACKAGES) {
+                promptSeen = true
+                break
+            }
+            Thread.sleep(250)
+        }
+        if (!promptSeen) {
+            println("FLOW_DRIVER no device-credential prompt appeared - proceeding")
+            return true
+        }
+        // Let the system focus the PIN field before typing into it.
+        Thread.sleep(500)
+        // Each command must run to completion before the next: close() alone
+        // does not wait, so an undrained ENTER could race ahead of the PIN
+        // (#261 review). Draining the stream to EOF awaits the command.
+        runShellToCompletion(uiAutomation, "input text $pin")
+        runShellToCompletion(uiAutomation, "input keyevent 66") // KEYEVENT_ENTER
+        val cleared = System.currentTimeMillis() + CREDENTIAL_WAIT_MS
+        while (System.currentTimeMillis() < cleared) {
+            val root = uiAutomation.rootInActiveWindow
+            val pkg = root?.packageName?.toString()
+            root?.recycle()
+            if (pkg != null && pkg !in CREDENTIAL_PACKAGES) {
+                println("FLOW_DRIVER device-credential prompt completed")
+                return true
+            }
+            Thread.sleep(250)
+        }
+        println("FLOW_DRIVER device-credential prompt did not clear after PIN entry")
+        return false
+    }
+
+    /** Runs a shell command to completion by draining its output to EOF. */
+    private fun runShellToCompletion(uiAutomation: android.app.UiAutomation, command: String) {
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(
+            uiAutomation.executeShellCommand(command)
+        ).use { it.readBytes() }
+    }
+
     /** True when an ENABLED (clickable) button carrying [text] exists. */
     private fun hasClickableButton(text: String): Boolean =
         compose.onAllNodes(hasText(text) and hasClickAction() and isEnabled())
@@ -169,7 +230,7 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
      * pre-tap gates pass) - the live caller emits its SEND_TAPPED marker
      * there so the marker can never precede a real tap by the gate waits.
      */
-    fun tapSendAndAwaitOnce(outcomeWaitMs: Long, screenshotEveryMs: Long = 0, onTapAboutToFire: () -> Unit = {}): SendOutcome {
+    fun tapSendAndAwaitOnce(outcomeWaitMs: Long, screenshotEveryMs: Long = 0, onTapAboutToFire: () -> Unit = {}, devicePin: String? = null): SendOutcome {
         // Run 42821291508: the tap raced the tail of on-device OCR. OCR was
         // still running when the send button was matched as enabled; its
         // completion recomposes the review screen (and a plate auto-fill
@@ -200,6 +261,15 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         }
         onTapAboutToFire()
         clickButton("שלח לעירייה")
+        // Live path: the submit gate raises the system ConfirmDeviceCredential
+        // prompt (MainActivity.authenticate). Complete it when a PIN was
+        // supplied - live runs only; the synthetic stub has no gate. A prompt
+        // that does not clear means the submit never started, which is a
+        // pre-network SEND_NOT_FIRED like any other.
+        if (devicePin != null && !completeDeviceCredential(devicePin)) {
+            screenshot("live-e2e-credential-stuck.png")
+            return SendOutcome.SEND_NOT_FIRED
+        }
         // The button must flip to its sending label (or an outcome must
         // appear) within a few seconds; otherwise the tap never reached the
         // app's submit path and retrying is safe - no request was made.
@@ -312,5 +382,11 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         const val PLATE_ID_WAIT_MS = 120_000L
         /** How long the IME may take to report hidden after an insets-controller hide. */
         const val IME_HIDE_WAIT_MS = 5_000L
+
+        /** How long to wait for the system credential prompt and for its dismissal. */
+        const val CREDENTIAL_WAIT_MS = 10_000L
+
+        /** Packages that host the ConfirmDeviceCredential screen. */
+        val CREDENTIAL_PACKAGES = setOf("com.android.settings", "com.android.systemui")
     }
 }

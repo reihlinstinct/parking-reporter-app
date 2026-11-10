@@ -301,6 +301,12 @@ jobs:
             echo "TIMING emulator-up $(date -u +%FT%TZ)"
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            # The submit path is gated by a device-unlock prompt and the
+            # emulator ships without a credential (a null KeyguardManager
+            # intent silently swallowed attempt 7, run 42829175477). Set a
+            # throwaway PIN - kept in sync with liveDevicePin in
+            # LiveEmulatorSubmissionTest.kt; the device is ephemeral.
+            adb shell locksettings set-pin 131313
             sh scripts/stage-live-files.sh /tmp/live-e2e/photo.jpg /tmp/live-e2e/params.json
             echo "TIMING staging-preflight-ok $(date -u +%FT%TZ)"
             ( for i in 1 2 3 4 5 6; do if [ -f /tmp/live-e2e/stop-rec ]; then break; fi; adb shell screenrecord --time-limit 170 /sdcard/live-rec-$i.mp4 >/dev/null 2>&1; done ) &

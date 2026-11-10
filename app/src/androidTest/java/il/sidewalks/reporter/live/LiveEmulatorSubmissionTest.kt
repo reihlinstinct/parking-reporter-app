@@ -47,6 +47,13 @@ import org.junit.Test
 class LiveEmulatorSubmissionTest {
     @get:Rule val compose = createComposeRule()
 
+    // Throwaway credential for the ephemeral live-run emulator, set by
+    // live-emulator-e2e.yml (`adb shell locksettings set-pin`); keep the two
+    // in sync. Not a secret: the device exists only inside one CI job. The
+    // real submit gate (device unlock) stays in force - the driver enters
+    // this PIN into the genuine system prompt.
+    private val liveDevicePin = "131313"
+
     private lateinit var logFile: File
 
     /** Fixed markers only; this file lands in the workflow's public log. */
@@ -180,7 +187,7 @@ class LiveEmulatorSubmissionTest {
             // 300s: the municipal API through the owner tunnel can answer
             // slowly; a slow-but-successful response must still be caught.
             // The 120s wait is what turned run 42762339581 OUTCOME_UNKNOWN.
-            var outcome = driver.tapSendAndAwaitOnce(300_000, screenshotEveryMs = 20_000, onTapAboutToFire = onTap)
+            var outcome = driver.tapSendAndAwaitOnce(300_000, screenshotEveryMs = 20_000, onTapAboutToFire = onTap, devicePin = liveDevicePin)
             var sendAttempts = 1
             // Only DRAFT_NOT_SAVED retries in-run: the gate's refusal proves
             // no request was made. SEND_NOT_FIRED never retries in-run - a
@@ -189,7 +196,7 @@ class LiveEmulatorSubmissionTest {
             while (outcome == FlowDriver.SendOutcome.DRAFT_NOT_SAVED && sendAttempts < 3) {
                 Thread.sleep(500)
                 sendAttempts += 1
-                outcome = driver.tapSendAndAwaitOnce(300_000, screenshotEveryMs = 20_000, onTapAboutToFire = onTap)
+                outcome = driver.tapSendAndAwaitOnce(300_000, screenshotEveryMs = 20_000, onTapAboutToFire = onTap, devicePin = liveDevicePin)
             }
             when (outcome) {
                 FlowDriver.SendOutcome.SUBMITTED -> {
