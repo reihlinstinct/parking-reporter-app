@@ -1,6 +1,14 @@
 # Ledger migration phases and proof (#88, slice 2)
 
-Status: design refinement before factory/UI wiring. All development tests use
+Status: SUPERSEDED by `LEDGER_ENCRYPTION.md` section 9 (second revision of the
+ledger encryption design). The SQLCipher export / separate-canonical-file
+mechanism below is retired with the move to field-level encryption; the proof,
+durability, restart-table, verification and user-approval decisions survive and
+are restated there. Kept for history; do not implement against this file.
+
+---
+
+Status (original): design refinement before factory/UI wiring. All development tests use
 synthetic databases. No real user data migration is authorized by this document.
 Key custody PR90 is merged but unused; Room/UI still opens the plaintext ledger.
 
