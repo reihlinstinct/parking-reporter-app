@@ -65,15 +65,17 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         val lat = latitude.toDoubleOrNull()
         val lon = longitude.toDoubleOrNull()
         val folded = draft.confirmEvidence(iso, lat, lon)
-        // Tab review (#266): never silently clear a warning the fold cannot
-        // settle. Without coordinates the draft stays not-ready; keep the
-        // location warnings so the user still sees why send is disabled.
-        if (lat == null || lon == null) {
-            val unsettled = draft.unresolved.intersect(setOf(
-                ReviewWarning.MISSING_GPS.code, ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code))
-            return folded.copy(unresolved = unsettled)
-        }
-        return folded
+        // Tab review (#266): the fold confirms time and location only, never
+        // the address - address warnings need their own explicit act: editing
+        // the address field (its label says "שאישרת") or the lookup's אשר כתובת.
+        // And without coordinates the location warnings stay too, so the user
+        // keeps the explanation while send is disabled.
+        val unsettled = draft.unresolved.intersect(setOf(
+            ReviewWarning.ADDRESS_NEEDS_CONFIRMATION.code,
+            ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code)) +
+            if (lat == null || lon == null) draft.unresolved.intersect(setOf(
+                ReviewWarning.MISSING_GPS.code, ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code)) else emptySet()
+        return folded.copy(unresolved = unsettled)
     }
     fun confirmPendingEvidence() {
         val iso = ReviewTime.toJerusalemIso(time, draft.confirmedTime)
@@ -182,7 +184,11 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             label = { Text(s.t("review.edit.plate_field")) }, modifier = Modifier.width(216.dp))
         }
         OutlinedTextField(draft.address, {
-            draft = draft.edit(address = it)
+            // Editing the field labeled "רחוב ומספר בית שאישרת" IS the explicit
+            // address confirmation (Tab #266); the save/send fold does not
+            // clear address warnings.
+            draft = draft.edit(address = it).copy(unresolved = draft.unresolved -
+                ReviewWarning.ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code)
             if (draft.evidence.latitude == null || draft.evidence.longitude == null) {
                 latitude = ""; longitude = ""; manualResult = null; manualGeneration++
                 draft = draft.copy(confirmedLatitude = null, confirmedLongitude = null,

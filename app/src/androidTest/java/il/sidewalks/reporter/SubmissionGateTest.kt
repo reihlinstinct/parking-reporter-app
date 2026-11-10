@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextReplacement
 import il.sidewalks.reporter.core.Evidence
 import il.sidewalks.reporter.core.ReviewDraft
 import il.sidewalks.reporter.ui.ReviewScreen
@@ -61,6 +62,34 @@ class SubmissionGateTest {
         }
         compose.onNodeWithText("שמור טיוטה").performClick()
         org.junit.Assert.assertTrue(saved?.unresolved?.isEmpty() == true)
+        compose.onNodeWithText("שלח לעירייה").assertIsEnabled()
+    }
+
+    @Test fun saveKeepsUnsettledAddressWarnings() {
+        // Tab review (#266): the fold confirms time/location only - an address
+        // warning survives save until the address field itself is edited.
+        compose.setContent {
+            MaterialTheme {
+                ReviewScreen(readyDraft().copy(unresolved = setOf("suggested_address_needs_confirmation")), null,
+                    onSave = {}, onBack = {}, onSubmit = {})
+            }
+        }
+        compose.onNodeWithText("שמור טיוטה").performClick()
+        compose.onNodeWithText("כתובת דורשת אישור").assertExists()
+        compose.onNodeWithText("שלח לעירייה").assertIsNotEnabled()
+    }
+
+    @Test fun addressFieldEditConfirmsTheAddress() {
+        // The field's label is "רחוב ומספר בית שאישרת": editing it is the
+        // explicit confirmation that clears the warning and enables send.
+        compose.setContent {
+            MaterialTheme {
+                ReviewScreen(readyDraft().copy(unresolved = setOf("suggested_address_needs_confirmation")), null,
+                    onSave = {}, onBack = {}, onSubmit = {})
+            }
+        }
+        compose.onNodeWithText("רחוב ומספר בית שאישרת").performTextReplacement("רחוב 14")
+        compose.onNodeWithText("שמור טיוטה").performClick()
         compose.onNodeWithText("שלח לעירייה").assertIsEnabled()
     }
 
