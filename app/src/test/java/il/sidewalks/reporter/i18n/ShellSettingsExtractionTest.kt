@@ -21,6 +21,13 @@ class ShellSettingsExtractionTest {
 
     /** Key -> the Hebrew literal it replaced. */
     private val extracted = linkedMapOf(
+        "settings.api.advanced" to "חיבור 106 מתקדם",
+        "settings.phone.israel_only" to "אפשר לשמור מספר בינלאומי. שליחה ל-106 נתמכת כרגע רק עם מספר נייד ישראלי.",
+        "settings.email.invalid" to "כתובת האימייל אינה תקינה. בדוק את הכתובת.",
+
+        "settings.id.invalid" to "מספר תעודת הזהות אינו תקין. בדוק את הספרות וספרת הביקורת.",
+        "settings.phone.invalid" to "הזן מספר בינלאומי עם + וקוד מדינה, או מספר נייד ישראלי שמתחיל ב-05.",
+
         "shell.nav.home" to "בית",
         "shell.nav.reports" to "הדיווחים שלי",
         "shell.nav.settings" to "הגדרות",
@@ -176,7 +183,7 @@ class ShellSettingsExtractionTest {
         for (key in used) assertTrue("$key is used but missing from strings.json", catalog.rawEntry(key) != null)
         // SettingsScreen also links to the Licenses screen using that screen's own
         // title key (#163); it is not one of the two screens' shell./settings. keys.
-        val ownUsed = used - "licenses.screen.title"
+        val ownUsed = used - "licenses.screen.title" - setOf("setup.title", "setup.description", "setup.save_continue", "setup.later")
         assertEquals("shell./settings. keys in the catalog vs the keys the two screens use", screenKeys, ownUsed)
     }
 
@@ -259,7 +266,20 @@ class ShellSettingsExtractionTest {
         assertTrue(keysUsedIn("AppShell.kt").all { it.startsWith("shell.") })
         // The one allowed exception is the Licenses-screen link button (#163), which
         // shows that screen's own licenses.screen.title rather than duplicating it.
-        assertTrue(keysUsedIn("SettingsScreen.kt").all { it.startsWith("settings.") || it == "licenses.screen.title" })
+        assertTrue(keysUsedIn("SettingsScreen.kt").all { it.startsWith("settings.") || it.startsWith("setup.") || it == "licenses.screen.title" })
+    }
+
+    @Test
+    fun setupKeysExistInAllLanguagesAndNeverReadProfiles() {
+        for (key in listOf("setup.title", "setup.description", "setup.save_continue", "setup.later")) {
+            for (code in listOf("he", "en", "ar", "ru", "am"))
+                assertTrue("$key/$code", raw.getJSONObject(key).optString(code).isNotBlank())
+        }
+        val shell = source("AppShell.kt")
+        val setup = shell.substring(shell.indexOf("if (showFirstRun) {"), shell.indexOf("    Scaffold("))
+        assertTrue(!setup.contains("readSettings("))
+        assertTrue(!Regex("""by\s+rememberSaveable""").containsMatchIn(setup))
+        assertTrue(setup.contains("SettingsScreen(null, basicSetup = true"))
     }
 
     @Test
@@ -280,8 +300,8 @@ class ShellSettingsExtractionTest {
     @Test
     fun languagePickerIsWiredOnlyToTheLanguageController() {
         val shell = source("AppShell.kt")
-        assertEquals(1, Regex("""onLanguageSelected\s*=\s*languageController::select\b""").findAll(shell).count())
-        assertEquals(1, Regex("""onLanguageSelected\s*=""").findAll(shell).count())
+        assertEquals(2, Regex("""onLanguageSelected\s*=\s*languageController::select\b""").findAll(shell).count())
+        assertEquals(2, Regex("""onLanguageSelected\s*=""").findAll(shell).count())
         val settings = source("SettingsScreen.kt")
         assertEquals(
             "the screen hands the picker its callback unchanged",

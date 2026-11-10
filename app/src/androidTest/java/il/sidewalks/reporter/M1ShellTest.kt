@@ -46,7 +46,7 @@ class M1ShellTest {
         compose.onNodeWithText("אשר את התוכן לבדיקה").performScrollTo().performClick()
         compose.runOnIdle { assertTrue(saved?.isApproved() == true) }
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
-        compose.onNodeWithText("לוחית ללא מקפים").performScrollTo().performTextReplacement("7654321")
+        compose.onNodeWithText("מספר לוחית (ספרות בלבד)").performScrollTo().performTextReplacement("7654321")
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
         compose.runOnIdle { assertFalse(saved?.isApproved() == true) }
     }
@@ -61,9 +61,9 @@ class M1ShellTest {
         compose.setContent { AppTheme { ReviewScreen(draft().approve(), bitmap.asImageBitmap(), { saved = it }, {}) } }
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
         compose.onNodeWithText("הצע לוחית מתוך הצילום").performScrollTo().performClick()
-        compose.waitUntil(30_000) { compose.onAllNodesWithText("הצעה בלבד: \u206612345678\u2069").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(30_000) { compose.onAllNodesWithText("הצעה בלבד: \u2066123-45-678\u2069").fetchSemanticsNodes().isNotEmpty() }
         screenshot("m2-ocr-synthetic.png")
-        compose.onNodeWithText("הצעה בלבד: \u206612345678\u2069").performScrollTo().performClick()
+        compose.onNodeWithText("הצעה בלבד: \u2066123-45-678\u2069").performScrollTo().performClick()
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
         compose.runOnIdle { assertEquals("12345678", saved?.plate); assertFalse(saved?.isApproved() == true) }
     }
@@ -76,6 +76,7 @@ class M1ShellTest {
         screenshot("m1-settings-synthetic.png")
         compose.onNodeWithText("שם פרטי").performTextInput("בדיקה")
         compose.onNodeWithText("שם משפחה").performTextInput("מדווח")
+        compose.onNodeWithText("חיבור 106 מתקדם").performScrollTo().performClick()
         compose.onNodeWithText("מפתח מנוי").performScrollTo().performTextInput("synthetic-subscription-key")
         compose.onNodeWithText("שם משתמש API").performScrollTo().performTextInput("synthetic-api-user")
         compose.onNodeWithText("סיסמת API").performScrollTo().performTextInput("synthetic-api-pass")
@@ -197,7 +198,7 @@ class M1ShellTest {
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
         compose.runOnIdle { assertEquals("", saved?.plate); assertFalse(saved?.isApproved() == true) }
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
-        compose.onNodeWithText("לוחית ללא מקפים").assertDoesNotExist()
+        compose.onNodeWithText("מספר לוחית (ספרות בלבד)").assertDoesNotExist()
     }
     @Test fun photoFirstHomeScreenshot() {
         compose.setContent { AppTheme {
