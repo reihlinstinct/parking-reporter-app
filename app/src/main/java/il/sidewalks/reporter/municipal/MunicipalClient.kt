@@ -56,6 +56,7 @@ class OkHttpMunicipalClient private constructor(
     private val subscriptionKey: String,
     private val username: String,
     private val password: String,
+    private val diagnostic: ((ResponseDiagnostic) -> Unit)? = null,
 ) : MunicipalClient {
 
     /**
@@ -63,8 +64,8 @@ class OkHttpMunicipalClient private constructor(
      * is not a parameter on purpose - a client that can be pointed at
      * another host can leak the municipal credentials there.
      */
-    constructor(subscriptionKey: String, username: String, password: String) :
-        this(DEFAULT_BASE_URL, subscriptionKey, username, password)
+    constructor(subscriptionKey: String, username: String, password: String, diagnostic: ((ResponseDiagnostic) -> Unit)? = null) :
+        this(DEFAULT_BASE_URL, subscriptionKey, username, password, diagnostic)
 
     init {
         if (subscriptionKey.isEmpty() || username.isEmpty() || password.isEmpty()) {
@@ -141,6 +142,14 @@ class OkHttpMunicipalClient private constructor(
         val raw: ByteArray
         try {
             http.newCall(request).execute().use { response ->
+                val privateSecrets = listOf(subscriptionKey, username, password, body["Token"] as? String ?: body["token"] as? String ?: "")
+                val preview = response.peekBody(ResponseDiagnostics.MAX_BODY_BYTES.toLong() + 1).string()
+                val headers = listOf("Content-Type", "Date", "Retry-After").mapNotNull { name ->
+                    response.header(name)?.take(256)?.let { name to it }
+                }.toMap()
+                // Diagnostics must never turn a successful case creation into a retry.
+                runCatching { diagnostic?.invoke(ResponseDiagnostic(endpoint, response.code, headers,
+                    ResponseDiagnostics.redactBody(preview, privateSecrets), null)) }
                 if (!response.isSuccessful) {
                     throw MunicipalApiException("$endpoint: HTTP ${response.code}.")
                 }
@@ -161,6 +170,7 @@ class OkHttpMunicipalClient private constructor(
         } catch (e: MunicipalApiException) {
             throw e
         } catch (e: IOException) {
+            runCatching { diagnostic?.invoke(ResponseDiagnostic(endpoint, null, emptyMap(), "", e.javaClass.simpleName)) }
             throw MunicipalApiException("$endpoint: network failure or invalid response.")
         }
         val parsed: JSONObject = try {
