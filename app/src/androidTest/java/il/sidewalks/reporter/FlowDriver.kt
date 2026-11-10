@@ -165,8 +165,11 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
      * network call) before treating a re-run as safe, and must never retry
      * it in-run. When [screenshotEveryMs] > 0 the long outcome wait is
      * captured every that many ms into live-e2e-wait-NN.png files.
+     * [onTapAboutToFire] runs immediately before the real click (after all
+     * pre-tap gates pass) - the live caller emits its SEND_TAPPED marker
+     * there so the marker can never precede a real tap by the gate waits.
      */
-    fun tapSendAndAwaitOnce(outcomeWaitMs: Long, screenshotEveryMs: Long = 0): SendOutcome {
+    fun tapSendAndAwaitOnce(outcomeWaitMs: Long, screenshotEveryMs: Long = 0, onTapAboutToFire: () -> Unit = {}): SendOutcome {
         // Run 42821291508: the tap raced the tail of on-device OCR. OCR was
         // still running when the send button was matched as enabled; its
         // completion recomposes the review screen (and a plate auto-fill
@@ -195,6 +198,7 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
             screenshot("live-e2e-send-never-enabled.png")
             return SendOutcome.SEND_NOT_FIRED
         }
+        onTapAboutToFire()
         clickButton("שלח לעירייה")
         // The button must flip to its sending label (or an outcome must
         // appear) within a few seconds; otherwise the tap never reached the
