@@ -289,7 +289,8 @@ class FullFlowE2eTest {
                 val context = InstrumentationRegistry.getInstrumentation().targetContext
                 val db = Room.databaseBuilder(context, ReportDatabase::class.java, "report-ledger.db").build()
                 try {
-                    val record = requireNotNull(runBlocking { db.reports().findPhoto(ownedPhotoHash) })
+                    val hash = requireNotNull(ownedPhotoHash) { "no claimed photo" }
+                    val record = requireNotNull(runBlocking { db.reports().findPhoto(hash) })
                     val stored = il.sidewalks.reporter.ledger.DraftCodec.decode(record.draftJson)
                     assertEquals(text, stored.exactHebrewText)
                     assertTrue("the send tap folded the time confirmation", stored.unresolved.isEmpty())
@@ -334,7 +335,8 @@ class FullFlowE2eTest {
                 val context = InstrumentationRegistry.getInstrumentation().targetContext
                 val db = Room.databaseBuilder(context, ReportDatabase::class.java, "report-ledger.db").build()
                 try {
-                    val record = requireNotNull(runBlocking { db.reports().findPhoto(ownedPhotoHash) })
+                    val hash = requireNotNull(ownedPhotoHash) { "no claimed photo" }
+                    val record = requireNotNull(runBlocking { db.reports().findPhoto(hash) })
                     db.openHelper.writableDatabase.execSQL(
                         "UPDATE reports SET revision = revision + 1 WHERE stableId = ?", arrayOf(record.stableId))
                 } finally {

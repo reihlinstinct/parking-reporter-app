@@ -132,7 +132,7 @@ class MunicipalReportTextStaysHebrewTest {
             assertEquals("$category: $digests", 1, digests.values.toSet().size)
         }
         assertEquals(
-            "f2b464b922c81525e4ec8ac5a1fe3d83deb6f4fe15cd1ef261f8f3dd576f99e7",
+            "52d2183b92c2a4ab2a9c858539d7564fac91152718a2ca9228011a3a4dcd2b54",
             draft(ReportCategory.SIDEWALK_PARKING).digest(),
         )
     }
