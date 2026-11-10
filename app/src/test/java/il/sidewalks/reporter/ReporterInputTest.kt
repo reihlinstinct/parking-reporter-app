@@ -14,7 +14,7 @@ class ReporterInputTest {
         assertTrue(ReporterInput.validPhone("+14155552671"))
     }
     @Test fun namesAllowLanguagesButNotDigitsAndEmailRejectsMalformedAddresses() {
-        assertEquals("רעי John محمد 李", ReporterInput.nameInput("רעי1 John٢ محمد۳ 李"))
+        assertEquals("בדיקה John محمد 李", ReporterInput.nameInput("בדיקה1 John٢ محمد۳ 李"))
         for (good in listOf("a+b@example.com", "name.last@sub.example.org", "אדם@example.co.il")) assertTrue(good, ReporterInput.validEmail(good))
         for (bad in listOf("a@@example.com", "a..b@example.com", "a@example", "a@-example.com", "a@exam_ple.com", "a b@example.com")) assertFalse(bad, ReporterInput.validEmail(bad))
     }
