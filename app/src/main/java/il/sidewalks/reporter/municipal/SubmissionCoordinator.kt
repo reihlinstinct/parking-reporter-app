@@ -45,7 +45,7 @@ class SubmissionCoordinator(
 
     enum class Reason {
         NOT_APPROVED,
-        PASSPORT_LOCAL_ONLY,
+        PASSPORT_DISCLOSURE_REQUIRED,
         MISSING_CREDENTIALS,
         UNSUPPORTED_CATEGORY,
         ADDRESS_UNRESOLVED,
@@ -66,7 +66,8 @@ class SubmissionCoordinator(
         originalJpeg: File,
     ): Outcome {
         if (!draft.isApproved()) return Outcome.Blocked(Reason.NOT_APPROVED, "draft not approved")
-        if (settings.passportLocalOnly) return Outcome.Blocked(Reason.PASSPORT_LOCAL_ONLY, "passport local profile cannot submit")
+        if (settings.passportMode && !PassportSubmission.hasReviewedDisclosure(draft.exactHebrewText, settings))
+            return Outcome.Blocked(Reason.PASSPORT_DISCLOSURE_REQUIRED, "passport disclosure must be saved and approved")
         if (!settings.hasMunicipalCredentials()) {
             // Name exactly which values are missing (constant field IDs, never
             // values) so the UI can say it (owner 2026-11-09).
@@ -94,7 +95,7 @@ class SubmissionCoordinator(
         }
         val contact = try {
             MunicipalPayloads.buildContact(MunicipalPayloads.Reporter(
-                settings.firstName, settings.lastName, settings.phone, settings.idNumber, settings.email))
+                settings.firstName, settings.lastName, settings.phone, if (settings.passportMode) PassportSubmission.COMPATIBILITY_ID else settings.idNumber, settings.email))
         } catch (e: MunicipalInputException) {
             return Outcome.Blocked(Reason.INPUT_INVALID, e.message ?: "reporter invalid")
         }

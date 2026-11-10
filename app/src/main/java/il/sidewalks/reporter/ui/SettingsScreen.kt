@@ -64,7 +64,7 @@ fun SettingsScreen(
     var firstName by remember { mutableStateOf(initial?.firstName.orEmpty()) }
     var lastName by remember { mutableStateOf(initial?.lastName.orEmpty()) }
     var id by remember { mutableStateOf(initial?.idNumber.orEmpty()) }
-    var passportMode by remember { mutableStateOf(initial?.passportLocalOnly ?: false) }
+    var passportMode by remember { mutableStateOf(initial?.passportMode ?: false) }
     var passport by remember { mutableStateOf(initial?.passportNumber.orEmpty()) }
     var phone by remember { mutableStateOf(initial?.phone.orEmpty()) }
     var email by remember { mutableStateOf(initial?.email.orEmpty()) }
@@ -95,7 +95,7 @@ fun SettingsScreen(
             Text(s.t("settings.passport.mode"))
         }
         if (passportMode) {
-            Text(s.t("settings.passport.local_only"))
+            Text(s.t("settings.passport.explanation", mapOf("placeholder" to il.sidewalks.reporter.municipal.PassportSubmission.COMPATIBILITY_ID)))
             OutlinedTextField(passport, { passport = it; saved = false }, label = { Text(s.t("settings.passport.number")) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
         } else OutlinedTextField(id, { id = ReporterInput.digits(it); saved = false }, label = { Text(s.t("settings.field.id_number")) }, isError = id.isNotBlank() && !ReporterInput.validId(id), supportingText = { if (id.isNotBlank() && !ReporterInput.validId(id)) Text(s.t("settings.id.invalid")) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
         OutlinedTextField(phone, { phone = ReporterInput.phoneInput(it); saved = false },
@@ -131,8 +131,8 @@ fun SettingsScreen(
         // blanked credential still enables the button, so clearing works on a blank screen too.
         // stays disabled when every field is blank (and nothing was touched) or right after a save.
         val anyField = listOf(firstName, lastName, id, passport, phone, email, subscriptionKey, apiUsername, apiPassword).any { it.isNotBlank() }
-        Button(enabled = !saved && (anyField || touchedMunicipal.isNotEmpty()) && (if (passportMode) passport.isNotBlank() || initial?.passportNumber?.isNotBlank() == true else id.isBlank() || ReporterInput.validId(id)) && (phone.isBlank() || ReporterInput.validPhone(phone)) && (email.isBlank() || ReporterInput.validEmail(email)), onClick = { save(ReporterSettings(firstName.trim(), lastName.trim(), ReporterInput.canonicalPhone(phone), id.trim(), email.trim(),
-            passportLocalOnly = passportMode, passportNumber = passport.trim(),
+        Button(enabled = !saved && (anyField || touchedMunicipal.isNotEmpty()) && (if (passportMode) il.sidewalks.reporter.municipal.PassportSubmission.validPassport(passport.ifBlank { initial?.passportNumber.orEmpty() }) else id.isBlank() || ReporterInput.validId(id)) && (phone.isBlank() || ReporterInput.validPhone(phone)) && (email.isBlank() || ReporterInput.validEmail(email)), onClick = { save(ReporterSettings(firstName.trim(), lastName.trim(), ReporterInput.canonicalPhone(phone), id.trim(), email.trim(),
+            passportMode = passportMode, passportNumber = passport.trim(),
             municipalSubscriptionKey = subscriptionKey.trim(),
             municipalUsername = apiUsername.trim(),
             municipalPassword = apiPassword.trim()), touchedMunicipal) {

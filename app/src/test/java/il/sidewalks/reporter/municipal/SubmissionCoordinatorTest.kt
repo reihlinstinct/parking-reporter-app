@@ -40,10 +40,23 @@ class SubmissionCoordinatorTest {
 
     @Test fun passportLocalProfileCannotReachAnyNetworkEvenWithValidIdAndCredentials() {
         val client = RecordingClient()
-        val outcome = coordinator(client).submitApproved(approvedDraft(), settings.copy(passportLocalOnly = true, passportNumber = "SYNTHETIC-PASSPORT"), jpegFile()) as SubmissionCoordinator.Outcome.Blocked
-        assertEquals(SubmissionCoordinator.Reason.PASSPORT_LOCAL_ONLY, outcome.reason)
+        val outcome = coordinator(client).submitApproved(approvedDraft(), settings.copy(passportMode = true, passportNumber = "SYNTHETIC-PASSPORT"), jpegFile()) as SubmissionCoordinator.Outcome.Blocked
+        assertEquals(SubmissionCoordinator.Reason.PASSPORT_DISCLOSURE_REQUIRED, outcome.reason)
         assertEquals(0, client.logins)
         assertEquals(null, client.seenReport)
+    }
+
+    @Test fun passportReviewedDisclosureSubmitsOnlyMaskedPassportAndPlaceholder() {
+        val client = RecordingClient()
+        val profile = settings.copy(passportMode = true, passportNumber = "SYNTHETIC-PASSPORT")
+        val text = approvedDraft().exactHebrewText + "\n\n" + PassportSubmission.disclosure(profile)
+        val shown = approvedDraft().edit(text = text).approve()
+        val outcome = coordinator(client).submitApproved(shown, profile, jpegFile())
+        assertTrue(outcome is SubmissionCoordinator.Outcome.Submitted)
+        assertEquals(PassportSubmission.COMPATIBILITY_ID, client.seenContact?.get("ContactIdNumber"))
+        assertEquals(text, client.seenReport?.get("CaseDescription"))
+        assertTrue(text.contains("xxxxxORT"))
+        assertTrue(!text.contains(profile.passportNumber))
     }
 
     @Test fun happyPathSubmitsWithPipelinePayloadShape() {
@@ -109,11 +122,14 @@ class SubmissionCoordinatorTest {
     }
 
     private open class RecordingClient : MunicipalClient {
+        var seenContact: Map<String, Any?>? = null
         var logins = 0
         var seenReport: Map<String, Any?>? = null
         override fun login(): String { logins++; return "token" }
-        override fun upsertContact(token: String, contact: LinkedHashMap<String, Any?>): Map<String, Any?> =
-            mapOf("ContactIdInCRM" to "contact-1")
+        override fun upsertContact(token: String, contact: LinkedHashMap<String, Any?>): Map<String, Any?> {
+            seenContact = contact
+            return mapOf("ContactIdInCRM" to "contact-1")
+        }
         override fun createCase(token: String, contact: LinkedHashMap<String, Any?>, report: LinkedHashMap<String, Any?>): Map<String, Any?> {
             seenReport = report
             return mapOf("CaseIdInCRM" to "c1", "WebCaseIdInCRM" to "w1", "CaseNumberInCRM" to "2611-0000001")

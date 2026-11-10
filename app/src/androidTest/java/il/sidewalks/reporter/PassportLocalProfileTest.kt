@@ -20,12 +20,12 @@ class PassportLocalProfileTest {
         UiPrefsLanguageStore.of(context).set("he")
         var saved: ReporterSettings? = null
         compose.setContent { AppTheme { SettingsScreen(null, save = { value, _, clear -> saved = value; clear() }, back = {}, basicSetup = true) } }
-        compose.onNodeWithText("ללא תעודת זהות ישראלית (דרכון, שמירה מקומית בלבד)").performScrollTo()
+        compose.onNodeWithText("ללא תעודת זהות ישראלית (דרכון)").performScrollTo()
         compose.onNode(isToggleable()).performClick()
-        compose.onNodeWithText("מספר דרכון (מקומי בלבד)").performScrollTo().performTextInput("SYNTHETIC-PASSPORT")
-        compose.onNodeWithText("ממשק 106 הנתמך באפליקציה", substring = true).performScrollTo().assertExists()
+        compose.onNodeWithText("מספר דרכון").performScrollTo().performTextInput("SYNTHETIC-PASSPORT")
+        compose.onNodeWithText("במצב דרכון נשלח בממשק", substring = true).performScrollTo().assertExists()
         File(context.filesDir, "passport-local-profile-synthetic.png").outputStream().use { compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
         compose.onNodeWithText("שמור והמשך").performScrollTo().performClick()
-        compose.runOnIdle { assertTrue(saved!!.passportLocalOnly); assertEquals("SYNTHETIC-PASSPORT", saved?.passportNumber); assertEquals("", saved?.idNumber) }
+        compose.runOnIdle { assertTrue(saved!!.passportMode); assertEquals("SYNTHETIC-PASSPORT", saved?.passportNumber); assertEquals("", saved?.idNumber) }
     }
 }

@@ -14,7 +14,7 @@ import javax.crypto.spec.GCMParameterSpec
 data class ReporterSettings(
     val firstName: String, val lastName: String, val phone: String, val idNumber: String, val email: String,
     val municipalSubscriptionKey: String = "", val municipalUsername: String = "", val municipalPassword: String = "",
-    val passportLocalOnly: Boolean = false, val passportNumber: String = "",
+    val passportMode: Boolean = false, val passportNumber: String = "",
 ) {
     fun hasMunicipalCredentials(): Boolean =
         municipalSubscriptionKey.isNotBlank() && municipalUsername.isNotBlank() && municipalPassword.isNotBlank()
