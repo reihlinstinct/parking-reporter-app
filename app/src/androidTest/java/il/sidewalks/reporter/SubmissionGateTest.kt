@@ -68,6 +68,7 @@ class SubmissionGateTest {
     @Test fun saveKeepsUnsettledAddressWarnings() {
         // Tab review (#266): the fold confirms time/location only - an address
         // warning survives save until the address field itself is edited.
+        // Warnings render as one combined "דרוש בירור: ..." line in view mode.
         compose.setContent {
             MaterialTheme {
                 ReviewScreen(readyDraft().copy(unresolved = setOf("suggested_address_needs_confirmation")), null,
@@ -75,19 +76,21 @@ class SubmissionGateTest {
             }
         }
         compose.onNodeWithText("שמור טיוטה").performClick()
-        compose.onNodeWithText("כתובת דורשת אישור").assertExists()
+        compose.onNodeWithText("כתובת דורשת אישור", substring = true).assertExists()
         compose.onNodeWithText("שלח לעירייה").assertIsNotEnabled()
     }
 
     @Test fun addressFieldEditConfirmsTheAddress() {
         // The field's label is "רחוב ומספר בית שאישרת": editing it is the
         // explicit confirmation that clears the warning and enables send.
+        // The field exists only in edit mode.
         compose.setContent {
             MaterialTheme {
                 ReviewScreen(readyDraft().copy(unresolved = setOf("suggested_address_needs_confirmation")), null,
                     onSave = {}, onBack = {}, onSubmit = {})
             }
         }
+        compose.onNodeWithText("ערוך").performClick()
         compose.onNodeWithText("רחוב ומספר בית שאישרת").performTextReplacement("רחוב 14")
         compose.onNodeWithText("שמור טיוטה").performClick()
         compose.onNodeWithText("שלח לעירייה").assertIsEnabled()
@@ -102,10 +105,12 @@ class SubmissionGateTest {
                     onSave = {}, onBack = {}, onSubmit = {})
             }
         }
+        compose.onNodeWithText("ערוך").performClick()
         compose.onNodeWithText("רחוב ומספר בית שאישרת").performTextReplacement("רחוב 129")
         compose.onNodeWithText("רחוב ומספר בית שאישרת").performTextReplacement("רחוב 12")
         compose.onNodeWithText("שמור טיוטה").performClick()
-        compose.onNodeWithText("כתובת דורשת אישור").assertExists()
+        compose.onNodeWithText("סיום עריכה").performClick()
+        compose.onNodeWithText("כתובת דורשת אישור", substring = true).assertExists()
         compose.onNodeWithText("שלח לעירייה").assertIsNotEnabled()
     }
 
@@ -120,7 +125,7 @@ class SubmissionGateTest {
             }
         }
         compose.onNodeWithText("שמור טיוטה").performClick()
-        compose.onNodeWithText("GPS חסר").assertExists()
+        compose.onNodeWithText("GPS חסר", substring = true).assertExists()
         compose.onNodeWithText("שלח לעירייה").assertIsNotEnabled()
     }
 
