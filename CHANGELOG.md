@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.27.4] - 2026-11-10
+
+### Other changes
+
+- test: fail clearly on Gradle wrapper pin drift (#237) (#276) (ce585f5)
+
 ## [0.27.3] - 2026-11-10
 
 ### Fixes
