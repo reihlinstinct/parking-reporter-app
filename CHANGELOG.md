@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.26.2] - 2026-11-10
+
+### Other changes
+
+- Use first-person ID-card mode label (#251) (2059198)
+
 ## [0.26.1] - 2026-11-10
 
 ### Fixes
