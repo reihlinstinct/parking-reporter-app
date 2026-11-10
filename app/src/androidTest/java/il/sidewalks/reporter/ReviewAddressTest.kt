@@ -65,13 +65,15 @@ class ReviewAddressTest {
         }
     }
 
-    @Test fun localTimeFieldKeepsOriginalSecondsAndRemovesOnlyApprovalNote() {
+    @Test fun localTimeFieldKeepsOriginalSecondsAndRemovesRedundantNotes() {
         val initial = draft().copy(address = "רחוב בדיקה 12", confirmedTime = "2026-01-01T12:00:47+02:00")
         var saved: ReviewDraft? = null
         compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {}, addressLookup = { _, _ -> emptyList() }) } }
         compose.onNodeWithText("זמן: \u206601/01/2026 12:00\u2069").assertExists()
         compose.onNodeWithText("כל שינוי מבטל אישור", substring = true).assertDoesNotExist()
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
+        compose.onNodeWithText("הזמן מוצג לפי השעון המקומי בירושלים.", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("בדוק את הרחוב ומספר הבית", substring = true).assertDoesNotExist()
         compose.onNodeWithText("זמן הצילום (24 שעות)").performScrollTo()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         File(context.filesDir, "review-local-time-synthetic.png").outputStream().use {
