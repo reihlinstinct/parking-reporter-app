@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.26.5] - 2026-11-10
+
+### Other changes
+
+- Capture encrypted live process and crash diagnostics (#252) (c1ed930)
+
 ## [0.26.4] - 2026-11-10
 
 ### Other changes
