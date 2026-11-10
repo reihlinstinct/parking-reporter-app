@@ -252,4 +252,100 @@ class FullFlowE2eTest {
         }
     }
 
+    /** Tab review (#266): a send tap without a prior save persists the exact
+     * shown draft into the ledger before the first network call (M-B). */
+    @Test fun sendWithoutPriorSavePersistsShownDraftBeforeNetwork() {
+        claimSyntheticPhoto()
+        val settings = ReporterSettings(
+            firstName = "ישראל", lastName = "ישראלי", phone = "+972501234567",
+            idNumber = "000000018", email = "synthetic@example.com",
+            municipalSubscriptionKey = "synthetic-key",
+            municipalUsername = "synthetic-user",
+            municipalPassword = "synthetic-pass")
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setBody("""{"Success":true,"Token":"synthetic-token"}"""))
+            server.enqueue(MockResponse().setBody("""{"Success":true,"ContactIdInCRM":"synthetic-contact-id"}"""))
+            server.enqueue(MockResponse().setBody(
+                """{"Success":true,"CaseIdInCRM":"synthetic-case-id","WebCaseIdInCRM":"synthetic-webcase-id","CaseNumberInCRM":"2000-0000000"}"""))
+            server.enqueue(MockResponse().setBody("""{"Success":true}"""))
+            server.start()
+            try {
+                launchFlow(settings) { s ->
+                    OkHttpMunicipalClient.forTesting(server.url("/"),
+                        s.municipalSubscriptionKey, s.municipalUsername, s.municipalPassword)
+                }
+                val driver = FlowDriver(compose)
+                val text = "רכב חונה על המדרכה בתרחיש בדיקה סינתטי"
+                driver.driveToEdited(FlowFields(
+                    text = text,
+                    plate = "12345678",
+                    address = "רחוב בדיקה 1",
+                    capturedAtIso = "2026-01-01T12:00:00+02:00",
+                    latitude = "31.77",
+                    longitude = "35.2137",
+                    categoryLabel = "חניה על המדרכה"))
+                driver.tapSendAndAwaitCaseNumber()
+                assertEquals(4, server.requestCount)
+                val context = InstrumentationRegistry.getInstrumentation().targetContext
+                val db = Room.databaseBuilder(context, ReportDatabase::class.java, "report-ledger.db").build()
+                try {
+                    val record = requireNotNull(runBlocking { db.reports().findPhoto(ownedPhotoHash) })
+                    val stored = il.sidewalks.reporter.ledger.DraftCodec.decode(record.draftJson)
+                    assertEquals(text, stored.exactHebrewText)
+                    assertTrue("the send tap folded the time confirmation", stored.unresolved.isEmpty())
+                    assertNotNull("saved-ready digest recorded", record.reviewedDigest)
+                } finally {
+                    db.close()
+                }
+            } finally {
+                cleanOwnedState()
+            }
+        }
+    }
+
+    /** Tab review (#266): when the shown draft cannot be persisted, the send
+     * stops before the first network call - unsaved text is never sent. */
+    @Test fun failedSaveBlocksNetwork() {
+        claimSyntheticPhoto()
+        val settings = ReporterSettings(
+            firstName = "ישראל", lastName = "ישראלי", phone = "+972501234567",
+            idNumber = "000000018", email = "synthetic@example.com",
+            municipalSubscriptionKey = "synthetic-key",
+            municipalUsername = "synthetic-user",
+            municipalPassword = "synthetic-pass")
+        MockWebServer().use { server ->
+            server.start()
+            try {
+                launchFlow(settings) { s ->
+                    OkHttpMunicipalClient.forTesting(server.url("/"),
+                        s.municipalSubscriptionKey, s.municipalUsername, s.municipalPassword)
+                }
+                val driver = FlowDriver(compose)
+                driver.driveToEdited(FlowFields(
+                    text = "רכב חונה על המדרכה בתרחיש בדיקה סינתטי",
+                    plate = "12345678",
+                    address = "רחוב בדיקה 1",
+                    capturedAtIso = "2026-01-01T12:00:00+02:00",
+                    latitude = "31.77",
+                    longitude = "35.2137",
+                    categoryLabel = "חניה על המדרכה"))
+                // An external writer bumps the row, making the shell's
+                // in-memory revision stale: the persist step fails closed.
+                val context = InstrumentationRegistry.getInstrumentation().targetContext
+                val db = Room.databaseBuilder(context, ReportDatabase::class.java, "report-ledger.db").build()
+                try {
+                    val record = requireNotNull(runBlocking { db.reports().findPhoto(ownedPhotoHash) })
+                    db.openHelper.writableDatabase.execSQL(
+                        "UPDATE reports SET revision = revision + 1 WHERE stableId = ?", arrayOf(record.stableId))
+                } finally {
+                    db.close()
+                }
+                assertEquals(FlowDriver.SendOutcome.DRAFT_NOT_SAVED, driver.tapSendAndAwaitOnce(15_000))
+                assertEquals(0, server.requestCount)
+            } finally {
+                cleanOwnedState()
+            }
+        }
+    }
+
 }

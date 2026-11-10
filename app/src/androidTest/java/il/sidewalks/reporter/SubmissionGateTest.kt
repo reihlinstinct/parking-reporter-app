@@ -49,6 +49,36 @@ class SubmissionGateTest {
         compose.onNodeWithText("שלח לעירייה").assertIsNotEnabled()
     }
 
+    @Test fun saveFoldResolvesTimeConfirmation() {
+        // Tab review (#266): the fold settles warnings whose underlying
+        // fields check out - readiness is field-derived, not latch-derived.
+        var saved: ReviewDraft? = null
+        compose.setContent {
+            MaterialTheme {
+                ReviewScreen(readyDraft().copy(unresolved = setOf("time_needs_confirmation")), null,
+                    onSave = { saved = it }, onBack = {}, onSubmit = {})
+            }
+        }
+        compose.onNodeWithText("שמור טיוטה").performClick()
+        org.junit.Assert.assertTrue(saved?.unresolved?.isEmpty() == true)
+        compose.onNodeWithText("שלח לעירייה").assertIsEnabled()
+    }
+
+    @Test fun saveKeepsUnsettledLocationWarnings() {
+        // Tab review (#266): folding must not silently clear a warning it
+        // cannot settle - without coordinates the draft stays not-ready and
+        // keeps its explanation, and send stays disabled.
+        compose.setContent {
+            MaterialTheme {
+                ReviewScreen(readyDraft().copy(confirmedLatitude = null, confirmedLongitude = null,
+                    unresolved = setOf("missing_gps")), null, onSave = {}, onBack = {}, onSubmit = {})
+            }
+        }
+        compose.onNodeWithText("שמור טיוטה").performClick()
+        compose.onNodeWithText("GPS חסר").assertExists()
+        compose.onNodeWithText("שלח לעירייה").assertIsNotEnabled()
+    }
+
     @Test fun sendButtonSubmitsTheShownDraft() {
         // The screen hands the draft it actually shows to the submit
         // callback - AppShell then refuses anything but the saved copy.

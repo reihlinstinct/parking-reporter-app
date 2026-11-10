@@ -162,8 +162,8 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         compose.onAllNodes(hasText(text) and hasClickAction() and isEnabled())
             .fetchSemanticsNodes().isNotEmpty()
 
-    /** Shared-photo entry through a locally approved draft. */
-    fun driveToSaved(fields: FlowFields) {
+    /** Shared-photo entry: category + field edits, without saving. */
+    fun driveToEdited(fields: FlowFields) {
         // A photo with embedded GPS (every real live photo) first raises the
         // location prompt; a synthetic photo goes straight to the review.
         compose.waitUntil(15_000) {
@@ -192,6 +192,11 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         compose.onNodeWithText("זמן הצילום (24 שעות)").performScrollTo().performTextReplacement(il.sidewalks.reporter.ui.ReviewTime.display(fields.capturedAtIso))
         // Location comes from the original photo EXIF, never hidden UI injection.
         // The synthetic provider supplies known synthetic EXIF; live uses real EXIF.
+    }
+
+    /** Shared-photo entry through a locally saved draft. */
+    fun driveToSaved(fields: FlowFields) {
+        driveToEdited(fields)
         // Save is the only review action left before send (owner instruction
         // 2026-11-10): it folds the checked time/coordinates into the draft,
         // which is what enables send.

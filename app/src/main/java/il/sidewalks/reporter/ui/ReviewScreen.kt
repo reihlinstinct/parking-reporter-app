@@ -61,12 +61,23 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // checked time and coordinates into the draft exactly like the removed
     // confirm button did.
     fun foldedDraft(): ReviewDraft {
-        val iso = ReviewTime.toJerusalemIso(time, draft.confirmedTime)
-        return if (iso != null) draft.confirmEvidence(iso, latitude.toDoubleOrNull(), longitude.toDoubleOrNull()) else draft
+        val iso = ReviewTime.toJerusalemIso(time, draft.confirmedTime) ?: return draft
+        val lat = latitude.toDoubleOrNull()
+        val lon = longitude.toDoubleOrNull()
+        val folded = draft.confirmEvidence(iso, lat, lon)
+        // Tab review (#266): never silently clear a warning the fold cannot
+        // settle. Without coordinates the draft stays not-ready; keep the
+        // location warnings so the user still sees why send is disabled.
+        if (lat == null || lon == null) {
+            val unsettled = draft.unresolved.intersect(setOf(
+                ReviewWarning.MISSING_GPS.code, ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code))
+            return folded.copy(unresolved = unsettled)
+        }
+        return folded
     }
     fun confirmPendingEvidence() {
         val iso = ReviewTime.toJerusalemIso(time, draft.confirmedTime)
-        draft = if (iso != null) draft.confirmEvidence(iso, latitude.toDoubleOrNull(), longitude.toDoubleOrNull())
+        draft = if (iso != null) foldedDraft()
             else draft.copy(unresolved = draft.unresolved + ReviewWarning.TIME_NEEDS_CONFIRMATION.code)
     }
     suspend fun findAddress() {
