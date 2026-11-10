@@ -53,6 +53,15 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var manualResult by remember(initial.evidence.stableId) { mutableStateOf<il.sidewalks.reporter.municipal.StreetDirectory.ConfirmableAddress?>(null) }
     var manualBusy by remember { mutableStateOf(false) }
     var manualError by remember { mutableStateOf(false) }
+    // Tab review (#266): address warnings clear only when the field value
+    // actually CHANGES from the value that carried the warning - a keystroke
+    // that returns to the reviewed/suggested baseline is not a confirmation.
+    var addressBaseline by remember(initial.evidence.stableId) { mutableStateOf(initial.address) }
+    var pendingAddressWarnings by remember(initial.evidence.stableId) {
+        mutableStateOf(initial.unresolved.intersect(setOf(
+            ReviewWarning.ADDRESS_NEEDS_CONFIRMATION.code,
+            ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code)))
+    }
     var manualGeneration by remember { mutableIntStateOf(0) }
     var categoryMenu by remember { mutableStateOf(false) }
     // Owner instruction 2026-11-10 (phonemsg 01M73E6E2S6AZP46K75QS2S1WY):
@@ -158,7 +167,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 if (geocoding) Text(s.t("review.geocode.loading"))
                 Text(geocodeStatus?.let { s.t(it) }.orEmpty())
                 suggestions.forEach { suggestion ->
-                    TextButton(onClick = { draft = draft.edit(address = suggestion.streetAndHouse).copy(unresolved = draft.unresolved + ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code); editing = true }) {
+                    TextButton(onClick = { draft = draft.edit(address = suggestion.streetAndHouse).copy(unresolved = draft.unresolved + ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code); addressBaseline = suggestion.streetAndHouse; pendingAddressWarnings = pendingAddressWarnings + ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code; editing = true }) {
                         Text(reviewAddressSuggestionText(s, suggestion.streetAndHouse))
                     }
                 }
@@ -186,9 +195,12 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         OutlinedTextField(draft.address, {
             // Editing the field labeled "רחוב ומספר בית שאישרת" IS the explicit
             // address confirmation (Tab #266); the save/send fold does not
-            // clear address warnings.
-            draft = draft.edit(address = it).copy(unresolved = draft.unresolved -
-                ReviewWarning.ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code)
+            // clear address warnings. But only a CHANGED value confirms:
+            // typing and deleting back to the baseline re-flags the warning.
+            val edited = draft.edit(address = it)
+            draft = edited.copy(unresolved = edited.unresolved -
+                ReviewWarning.ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code +
+                if (it != addressBaseline) emptySet() else pendingAddressWarnings)
             if (draft.evidence.latitude == null || draft.evidence.longitude == null) {
                 latitude = ""; longitude = ""; manualResult = null; manualGeneration++
                 draft = draft.copy(confirmedLatitude = null, confirmedLongitude = null,
@@ -203,7 +215,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         if (geocoding) Text(s.t("review.geocode.loading"))
         Text(geocodeStatus?.let { s.t(it) }.orEmpty())
         suggestions.forEach { suggestion ->
-            TextButton(onClick = { draft = draft.edit(address = suggestion.streetAndHouse).copy(unresolved = draft.unresolved + ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code) }) {
+            TextButton(onClick = { draft = draft.edit(address = suggestion.streetAndHouse).copy(unresolved = draft.unresolved + ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code); addressBaseline = suggestion.streetAndHouse; pendingAddressWarnings = pendingAddressWarnings + ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code }) {
                 Text(reviewAddressSuggestionText(s, suggestion.streetAndHouse))
             }
         }
@@ -239,6 +251,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 Text(s.t("review.location.confirm_note"))
                 Button(onClick = {
                     latitude = result.latitude.toString(); longitude = result.longitude.toString()
+                    addressBaseline = result.address; pendingAddressWarnings = emptySet()
                     draft = draft.edit(address = result.address).copy(confirmedLatitude = result.latitude,
                         confirmedLongitude = result.longitude,
                         unresolved = draft.unresolved - ReviewWarning.MISSING_GPS.code - ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code)

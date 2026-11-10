@@ -93,6 +93,22 @@ class SubmissionGateTest {
         compose.onNodeWithText("שלח לעירייה").assertIsEnabled()
     }
 
+    @Test fun addressEditThatReturnsToBaselineDoesNotConfirm() {
+        // Tab review (#266): one keystroke typed and deleted must not confirm -
+        // returning to the suggested value re-flags the warning.
+        compose.setContent {
+            MaterialTheme {
+                ReviewScreen(readyDraft().copy(unresolved = setOf("suggested_address_needs_confirmation")), null,
+                    onSave = {}, onBack = {}, onSubmit = {})
+            }
+        }
+        compose.onNodeWithText("רחוב ומספר בית שאישרת").performTextReplacement("רחוב 129")
+        compose.onNodeWithText("רחוב ומספר בית שאישרת").performTextReplacement("רחוב 12")
+        compose.onNodeWithText("שמור טיוטה").performClick()
+        compose.onNodeWithText("כתובת דורשת אישור").assertExists()
+        compose.onNodeWithText("שלח לעירייה").assertIsNotEnabled()
+    }
+
     @Test fun saveKeepsUnsettledLocationWarnings() {
         // Tab review (#266): folding must not silently clear a warning it
         // cannot settle - without coordinates the draft stays not-ready and

@@ -34,7 +34,9 @@ class MunicipalReportTextStaysHebrewTest {
     private val reportTextSha256 = "1eea38c776f3d3719bcd6a8c50a7e13e5316de84cb4762e82d06ec5453b69e4f"
 
     private fun draft(category: ReportCategory): ReviewDraft {
-        val evidence = Evidence("stable-115", "a".repeat(64), "2026-11-08T10:00:00+02:00", 31.7683, 35.2137)
+        // The hash matches the jpeg bytes written in submit(): the coordinator
+        // refuses a photo whose bytes do not match the draft evidence (#266).
+        val evidence = Evidence("stable-115", il.sidewalks.reporter.intake.EncryptedPackage.sha256(byteArrayOf(1, 2, 3, 4)), "2026-11-08T10:00:00+02:00", 31.7683, 35.2137)
         return ReviewDraft(evidence, if (category.needsPlate) "12345678" else "", "רחוב הנביאים 12", category.code,
             reportText, emptySet())
     }

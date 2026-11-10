@@ -16,8 +16,12 @@ class SubmissionCoordinatorTest {
         municipalSubscriptionKey = "k", municipalUsername = "u", municipalPassword = "p",
     )
 
+    private val jpegBytes = byteArrayOf(1, 2, 3, 4)
+
     private fun readyDraft(): ReviewDraft {
-        val evidence = Evidence("stable-1", "a".repeat(64), "2026-11-08T10:00:00+02:00", 31.7683, 35.2137)
+        // The evidence hash must match jpegBytes: the coordinator refuses a
+        // photo whose bytes do not match the draft evidence (Tab review #266).
+        val evidence = Evidence("stable-1", il.sidewalks.reporter.intake.EncryptedPackage.sha256(jpegBytes), "2026-11-08T10:00:00+02:00", 31.7683, 35.2137)
         return ReviewDraft(evidence, "12345678", "רחוב הנביאים 12", "sidewalk_parking",
             "רכב חנה על המדרכה", emptySet())
     }
@@ -33,8 +37,20 @@ class SubmissionCoordinatorTest {
 
     private fun jpegFile(): File {
         val f = File.createTempFile("original", ".jpg")
-        f.writeBytes(byteArrayOf(1, 2, 3, 4))
+        f.writeBytes(jpegBytes)
         return f
+    }
+
+    @Test fun photoHashMismatchIsRefusedBeforeAnyNetworkCall() {
+        // Tab review (#266): a draft paired with another report's photo must
+        // never reach the network - blocked before the first client call.
+        val client = RecordingClient()
+        val wrongPhoto = File.createTempFile("other", ".jpg").apply { writeBytes(byteArrayOf(9, 9, 9, 9)) }
+        val outcome = coordinator(client).submit(readyDraft(), settings, wrongPhoto) as SubmissionCoordinator.Outcome.Blocked
+        assertEquals(SubmissionCoordinator.Reason.INPUT_INVALID, outcome.reason)
+        assertEquals(0, client.logins)
+        assertEquals(null, client.seenContact)
+        assertEquals(null, client.seenReport)
     }
 
     @Test fun passportLocalProfileCannotReachAnyNetworkEvenWithValidIdAndCredentials() {

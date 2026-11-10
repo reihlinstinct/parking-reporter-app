@@ -314,11 +314,16 @@ fun AppShell(
     }
     fun openRecord(record: ReportRecord) {
         try {
-            draft = il.sidewalks.reporter.ledger.DraftCodec.decode(record.draftJson)
+            val decoded = il.sidewalks.reporter.ledger.DraftCodec.decode(record.draftJson)
             val file = File(context.noBackupFilesDir, record.originalRelativePath)
+            check(decoded.evidence.stableId == record.stableId && decoded.evidence.originalSha256 == record.originalSha256)
             check(file.canonicalPath.startsWith(context.noBackupFilesDir.canonicalPath + "/") && file.isFile)
             check(EvidenceReader().read(file, record.stableId).originalSha256 == record.originalSha256)
-            original = file; revision = record.revision; page = "review"
+            // Tab review (#266): assign draft/original/revision only after every
+            // check passes. The old order set draft first, so a failed check
+            // paired the tapped record's draft with the PREVIOUS record's
+            // original photo and revision - and Continue could send that mix.
+            draft = decoded; original = file; revision = record.revision; page = "review"
         } catch (_: Exception) { status = strings.t("shell.status.evidence_restore_failed") }
     }
     // The system photo picker needs no permissions (no camera, no location).

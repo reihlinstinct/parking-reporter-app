@@ -67,6 +67,12 @@ class SubmissionCoordinator(
         originalJpeg: File,
     ): Outcome {
         if (!draft.isReady()) return Outcome.Blocked(Reason.NOT_READY, "draft not ready")
+        // Tab review (#266): never send a photo whose bytes do not match the
+        // draft's evidence hash - a mis-paired draft and original would file
+        // the wrong photo. Refuse before any state write or network call.
+        val photoHash = il.sidewalks.reporter.intake.EncryptedPackage.sha256(originalJpeg.readBytes())
+        if (photoHash != draft.evidence.originalSha256)
+            return Outcome.Blocked(Reason.INPUT_INVALID, "photo bytes do not match the draft evidence hash")
         if (!PassportSubmission.isSupportedPhone(settings.phone)) return Outcome.Blocked(Reason.INPUT_INVALID, "unsupported reporter phone")
         if (!PassportSubmission.hasReviewedDisclosure(draft.exactHebrewText, settings))
             return Outcome.Blocked(Reason.PASSPORT_DISCLOSURE_REQUIRED, "passport disclosure must be saved before sending")
