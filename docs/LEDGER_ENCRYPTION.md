@@ -252,7 +252,7 @@ throws in Room. Every `fallbackToDestructiveMigration*` variant is forbidden
 in any build - a destructive fallback would delete the duplicate guard.
 Pinned by a source test that scans the Room database builder configuration.
 
-### 7. Key invalidation versus the duplicate guard (OWNER DECISION PENDING)
+### 7. Key invalidation versus the duplicate guard (DECIDED: option (a))
 
 Removing or force-resetting the lock screen permanently invalidates the
 auth-bound wrapping key (section 2). The one-report-per-photo guard lives
@@ -264,25 +264,17 @@ after which every previously filed photo can be imported and filed again.
 Encryption would thereby tie duplicate-guard loss to an ordinary action
 (removing the lock screen) that today is harmless.
 
-Two documented options; the owner picks one before implementation:
-
-- **(a) Tombstone-preserving recovery (RECOMMENDED).** A user-confirmed
-  key-loss recovery keeps every row's plaintext columns (`stableId`,
-  `originalSha256`, `originalRelativePath`, `revision`) as permanent
-  tombstones, marks the encrypted fields unreadable, and permanently refuses
-  open, approve and send for tombstoned rows. Their
-  `submissions/<stableId>.json` files are kept. New custody is created only
-  through a separately reviewed recovery proof bound to that exact tombstone
-  set. Tests must show `reserve` of a tombstoned hash still aborts after
-  recovery and after reopen. This keeps the guard - the property the whole
-  live-run machinery exists to protect - with no plaintext content exposure.
-- **(b) Accepted limitation.** An explicit owner ruling that guard loss
-  after lock-screen removal plus Clear storage is accepted, stated in the
-  threat model. This is weaker: duplicate filings are exactly what the guard
-  and the cross-run duplicate detection exist to prevent, and the trigger
-  (removing a lock screen) is a common user action.
-
-Recommendation: (a).
+Owner decision (user-approved 2026-11-10 15:35 IST, relayed via Instinct):
+option (a), tombstone-preserving recovery. A user-confirmed key-loss
+recovery keeps every row's plaintext columns (`stableId`, `originalSha256`,
+`originalRelativePath`, `revision`) as permanent tombstones, marks the
+encrypted fields unreadable, and permanently refuses open, approve and send
+for tombstoned rows. Their `submissions/<stableId>.json` files are kept.
+New custody is created only through a separately reviewed recovery proof
+bound to that exact tombstone set. Tests must show `reserve` of a
+tombstoned hash still aborts after recovery and after reopen. This keeps
+the guard - the property the whole live-run machinery exists to protect -
+with no plaintext content exposure.
 
 ### 8. Tests
 
