@@ -115,6 +115,7 @@ class ShellSettingsExtractionTest {
         "shell.submit.blocked.lookup_mismatch" to "קובץ הכתובות במכשיר מיושן או שונה. התקן את העותק העדכני",
         "shell.submit.draft_not_saved" to "הטיוטה לא נשמרה אחרי האישור. שמור ואשר מחדש לפני שליחה.",
         "shell.submit.sending" to "שולח לעירייה...",
+        "shell.submit.no_device_lock" to "הגדר נעילת מסך",
         "shell.unlock.submit_title" to "שליחת דיווח לעירייה",
         "shell.unlock.submit_subtitle" to "אימות נעילת המכשיר מאשר שליחת הדיווח לעיריית ירושלים",
         "shell.unlock.settings_title" to "הגדרות פרטיות",
