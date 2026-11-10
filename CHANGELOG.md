@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.26.13] - 2026-11-10
+
+### Other changes
+
+- diagnostics: trace the send tap from semantics click to submit gate (#265) (1aa29fc)
+
 ## [0.26.12] - 2026-11-10
 
 ### Fixes
