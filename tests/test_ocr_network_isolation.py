@@ -6,13 +6,15 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 class NetworkIsolationTest(unittest.TestCase):
-    def probe(self, codes):
+    def probe(self, codes, transport=0):
         with tempfile.TemporaryDirectory() as directory:
             # Functions run in the same shell; calls inside if are not subshells.
             script = '''source "$1"
 codes=($3)
+transport=$4
 index=0
 adb() {
+    if [[ "$*" == "get-state" ]]; then return "$transport"; fi
     if [[ "$*" == *toybox* ]]; then
         result=${codes[$index]:-0}
         index=$((index + 1))
@@ -23,7 +25,9 @@ adb() {
 sleep() { :; }
 ocr_network_isolation "$2"
 '''
-            return subprocess.run(['bash', '-c', script, 'test', str(ROOT/'scripts/ocr-network-isolation.sh'), directory, ' '.join(map(str, codes))], capture_output=True).returncode
+            return subprocess.run(['bash', '-c', script, 'test', str(ROOT/'scripts/ocr-network-isolation.sh'), directory, ' '.join(map(str, codes)), str(transport)], capture_output=True).returncode
+    def test_transport_failure_is_not_offline(self):
+        self.assertNotEqual(0, self.probe([0, 1, 1, 1], transport=1))
     def test_positive_probe_must_work(self):
         self.assertNotEqual(0, self.probe([1]))
     def test_transition_can_settle_to_three_negative_probes(self):

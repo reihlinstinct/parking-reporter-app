@@ -12,6 +12,10 @@ ocr_network_isolation() {
     # the same working TCP probe, with a bounded wait, before staging photos.
     for attempt in $(seq 1 10); do
         sleep 2
+        if ! adb get-state > "$output/device-state-$attempt.txt" 2>&1; then
+            echo 'device transport unavailable - refusing OCR'
+            return 1
+        fi
         if adb shell 'echo | toybox nc -w 3 1.1.1.1 443' > "$output/offline-probe-$attempt.txt" 2>&1; then
             offline=0
         else
