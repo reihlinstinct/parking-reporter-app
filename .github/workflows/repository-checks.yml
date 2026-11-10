@@ -59,6 +59,8 @@ jobs:
         run: |
           /tmp/venv/bin/python -m unittest discover -s tests -p 'test_trial_submit_preflight.py' -v
           /tmp/venv/bin/python -m unittest discover -s tests -p 'test_vpn_submit.py' -v
+      - name: Offline OCR network-isolation behavioral regression tests
+        run: /tmp/venv/bin/python -m unittest discover -s tests -p 'test_ocr_network_isolation.py' -v
       - name: Run synthetic intake smoke tests
         # pipefail: without it a failing or crashing test run still exits 0 through tee.
         run: |
