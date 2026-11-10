@@ -45,6 +45,7 @@ class SubmissionCoordinator(
 
     enum class Reason {
         NOT_APPROVED,
+        PASSPORT_LOCAL_ONLY,
         MISSING_CREDENTIALS,
         UNSUPPORTED_CATEGORY,
         ADDRESS_UNRESOLVED,
@@ -65,6 +66,7 @@ class SubmissionCoordinator(
         originalJpeg: File,
     ): Outcome {
         if (!draft.isApproved()) return Outcome.Blocked(Reason.NOT_APPROVED, "draft not approved")
+        if (settings.passportLocalOnly) return Outcome.Blocked(Reason.PASSPORT_LOCAL_ONLY, "passport local profile cannot submit")
         if (!settings.hasMunicipalCredentials()) {
             // Name exactly which values are missing (constant field IDs, never
             // values) so the UI can say it (owner 2026-11-09).

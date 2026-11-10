@@ -38,6 +38,14 @@ class SubmissionCoordinatorTest {
         return f
     }
 
+    @Test fun passportLocalProfileCannotReachAnyNetworkEvenWithValidIdAndCredentials() {
+        val client = RecordingClient()
+        val outcome = coordinator(client).submitApproved(approvedDraft(), settings.copy(passportLocalOnly = true, passportNumber = "SYNTHETIC-PASSPORT"), jpegFile()) as SubmissionCoordinator.Outcome.Blocked
+        assertEquals(SubmissionCoordinator.Reason.PASSPORT_LOCAL_ONLY, outcome.reason)
+        assertEquals(0, client.logins)
+        assertEquals(null, client.seenReport)
+    }
+
     @Test fun happyPathSubmitsWithPipelinePayloadShape() {
         val client = RecordingClient()
         val outcome = coordinator(client).submitApproved(approvedDraft(), settings, jpegFile())

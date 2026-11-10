@@ -21,6 +21,10 @@ class ShellSettingsExtractionTest {
 
     /** Key -> the Hebrew literal it replaced. */
     private val extracted = linkedMapOf(
+        "settings.passport.mode" to "ללא תעודת זהות ישראלית (דרכון, שמירה מקומית בלבד)",
+        "settings.passport.number" to "מספר דרכון (מקומי בלבד)",
+        "settings.passport.local_only" to "ממשק 106 הנתמך באפליקציה דורש כרגע תעודת זהות ישראלית. במצב דרכון אין שליחה לעירייה. אפשר לשמור את הדיווח במכשיר ולהגיש ידנית בערוץ אחר.",
+
         "settings.api.advanced" to "חיבור 106 מתקדם",
         "settings.phone.israel_only" to "אפשר לשמור מספר בינלאומי. שליחה ל-106 נתמכת כרגע רק עם מספר נייד ישראלי.",
         "settings.email.invalid" to "כתובת האימייל אינה תקינה. בדוק את הכתובת.",
@@ -210,6 +214,7 @@ class ShellSettingsExtractionTest {
             Reason.MISSING_CREDENTIALS to "חסרים פרטי גישה לעירייה בהגדרות",
             Reason.UNSUPPORTED_CATEGORY to "הקטגוריה אינה נתמכת לשליחה",
             Reason.ADDRESS_UNRESOLVED to "הכתובת לא נקבעה: $lri$d$pdi",
+            Reason.PASSPORT_LOCAL_ONLY to "ממשק 106 הנתמך באפליקציה דורש כרגע תעודת זהות ישראלית. במצב דרכון אין שליחה לעירייה. אפשר לשמור את הדיווח במכשיר ולהגיש ידנית בערוץ אחר.",
             Reason.INPUT_INVALID to "קלט לא תקין: $lri$d$pdi",
             Reason.MUNICIPAL_REVIEW_NEEDED to "המצב מול העירייה אינו ודאי. בדוק באפליקציית העירייה; לא בוצעה שליחה חוזרת. $lri$d$pdi",
             Reason.MUNICIPAL_API_FAILURE to "העירייה ענתה: $lri$d$pdi",

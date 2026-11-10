@@ -529,6 +529,7 @@ internal fun municipalOutcomeText(strings: Strings, outcome: SubmissionCoordinat
     is SubmissionCoordinator.Outcome.AlreadySubmitted ->
         strings.t("shell.submit.already_sent", mapOf("case_number" to (outcome.caseNumber ?: "")))
     is SubmissionCoordinator.Outcome.Blocked -> when (outcome.reason) {
+        SubmissionCoordinator.Reason.PASSPORT_LOCAL_ONLY -> strings.t("settings.passport.local_only")
         SubmissionCoordinator.Reason.NOT_APPROVED -> strings.t("shell.submit.blocked.not_approved")
         SubmissionCoordinator.Reason.MISSING_CREDENTIALS ->
             strings.t("shell.submit.blocked.missing_credentials") + missingCredentialsSuffix(strings, outcome.missingFields)

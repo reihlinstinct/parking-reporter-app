@@ -25,6 +25,8 @@ object SettingsCodec {
         if (settings.municipalPassword.isNotBlank()) {
             json.put("municipalPassword", settings.municipalPassword)
         }
+        if (settings.passportLocalOnly) json.put("passportLocalOnly", true)
+        if (settings.passportNumber.isNotBlank()) json.put("passportNumber", settings.passportNumber)
         return json.toString().toByteArray(Charsets.UTF_8)
     }
 
@@ -41,6 +43,8 @@ object SettingsCodec {
             municipalSubscriptionKey = json.optString("municipalSubscriptionKey"),
             municipalUsername = json.optString("municipalUsername"),
             municipalPassword = json.optString("municipalPassword"),
+            passportLocalOnly = json.optBoolean("passportLocalOnly", false),
+            passportNumber = json.optString("passportNumber"),
         )
     }
 }
