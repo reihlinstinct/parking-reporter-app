@@ -17,7 +17,7 @@ class ContactInputValidationTest {
     @get:Rule val compose = createComposeRule()
     private fun screenshot(name: String) {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        File(context.filesDir, name).outputStream().use { compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        File(context.filesDir, name).outputStream().use { compose.onNode(isRoot() and hasAnyDescendant(hasText("טלפון"))).captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
     }
     @Test fun invalidIdAndEmailBlockSaveAndPhoneStoresCanonical() {
         UiPrefsLanguageStore.of(InstrumentationRegistry.getInstrumentation().targetContext).set("he")
