@@ -146,3 +146,15 @@ requires an app release carrying the new pin and coordinated installation of
 the matching private file. The file itself must not enter this public repo.
 Synthetic E2E uses the test-only in-memory directory seam from #185, not an
 override of the production pin or an installed-file mutation.
+
+## Manual live-emulator workflow
+
+The protected `m0-trial-submit` environment supplies a temporary
+`PRIVATE_LOOKUP_READ_TOKEN`, scoped to Contents:read on the private source
+repository only. The workflow downloads the directory outside the evidence
+bundle, verifies the production whole-file pin, installs it in the app's
+`no_backup/addresses.json`, and verifies its device hash before instrumentation.
+Missing, wrong or unreadable data fails before any tap. No lookup data is
+committed or uploaded as an artifact; runner/device copies are removed.
+Revoke the temporary token after the night's test, verify 401, then remove
+the environment secret. Never copy it into repository-level secrets.

@@ -35,9 +35,24 @@ export MOCK_DEVICE="$tmp/device"
 printf 'fake photo bytes\n' > "$tmp/photo.jpg"
 printf '{"plate":"00000000"}\n' > "$tmp/params.json"
 
-scripts/stage-live-files.sh "$tmp/photo.jpg" "$tmp/params.json" | grep -q 'preflight: staged photo and params verified on device'
+printf '{"version":1,"streets":[],"addresses":[]}\n' > "$tmp/addresses.json"
+mkdir -p "$tmp/repo/scripts" "$tmp/repo/app/src/main/java/il/sidewalks/reporter/municipal"
+cp scripts/stage-live-files.sh "$tmp/repo/scripts/"
+pin=$(sha256sum "$tmp/addresses.json" | cut -d' ' -f1)
+printf '        "%s"\n' "$pin" > "$tmp/repo/app/src/main/java/il/sidewalks/reporter/municipal/AddressLookupPin.kt"
+cd "$tmp/repo"
+sh "$tmp/repo/scripts/stage-live-files.sh" "$tmp/photo.jpg" "$tmp/params.json" "$tmp/addresses.json" | grep -q 'preflight: staged photo and params verified on device'
 test -s "$tmp/device/il.sidewalks.reporter.test/files/live-photo.jpg"
 test -s "$tmp/device/il.sidewalks.reporter/files/live-params.json"
 cmp "$tmp/photo.jpg" "$tmp/device/il.sidewalks.reporter.test/files/live-photo.jpg"
 
+cmp "$tmp/addresses.json" "$tmp/device/il.sidewalks.reporter/no_backup/addresses.json"
+printf 'tampered' > "$tmp/addresses.json"
+if sh "$tmp/repo/scripts/stage-live-files.sh" "$tmp/photo.jpg" "$tmp/params.json" "$tmp/addresses.json" >/dev/null 2>&1; then
+  echo 'mismatched directory was accepted' >&2; exit 1
+fi
+rm "$tmp/addresses.json"
+if sh "$tmp/repo/scripts/stage-live-files.sh" "$tmp/photo.jpg" "$tmp/params.json" "$tmp/addresses.json" >/dev/null 2>&1; then
+  echo 'missing directory was accepted' >&2; exit 1
+fi
 echo 'staging regression test passed: first-install (no files/ dir) handled'

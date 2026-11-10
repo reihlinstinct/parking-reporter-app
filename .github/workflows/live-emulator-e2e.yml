@@ -97,6 +97,24 @@ jobs:
             done < <(jq -r '.artifacts[] | select(.expired | not) | [.id, .archive_download_url] | @tsv' <<<"$resp")
           fi
           echo 'no prior live run took this digest'
+      - name: Fetch the pinned private address directory
+        env:
+          PRIVATE_LOOKUP_READ_TOKEN: ${{ secrets.PRIVATE_LOOKUP_READ_TOKEN }}
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$PRIVATE_LOOKUP_READ_TOKEN" || { echo 'private lookup read token missing'; exit 1; }
+          mkdir -p /tmp/live-private
+          curl -fsSL --retry 2 \
+            -H "Authorization: Bearer $PRIVATE_LOOKUP_READ_TOKEN" \
+            -H 'Accept: application/vnd.github.raw+json' \
+            'https://api.github.com/repos/reihlinstinct/parking-reports/contents/addresses.json?ref=main' \
+            -o /tmp/live-private/addresses.json
+          pin=$(sed -n 's/^        "\([0-9a-f]\{64\}\)"$/\1/p' app/src/main/java/il/sidewalks/reporter/municipal/AddressLookupPin.kt)
+          test -n "$pin" && test "$(sha256sum /tmp/live-private/addresses.json | cut -d' ' -f1)" = "$pin" || {
+            echo 'private lookup does not match production pin'; exit 1;
+          }
+          echo 'private address directory verified (contents withheld)'
       - name: Build app and test APKs
         run: sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
       - name: Pre-download the emulator system image (direct, before any tunnel)
@@ -307,7 +325,7 @@ jobs:
             # throwaway PIN - kept in sync with liveDevicePin in
             # LiveEmulatorSubmissionTest.kt; the device is ephemeral.
             adb shell locksettings set-pin 131313
-            sh scripts/stage-live-files.sh /tmp/live-e2e/photo.jpg /tmp/live-e2e/params.json
+            sh scripts/stage-live-files.sh /tmp/live-e2e/photo.jpg /tmp/live-e2e/params.json /tmp/live-private/addresses.json
             echo "TIMING staging-preflight-ok $(date -u +%FT%TZ)"
             ( for i in 1 2 3 4 5 6; do if [ -f /tmp/live-e2e/stop-rec ]; then break; fi; adb shell screenrecord --time-limit 170 /sdcard/live-rec-$i.mp4 >/dev/null 2>&1; done ) &
             # Launcher-icon proof (owner request 2026-11-10): with the app
@@ -362,7 +380,7 @@ jobs:
             # produced empty files silently).
             adb shell "run-as il.sidewalks.reporter cat files/live-e2e-shots.txt" > /tmp/live-e2e/shots.txt 2>/dev/null || true
             while read -r shot; do case "$shot" in live-e2e-*.png) adb shell "run-as il.sidewalks.reporter cat 'files/$shot'" > "/tmp/live-e2e/$shot" 2>/dev/null || true;; esac; done < /tmp/live-e2e/shots.txt
-            adb shell "run-as il.sidewalks.reporter rm -f files/live-params.json files/live-e2e-*.png files/live-e2e-shots.txt files/live-e2e-case-number.txt files/live-e2e-submission-state.json" || true
+            adb shell "run-as il.sidewalks.reporter rm -f no_backup/addresses.json files/live-params.json files/live-e2e-*.png files/live-e2e-shots.txt files/live-e2e-case-number.txt files/live-e2e-submission-state.json" || true
             adb shell "run-as il.sidewalks.reporter.test rm -f files/live-photo.jpg" || true
       - name: Encrypt the recording and raw output
         if: always()
@@ -468,5 +486,5 @@ jobs:
           sudo python3 trial/l2tp.py down || true
           rm -f /tmp/egress-blocked
           rm -rf /tmp/trial-state /tmp/trial-result.txt /tmp/live-e2e/prior
-          shred -u /tmp/live-e2e/photo.jpg /tmp/live-e2e/params.json 2>/dev/null || true
+          shred -u /tmp/live-private/addresses.json /tmp/live-e2e/photo.jpg /tmp/live-e2e/params.json 2>/dev/null || true
           rm -rf /tmp/live-e2e
