@@ -50,6 +50,11 @@ class ReviewAddressTest {
         File(context.filesDir, "review-resolved-address-synthetic.png").outputStream().use {
             compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
         }
+        compose.onNodeWithText("סיום עריכה").performScrollTo().performClick()
+        File(context.filesDir, "review-address-summary-synthetic.png").outputStream().use {
+            compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+        }
+        compose.onNodeWithText("ערוך").performScrollTo().performClick()
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
         compose.runOnIdle {
             assertEquals("רחוב בדיקה 12", saved?.address)

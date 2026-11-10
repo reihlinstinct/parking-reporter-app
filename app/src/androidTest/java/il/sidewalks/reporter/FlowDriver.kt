@@ -70,7 +70,10 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         compose.onNodeWithText("רחוב ומספר בית שאישרת").performScrollTo().performTextReplacement(fields.address)
         compose.onNodeWithText("הטקסט המדויק לבדיקה").performScrollTo().performTextReplacement(fields.text)
         compose.onNodeWithText("זמן מאושר עם אזור זמן (ISO)").performScrollTo().performTextReplacement(fields.capturedAtIso)
-        compose.onNodeWithText("תיקון מיקום מתקדם").performScrollTo().performClick()
+        // Missing-GPS drafts already expose Advanced; GPS drafts keep it closed.
+        if (compose.onAllNodesWithText("תיקון מיקום מתקדם").fetchSemanticsNodes().isNotEmpty()) {
+            compose.onNodeWithText("תיקון מיקום מתקדם").performScrollTo().performClick()
+        }
         compose.onNodeWithText("קו רוחב").performScrollTo().performTextReplacement(fields.latitude)
         compose.onNodeWithText("קו אורך").performScrollTo().performTextReplacement(fields.longitude)
         compose.onNodeWithText("אשר זמן, מיקום וכתובת שבדקת").performScrollTo().performClick()
