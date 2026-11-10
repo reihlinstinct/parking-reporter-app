@@ -35,7 +35,7 @@ class SettingsScreenSecondSaveTest {
         compose.onNodeWithText("טלפון").performScrollTo().performTextReplacement("0500000001")
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().performClick()
         compose.runOnIdle {
-            assertEquals("0500000001", saved?.phone)
+            assertEquals("+972500000001", saved?.phone)
             // The user never touched the credential fields: they stay stored.
             assertEquals("synthetic-api-pass", saved?.municipalPassword)
             assertEquals("synthetic-subscription-key", saved?.municipalSubscriptionKey)
@@ -49,6 +49,7 @@ class SettingsScreenSecondSaveTest {
         val profile = mutableStateOf<ReporterSettings?>(stored)
         var saved: ReporterSettings? = null
         compose.setContent { MaterialTheme { SettingsScreen(profile.value, { s, touched, done -> saved = mergeReporterSettings(s, stored, touched); profile.value = null; done() }, {}) } }
+        compose.onNodeWithText("חיבור 106 מתקדם").performScrollTo().performClick()
         compose.onNodeWithText("סיסמת API").performScrollTo().performTextReplacement("")
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().performClick()
         compose.runOnIdle {

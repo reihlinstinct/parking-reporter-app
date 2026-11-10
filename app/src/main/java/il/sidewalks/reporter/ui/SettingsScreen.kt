@@ -73,6 +73,7 @@ fun SettingsScreen(
     var touchedMunicipal by remember { mutableStateOf(setOf<String>()) }
     var saved by remember { mutableStateOf(false) }
     var phoneFocused by remember { mutableStateOf(false) }
+    var advanced106 by remember { mutableStateOf(false) }
     ProvideStringsIfMissing {
     val s = LocalStrings.current
     Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -104,11 +105,14 @@ fun SettingsScreen(
         OutlinedTextField(email, { email = it; saved = false }, label = { Text(s.t("settings.field.email")) }, isError = email.isNotBlank() && !ReporterInput.validEmail(email), supportingText = { if (email.isNotBlank() && !ReporterInput.validEmail(email)) Text(s.t("settings.email.invalid")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
         if (!basicSetup) {
         HorizontalDivider()
+        TextButton(onClick = { advanced106 = !advanced106 }) { Text(s.t("settings.api.advanced")) }
+        if (advanced106) {
         Text(s.t("settings.api.title"), style = MaterialTheme.typography.titleMedium)
         Text(s.t("settings.api.description"), style = MaterialTheme.typography.bodySmall)
         OutlinedTextField(subscriptionKey, { subscriptionKey = it; saved = false; touchedMunicipal = touchedMunicipal + "subscription_key" }, label = { Text(s.t("settings.field.subscription_key")) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
         OutlinedTextField(apiUsername, { apiUsername = it; saved = false; touchedMunicipal = touchedMunicipal + "api_username" }, label = { Text(s.t("settings.field.api_username")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
         OutlinedTextField(apiPassword, { apiPassword = it; saved = false; touchedMunicipal = touchedMunicipal + "api_password" }, label = { Text(s.t("settings.field.api_password")) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
+        }
         }
         // Blank personal fields keep the stored values via mergeReporterSettings in the
         // caller's save callback; a municipal credential field saves as typed only when
