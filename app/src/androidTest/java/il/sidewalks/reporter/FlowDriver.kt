@@ -231,10 +231,13 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
      * it in-run. When [screenshotEveryMs] > 0 the long outcome wait is
      * captured every that many ms into live-e2e-wait-NN.png files.
      * [onTapAboutToFire] runs immediately before the real click (after all
-     * pre-tap gates pass) - the live caller emits its SEND_TAPPED marker
-     * there so the marker can never precede a real tap by the gate waits.
+     * pre-tap gates pass) with the 1-based tap number - the live caller emits
+     * its SEND_TAPPED marker there so the marker can never precede a real tap
+     * by the gate waits. [onNote] reports why the tap loop stopped without a
+     * tap (record directory not provably empty, or MAX_SEND_TAPS reached) so
+     * the live caller can emit a marker for it, not only a logcat line.
      */
-    fun tapSendAndAwaitOnce(outcomeWaitMs: Long, screenshotEveryMs: Long = 0, onTapAboutToFire: () -> Unit = {}, devicePin: String? = null): SendOutcome {
+    fun tapSendAndAwaitOnce(outcomeWaitMs: Long, screenshotEveryMs: Long = 0, onTapAboutToFire: (Int) -> Unit = {}, devicePin: String? = null, onNote: (String) -> Unit = {}): SendOutcome {
         // Run 42821291508: the tap raced the tail of on-device OCR. OCR was
         // still running when the send button was matched as enabled; its
         // completion recomposes the review screen (and a plate auto-fill
@@ -255,15 +258,18 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
             return SendOutcome.SEND_NOT_FIRED
         }
         // The state machine writes its per-report record BEFORE the first
-        // network call, so while no record exists a tap provably fired
-        // nothing and re-tapping cannot duplicate anything at the city.
-        // Snapshotted once here and compared before EVERY re-tap below: a
-        // new record after any tap ends the loop with no further tap, and
-        // the caller arbitrates that SEND_NOT_FIRED into OUTCOME_UNKNOWN.
+        // network call, so positive proof that the record directory is absent
+        // or empty proves no request has fired and a tap cannot duplicate
+        // anything at the city. That proof is re-established immediately
+        // before EVERY tap (first and re-taps alike) inside the loop below:
+        // File.list() is null both for an absent directory and for one that
+        // cannot be read, so only the absent case is proof - an unreadable
+        // path or ANY entry at all (a record, a .tmp file, anything) stops
+        // the loop with no tap, and the live caller arbitrates that
+        // SEND_NOT_FIRED into OUTCOME_UNKNOWN (#264 review).
         val submissionsDir = File(
             InstrumentationRegistry.getInstrumentation().targetContext.noBackupFilesDir,
             "submissions")
-        val recordsBefore = submissionsDir.list()?.toSet() ?: emptySet()
         var tap = 0
         while (true) {
             val enabled = try {
@@ -275,12 +281,17 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
                 screenshot("live-e2e-send-never-enabled.png")
                 return SendOutcome.SEND_NOT_FIRED
             }
-            // Let in-flight recomposition settle before the real click:
-            // run 42853563754 clicked during the review screen's recompose
-            // churn and the semantics click no-opped silently.
-            compose.waitForIdle()
+            // clickButton settles in-flight recomposition itself before the
+            // real click: run 42853563754 clicked during the review screen's
+            // recompose churn and the semantics click no-opped silently.
+            if (!noSubmissionRecordProvably(submissionsDir)) {
+                println("FLOW_DRIVER submission record dir not provably empty before send tap ${tap + 1} - not tapping")
+                onNote("SEND_NOT_FIRED reason=record-dir-not-provably-empty")
+                screenshot("live-e2e-send-record-unreadable.png")
+                return SendOutcome.SEND_NOT_FIRED
+            }
             tap += 1
-            onTapAboutToFire()
+            onTapAboutToFire(tap)
             clickButton("שלח לעירייה")
             // Live path: the submit gate raises the system ConfirmDeviceCredential
             // prompt (MainActivity.authenticate). Complete it when a PIN was
@@ -301,18 +312,16 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
                 }; true
             } catch (e: ComposeTimeoutException) { false }
             if (fired) break
-            // The tap no-opped. Re-tap ONLY while the pre-network record
-            // still proves no request fired; never tap again once a network
-            // call may have begun. Bounded by MAX_SEND_TAPS.
-            if ((submissionsDir.list()?.toSet() ?: emptySet()) != recordsBefore) {
-                println("FLOW_DRIVER submission record appeared after send tap $tap - not re-tapping")
-                return SendOutcome.SEND_NOT_FIRED
-            }
+            // The tap no-opped. A re-tap happens only after the loop
+            // re-proves above that still no submission record exists - never
+            // once a network call may have begun - and only up to
+            // MAX_SEND_TAPS.
             if (tap >= MAX_SEND_TAPS) {
                 println("FLOW_DRIVER send tap $tap left no sending state and no record - giving up")
+                onNote("SEND_NOT_FIRED reason=max-taps")
                 return SendOutcome.SEND_NOT_FIRED
             }
-            println("FLOW_DRIVER send tap $tap no-opped (no sending state, no record) - re-tapping")
+            println("FLOW_DRIVER send tap $tap no-opped (no sending state, provably no record) - re-tapping after re-proof")
         }
         screenshot("live-e2e-after-send-tap.png")
         val startedAt = System.currentTimeMillis()
@@ -405,6 +414,20 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         return node.config[SemanticsProperties.Text].joinToString(separator = "") { it.text }
     }
 
+    /**
+     * Positive proof that no submission record exists under [dir]: the path
+     * is absent, or it is a readable directory with no entries. File.list()
+     * returns null both for an absent path AND for one that cannot be read
+     * (an I/O error, or a non-directory at the path) - only the absent case
+     * is proof, so a null listing on an existing path fails closed, as does
+     * ANY entry at all (a record file, a .tmp, anything) (#264 review).
+     */
+    private fun noSubmissionRecordProvably(dir: File): Boolean {
+        if (!dir.exists()) return true
+        val names = dir.list() ?: return false
+        return names.isEmpty()
+    }
+
     private companion object {
         /** Lists the screenshots that actually landed, one filename per line; the workflow pulls by it. */
         const val SHOTS_MANIFEST = "live-e2e-shots.txt"
@@ -413,10 +436,12 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         /** How long to wait for an ENABLED send button before calling the tap missed. Covers async approval/save. */
         const val SEND_ENABLED_WAIT_MS = 30_000L
 
-        /** Total send taps per call: a no-op tap is re-tried only while the
-         * pre-network submission record proves nothing fired (never after a
-         * network call may have begun) - see tapSendAndAwaitOnce. */
-        const val MAX_SEND_TAPS = 3
+        /** Total send taps per call: a no-op tap is re-tried only on fresh
+         * positive proof that no submission record exists (never after a
+         * network call may have begun) - see tapSendAndAwaitOnce. A live run
+         * taps at most MAX_SEND_TAPS times per call, times the caller's
+         * up-to-3 DRAFT_NOT_SAVED retries: 6 clicks worst case. */
+        const val MAX_SEND_TAPS = 2
         /** How long to wait for on-device OCR to go idle before arming the send tap. ML Kit on an emulator can be slow. */
         const val PLATE_ID_WAIT_MS = 120_000L
         /** How long the IME may take to report hidden after an insets-controller hide. */

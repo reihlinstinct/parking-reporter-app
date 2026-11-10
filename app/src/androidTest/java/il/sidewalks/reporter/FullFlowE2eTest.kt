@@ -201,4 +201,54 @@ class FullFlowE2eTest {
         }
     }
 
+    /**
+     * Tab #264 review: File.list() returns null both for an absent directory
+     * and for one that cannot be read, so a null listing is not proof that no
+     * submission record exists. With a plain FILE parked at the submissions
+     * path (exists() true, list() null) the driver cannot prove a send tap is
+     * pre-network, so it must refuse to tap at all.
+     */
+    @Test fun sendTapWithoutProvablyEmptyRecordDirIsNotFired() {
+        claimSyntheticPhoto()
+        val settings = ReporterSettings(
+            firstName = "ישראל", lastName = "ישראלי", phone = "+972501234567",
+            idNumber = "000000018", email = "synthetic@example.com",
+            municipalSubscriptionKey = "synthetic-key",
+            municipalUsername = "synthetic-user",
+            municipalPassword = "synthetic-pass")
+        MockWebServer().use { server ->
+            server.start()
+            try {
+                launchFlow(settings) { s ->
+                    OkHttpMunicipalClient.forTesting(server.url("/"),
+                        s.municipalSubscriptionKey, s.municipalUsername, s.municipalPassword)
+                }
+                val blocker = File(
+                    InstrumentationRegistry.getInstrumentation().targetContext.noBackupFilesDir,
+                    "submissions")
+                blocker.writeText("not a directory - an unreadable listing must fail closed")
+                try {
+                    val driver = FlowDriver(compose)
+                    driver.driveToApproved(FlowFields(
+                        text = "רכב חונה על המדרכה בתרחיש בדיקה סינתטי",
+                        plate = "12345678",
+                        address = "רחוב בדיקה 1",
+                        capturedAtIso = "2026-01-01T12:00:00+02:00",
+                        latitude = "31.77",
+                        longitude = "35.2137",
+                        categoryLabel = "חניה על המדרכה"))
+                    var tapped = false
+                    assertEquals(FlowDriver.SendOutcome.SEND_NOT_FIRED,
+                        driver.tapSendAndAwaitOnce(5_000, onTapAboutToFire = { tapped = true }))
+                    assertTrue("send must not be tapped while the record directory is not provably empty", !tapped)
+                    assertEquals(0, server.requestCount)
+                } finally {
+                    blocker.delete()
+                }
+            } finally {
+                cleanOwnedState()
+            }
+        }
+    }
+
 }

@@ -175,19 +175,25 @@ class LiveEmulatorSubmissionTest {
             // network call, so a new record proves a request fired. Snapshot
             // now: it is the arbiter if the sending label never shows.
             val submissionsDir = File(context.noBackupFilesDir, "submissions")
-            val submissionsBefore = submissionsDir.list()?.toSet() ?: emptySet()
+            // The snapshot keeps the absent-vs-unreadable distinction:
+            // File.list() is null both for an absent directory (provably no
+            // record) and for one that cannot be read (no proof at all) -
+            // the same distinction the driver's per-tap proof makes (#264).
+            fun recordNames(): Set<String>? = if (!submissionsDir.exists()) emptySet() else submissionsDir.list()?.toSet()
+            val submissionsBefore = recordNames()
             // SEND_TAPPED is emitted by the driver immediately before the
             // real click (after its pre-tap gates): a gate timeout returns
             // SEND_NOT_FIRED with no marker, so the public log can never show
             // a tap that did not happen (#259 review, run 42821291508).
-            val onTap = { marker("SEND_TAPPED"); sendTapped = true }
+            val onTap = { n: Int -> marker("SEND_TAPPED tap=$n"); sendTapped = true }
+            val onDriverNote = { note: String -> marker(note) }
             // A live call can be slow; the wait is deliberately longer than
             // the stub's. DRAFT_NOT_SAVED means the gate refused and nothing
             // was sent, so only then is a retry safe.
             // 300s: the municipal API through the owner tunnel can answer
             // slowly; a slow-but-successful response must still be caught.
             // The 120s wait is what turned run 42762339581 OUTCOME_UNKNOWN.
-            var outcome = driver.tapSendAndAwaitOnce(300_000, screenshotEveryMs = 20_000, onTapAboutToFire = onTap, devicePin = liveDevicePin)
+            var outcome = driver.tapSendAndAwaitOnce(300_000, screenshotEveryMs = 20_000, onTapAboutToFire = onTap, devicePin = liveDevicePin, onNote = onDriverNote)
             var sendAttempts = 1
             // Only DRAFT_NOT_SAVED retries in-run at this level: the gate's
             // refusal proves no request was made. The driver itself re-taps a
@@ -198,7 +204,7 @@ class LiveEmulatorSubmissionTest {
             while (outcome == FlowDriver.SendOutcome.DRAFT_NOT_SAVED && sendAttempts < 3) {
                 Thread.sleep(500)
                 sendAttempts += 1
-                outcome = driver.tapSendAndAwaitOnce(300_000, screenshotEveryMs = 20_000, onTapAboutToFire = onTap, devicePin = liveDevicePin)
+                outcome = driver.tapSendAndAwaitOnce(300_000, screenshotEveryMs = 20_000, onTapAboutToFire = onTap, devicePin = liveDevicePin, onNote = onDriverNote)
             }
             when (outcome) {
                 FlowDriver.SendOutcome.SUBMITTED -> {
@@ -221,9 +227,12 @@ class LiveEmulatorSubmissionTest {
                 }
                 FlowDriver.SendOutcome.SEND_NOT_FIRED -> {
                     // Arbitrate the missing sending label against the state
-                    // record, which is written before the first network call.
-                    val submissionsAfter = submissionsDir.list()?.toSet() ?: emptySet()
-                    if (submissionsAfter != submissionsBefore) {
+                    // record, which is written before the first network
+                    // call. A null listing means the directory could not be
+                    // read - that is no proof either way, so it arbitrates to
+                    // OUTCOME_UNKNOWN exactly like an appeared record (#264).
+                    val submissionsAfter = recordNames()
+                    if (submissionsAfter == null || submissionsBefore == null || submissionsAfter != submissionsBefore) {
                         // A record appeared without the sending state: the
                         // request may have fired. Ambiguous - preserve the
                         // state evidence and let the 106 inbox decide.
