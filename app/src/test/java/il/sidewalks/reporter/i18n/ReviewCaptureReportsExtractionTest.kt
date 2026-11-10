@@ -339,8 +339,7 @@ class ReviewCaptureReportsExtractionTest {
         assertTrue(screen.contains("draft.confirmEvidence(iso,"))
         assertEquals(1, screen.split("fun confirmPendingEvidence()").size - 1)
         assertTrue("save folds the confirmation", screen.contains("onClick = { confirmPendingEvidence(); onSave(draft) }"))
-        assertTrue("send folds the confirmation", screen.contains("onClick = {
-                confirmPendingEvidence()"))
+        assertTrue("send folds the confirmation", screen.contains("onClick = {\n                confirmPendingEvidence()"))
         assertTrue("send enables on the folded draft's readiness", screen.contains("enabled = foldedDraft().isReady()"))
     }
 

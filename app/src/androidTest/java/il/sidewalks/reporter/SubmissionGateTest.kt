@@ -35,10 +35,14 @@ class SubmissionGateTest {
         compose.onNodeWithText("שלח לעירייה").assertExists()
     }
 
-    @Test fun sendStaysDisabledUntilReady() {
+    @Test fun sendStaysDisabledOnIncompleteDraft() {
+        // Send is the single confirmation (owner instruction 2026-11-10): the
+        // approval latch is gone, so a resolvable warning alone no longer
+        // disables send - the send tap itself folds the checked time. Only a
+        // structurally incomplete draft (here: no plate) keeps send disabled.
         compose.setContent {
             MaterialTheme {
-                ReviewScreen(readyDraft().copy(unresolved = setOf("time_needs_confirmation")), null,
+                ReviewScreen(readyDraft().copy(plate = ""), null,
                     onSave = {}, onBack = {}, onSubmit = {})
             }
         }

@@ -281,10 +281,10 @@ class M1ShellTest {
         compose.onNodeWithText("העלה תמונה").assertExists()
         compose.onNodeWithText("הדיווחים שלי").assertExists()
         compose.onNodeWithText("הדיווחים שלי").performClick()
-        compose.onNodeWithText("טיוטות שלא אושרו").assertExists()
+        compose.onNodeWithText("טיוטות").assertExists()
         // Shared test database may hold another test draft; navigation must not
         // assume an empty ledger or delete unrelated rows to make it empty.
-        compose.onNodeWithText("אושרו וממתינים לשליחה").assertExists()
+        compose.onNodeWithText("מוכנים לשליחה").assertExists()
         compose.onNodeWithText("היסטוריית דיווחים").assertExists()
         compose.onNodeWithText("בית").performClick()
         compose.onNodeWithText("צלם תמונה").assertExists()

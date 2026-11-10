@@ -474,6 +474,9 @@ fun AppShell(
             }, onBack = { page = "home" },
                 onSubmit = { shown -> submitReport(shown) },
                 submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, noDeviceCredential = noDeviceCredential)
+            // Save feedback lands in the shell status; show it here as on
+            // home/settings so שמור טיוטה visibly confirms (driver waits on it).
+            if (status.isNotEmpty()) Text(status)
         }
         "settings" -> SettingsScreen(profile, save = { value, touchedMunicipal, cleared ->
             persistSettings(value, touchedMunicipal, cleared)
