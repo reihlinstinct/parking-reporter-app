@@ -25,7 +25,7 @@ class ShellSettingsExtractionTest {
         "settings.passport.number" to "מספר דרכון",
         "shell.passport.review_required" to "נוסף לנוסח הדיווח גילוי על הדרכון ומספר מציין המקום. בדוק את הנוסח המלא, שמור ואשר מחדש לפני שליחה. אם מספר הדרכון חסר או אינו תקין, תקן אותו בהגדרות.",
         "settings.api.advanced" to "חיבור 106 מתקדם",
-        "settings.phone.israel_only" to "אפשר לשמור מספר בינלאומי. שליחה ל-106 נתמכת כרגע רק עם מספר נייד ישראלי.",
+        "settings.phone.international" to "אפשר להשתמש במספר בינלאומי. קוד המדינה נשמר כפי שהוזן.",
         "settings.email.invalid" to "כתובת האימייל אינה תקינה. בדוק את הכתובת.",
 
         "settings.id.invalid" to "מספר תעודת הזהות אינו תקין. בדוק את הספרות וספרת הביקורת.",

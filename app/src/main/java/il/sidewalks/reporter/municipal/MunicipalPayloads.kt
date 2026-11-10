@@ -77,15 +77,13 @@ object MunicipalPayloads {
         return number
     }
 
-    /** Israeli mobile: strips separators, maps +972 to 0, requires 05XXXXXXXX. */
+    /** Preserve international numbers; retain the existing Israeli mobile wire form. */
     fun normalizePhone(raw: String): String {
-        var phone = raw.replace(Regex("[\\s()\\-]"), "")
-        if (phone.startsWith("+972")) phone = "0" + phone.substring(4)
-        if (!Regex("05[0-9]{8}").matches(phone)) {
-            throw MunicipalInputException(
-                "Supply an Israeli mobile number, such as 05XXXXXXXX or +9725XXXXXXXX."
-            )
-        }
+        val phone = raw.replace(Regex("[\\s()\\-]"), "")
+        if (Regex("05[0-9]{8}").matches(phone)) return phone
+        if (Regex("\\+9725[0-9]{8}").matches(phone)) return "0" + phone.substring(4)
+        if (!Regex("\\+?[1-9][0-9]{6,14}").matches(phone))
+            throw MunicipalInputException("Supply a phone number with digits and an optional leading country-code plus.")
         return phone
     }
 

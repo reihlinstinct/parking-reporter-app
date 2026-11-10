@@ -99,11 +99,11 @@ fun SettingsScreen(
         } else OutlinedTextField(id, { id = ReporterInput.digits(it); saved = false }, label = { Text(s.t("settings.field.id_number")) }, isError = id.isNotBlank() && !ReporterInput.validId(id), supportingText = { if (id.isNotBlank() && !ReporterInput.validId(id)) Text(s.t("settings.id.invalid")) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
         OutlinedTextField(phone, { phone = ReporterInput.phoneInput(it); saved = false },
             label = { Text(s.t("settings.field.phone")) },
-            textStyle = TextStyle(textDirection = TextDirection.Ltr),
+            textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
             isError = phone.isNotBlank() && !ReporterInput.validPhone(phone),
             supportingText = {
                 if (phone.isNotBlank() && !ReporterInput.validPhone(phone)) Text(s.t("settings.phone.invalid"))
-                else if (phone.isNotBlank() && !ReporterInput.isIsraeliMobile(phone)) Text(s.t("settings.phone.israel_only"))
+                else if (phone.isNotBlank()) Text(s.t("settings.phone.international"))
             },
             visualTransformation = if (phoneFocused) VisualTransformation.None else PhoneDisplayTransformation,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, autoCorrectEnabled = false),
