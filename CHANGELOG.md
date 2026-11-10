@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.26.4] - 2026-11-10
+
+### Other changes
+
+- Make the catalog the single language source (#221) (ea07e5f)
+
 ## [0.26.3] - 2026-11-10
 
 ### Other changes
