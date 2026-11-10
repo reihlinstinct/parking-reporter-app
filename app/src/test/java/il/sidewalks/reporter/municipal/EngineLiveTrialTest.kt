@@ -112,7 +112,7 @@ class EngineLiveTrialTest {
                 subject = category.code,
                 exactHebrewText = text,
                 unresolved = emptySet(),
-            ).approve()
+            )
 
             val streets = StreetDirectory.load(env("TRIAL_STREET_LOOKUP_JSON"))
             val stateDir = File(env("TRIAL_STATE_DIR")).apply { mkdirs() }
@@ -121,7 +121,7 @@ class EngineLiveTrialTest {
             }
             // Single attempt: the workflow gives the submit phase no
             // fallback, so a failure here can never re-run a case write.
-            when (val outcome = coordinator.submitApproved(draft, settings(), photo)) {
+            when (val outcome = coordinator.submit(draft, settings(), photo)) {
                 is SubmissionCoordinator.Outcome.Submitted ->
                     report("SUBMITTED")
                 is SubmissionCoordinator.Outcome.AlreadySubmitted ->

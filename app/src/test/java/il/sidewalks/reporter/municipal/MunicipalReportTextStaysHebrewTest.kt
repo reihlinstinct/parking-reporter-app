@@ -34,9 +34,11 @@ class MunicipalReportTextStaysHebrewTest {
     private val reportTextSha256 = "1eea38c776f3d3719bcd6a8c50a7e13e5316de84cb4762e82d06ec5453b69e4f"
 
     private fun draft(category: ReportCategory): ReviewDraft {
-        val evidence = Evidence("stable-115", "a".repeat(64), "2026-11-08T10:00:00+02:00", 31.7683, 35.2137)
+        // The hash matches the jpeg bytes written in submit(): the coordinator
+        // refuses a photo whose bytes do not match the draft evidence (#266).
+        val evidence = Evidence("stable-115", il.sidewalks.reporter.intake.EncryptedPackage.sha256(byteArrayOf(1, 2, 3, 4)), "2026-11-08T10:00:00+02:00", 31.7683, 35.2137)
         return ReviewDraft(evidence, if (category.needsPlate) "12345678" else "", "רחוב הנביאים 12", category.code,
-            reportText, emptySet()).approve()
+            reportText, emptySet())
     }
 
     private fun fixture(): StreetDirectory = StreetDirectory.load("""
@@ -61,7 +63,7 @@ class MunicipalReportTextStaysHebrewTest {
         val client = RecordingClient()
         val jpeg = File.createTempFile("original", ".jpg").apply { writeBytes(byteArrayOf(1, 2, 3, 4)); deleteOnExit() }
         val outcome = SubmissionCoordinator({ client }, fixture()) { InMemorySubmissionStateStore() }
-            .submitApproved(draft(category), settings, jpeg)
+            .submit(draft(category), settings, jpeg)
         assertTrue("$category: $outcome", outcome is SubmissionCoordinator.Outcome.Submitted)
         return client.seenReport!!
     }
@@ -122,16 +124,16 @@ class MunicipalReportTextStaysHebrewTest {
         }
     }
 
-    /** The approval binds the same Hebrew bytes in every UI language. */
+    /** The review digest binds the same Hebrew bytes in every UI language. */
     @Test
-    fun approvalDigestIsLanguageIndependent() {
+    fun reviewDigestIsLanguageIndependent() {
         for (category in ReportCategory.entries) {
-            val digests = underEachLocale { draft(category).approvedDigest!! }
+            val digests = underEachLocale { draft(category).digest() }
             assertEquals("$category: $digests", 1, digests.values.toSet().size)
         }
         assertEquals(
-            "f2b464b922c81525e4ec8ac5a1fe3d83deb6f4fe15cd1ef261f8f3dd576f99e7",
-            draft(ReportCategory.SIDEWALK_PARKING).approvedDigest,
+            "52d2183b92c2a4ab2a9c858539d7564fac91152718a2ca9228011a3a4dcd2b54",
+            draft(ReportCategory.SIDEWALK_PARKING).digest(),
         )
     }
 

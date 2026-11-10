@@ -5,7 +5,7 @@ import il.sidewalks.reporter.core.ReviewDraft
 import il.sidewalks.reporter.ledger.DraftCodec
 import il.sidewalks.reporter.ui.ReviewWarning
 import il.sidewalks.reporter.ui.initialReviewWarnings
-import il.sidewalks.reporter.ui.reportsOpenApprovedText
+import il.sidewalks.reporter.ui.reportsOpenReadyText
 import il.sidewalks.reporter.ui.reportsOpenDraftText
 import il.sidewalks.reporter.ui.reviewAddressSuggestionText
 import il.sidewalks.reporter.ui.reviewAddressText
@@ -83,12 +83,7 @@ class ReviewCaptureReportsExtractionTest {
         "review.edit.time_field" to "זמן הצילום (24 שעות)",
         "review.edit.latitude_field" to "קו רוחב",
         "review.edit.longitude_field" to "קו אורך",
-        "review.edit.confirm_button" to "אשר זמן, מיקום וכתובת שבדקת",
-        "review.approve_button" to "אשר את התוכן לבדיקה",
-        "review.approved" to "התוכן אושר מקומית, לא נשלח",
-        "review.not_approved" to "התוכן לא אושר",
         "review.save_draft" to "שמור טיוטה",
-        "review.outgoing_preview" to "בדוק תמונה נפרדת ללא נתוני צילום",
         "review.submit.button" to "שלח לעירייה",
         "review.submit.sending" to "שולח לעירייה...",
         "review.submit.missing_credentials" to "לא ניתן לשלוח - יש להגדיר בהגדרות את הערכים:",
@@ -138,12 +133,12 @@ class ReviewCaptureReportsExtractionTest {
 
     private val reports = linkedMapOf(
         "reports.title" to "הדיווחים שלי",
-        "reports.pending.title" to "טיוטות שלא אושרו",
-        "reports.pending.empty" to "אין טיוטות ממתינות",
-        "reports.pending.open" to "פתח טיוטה {id}",
-        "reports.approved.title" to "אושרו וממתינים לשליחה",
-        "reports.approved.empty" to "אין דיווחים שאושרו וממתינים לשליחה",
-        "reports.approved.open" to "פתח דיווח {id}",
+        "reports.drafts.title" to "טיוטות",
+        "reports.drafts.empty" to "אין טיוטות",
+        "reports.drafts.open" to "פתח טיוטה {id}",
+        "reports.ready.title" to "מוכנים לשליחה",
+        "reports.ready.empty" to "אין דיווחים מוכנים לשליחה",
+        "reports.ready.open" to "פתח דיווח {id}",
         "reports.history.title" to "היסטוריית דיווחים",
         "reports.history.empty" to "אין דיווחים שנשלחו עדיין. שליחה חיה תופעל רק באישור נפרד, וסטטוס יגיע מדואר העירייה בלבד.",
     )
@@ -194,7 +189,12 @@ class ReviewCaptureReportsExtractionTest {
             assertTrue("$key is used but missing from strings.json", entry != null)
             for (code in languages) assertTrue("$key/$code", entry!!.optString(code).isNotBlank())
         }
-        val retired = setOf("review.approval_note", "review.edit.latitude_field", "review.edit.longitude_field", "review.edit.timezone_toggle", "review.edit.timezone_field", "review.edit.timezone_note", "review.location.show_advanced", "review.location.hide_advanced", "review.location.advanced_note", "review.location.missing", "review.location.enter_missing")
+        // The 2026-11-10 single-confirmation change (owner instruction, phonemsg
+        // 01M73E6E2S6AZP46K75QS2S1WY) retired the approval/confirm/preview keys and
+        // renamed the reports buckets from pending/approved to drafts/ready.
+        val retired = setOf("review.approval_note", "review.edit.latitude_field", "review.edit.longitude_field", "review.edit.timezone_toggle", "review.edit.timezone_field", "review.edit.timezone_note", "review.location.show_advanced", "review.location.hide_advanced", "review.location.advanced_note", "review.location.missing", "review.location.enter_missing",
+            "review.approve_button", "review.approved", "review.not_approved", "review.edit.confirm_button", "review.outgoing_preview",
+            "reports.pending.title", "reports.pending.empty", "reports.pending.open", "reports.approved.title", "reports.approved.empty", "reports.approved.open")
         val screenKeys = catalog.keys.filter { it.startsWith("review.") || it.startsWith("capture.") || it.startsWith("reports.") }.toSet() - retired
         // The expected key set is derived - catalog keys versus keys the screens
         // use - so adding a catalog key and using it needs no test edit. The `all`
@@ -224,7 +224,7 @@ class ReviewCaptureReportsExtractionTest {
         assertEquals("זמן: ${lri}01/01/2026 14:00$pdi", reviewTimeText(he, "2026-01-01T12:00:00Z"))
         assertEquals("זמן: ${lri}01/01/2026 12:00$pdi", reviewTimeText(he, "2026-01-01T12:00:00+02:00"))
         assertEquals("פתח טיוטה ${lri}aaaabbbb$pdi", reportsOpenDraftText(he, "aaaabbbb"))
-        assertEquals("פתח דיווח ${lri}ccccdddd$pdi", reportsOpenApprovedText(he, "ccccdddd"))
+        assertEquals("פתח דיווח ${lri}ccccdddd$pdi", reportsOpenReadyText(he, "ccccdddd"))
         // Hebrew values get the catalog's FSI..PDI where the old line had LRI..PDI or nothing.
         assertEquals("לוחית: ${fsi}לא אושרה$pdi", reviewPlateText(he, ""))
         assertEquals("כתובת: ${fsi}הנביאים 12$pdi", reviewAddressText(he, "הנביאים 12"))
@@ -320,18 +320,27 @@ class ReviewCaptureReportsExtractionTest {
     }
 
     @Test
-    fun redundantReviewNotesAreRemovedWithoutChangingConfirmationControls() {
+    fun confirmationFoldLivesInSaveAndSendAfterApprovalControlsWereRemoved() {
         val screen = source("ReviewScreen.kt")
         for (key in listOf("review.edit.confirm_note", "review.edit.jerusalem_time_note")) {
             assertFalse("removed note must not render: $key", screen.contains(key))
             assertFalse("removed note must not remain in the catalog: $key", raw.has(key))
         }
-        for (key in listOf("review.edit.time_field", "review.edit.confirm_button")) {
-            assertTrue("confirmation control remains: $key", screen.contains(key))
-            assertTrue("confirmation label remains: $key", raw.has(key))
+        // Owner instruction 2026-11-10: the confirm/approve/preview buttons are
+        // gone; send is the single confirmation. The labels stay in the
+        // catalog as retired (the derived key check skips them).
+        for (key in listOf("review.edit.confirm_button", "review.approve_button", "review.approved", "review.not_approved", "review.outgoing_preview")) {
+            assertFalse("removed control must not render: $key", screen.contains(key))
+            assertTrue("removed label stays in the catalog as retired: $key", raw.has(key))
         }
+        assertTrue("time field remains", screen.contains("review.edit.time_field") && raw.has("review.edit.time_field"))
+        // The removed confirm button's fold now runs from save and from send.
         assertTrue(screen.contains("ReviewTime.toJerusalemIso(time, draft.confirmedTime)"))
         assertTrue(screen.contains("draft.confirmEvidence(iso,"))
+        assertEquals(1, screen.split("fun confirmPendingEvidence()").size - 1)
+        assertTrue("save folds the confirmation", screen.contains("onClick = { confirmPendingEvidence(); onSave(draft) }"))
+        assertTrue("send folds the confirmation", screen.contains("onClick = {\n                confirmPendingEvidence()"))
+        assertTrue("send enables on the folded draft's readiness", screen.contains("enabled = foldedDraft().isReady()"))
     }
 
     /** Source tripwire: each two-way text keeps its branches (a swap shows the wrong state). */
@@ -341,7 +350,6 @@ class ReviewCaptureReportsExtractionTest {
         for (snippet in listOf(
             """s.t(if (editing) "review.edit.done" else "review.edit.start")""",
             """s.t(if (recognizing) "review.edit.recognizing" else "review.edit.suggest_plate")""",
-            """s.t(if (draft.isApproved()) "review.approved" else "review.not_approved")""",
             """s.t(if (submitting) "review.submit.sending" else "review.submit.button")""",
             """if (plates.isEmpty()) "review.ocr.no_plate" else "review.ocr.suggestions_found"""",
             """if (suggestions.isEmpty()) "review.geocode.no_suggestions" else "review.geocode.check_house_number"""",

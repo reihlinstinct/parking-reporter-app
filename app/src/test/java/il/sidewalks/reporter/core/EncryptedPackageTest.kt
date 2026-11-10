@@ -15,7 +15,7 @@ import java.util.Base64
 
 class EncryptedPackageTest {
     private fun draft() = ReviewDraft(Evidence("synthetic-id", "a".repeat(64), "2026-01-01T12:00:00Z", 31.0, 35.0),
-        "1234567", "רחוב בדיקה 1", "sidewalk_parking", "דיווח בדיקה", emptySet()).approve()
+        "1234567", "רחוב בדיקה 1", "sidewalk_parking", "דיווח בדיקה", emptySet())
     private val reporter = ReporterSettings("synthetic-first", "synthetic-last", "0000000", "000000000", "synthetic@example.invalid")
     private val photo = byteArrayOf(0xff.toByte(), 0xd8.toByte()) + ByteArray(68_000) { 4 } + byteArrayOf(0xff.toByte(), 0xd9.toByte())
     private fun seal(): Triple<SealedUpload, KeysetHandle, KeysetHandle> {
@@ -50,7 +50,9 @@ class EncryptedPackageTest {
         val r = EncryptedPackage.reviewedReport(draft(), reporter, photo); val digest = EncryptedPackage.approvalDigest(r)
         r.getJSONObject("reporter").put("phone", "synthetic-change")
         assertNotEquals(digest, EncryptedPackage.approvalDigest(r))
-        assertThrows(IllegalArgumentException::class.java) { EncryptedPackage.reviewedReport(draft().edit(), reporter, photo) }
+        // No approval latch anymore (owner instruction 2026-11-10): packaging
+        // gates on readiness - an edit that breaks readiness (invalid plate) throws.
+        assertThrows(IllegalArgumentException::class.java) { EncryptedPackage.reviewedReport(draft().edit(plate = ""), reporter, photo) }
         assertThrows(IllegalArgumentException::class.java) { EncryptedPackage.reviewedReport(draft(), reporter, ByteArray(1_100_001)) }
     }
     @Test fun canonicalOrderDoesNotDependOnInsertionOrder() {

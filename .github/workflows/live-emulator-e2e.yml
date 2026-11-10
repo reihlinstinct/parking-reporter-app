@@ -310,6 +310,21 @@ jobs:
             sh scripts/stage-live-files.sh /tmp/live-e2e/photo.jpg /tmp/live-e2e/params.json
             echo "TIMING staging-preflight-ok $(date -u +%FT%TZ)"
             ( for i in 1 2 3 4 5 6; do if [ -f /tmp/live-e2e/stop-rec ]; then break; fi; adb shell screenrecord --time-limit 170 /sdcard/live-rec-$i.mp4 >/dev/null 2>&1; done ) &
+            # Launcher-icon proof (owner request 2026-11-10): with the app
+            # installed and the screen recording already running, open the
+            # launcher drawer so the chosen adaptive icon is visible in the
+            # recording; also capture PNGs into the encrypted bundle.
+            adb shell input keyevent KEYCODE_HOME
+            sleep 1
+            adb shell input swipe 540 1600 540 700 400
+            sleep 2
+            adb shell screencap -p /sdcard/live-e2e-drawer-1.png
+            adb shell input swipe 540 1600 540 700 400
+            sleep 1
+            adb shell screencap -p /sdcard/live-e2e-drawer-2.png
+            adb pull /sdcard/live-e2e-drawer-1.png /tmp/live-e2e/live-e2e-drawer-1.png || true
+            adb pull /sdcard/live-e2e-drawer-2.png /tmp/live-e2e/live-e2e-drawer-2.png || true
+            adb shell rm -f /sdcard/live-e2e-drawer-1.png /sdcard/live-e2e-drawer-2.png || true
             sh scripts/capture-live-instrumentation.sh /tmp/live-e2e
             echo "TIMING instrumentation-done rc=$(cat /tmp/live-e2e/instrumentation.rc) $(date -u +%FT%TZ)"
             touch /tmp/live-e2e/stop-rec

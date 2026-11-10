@@ -3,7 +3,7 @@
 The manual workflow `.github/workflows/live-emulator-e2e.yml` files **one real
 municipal case through the real app UI** in a CI emulator and records the
 screen while it happens. It exists so a live submission can be demonstrated
-end to end - camera-roll entry, review, local approval, send - not only as an
+end to end - camera-roll entry, review, save, send - not only as an
 engine-level JVM test (`m0-engine-trial.yml`, no UI).
 
 This path is strictly opt-in. Nothing here runs on push, on pull requests, or

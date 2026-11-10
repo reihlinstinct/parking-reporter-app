@@ -26,7 +26,7 @@ class ShellSettingsExtractionTest {
     private val extracted = linkedMapOf(
         "settings.passport.mode" to "אין לי תעודת זהות",
         "settings.passport.number" to "מספר דרכון",
-        "shell.passport.review_required" to "נדרש גילוי על פרטי הקשר ומספרי מצייני המקום בנוסח הדיווח. בדוק את הנוסח המלא, שמור ואשר מחדש לפני שליחה. אם פרטי הקשר חסרים או אינם תקינים, תקן אותם בהגדרות.",
+        "shell.passport.review_required" to "נדרש גילוי על פרטי הקשר ומספרי מצייני המקום בנוסח הדיווח. בדוק את הנוסח המלא ושמור מחדש לפני שליחה. אם פרטי הקשר חסרים או אינם תקינים, תקן אותם בהגדרות.",
         "settings.api.advanced" to "חיבור 106 מתקדם",
         "settings.phone.international" to "מספר שאינו נייד ישראלי: המספר שלך יופיע בנוסח הדיווח; בשדה העירייה יישלח מספר מציין מקום לאחר אישורך.",
         "settings.email.invalid" to "כתובת האימייל אינה תקינה. בדוק את הכתובת.",
@@ -52,11 +52,6 @@ class ShellSettingsExtractionTest {
         // The four review questions AppShell adds to a new draft moved to review.warning.*
         // in PR-2b (stored as codes, translated when shown): ReviewCaptureReportsExtractionTest.
         "shell.home.permission_note" to "ביטול הרשאת מצלמה או אימות משאיר את המסך ללא פעולה. אין שמירת פרטים גלויים כחלופה.",
-        "shell.outgoing.title" to "תמונה נפרדת לבדיקה",
-        "shell.outgoing.image_description" to "התמונה המדויקת המיועדת להעברה בעתיד",
-        "shell.outgoing.explanation" to "המקור לא השתנה. נתוני EXIF הוסרו מהעותק. בדוק שהלוחית והעבירה קריאות; אל תאשר תמונה שאיבדה ראיה.",
-        "shell.outgoing.no_sending" to "שליחה והתחברות אינן זמינות בגרסת הבדיקה. אין אישור שליחה ממסך זה.",
-        "shell.outgoing.back_to_review" to "חזור לבדיקה",
         "shell.import_location.title" to "נמצא מיקום בתמונה",
         "shell.import_location.message" to "להשתמש במיקום מהתמונה לדיווח? ניתן גם בלי, ולסמן את המיקום ידנית.",
         "shell.import_location.use" to "השתמש במיקום",
@@ -67,7 +62,6 @@ class ShellSettingsExtractionTest {
         "shell.status.evidence_duplicate_or_unsaved" to "הראיה כפולה או שלא נשמרה, לא בוצעה שליחה",
         "shell.status.evidence_restore_failed" to "לא ניתן לשחזר את הראיה; אין שליחה",
         "shell.status.image_read_failed" to "התמונה לא נקראה, לא בוצעה שליחה",
-        "shell.status.outgoing_prepare_failed" to "לא ניתן להכין תמונה לבדיקה; אין שליחה",
         "shell.status.settings_saved" to "נשמר מוצפן",
         "shell.status.settings_save_failed" to "הצפנה או אימות נכשלו, לא נשמר מידע גלוי",
         "shell.status.import_cancelled" to "הייבוא בוטל, לא בוצעה שליחה",
@@ -103,7 +97,7 @@ class ShellSettingsExtractionTest {
         "shell.submit.sent" to "נשלח לעירייה. מספר קריאה: {case_number}",
         "shell.submit.case_number_received" to "התקבל בעירייה",
         "shell.submit.already_sent" to "הדיווח כבר נשלח. מספר קריאה: {case_number}",
-        "shell.submit.blocked.not_approved" to "אשר את התוכן לפני שליחה",
+        "shell.submit.blocked.not_ready" to "השלם את הטיוטה לפני שליחה",
         "shell.submit.blocked.missing_credentials" to "חסרים פרטי גישה לעירייה בהגדרות",
         "shell.submit.blocked.unsupported_category" to "הקטגוריה אינה נתמכת לשליחה",
         "shell.submit.blocked.address_unresolved" to "הכתובת לא נקבעה: {detail}",
@@ -113,7 +107,7 @@ class ShellSettingsExtractionTest {
         "shell.submit.blocked.local_failure" to "שגיאה מקומית, לא בוצעה שליחה ({detail})",
         "shell.submit.blocked.lookup_not_installed" to "קובץ הכתובות הפרטי לא מותקן במכשיר",
         "shell.submit.blocked.lookup_mismatch" to "קובץ הכתובות במכשיר מיושן או שונה. התקן את העותק העדכני",
-        "shell.submit.draft_not_saved" to "הטיוטה לא נשמרה אחרי האישור. שמור ואשר מחדש לפני שליחה.",
+        "shell.submit.draft_not_saved" to "הטיוטה לא נשמרה. שמור לפני שליחה.",
         "shell.submit.sending" to "שולח לעירייה...",
         "shell.submit.no_device_lock" to "הגדר נעילת מסך", // twin of review.submit.no_device_lock; shell and review keys are prefix-checked separately
         "shell.unlock.submit_title" to "שליחת דיווח לעירייה",
@@ -125,7 +119,6 @@ class ShellSettingsExtractionTest {
     /** Keys added by PR-2a for the language picker (new texts, no old literal). */
     private val pickerKeys = setOf("settings.language.title", "settings.language.system_default")
 
-    private val sizeSummaryHe = "{width} × {height}, {count} bytes"
 
     private fun source(name: String): String =
         I18nTestFiles.moduleFile("src/main/java/il/sidewalks/reporter/ui/$name").readText(Charsets.UTF_8)
@@ -138,10 +131,6 @@ class ShellSettingsExtractionTest {
     fun extractedHebrewValuesEqualTheOldLiteralsByteForByte() {
         for ((key, literal) in extracted + submitExtracted) {
             assertEquals("he value of $key", literal, raw.getJSONObject(key).getString(source))
-        }
-        val plural = raw.getJSONObject("shell.outgoing.size_summary").getJSONObject(source)
-        for (category in listOf("one", "two", "other")) {
-            assertEquals("size_summary he/$category", sizeSummaryHe, plural.getString(category))
         }
     }
 
@@ -159,11 +148,6 @@ class ShellSettingsExtractionTest {
         val pdi = Bidi.PDI
         assertEquals("פתח טיוטה ${lri}aaaabbbb$pdi", catalog.t(source, "shell.home.open_draft", mapOf("id" to "aaaabbbb")))
         assertEquals("גרסה ${lri}0.12.1$pdi", catalog.t(source, "settings.version", mapOf("version" to "0.12.1")))
-        assertEquals(
-            "${lri}1280$pdi × ${lri}960$pdi, ${lri}2048$pdi bytes",
-            catalog.tp(source, "shell.outgoing.size_summary", 2048, mapOf("width" to 1280, "height" to 960)),
-        )
-        assertEquals("1280 × 960, 1 byte", catalog.tp(english, "shell.outgoing.size_summary", 1, mapOf("width" to 1280, "height" to 960)))
         assertEquals("Version 0.12.1", catalog.t(english, "settings.version", mapOf("version" to "0.12.1")))
     }
 
@@ -212,11 +196,11 @@ class ShellSettingsExtractionTest {
         assertEquals("הדיווח כבר נשלח. מספר קריאה: \u20667654321\u2069", municipalOutcomeText(he, Outcome.AlreadySubmitted("7654321")))
         assertEquals("הדיווח כבר נשלח. מספר קריאה: \u2066\u2069", municipalOutcomeText(he, Outcome.AlreadySubmitted(null)))
         val expected = mapOf(
-            Reason.NOT_APPROVED to "אשר את התוכן לפני שליחה",
+            Reason.NOT_READY to "השלם את הטיוטה לפני שליחה",
             Reason.MISSING_CREDENTIALS to "חסרים פרטי גישה לעירייה בהגדרות",
             Reason.UNSUPPORTED_CATEGORY to "הקטגוריה אינה נתמכת לשליחה",
             Reason.ADDRESS_UNRESOLVED to "הכתובת לא נקבעה: $lri$d$pdi",
-            Reason.PASSPORT_DISCLOSURE_REQUIRED to "נדרש גילוי על פרטי הקשר ומספרי מצייני המקום בנוסח הדיווח. בדוק את הנוסח המלא, שמור ואשר מחדש לפני שליחה. אם פרטי הקשר חסרים או אינם תקינים, תקן אותם בהגדרות.",
+            Reason.PASSPORT_DISCLOSURE_REQUIRED to "נדרש גילוי על פרטי הקשר ומספרי מצייני המקום בנוסח הדיווח. בדוק את הנוסח המלא ושמור מחדש לפני שליחה. אם פרטי הקשר חסרים או אינם תקינים, תקן אותם בהגדרות.",
             Reason.INPUT_INVALID to "קלט לא תקין: $lri$d$pdi",
             Reason.MUNICIPAL_REVIEW_NEEDED to "המצב מול העירייה אינו ודאי. בדוק באפליקציית העירייה; לא בוצעה שליחה חוזרת. $lri$d$pdi",
             Reason.MUNICIPAL_API_FAILURE to "העירייה ענתה: $lri$d$pdi",

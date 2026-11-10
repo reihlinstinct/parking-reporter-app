@@ -17,7 +17,7 @@ class OfflineReceiverTest {
         val jpeg = byteArrayOf(-1, -40) + ByteArray(68_000) { 4 } + byteArrayOf(-1, -39)
         val report = EncryptedPackage.reviewedReport(
             ReviewDraft(Evidence("synthetic-id", "a".repeat(64), "2026-01-01T12:00:00Z", 31.0, 35.0),
-                "1234567", "רחוב בדיקה 1", "sidewalk_parking", "בדיקה", emptySet()).approve(),
+                "1234567", "רחוב בדיקה 1", "sidewalk_parking", "בדיקה", emptySet()),
             ReporterSettings("synthetic", "reporter", "0000000", "000000000", "synthetic@example.invalid"), jpeg)
         val upload = EncryptedPackage.seal(report, jpeg, EncryptedPackage.approvalDigest(report), "test-receiver", "test-device",
             receiver.publicKeysetHandle.getPrimitive(HybridEncrypt::class.java), device.getPrimitive(PublicKeySign::class.java))

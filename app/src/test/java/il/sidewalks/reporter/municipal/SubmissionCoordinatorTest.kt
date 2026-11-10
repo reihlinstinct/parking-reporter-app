@@ -16,11 +16,14 @@ class SubmissionCoordinatorTest {
         municipalSubscriptionKey = "k", municipalUsername = "u", municipalPassword = "p",
     )
 
-    private fun approvedDraft(): ReviewDraft {
-        val evidence = Evidence("stable-1", "a".repeat(64), "2026-11-08T10:00:00+02:00", 31.7683, 35.2137)
-        val draft = ReviewDraft(evidence, "12345678", "רחוב הנביאים 12", "sidewalk_parking",
+    private val jpegBytes = byteArrayOf(1, 2, 3, 4)
+
+    private fun readyDraft(): ReviewDraft {
+        // The evidence hash must match jpegBytes: the coordinator refuses a
+        // photo whose bytes do not match the draft evidence (Tab review #266).
+        val evidence = Evidence("stable-1", il.sidewalks.reporter.intake.EncryptedPackage.sha256(jpegBytes), "2026-11-08T10:00:00+02:00", 31.7683, 35.2137)
+        return ReviewDraft(evidence, "12345678", "רחוב הנביאים 12", "sidewalk_parking",
             "רכב חנה על המדרכה", emptySet())
-        return draft.approve()
     }
 
     private fun fixture(): StreetDirectory = StreetDirectory.load("""
@@ -34,13 +37,25 @@ class SubmissionCoordinatorTest {
 
     private fun jpegFile(): File {
         val f = File.createTempFile("original", ".jpg")
-        f.writeBytes(byteArrayOf(1, 2, 3, 4))
+        f.writeBytes(jpegBytes)
         return f
+    }
+
+    @Test fun photoHashMismatchIsRefusedBeforeAnyNetworkCall() {
+        // Tab review (#266): a draft paired with another report's photo must
+        // never reach the network - blocked before the first client call.
+        val client = RecordingClient()
+        val wrongPhoto = File.createTempFile("other", ".jpg").apply { writeBytes(byteArrayOf(9, 9, 9, 9)) }
+        val outcome = coordinator(client).submit(readyDraft(), settings, wrongPhoto) as SubmissionCoordinator.Outcome.Blocked
+        assertEquals(SubmissionCoordinator.Reason.INPUT_INVALID, outcome.reason)
+        assertEquals(0, client.logins)
+        assertEquals(null, client.seenContact)
+        assertEquals(null, client.seenReport)
     }
 
     @Test fun passportLocalProfileCannotReachAnyNetworkEvenWithValidIdAndCredentials() {
         val client = RecordingClient()
-        val outcome = coordinator(client).submitApproved(approvedDraft(), settings.copy(passportMode = true, passportNumber = "SYNTHETIC-PASSPORT"), jpegFile()) as SubmissionCoordinator.Outcome.Blocked
+        val outcome = coordinator(client).submit(readyDraft(), settings.copy(passportMode = true, passportNumber = "SYNTHETIC-PASSPORT"), jpegFile()) as SubmissionCoordinator.Outcome.Blocked
         assertEquals(SubmissionCoordinator.Reason.PASSPORT_DISCLOSURE_REQUIRED, outcome.reason)
         assertEquals(0, client.logins)
         assertEquals(null, client.seenReport)
@@ -49,9 +64,9 @@ class SubmissionCoordinatorTest {
     @Test fun passportReviewedDisclosureSubmitsOnlyMaskedPassportAndPlaceholder() {
         val client = RecordingClient()
         val profile = settings.copy(passportMode = true, passportNumber = "SYNTHETIC-PASSPORT")
-        val text = approvedDraft().exactHebrewText + "\n\n" + PassportSubmission.disclosure(profile)
-        val shown = approvedDraft().edit(text = text).approve()
-        val outcome = coordinator(client).submitApproved(shown, profile, jpegFile())
+        val text = readyDraft().exactHebrewText + "\n\n" + PassportSubmission.disclosure(profile)
+        val shown = readyDraft().edit(text = text)
+        val outcome = coordinator(client).submit(shown, profile, jpegFile())
         assertTrue(outcome is SubmissionCoordinator.Outcome.Submitted)
         assertEquals(PassportSubmission.COMPATIBILITY_ID, client.seenContact?.get("ContactIdNumber"))
         assertEquals(text, client.seenReport?.get("CaseDescription"))
@@ -62,11 +77,11 @@ class SubmissionCoordinatorTest {
     @Test fun foreignPhoneRequiresReviewedRealNumberAndUsesOnlyPlaceholderInContact() {
         val client = RecordingClient()
         val profile = settings.copy(phone = "+12025550123")
-        val blocked = coordinator(client).submitApproved(approvedDraft(), profile, jpegFile()) as SubmissionCoordinator.Outcome.Blocked
+        val blocked = coordinator(client).submit(readyDraft(), profile, jpegFile()) as SubmissionCoordinator.Outcome.Blocked
         assertEquals(SubmissionCoordinator.Reason.PASSPORT_DISCLOSURE_REQUIRED, blocked.reason)
         assertEquals(0, client.logins)
-        val text = approvedDraft().exactHebrewText + "\n\n" + PassportSubmission.disclosure(profile)
-        assertTrue(coordinator(client).submitApproved(approvedDraft().edit(text = text).approve(), profile, jpegFile()) is SubmissionCoordinator.Outcome.Submitted)
+        val text = readyDraft().exactHebrewText + "\n\n" + PassportSubmission.disclosure(profile)
+        assertTrue(coordinator(client).submit(readyDraft().edit(text = text), profile, jpegFile()) is SubmissionCoordinator.Outcome.Submitted)
         assertEquals(PassportSubmission.INTERNATIONAL_PHONE_PLACEHOLDER, client.seenContact?.get("MobilePhoneNumber"))
         assertTrue(client.seenReport!!["CaseDescription"].toString().contains("+12025550123"))
         assertEquals("0501234567", PassportSubmission.phoneForPayload(settings.copy(phone = "+972501234567")))
@@ -75,11 +90,11 @@ class SubmissionCoordinatorTest {
 
     @Test fun staleDisclosureIsBlockedAndReplacedForPhonePassportAndModeChanges() {
         val old = settings.copy(passportMode = true, passportNumber = "SYNTHETIC-OLD", phone = "+12025550123")
-        val oldText = PassportSubmission.reconcileDisclosure(approvedDraft().exactHebrewText, old)
+        val oldText = PassportSubmission.reconcileDisclosure(readyDraft().exactHebrewText, old)
         for (current in listOf(old.copy(phone = "+12025550124"), old.copy(passportNumber = "SYNTHETIC-NEW"), settings)) {
             val client = RecordingClient()
             assertTrue(!PassportSubmission.hasReviewedDisclosure(oldText, current))
-            val outcome = coordinator(client).submitApproved(approvedDraft().edit(text = oldText).approve(), current, jpegFile())
+            val outcome = coordinator(client).submit(readyDraft().edit(text = oldText), current, jpegFile())
             assertEquals(SubmissionCoordinator.Reason.PASSPORT_DISCLOSURE_REQUIRED, (outcome as SubmissionCoordinator.Outcome.Blocked).reason)
             assertEquals(0, client.logins)
             val fixed = PassportSubmission.reconcileDisclosure(oldText, current)
@@ -87,7 +102,7 @@ class SubmissionCoordinatorTest {
             assertEquals(fixed, PassportSubmission.reconcileDisclosure(fixed, current))
             if (current.phone != old.phone) assertTrue(!fixed.contains("+12025550123"))
             if (!current.passportMode || current.passportNumber != old.passportNumber) assertTrue(!fixed.contains("xxxxxOLD"))
-            assertTrue(coordinator(client).submitApproved(approvedDraft().edit(text = fixed).approve(), current, jpegFile()) is SubmissionCoordinator.Outcome.Submitted)
+            assertTrue(coordinator(client).submit(readyDraft().edit(text = fixed), current, jpegFile()) is SubmissionCoordinator.Outcome.Submitted)
         }
     }
 
@@ -95,8 +110,8 @@ class SubmissionCoordinatorTest {
         for (phone in listOf("0501234567", "+972501234567", "+12025550123", "972501234567")) {
             val profile = settings.copy(phone = phone, passportMode = false)
             val client = RecordingClient()
-            val text = PassportSubmission.reconcileDisclosure(approvedDraft().exactHebrewText, profile)
-            assertTrue(coordinator(client).submitApproved(approvedDraft().edit(text = text).approve(), profile, jpegFile()) is SubmissionCoordinator.Outcome.Submitted)
+            val text = PassportSubmission.reconcileDisclosure(readyDraft().exactHebrewText, profile)
+            assertTrue(coordinator(client).submit(readyDraft().edit(text = text), profile, jpegFile()) is SubmissionCoordinator.Outcome.Submitted)
             assertEquals(settings.idNumber, client.seenContact?.get("ContactIdNumber"))
             assertEquals(if (PassportSubmission.isIsraeliPhone(phone)) "0501234567" else PassportSubmission.INTERNATIONAL_PHONE_PLACEHOLDER, client.seenContact?.get("MobilePhoneNumber"))
         }
@@ -104,7 +119,7 @@ class SubmissionCoordinatorTest {
     @Test fun israeliLandlinesRemainBlockedBeforeAnyNetwork() {
         for (passportMode in listOf(false, true)) for (phone in listOf("+97221234567", "97221234567", "021234567", "21234567", "26543210", "541234567", "501234567", "1234567", "14155552671", "+1234567", "+1234567890123456")) {
             val client = RecordingClient()
-            val outcome = coordinator(client).submitApproved(approvedDraft(), settings.copy(phone = phone, passportMode = passportMode, passportNumber = "SYNTHETIC-PASSPORT"), jpegFile())
+            val outcome = coordinator(client).submit(readyDraft(), settings.copy(phone = phone, passportMode = passportMode, passportNumber = "SYNTHETIC-PASSPORT"), jpegFile())
             assertEquals(SubmissionCoordinator.Reason.INPUT_INVALID, (outcome as SubmissionCoordinator.Outcome.Blocked).reason)
             assertEquals(0, client.logins)
         }
@@ -125,7 +140,7 @@ class SubmissionCoordinatorTest {
 
     @Test fun happyPathSubmitsWithPipelinePayloadShape() {
         val client = RecordingClient()
-        val outcome = coordinator(client).submitApproved(approvedDraft(), settings, jpegFile())
+        val outcome = coordinator(client).submit(readyDraft(), settings, jpegFile())
         assertTrue(outcome is SubmissionCoordinator.Outcome.Submitted)
         assertEquals("2611-0000001", (outcome as SubmissionCoordinator.Outcome.Submitted).caseNumber)
         assertEquals("1145", client.seenReport?.get("CaseSubjectCode"))
@@ -135,16 +150,16 @@ class SubmissionCoordinatorTest {
         assertTrue(client.seenReport?.get("CoordinateX") is Int)
     }
 
-    @Test fun unapprovedDraftBlocked() {
-        val draft = approvedDraft().copy(approvedDigest = null)
-        val outcome = coordinator(RecordingClient()).submitApproved(draft, settings, jpegFile())
-        assertEquals(SubmissionCoordinator.Reason.NOT_APPROVED,
+    @Test fun incompleteDraftBlocked() {
+        val draft = readyDraft().copy(unresolved = setOf("time_needs_confirmation"))
+        val outcome = coordinator(RecordingClient()).submit(draft, settings, jpegFile())
+        assertEquals(SubmissionCoordinator.Reason.NOT_READY,
             (outcome as SubmissionCoordinator.Outcome.Blocked).reason)
     }
 
     @Test fun missingCredentialsBlocked() {
         val noCreds = settings.copy(municipalPassword = "")
-        val outcome = coordinator(RecordingClient()).submitApproved(approvedDraft(), noCreds, jpegFile()) as SubmissionCoordinator.Outcome.Blocked
+        val outcome = coordinator(RecordingClient()).submit(readyDraft(), noCreds, jpegFile()) as SubmissionCoordinator.Outcome.Blocked
         assertEquals(SubmissionCoordinator.Reason.MISSING_CREDENTIALS, outcome.reason)
         // The detail names exactly which values are missing (constant IDs, never values).
         assertEquals("municipal credentials absent: api_password", outcome.detail)
@@ -153,8 +168,8 @@ class SubmissionCoordinatorTest {
 
     @Test fun unresolvableAddressBlockedBeforeAnyNetwork() {
         val client = RecordingClient()
-        val draft = approvedDraft().copy(address = "רחוב שאינו קיים 1").approve()
-        val outcome = coordinator(client).submitApproved(draft, settings, jpegFile())
+        val draft = readyDraft().copy(address = "רחוב שאינו קיים 1")
+        val outcome = coordinator(client).submit(draft, settings, jpegFile())
         assertEquals(SubmissionCoordinator.Reason.ADDRESS_UNRESOLVED,
             (outcome as SubmissionCoordinator.Outcome.Blocked).reason)
         assertEquals(0, client.logins)
@@ -164,8 +179,8 @@ class SubmissionCoordinatorTest {
         // A confirmed address with no house number must NOT fall back to the
         // GPS-nearest house: the user never confirmed that house.
         val client = RecordingClient()
-        val draft = approvedDraft().copy(address = "רחוב הנביאים").approve()
-        val outcome = coordinator(client).submitApproved(draft, settings, jpegFile())
+        val draft = readyDraft().copy(address = "רחוב הנביאים")
+        val outcome = coordinator(client).submit(draft, settings, jpegFile())
         assertEquals(SubmissionCoordinator.Reason.ADDRESS_UNRESOLVED,
             (outcome as SubmissionCoordinator.Outcome.Blocked).reason)
         assertEquals(0, client.logins)
@@ -173,7 +188,7 @@ class SubmissionCoordinatorTest {
 
     @Test fun reviewNeededPassesThroughWithoutRetry() {
         val client = FailingCreateClient()
-        val outcome = coordinator(client).submitApproved(approvedDraft(), settings, jpegFile())
+        val outcome = coordinator(client).submit(readyDraft(), settings, jpegFile())
         assertEquals(SubmissionCoordinator.Reason.MUNICIPAL_REVIEW_NEEDED,
             (outcome as SubmissionCoordinator.Outcome.Blocked).reason)
         assertEquals(1, client.createCalls)

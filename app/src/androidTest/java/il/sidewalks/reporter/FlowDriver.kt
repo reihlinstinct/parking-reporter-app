@@ -162,8 +162,8 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         compose.onAllNodes(hasText(text) and hasClickAction() and isEnabled())
             .fetchSemanticsNodes().isNotEmpty()
 
-    /** Shared-photo entry through a locally approved draft. */
-    fun driveToApproved(fields: FlowFields) {
+    /** Shared-photo entry: category + field edits, without saving. */
+    fun driveToEdited(fields: FlowFields) {
         // A photo with embedded GPS (every real live photo) first raises the
         // location prompt; a synthetic photo goes straight to the review.
         compose.waitUntil(15_000) {
@@ -192,11 +192,17 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         compose.onNodeWithText("זמן הצילום (24 שעות)").performScrollTo().performTextReplacement(il.sidewalks.reporter.ui.ReviewTime.display(fields.capturedAtIso))
         // Location comes from the original photo EXIF, never hidden UI injection.
         // The synthetic provider supplies known synthetic EXIF; live uses real EXIF.
-        clickButton("אשר זמן, מיקום וכתובת שבדקת")
-        compose.waitUntil(10_000) { hasClickableButton("אשר את התוכן לבדיקה") }
-        clickButton("אשר את התוכן לבדיקה")
+    }
+
+    /** Shared-photo entry through a locally saved draft. */
+    fun driveToSaved(fields: FlowFields) {
+        driveToEdited(fields)
+        // Save is the only review action left before send (owner instruction
+        // 2026-11-10): it folds the checked time/coordinates into the draft,
+        // which is what enables send.
+        clickButton("שמור טיוטה")
         compose.waitUntil(15_000) {
-            compose.onAllNodesWithText("התוכן אושר מקומית, לא נשלח").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("נשמר מקומית, לא נשלח").fetchSemanticsNodes().isNotEmpty()
         }
     }
 
@@ -279,13 +285,6 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         val submissionsDir = File(
             InstrumentationRegistry.getInstrumentation().targetContext.noBackupFilesDir,
             "submissions")
-        // The approval buttons keep their labels after latching, so pixels
-        // cannot show whether they disabled - log their semantics state.
-        for (label in listOf("אשר זמן, מיקום וכתובת שבדקת", "אשר את התוכן לבדיקה")) {
-            val nodes = compose.onAllNodes(hasText(label) and hasClickAction()).fetchSemanticsNodes()
-            println("FLOW_DRIVER approval button '$label': ${nodes.size} node(s): " +
-                nodes.joinToString { "[enabled=${SemanticsProperties.Disabled !in it.config}]" })
-        }
         var tap = 0
         while (true) {
             val enabled = try {
@@ -297,9 +296,12 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
                 screenshot("live-e2e-send-never-enabled.png")
                 return SendOutcome.SEND_NOT_FIRED
             }
-            // clickButton settles in-flight recomposition itself before the
-            // real click: run 42853563754 clicked during the review screen's
-            // recompose churn and the semantics click no-opped silently.
+            // Settle in-flight recomposition before the real click: run
+            // 42853563754 clicked during the review screen's recompose churn
+            // and the semantics click no-opped silently. The record-dir
+            // proof sits directly before the click (#264 review), so the
+            // window between proof and click is as small as it can be.
+            compose.waitForIdle()
             if (!noSubmissionRecordProvably(submissionsDir)) {
                 println("FLOW_DRIVER submission record dir not provably empty before send tap ${tap + 1} - not tapping")
                 onNote("SEND_NOT_FIRED reason=record-dir-not-provably-empty")
@@ -308,7 +310,18 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
             }
             tap += 1
             onTapAboutToFire(tap)
-            clickButton("שלח לעירייה")
+            // Runs 42853563754 / 42880867432: an enabled-button semantics
+            // click no-opped repeatedly. Log every matching node (count,
+            // enabled, bounds) so the run shows whether onNode's first match
+            // is the visible button or a stale duplicate left by a transition.
+            val matches = compose.onAllNodes(hasText("שלח לעירייה") and hasClickAction()).fetchSemanticsNodes()
+            println("FLOW_DRIVER click target 'שלח לעירייה': ${matches.size} clickable node(s): " +
+                matches.joinToString { m ->
+                    "[enabled=${SemanticsProperties.Disabled !in m.config} bounds=${m.boundsInRoot} visible=${m.layoutInfo.isPlaced}]"
+                })
+            compose.onNode(hasText("שלח לעירייה") and hasClickAction() and isEnabled())
+                .performScrollTo()
+                .performSemanticsAction(SemanticsActions.OnClick)
             // Live path: the submit gate raises the system ConfirmDeviceCredential
             // prompt (MainActivity.authenticate). Complete it when a PIN was
             // supplied - live runs only; the synthetic stub has no gate. A prompt

@@ -19,7 +19,7 @@ object SyntheticIntakeDemo {
         val bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888).apply { eraseColor(android.graphics.Color.BLUE) }
         val jpeg = ByteArrayOutputStream().use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out); out.toByteArray() }; bitmap.recycle()
         val draft = ReviewDraft(Evidence("synthetic-${java.util.UUID.randomUUID()}", EncryptedPackage.sha256(jpeg), "2026-01-01T12:00:00Z", 31.0, 35.0),
-            "1234567", "רחוב בדיקה 1", "sidewalk_parking", "דיווח סינתטי בלבד", emptySet()).approve()
+            "1234567", "רחוב בדיקה 1", "sidewalk_parking", "דיווח סינתטי בלבד", emptySet())
         val profile = ReporterSettings("synthetic", "reporter", "0000000", "000000000", "synthetic@example.invalid")
         val report = EncryptedPackage.reviewedReport(draft, profile, jpeg)
         val upload = EncryptedPackage.seal(report, jpeg, EncryptedPackage.approvalDigest(report), "synthetic-receiver", "synthetic-device",

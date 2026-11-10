@@ -38,12 +38,12 @@ class ReviewAddressTest {
             assertEquals("רחוב בדיקה", street); assertEquals("12", house)
             il.sidewalks.reporter.municipal.StreetDirectory.ConfirmableAddress("רחוב בדיקה 12", 31.77, 35.21)
         }) } }
-        compose.onNodeWithText("אשר את התוכן לבדיקה").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("שלח").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithText("רחוב בירושלים").performScrollTo().performTextReplacement("רחוב בדיקה")
         compose.onNodeWithText("מספר בית").performScrollTo().performTextReplacement("12")
         compose.onNodeWithText("חפש כתובת מדויקת").performScrollTo().performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithText("אשר את כתובת האירוע").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("אשר את התוכן לבדיקה").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("שלח").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithText("אשר את כתובת האירוע").performScrollTo()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         File(context.filesDir, "no-gps-address-confirm-synthetic.png").outputStream().use {
@@ -53,15 +53,13 @@ class ReviewAddressTest {
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
         compose.onNodeWithText("חפש הצעות כתובת לפי המיקום").assertDoesNotExist()
         compose.onNodeWithText("רחוב ומספר בית שאישרת").performScrollTo().performTextReplacement("רחוב בדיקה 14")
-        compose.onNodeWithText("אשר זמן, מיקום וכתובת שבדקת").performScrollTo().performClick()
-        compose.onNodeWithText("אשר את התוכן לבדיקה").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("שלח").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
         compose.runOnIdle {
             assertEquals(initial.evidence, saved?.evidence)
             assertEquals("רחוב בדיקה 14", saved?.address)
             assertNull(saved?.confirmedLatitude)
             assertNull(saved?.confirmedLongitude)
-            assertNull(saved?.approvedDigest)
         }
     }
 
@@ -79,9 +77,8 @@ class ReviewAddressTest {
         File(context.filesDir, "review-local-time-synthetic.png").outputStream().use {
             compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
         }
-        compose.onNodeWithText("אשר זמן, מיקום וכתובת שבדקת").performScrollTo().performClick()
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
-        compose.runOnIdle { assertEquals(initial.evidence, saved?.evidence); assertEquals(initial.confirmedTime, saved?.confirmedTime); assertNull(saved?.approvedDigest) }
+        compose.runOnIdle { assertEquals(initial.evidence, saved?.evidence); assertEquals(initial.confirmedTime, saved?.confirmedTime) }
     }
 
     @Test fun plateEntryFormatsDigitsButStoresNoDashes() {
@@ -95,20 +92,20 @@ class ReviewAddressTest {
             compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
         }
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
-        compose.runOnIdle { assertEquals("12345678", saved?.plate); assertNull(saved?.approvedDigest) }
+        compose.runOnIdle { assertEquals("12345678", saved?.plate) }
     }
 
-    @Test fun unambiguousOcrPrefillsWithoutSuggestionTapOrApproval() {
+    @Test fun unambiguousOcrPrefillsWithoutSuggestionTap() {
         val initial = draft().copy(address = "רחוב בדיקה 12", plate = "")
         var saved: ReviewDraft? = null
         val bitmap = android.graphics.Bitmap.createBitmap(20, 20, android.graphics.Bitmap.Config.ARGB_8888)
         compose.setContent { AppTheme { ReviewScreen(initial, bitmap.asImageBitmap(), { saved = it }, {}, plateRecognizer = { listOf("1234567") }) } }
         compose.waitUntil(10_000) { compose.onAllNodesWithText("לוחית: \u206612-345-67\u2069").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
-        compose.runOnIdle { assertEquals("1234567", saved?.plate); assertNull(saved?.approvedDigest) }
+        compose.runOnIdle { assertEquals("1234567", saved?.plate) }
     }
 
-    @Test fun gpsSuggestsStreetHouseButNeverApprovesOrChangesEvidence() {
+    @Test fun gpsSuggestsStreetHouseButNeverChangesEvidence() {
         val initial = draft()
         var saved: ReviewDraft? = null
         compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {}, addressLookup = { lat, lon ->
@@ -120,7 +117,7 @@ class ReviewAddressTest {
         compose.onNodeWithText("הצעה בלבד: \u2068רחוב בדיקה 12\u2069").performScrollTo().assertExists()
         compose.onNodeWithText("קו רוחב").assertDoesNotExist()
         compose.onNodeWithText("קו אורך").assertDoesNotExist()
-        compose.onNodeWithText("אשר את התוכן לבדיקה").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("שלח").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithText("הצעה בלבד: \u2068רחוב בדיקה 12\u2069").performScrollTo().performClick()
         compose.onNodeWithText("קו רוחב").assertDoesNotExist()
         compose.onNodeWithText("קו אורך").assertDoesNotExist()
@@ -140,7 +137,6 @@ class ReviewAddressTest {
             assertEquals(initial.evidence, saved?.evidence)
             assertEquals(initial.confirmedLatitude, saved?.confirmedLatitude)
             assertEquals(initial.confirmedLongitude, saved?.confirmedLongitude)
-            assertNull(saved?.approvedDigest)
         }
         compose.onNodeWithText("קו רוחב").assertDoesNotExist()
         compose.onNodeWithText("קו אורך").assertDoesNotExist()
@@ -154,7 +150,7 @@ class ReviewAddressTest {
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
         compose.onNodeWithText("רחוב ומספר בית שאישרת").performScrollTo().assertExists()
         compose.onNodeWithText("קו רוחב").assertDoesNotExist()
-        compose.onNodeWithText("אשר את התוכן לבדיקה").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("שלח").performScrollTo().assertIsNotEnabled()
     }
     @Test fun decliningProviderConsentDoesNotLookup() {
         var calls = 0
@@ -163,7 +159,7 @@ class ReviewAddressTest {
         compose.waitForIdle()
         compose.runOnIdle { assertEquals(0, calls) }
         compose.onNodeWithText("קו רוחב").assertDoesNotExist()
-        compose.onNodeWithText("אשר את התוכן לבדיקה").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("שלח").performScrollTo().assertIsNotEnabled()
     }
     @Test fun missingGpsHasVisibleCorrectionRouteAndNeverInventsCoordinates() {
         val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null), confirmedLatitude = null, confirmedLongitude = null)
@@ -172,14 +168,13 @@ class ReviewAddressTest {
         compose.onNodeWithText("לא נמצא מיקום בתמונה.", substring = true).performScrollTo().assertExists()
         compose.onNodeWithText("קו רוחב").assertDoesNotExist()
         compose.onNodeWithText("קו אורך").assertDoesNotExist()
-        compose.onNodeWithText("אשר את התוכן לבדיקה").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("שלח").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
         compose.runOnIdle {
             assertNull(saved?.evidence?.latitude)
             assertNull(saved?.evidence?.longitude)
             assertNull(saved?.confirmedLatitude)
             assertNull(saved?.confirmedLongitude)
-            assertNull(saved?.approvedDigest)
         }
     }
     @Test fun decliningConsentSurvivesSavedStateRestoration() {
