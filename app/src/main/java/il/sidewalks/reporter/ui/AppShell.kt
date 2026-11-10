@@ -433,7 +433,7 @@ fun AppShell(
             // lock note is obsolete once a lockscreen exists.
             val noDeviceCredential = !hasDeviceCredential()
             LaunchedEffect(noDeviceCredential) {
-                if (!noDeviceCredential && submissionNote == strings.t("shell.submit.no_device_lock")) submissionNote = null
+                if (!noDeviceCredential && submissionNote == strings.t("shell.submit.no_device_lock")) submissionNote = ""
             }
             ReviewScreen(value, image, ::saveDraft, manualAddressLookup = { street, house ->
                 val directory = streetsDirectory ?: (streetDirectoryLoader?.invoke() ?: loadStreetDirectory(context)).also { streetsDirectory = it }
