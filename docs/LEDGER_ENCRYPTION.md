@@ -130,7 +130,12 @@ installed device already has history - including devices whose ledger is
 empty. An existing but empty v1 file is therefore a migration, not
 `loadOrCreateEmpty`. On a true fresh install (no `report-ledger*` file and
 no `report-ledger-migration*` journal), custody must be created before the
-first Room open.
+first Room open. On this fresh-install path, after the custody commit and
+read-back and before the first Room open, the journal is written durably as
+`complete`: a fresh install has nothing to migrate, and Room then creates
+the database directly at v2. A fresh install that skipped this write would
+be indistinguishable from the stopped "v2 schema, no journal" state, so the
+journal write is part of custody creation, not an optional step.
 
 The internal proof that authorizes key creation for a ledger with history:
 
@@ -154,9 +159,12 @@ commit with read-back verification -> only then write the migration journal
 - Journal present, no committed key: contradiction - fixed stopped state,
   retain all data, never infer or recover by mtime.
 
-A database arriving without its key (for example a vendor transfer tool that
-ignores the backup rules) stops the same way: `hasHistory()` is true and no
-envelope is committed.
+A database file can also arrive without its key (for example a vendor
+transfer tool that ignores the backup rules). A v1 file in that situation is
+an ordinary migration source: `hasHistory()` is true, no envelope is
+committed, and the proof path above applies. Only a v2 file stops: it fails
+the `user_version == 1` proof, and there is no committed envelope to
+authenticate against.
 
 ### 4. Migration from v1 (plaintext) to v2 (encrypted)
 
@@ -168,37 +176,46 @@ writes use explicit sync/rename/directory-sync plus authenticated read-back
 (the same durability discipline as key custody, not AtomicFile's
 logged-error success).
 
-Schema plan: Room version 1 -> 2. The Room `Migration` is a schema stub that
-creates a new `reports_v2` table with BLOB `draftJson`/`reviewedDigest`
-columns, the same unique index on `originalSha256`, and the other columns
-unchanged. SQLite cannot ALTER a column's type and the SQLite shipped with
-minSdk 26 has no DROP COLUMN, so the data pass rebuilds rather than alters:
-copy-encrypt every row into `reports_v2`, verify, drop the old table, rename.
+Schema plan: Room version 1 -> 2. The Room `Migration` is not a stub and
+does the whole data pass itself. Room runs a `Migration` inside the upgrade
+transaction and, before committing, validates the resulting schema against
+the version-2 entities and writes its identity hash - so no per-record work
+outside that transaction is possible, and a partial result can never be
+committed. The `Migration` creates a new `reports_v2` table with BLOB
+`draftJson`/`reviewedDigest` columns, the same unique index on
+`originalSha256`, and the other columns unchanged. SQLite cannot ALTER a
+column's type and the SQLite shipped with minSdk 26 has no DROP COLUMN, so
+the data pass rebuilds rather than alters: copy-encrypt every row into
+`reports_v2`, verify, drop the old table, rename - all inside the one
+upgrade transaction.
 The Kotlin-facing ledger API keeps today's String-in/String-out shape in a
 repository layer above the `ByteArray` Room entity; DAO signatures for
 `reserve`, `find`, `findPhoto`, `all`, `store`, `approve` are unchanged at
 the repository boundary.
 
 Who opens the database during migration: the migration factory is the sole
-opener. It opens through Room's `openHelper` (a raw `SupportSQLiteDatabase`)
-in migration mode so the schema-stub `Migration` runs; the normal Room DAO
-path never opens a v1 or partially migrated file. Existing Room handles must
-close before migration; UI is stopped until it completes.
+opener. It writes journal `state = migrating` durably first, then opens
+through Room's `openHelper` (a raw `SupportSQLiteDatabase`) in migration
+mode so the `Migration` runs; the normal Room DAO path never opens a v1 or
+partially migrated file. Existing Room handles must close before migration;
+UI is stopped until it completes.
 
 Data pass, under the exclusive lock:
 
-1. `PRAGMA secure_delete = ON` before the first write (a step, not an
-   assumption).
-2. Encrypt rows one transaction per record into `reports_v2`, in `stableId`
-   order. The v2 table contents are the resume cursor: on restart, rows
-   already present (and verified) in `reports_v2` are skipped. A record is
-   recognized as ciphertext by the envelope version byte and GCM
-   verification; while the journal state is `migrating`, plaintext in a v2
-   column mid-copy is expected and handled by re-encryption of that row; in
-   state `complete` it is a hard failure, never a silent passthrough.
-3. After the last row: decrypt and compare every v2 row against the v1
-   source, privately (no values in logs).
-4. Drop the v1 table, rename `reports_v2`, journal `state = cleaning`.
+1. `PRAGMA secure_delete = ON` on the raw connection before the upgrade
+   transaction begins (a step, not an assumption).
+2. Inside the one upgrade transaction, in `stableId` order: encrypt each v1
+   row's `draftJson`/`reviewedDigest` into `reports_v2` and immediately
+   decrypt-verify the written envelope against the source values, privately
+   (no values in logs). Any failure rolls the whole transaction back: the
+   v1 file is unchanged, and a v2 row is either a fully verified envelope
+   or absent. There is no resume cursor and no mid-copy plaintext
+   passthrough - a crash during the data pass re-runs the whole pass from
+   the intact v1 source.
+3. Drop the v1 table, rename `reports_v2`, still inside the same
+   transaction. Room then validates the schema against the v2 entities and
+   commits.
+4. After the open returns, journal `state = cleaning` durably.
 5. `VACUUM` (outside any transaction - VACUUM cannot run inside one), then
    `wal_checkpoint(TRUNCATE)` (it must follow VACUUM: in WAL mode VACUUM's
    output goes through the WAL).
@@ -212,11 +229,14 @@ Restart table:
 
 | Last durable state | Required safe action | Never do |
 |---|---|---|
-| No journal, v1 file | validate proof under lock, create/commit custody, start | treat any database as a known v1 source |
-| Journal `migrating`, v2 partial | reverify proof identity; resume copy from v2 contents | replace the key or reopen v1 for writes |
+| No journal, v1 file, no committed key | validate proof under lock, create/commit custody, write journal `migrating`, start | treat any database as a known v1 source |
+| No journal, v1 file, committed key | re-issue the proof against the current source file (its bound identity was never persisted, so it is simply re-validated against the file now present), write journal `migrating`, start | create custody again (`commitDurably` refuses when a committed file exists) or reopen v1 for writes |
+| Journal `migrating`, v1 file | crash before or during the upgrade transaction: nothing was committed; revalidate the proof under lock, re-run the whole data pass | replace the key, reopen v1 for writes, or resume mid-copy (there is no resume cursor) |
+| Journal `migrating`, v2 schema | the upgrade committed before the journal write: skip the data pass, journal `cleaning`, resume at the VACUUM step | re-copy from a stale v1 or skip the byte scan |
 | Journal `cleaning` | reverify v2 against v1; resume at VACUUM/checkpoint step | re-copy from a stale v1 or skip the byte scan |
 | Journal `complete` | authenticated encrypted open only | reclassify wrong key/corruption as plaintext |
-| v2 schema, no journal | fixed stopped state, retain data | infer state by mtime or delete anything |
+| Committed key, no journal, no database | fresh-install crash point: write journal `complete` durably, open Room creating the v2 database | treat it as a migration (there is no source) |
+| v2 schema, no journal (not the fresh-install row above) | fixed stopped state, retain data | infer state by mtime or delete anything |
 | Missing/corrupt/contradictory journal or files | fixed stopped state, retain data | reset, recover by guessing, destructive migration |
 
 User-approval gate (kept from #91): no real user data migration is
@@ -231,7 +251,9 @@ protects the startup sweep: the sweep (`GalleryImport.sweepUnreferenced`)
 runs only in the ready state, over the plaintext `originalRelativePath` of
 every row; if the ledger is not ready, the sweep does not run at all, so an
 undecryptable row can never cause its evidence photo to be deleted as
-"unreferenced".
+"unreferenced". The one exception is a tombstoned row (section 7): it is
+never decrypted, so it is not a GCM failure and does not stop the ledger.
+The rule above applies to every non-tombstoned row.
 
 | Consumer | Ready | Migrating / locked / key-loss stopped |
 |---|---|---|
@@ -258,8 +280,9 @@ Removing or force-resetting the lock screen permanently invalidates the
 auth-bound wrapping key (section 2). The one-report-per-photo guard lives
 only in the ledger (unique index on `originalSha256`, enforced through
 `reserve`), and the app accepts any gallery image via `ACTION_SEND`. Without
-a recovery path, the user's only way back to a working app is Clear storage
-or reinstall, which deletes the ledger and every `originalSha256` row -
+a recovery path, the user's only way back to a working app would be Clear
+storage or reinstall, which would delete the ledger and every
+`originalSha256` row -
 after which every previously filed photo can be imported and filed again.
 Encryption would thereby tie duplicate-guard loss to an ordinary action
 (removing the lock screen) that today is harmless.
@@ -267,14 +290,38 @@ Encryption would thereby tie duplicate-guard loss to an ordinary action
 Owner decision (user-approved 2026-11-10 15:35 IST, relayed via Instinct):
 option (a), tombstone-preserving recovery. A user-confirmed key-loss
 recovery keeps every row's plaintext columns (`stableId`, `originalSha256`,
-`originalRelativePath`, `revision`) as permanent tombstones, marks the
-encrypted fields unreadable, and permanently refuses open, approve and send
-for tombstoned rows. Their `submissions/<stableId>.json` files are kept.
-New custody is created only through a separately reviewed recovery proof
-bound to that exact tombstone set. Tests must show `reserve` of a
-tombstoned hash still aborts after recovery and after reopen. This keeps
-the guard - the property the whole live-run machinery exists to protect -
-with no plaintext content exposure.
+`originalRelativePath`, `revision`) and its ciphertext bytes untouched, and
+sets a new plaintext `tombstoned` flag column in the same transaction that
+commits the recovery proof. The tombstoned flag means:
+
+- The row is never decrypted, and its undecryptable ciphertext is not a
+  GCM failure: the section-5 rule stops the ledger only for a
+  non-tombstoned row's failure.
+- `all()` returns tombstoned rows marked as such; the Reports list shows
+  them as unreadable; the startup sweep's referenced set includes their
+  `originalRelativePath`, so their evidence photos are kept, not deleted
+  as "unreferenced".
+- Open, approve and send are permanently refused for tombstoned rows
+  (fail closed). If a tombstoned row's `submissions/<stableId>.json`
+  records an in-flight or uncertain municipal submission, send stays
+  refused, but the case data from that plaintext file is still shown so
+  the user can track or verify the case with the municipality.
+- Recovery deletes, compacts or rewrites no row and no hash: the only
+  write is the tombstone flag in the recovery transaction. There is no
+  in-app reset or clear-ledger flow; Clear storage and uninstall remain
+  the OS-level residual risk accepted in section 2.
+
+Their `submissions/<stableId>.json` files are kept. New custody is created
+only through a separately reviewed recovery proof bound to that exact
+tombstone set, and recovery is offered only after the user has set a secure
+lock screen again: a new wrapping key cannot be created or used without one
+(section 2). Until recovery is confirmed, the stopped screen shows the
+ledger as locked by the removed credential and offers the recovery action
+- nothing destructive. Tests must show `reserve` of a tombstoned hash
+still aborts after recovery and after reopen, and that the startup sweep
+keeps tombstoned rows' evidence photos. This keeps the guard - the
+property the whole live-run machinery exists to protect - with no
+plaintext content exposure.
 
 ### 8. Tests
 
@@ -287,9 +334,9 @@ with no plaintext content exposure.
 - AAD binding: a `draftJson` ciphertext copied into `reviewedDigest` (same
   row) fails verification; a ciphertext copied to another row fails.
 - Migration: golden v1 database migrates to identical logical content;
-  interrupted migration (kill between records, between rename and VACUUM,
-  between VACUUM and checkpoint, before `complete`) resumes per the restart
-  table; post-migration raw file, WAL and SHM contain no plaintext
+  interrupted migration (kill mid-data-pass, between the upgrade commit
+  and the `cleaning` journal write, between VACUUM and checkpoint, before
+  `complete`) resumes per the restart table; post-migration raw file, WAL and SHM contain no plaintext
   fragments; "v2 schema, no journal" stops and retains data.
 - Fail-closed consumers: corrupt one row; `all()` throws, the sweep deletes
   nothing, and the photo files are untouched. `reserve` of an existing hash
@@ -303,9 +350,11 @@ with no plaintext content exposure.
   the manifest keeps `allowBackup="false"`; a future narrowing fails CI.
 - Downgrade: source test forbids `fallbackToDestructiveMigration*` on the
   ledger builder.
-- Tombstone recovery (if option (a) is chosen): recovery preserves
-  tombstones, tombstoned rows refuse open/approve/send, `reserve` of a
-  tombstoned hash aborts after recovery and after reopen.
+- Tombstone recovery: recovery preserves tombstones, tombstoned rows
+  refuse open/approve/send, `reserve` of a tombstoned hash aborts after
+  recovery and after reopen, and after recovery the startup sweep's
+  referenced set includes tombstoned rows' `originalRelativePath` so their
+  evidence photos are not deleted.
 - Ledger behavior: revision conflicts, duplicate reserve, ordering, and the
   duplicate guard behave exactly as before across reopen.
 - androidTest boundary move: the instrumented helpers that open Room
