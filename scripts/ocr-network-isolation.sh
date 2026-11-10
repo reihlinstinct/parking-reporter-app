@@ -28,7 +28,7 @@ ocr_network_isolation() {
                 echo 'network probe unrecognised - refusing OCR'
                 return 1
             fi
-            if grep -vxF 'nc: connect: Network is unreachable' "$output/offline-probe-$attempt.txt" | grep -q .; then
+            if grep -qvxF -e 'nc: connect: Network is unreachable' -e '' "$output/offline-probe-$attempt.txt"; then
                 echo 'network probe unrecognised - refusing OCR'
                 return 1
             fi
