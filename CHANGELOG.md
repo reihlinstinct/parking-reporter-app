@@ -6,6 +6,17 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.27.3] - 2026-11-10
+
+### Fixes
+
+- fix: submit the exact EXIF-free review image in app (#201) (#273) (890cc5c)
+
+### Other changes
+
+- ci: run offline OCR network-isolation suite (#245) (#275) (af878b9)
+- test: execute actual private OCR input-integrity gate (#247) (#274) (a394fa6)
+
 ## [0.27.2] - 2026-11-10
 
 ### Fixes
