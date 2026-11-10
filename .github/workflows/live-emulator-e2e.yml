@@ -97,28 +97,6 @@ jobs:
             done < <(jq -r '.artifacts[] | select(.expired | not) | [.id, .archive_download_url] | @tsv' <<<"$resp")
           fi
           echo 'no prior live run took this digest'
-      - name: Fetch the pinned private address directory
-        env:
-          PRIVATE_LOOKUP_READ_TOKEN: ${{ secrets.PRIVATE_LOOKUP_READ_TOKEN }}
-        run: |
-          set -euo pipefail
-          umask 077
-          test -n "$PRIVATE_LOOKUP_READ_TOKEN" || { echo 'private lookup read token missing'; exit 1; }
-          mkdir -p /tmp/live-private
-          header=$(mktemp /tmp/live-private/header.XXXXXX)
-          trap 'shred -u "$header" 2>/dev/null || true' EXIT
-          printf 'Authorization: Bearer %s\n' "$PRIVATE_LOOKUP_READ_TOKEN" > "$header"
-          unset PRIVATE_LOOKUP_READ_TOKEN
-          curl -fsSL --retry 2 \
-            -H "@$header" \
-            -H 'Accept: application/vnd.github.raw+json' \
-            'https://api.github.com/repos/reihlinstinct/parking-reports/contents/addresses.json?ref=main' \
-            -o /tmp/live-private/addresses.json
-          pin=$(sed -n 's/^        "\([0-9a-f]\{64\}\)"$/\1/p' app/src/main/java/il/sidewalks/reporter/municipal/AddressLookupPin.kt)
-          test -n "$pin" && test "$(sha256sum /tmp/live-private/addresses.json | cut -d' ' -f1)" = "$pin" || {
-            echo 'private lookup does not match production pin'; exit 1;
-          }
-          echo 'private address directory verified (contents withheld)'
       - name: Build app and test APKs
         run: sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
       - name: Pre-download the emulator system image (direct, before any tunnel)
@@ -309,6 +287,28 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - name: Fetch the pinned private address directory
+        env:
+          PRIVATE_LOOKUP_READ_TOKEN: ${{ secrets.PRIVATE_LOOKUP_READ_TOKEN }}
+        run: |
+          set -euo pipefail
+          umask 077
+          test -n "$PRIVATE_LOOKUP_READ_TOKEN" || { echo 'private lookup read token missing'; exit 1; }
+          mkdir -p /tmp/live-private
+          header=$(mktemp /tmp/live-private/header.XXXXXX)
+          trap 'shred -u "$header" 2>/dev/null || true' EXIT
+          printf 'Authorization: Bearer %s\n' "$PRIVATE_LOOKUP_READ_TOKEN" > "$header"
+          unset PRIVATE_LOOKUP_READ_TOKEN
+          curl -fsSL --retry 2 \
+            -H "@$header" \
+            -H 'Accept: application/vnd.github.raw+json' \
+            'https://api.github.com/repos/reihlinstinct/parking-reports/contents/addresses.json?ref=main' \
+            -o /tmp/live-private/addresses.json
+          pin=$(sed -n 's/^        "\([0-9a-f]\{64\}\)"$/\1/p' app/src/main/java/il/sidewalks/reporter/municipal/AddressLookupPin.kt)
+          test -n "$pin" && test "$(sha256sum /tmp/live-private/addresses.json | cut -d' ' -f1)" = "$pin" || {
+            echo 'private lookup does not match production pin'; exit 1;
+          }
+          echo 'private address directory verified (contents withheld)'
       - name: Run the live submission in the emulator (screen recorded)
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:

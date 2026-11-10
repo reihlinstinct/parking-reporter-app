@@ -60,4 +60,16 @@ if sh "$tmp/repo/scripts/stage-live-files.sh" "$tmp/photo.jpg" "$tmp/params.json
   echo 'missing directory was accepted' >&2; exit 1
 fi
 test ! -s "$MOCK_CALL_LOG"
+printf '{"version":1,"streets":[],"addresses":[]}\n' > "$tmp/addresses.json"
+for bad_pin in malformed missing; do
+  if [ "$bad_pin" = malformed ]; then
+    printf 'not-a-pin\n' > app/src/main/java/il/sidewalks/reporter/municipal/AddressLookupPin.kt
+  else
+    rm app/src/main/java/il/sidewalks/reporter/municipal/AddressLookupPin.kt
+  fi
+  if sh "$tmp/repo/scripts/stage-live-files.sh" "$tmp/photo.jpg" "$tmp/params.json" "$tmp/addresses.json" >/dev/null 2>&1; then
+    echo 'invalid pin was accepted' >&2; exit 1
+  fi
+  test ! -s "$MOCK_CALL_LOG"
+done
 echo 'staging regression test passed: first-install (no files/ dir) handled'
