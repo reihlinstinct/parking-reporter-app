@@ -7,7 +7,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
 import il.sidewalks.reporter.ui.SettingsScreen
 import il.sidewalks.reporter.ui.theme.AppTheme
-import il.sidewalks.reporter.i18n.AppCatalog
 import il.sidewalks.reporter.i18n.UiPrefsLanguageStore
 import org.junit.Assert.*
 import org.junit.Rule
@@ -21,7 +20,7 @@ class ContactInputValidationTest {
         File(context.filesDir, name).outputStream().use { compose.onNode(isRoot() and hasAnyDescendant(hasText("טלפון"))).captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
     }
     @Test fun invalidIdAndEmailBlockSaveAndPhoneStoresCanonical() {
-        UiPrefsLanguageStore.of(InstrumentationRegistry.getInstrumentation().targetContext).set(requireNotNull(AppCatalog.get(InstrumentationRegistry.getInstrumentation().targetContext).defaultLanguage).code)
+        UiPrefsLanguageStore.of(InstrumentationRegistry.getInstrumentation().targetContext).set("he")
         var saved: ReporterSettings? = null
         compose.setContent { AppTheme { SettingsScreen(null, save = { value, _, clear -> saved = value; clear() }, back = {}, basicSetup = true) } }
         compose.onNodeWithText("שם פרטי").performTextInput("בדיקה1")
