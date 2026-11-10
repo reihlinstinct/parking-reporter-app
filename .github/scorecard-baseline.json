@@ -1,45 +1,53 @@
 {
- "version": 1,
- "findings": [
-  {
-   "path": ".github/workflows/manual-gpg-signing.yml",
-   "rule": "top-level-write",
-   "scope": "workflow",
-   "evidence": "contents: write",
-   "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
-   "reason": "Pre-existing workflow-level write in the manual signing-test workflow; tracked for job-level scoping in this issue."
-  },
-  {
-   "path": ".github/workflows/release.yml",
-   "rule": "job-write",
-   "scope": "release",
-   "evidence": "contents: write",
-   "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/71",
-   "reason": "release job only (push to main, skips chore(release) commits): pushes the release commit and vX.Y.Z tag and creates the GitHub release; top level stays contents: read; see docs/WRITE_GRANTS.md."
-  },
-  {
-   "path": ".github/workflows/scorecard.yml",
-   "rule": "job-write",
-   "scope": "analysis",
-   "evidence": "security-events: write",
-   "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
-   "reason": "Approved job-scoped SARIF upload to GitHub code scanning; no code or secrets write."
-  },
-  {
-   "path": ".github/workflows/scorecard.yml",
-   "rule": "job-write",
-   "scope": "analysis",
-   "evidence": "id-token: write",
-   "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
-   "reason": "OIDC token for OpenSSF publish_results badge publishing; pre-existing; job-scoped; reviewed."
-  },
-  {
-   "path": ".github/workflows/wiki-sync.yml",
-   "rule": "job-write",
-   "scope": "sync",
-   "evidence": "contents: write",
-   "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/71",
-   "reason": "sync job only (push to main on docs/wiki/** or dispatch): pushes top-level docs/wiki/*.md to this repo's own .wiki.git, no PAT; top level stays contents: read; see docs/WRITE_GRANTS.md."
-  }
- ]
+  "version": 1,
+  "findings": [
+    {
+      "path": ".github/workflows/manual-gpg-signing.yml",
+      "rule": "top-level-write",
+      "scope": "workflow",
+      "evidence": "contents: write",
+      "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
+      "reason": "Pre-existing workflow-level write in the manual signing-test workflow; tracked for job-level scoping in this issue."
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "rule": "job-write",
+      "scope": "release",
+      "evidence": "contents: write",
+      "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/71",
+      "reason": "release job only (push to main, skips chore(release) commits): pushes the release commit and vX.Y.Z tag and creates the GitHub release; top level stays contents: read; see docs/WRITE_GRANTS.md."
+    },
+    {
+      "path": ".github/workflows/scorecard.yml",
+      "rule": "job-write",
+      "scope": "analysis",
+      "evidence": "security-events: write",
+      "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
+      "reason": "Approved job-scoped SARIF upload to GitHub code scanning; no code or secrets write."
+    },
+    {
+      "path": ".github/workflows/scorecard.yml",
+      "rule": "job-write",
+      "scope": "analysis",
+      "evidence": "id-token: write",
+      "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
+      "reason": "OIDC token for OpenSSF publish_results badge publishing; pre-existing; job-scoped; reviewed."
+    },
+    {
+      "path": ".github/workflows/wiki-sync.yml",
+      "rule": "job-write",
+      "scope": "sync",
+      "evidence": "contents: write",
+      "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/71",
+      "reason": "sync job only (push to main on docs/wiki/** or dispatch): pushes top-level docs/wiki/*.md to this repo's own .wiki.git, no PAT; top level stays contents: read; see docs/WRITE_GRANTS.md."
+    },
+    {
+      "path": ".github/workflows/gemini-review.yml",
+      "rule": "job-write",
+      "scope": "gemini-review",
+      "evidence": "pull-requests: write",
+      "issue": "https://github.com/reihlinstinct/gemini-pr-review/issues/1",
+      "reason": "Owner-approved event-driven Gemini PR review; COMMENT-only advisory reviews, idempotent per head SHA. Tracked in reihlinstinct/gemini-pr-review#1."
+    }
+  ]
 }
