@@ -23,7 +23,7 @@ class ShellSettingsExtractionTest {
     private val extracted = linkedMapOf(
         "settings.passport.mode" to "ללא תעודת זהות ישראלית",
         "settings.passport.number" to "מספר דרכון",
-        "shell.passport.review_required" to "נוסף לנוסח הדיווח גילוי על הדרכון ומספר מציין המקום. בדוק את הנוסח המלא, שמור ואשר מחדש לפני שליחה. אם מספר הדרכון חסר או אינו תקין, תקן אותו בהגדרות.",
+        "shell.passport.review_required" to "נדרש גילוי על פרטי הקשר ומספרי מצייני המקום בנוסח הדיווח. בדוק את הנוסח המלא, שמור ואשר מחדש לפני שליחה. אם פרטי הקשר חסרים או אינם תקינים, תקן אותם בהגדרות.",
         "settings.api.advanced" to "חיבור 106 מתקדם",
         "settings.phone.international" to "אפשר להשתמש במספר בינלאומי. קוד המדינה נשמר כפי שהוזן.",
         "settings.email.invalid" to "כתובת האימייל אינה תקינה. בדוק את הכתובת.",
@@ -213,7 +213,7 @@ class ShellSettingsExtractionTest {
             Reason.MISSING_CREDENTIALS to "חסרים פרטי גישה לעירייה בהגדרות",
             Reason.UNSUPPORTED_CATEGORY to "הקטגוריה אינה נתמכת לשליחה",
             Reason.ADDRESS_UNRESOLVED to "הכתובת לא נקבעה: $lri$d$pdi",
-            Reason.PASSPORT_DISCLOSURE_REQUIRED to "נוסף לנוסח הדיווח גילוי על הדרכון ומספר מציין המקום. בדוק את הנוסח המלא, שמור ואשר מחדש לפני שליחה. אם מספר הדרכון חסר או אינו תקין, תקן אותו בהגדרות.",
+            Reason.PASSPORT_DISCLOSURE_REQUIRED to "נדרש גילוי על פרטי הקשר ומספרי מצייני המקום בנוסח הדיווח. בדוק את הנוסח המלא, שמור ואשר מחדש לפני שליחה. אם פרטי הקשר חסרים או אינם תקינים, תקן אותם בהגדרות.",
             Reason.INPUT_INVALID to "קלט לא תקין: $lri$d$pdi",
             Reason.MUNICIPAL_REVIEW_NEEDED to "המצב מול העירייה אינו ודאי. בדוק באפליקציית העירייה; לא בוצעה שליחה חוזרת. $lri$d$pdi",
             Reason.MUNICIPAL_API_FAILURE to "העירייה ענתה: $lri$d$pdi",
