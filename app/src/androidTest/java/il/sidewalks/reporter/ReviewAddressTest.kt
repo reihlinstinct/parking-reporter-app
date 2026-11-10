@@ -1,9 +1,9 @@
 package il.sidewalks.reporter
 
-import androidx.compose.ui.test.assertDoesNotExist
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.StateRestorationTester
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -81,5 +81,31 @@ class ReviewAddressTest {
         compose.runOnIdle { assertEquals(0, calls) }
         compose.onNodeWithText("קו רוחב").assertDoesNotExist()
         compose.onNodeWithText("אשר את התוכן לבדיקה").performScrollTo().assertIsNotEnabled()
+    }
+    @Test fun missingGpsHasVisibleCorrectionRouteAndNeverInventsCoordinates() {
+        val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null), confirmedLatitude = null, confirmedLongitude = null)
+        var saved: ReviewDraft? = null
+        compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {}) } }
+        compose.onNodeWithText("השלם מיקום חסר").performScrollTo().performClick()
+        compose.onNodeWithText("קו רוחב").performScrollTo().performTextReplacement("31.77")
+        compose.onNodeWithText("קו אורך").performScrollTo().performTextReplacement("35.21")
+        compose.onNodeWithText("אשר זמן, מיקום וכתובת שבדקת").performScrollTo().performClick()
+        compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
+        compose.runOnIdle {
+            assertNull(saved?.evidence?.latitude)
+            assertNull(saved?.evidence?.longitude)
+            assertEquals(31.77, saved!!.confirmedLatitude!!, 0.0)
+            assertEquals(35.21, saved!!.confirmedLongitude!!, 0.0)
+            assertNull(saved?.approvedDigest)
+        }
+    }
+    @Test fun decliningConsentSurvivesSavedStateRestoration() {
+        var calls = 0
+        val restoration = StateRestorationTester(compose)
+        restoration.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}, addressLookup = { _, _ -> calls += 1; emptyList() }) } }
+        compose.onNodeWithText("לא עכשיו").performClick()
+        restoration.emulateSavedInstanceStateRestore()
+        compose.onNodeWithText("למצוא רחוב ומספר בית?").assertDoesNotExist()
+        compose.runOnIdle { assertEquals(0, calls) }
     }
 }

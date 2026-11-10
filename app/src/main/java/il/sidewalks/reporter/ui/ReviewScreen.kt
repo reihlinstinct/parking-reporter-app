@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDirection
@@ -41,7 +42,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var longitude by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedLongitude?.toString().orEmpty()) }
     var editing by remember(initial.evidence.stableId) { mutableStateOf(false) }
     var categoryMenu by remember { mutableStateOf(false) }
-    var advancedLocation by remember(initial.evidence.stableId) { mutableStateOf(false) }
+    var advancedLocation by rememberSaveable(initial.evidence.stableId) { mutableStateOf(initial.confirmedLatitude == null || initial.confirmedLongitude == null) }
     suspend fun findAddress() {
         val lat = latitude.toDoubleOrNull() ?: return
         val lon = longitude.toDoubleOrNull() ?: return
@@ -57,7 +58,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     }
     // The provider may receive coordinates. Keep geocoding opt-in, even
     // though the resulting street/house lookup needs no coordinate typing.
-    var askAddressConsent by remember(initial.evidence.stableId) {
+    var askAddressConsent by rememberSaveable(initial.evidence.stableId) {
         mutableStateOf(initial.address.isBlank() && initial.confirmedLatitude != null && initial.confirmedLongitude != null)
     }
     suspend fun recognize() {
@@ -151,7 +152,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             }
         }
         OutlinedTextField(draft.exactHebrewText, { draft = draft.edit(text = it) }, label = { Text(s.t("review.edit.text_field")) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
-        Text(s.t("review.location.confirm_note"))
+        Text(s.t("review.edit.confirm_note"))
         Text(ISO_TIME_EXAMPLE, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(time, { time = it; draft = draft.copy(unresolved = setOf(ReviewWarning.TIME_NEEDS_CONFIRMATION.code), approvedDigest = null) }, textStyle = TextStyle(textDirection = TextDirection.Ltr), label = { Text(s.t("review.edit.time_field")) }, modifier = Modifier.fillMaxWidth())
         TextButton(onClick = { advancedLocation = !advancedLocation }) { Text(s.t(if (advancedLocation) "review.location.hide_advanced" else "review.location.show_advanced")) }
@@ -163,6 +164,10 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         Text(reviewAddressText(s, draft.address))
         Button(onClick = { draft = draft.confirmEvidence(time, latitude.toDoubleOrNull(), longitude.toDoubleOrNull()) }, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.edit.confirm_button")) }
         if (draft.unresolved.isNotEmpty()) Text(unresolvedText(s, draft.unresolved))
+        }
+        if (latitude.toDoubleOrNull() == null || longitude.toDoubleOrNull() == null) {
+            Text(s.t("review.location.missing"))
+            TextButton(onClick = { editing = true; advancedLocation = true }) { Text(s.t("review.location.enter_missing")) }
         }
         Text(s.t("review.approval_note"))
         Button(enabled = draft.isReady(), onClick = { draft = draft.approve(); onSave(draft) }, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.approve_button")) }
