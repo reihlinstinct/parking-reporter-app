@@ -22,6 +22,12 @@ adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 # Do not allow ML Kit telemetry or image transport during the benchmark.
 adb shell svc wifi disable
 adb shell svc data disable
+# Fail closed: emulator normally has internet access, but this run must not.
+# Probe uses a numeric public IP, not DNS. A successful outbound packet refuses.
+if adb shell ping -c 1 -W 2 8.8.8.8 > "$work/output/offline-probe.txt" 2>&1; then
+    echo 'network isolation check failed - refusing OCR'
+    exit 1
+fi
 adb shell run-as il.sidewalks.reporter mkdir -p files/ocr-benchmark
 for f in "$work/input"/*; do
     adb shell "run-as il.sidewalks.reporter sh -c 'cat > files/ocr-benchmark/$(basename "$f")'" < "$f"

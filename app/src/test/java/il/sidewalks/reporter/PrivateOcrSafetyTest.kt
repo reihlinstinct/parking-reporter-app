@@ -23,6 +23,8 @@ class PrivateOcrSafetyTest {
         val script = read("../scripts/run-private-ocr-benchmark.sh", "scripts/run-private-ocr-benchmark.sh")
         assertTrue(script.contains("svc wifi disable"))
         assertTrue(script.contains("svc data disable"))
+        assertTrue(script.contains("if adb shell ping -c 1 -W 2"))
+        assertTrue(script.contains("network isolation check failed - refusing OCR"))
         assertTrue(script.contains("OCR_BENCH_INPUT_SHA256"))
         assertTrue(script.contains("openssl enc -aes-256-cbc"))
         assertFalse(script.contains("screenrecord"))
