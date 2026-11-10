@@ -19,11 +19,14 @@ with tarfile.open('/tmp/ocr-benchmark/input.tar') as archive:
 PY
 adb install -r app/build/outputs/apk/debug/app-debug.apk > "$work/output/install.txt" 2>&1
 adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk >> "$work/output/install.txt" 2>&1
-# Do not allow ML Kit telemetry or image transport during the benchmark.
+# Positive control must prove this exact probe works before isolation; ICMP-filtered
+# or missing ping is not evidence of offline state. Fail closed on either side.
+if ! adb shell ping -c 1 -W 2 8.8.8.8 > "$work/output/online-control.txt" 2>&1; then
+    echo 'network positive control failed - refusing OCR'
+    exit 1
+fi
 adb shell svc wifi disable
 adb shell svc data disable
-# Fail closed: emulator normally has internet access, but this run must not.
-# Probe uses a numeric public IP, not DNS. A successful outbound packet refuses.
 if adb shell ping -c 1 -W 2 8.8.8.8 > "$work/output/offline-probe.txt" 2>&1; then
     echo 'network isolation check failed - refusing OCR'
     exit 1
