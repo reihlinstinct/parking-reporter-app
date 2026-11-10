@@ -11,9 +11,9 @@ import java.io.File
  * outcomes to Hebrew copy - this class never produces user-facing text.
  *
  * Hard rules preserved here:
- * - the draft must be locally approved (digest matches) before anything runs;
- * - the report photo attached is the immutable original bytes, like the
- *   helper pipeline, never a re-encoded derivative;
+ * - the complete shown draft and original evidence hash must match;
+ * - the app passes the exact previewed, EXIF-free outgoing photo; the JVM
+ *   workflow engine explicitly retains its original-photo behavior;
  * - every municipal failure maps to a typed outcome; nothing is retried
  *   silently and no state is deleted here.
  */
@@ -22,6 +22,13 @@ class SubmissionCoordinator(
     private val streets: StreetDirectory,
     private val storeFor: (stableId: String) -> SubmissionStateStore,
 ) {
+    /** Snapshot of the exact reviewed outgoing bytes, bound to their source original. */
+    class OutgoingPhoto(jpeg: ByteArray, val originalHash: String) {
+        private val bytes = jpeg.copyOf()
+        val hash: String = il.sidewalks.reporter.intake.EncryptedPackage.sha256(bytes)
+        fun snapshot(): ByteArray = bytes.copyOf()
+    }
+
     sealed interface Outcome {
         /** The city accepted the case; [caseNumber] is the municipal number. */
         data class Submitted(val caseNumber: String?) : Outcome
@@ -59,20 +66,37 @@ class SubmissionCoordinator(
         MUNICIPAL_API_FAILURE,
     }
 
-    /** Submits a complete (SendGate-ready) draft; send is the single confirmation. */
+    /** In-app send requires the exact previewed derivative. No original fallback. */
+    fun submit(draft: ReviewDraft, settings: ReporterSettings, originalJpeg: File,
+               outgoingPhoto: OutgoingPhoto): Outcome =
+        submitInternal(draft, settings, originalJpeg, outgoingPhoto)
+
+    /** Separate JVM workflow path: preserve its owner-approved original-photo policy. */
+    fun submitOriginalForWorkflow(draft: ReviewDraft, settings: ReporterSettings,
+                                  originalJpeg: File): Outcome =
+        submitInternal(draft, settings, originalJpeg, null)
+
     @Suppress("UNCHECKED_CAST")
-    fun submit(
+    private fun submitInternal(
         draft: ReviewDraft,
         settings: ReporterSettings,
         originalJpeg: File,
+        outgoingPhoto: OutgoingPhoto?,
     ): Outcome {
         if (!draft.isReady()) return Outcome.Blocked(Reason.NOT_READY, "draft not ready")
         // Tab review (#266): never send a photo whose bytes do not match the
         // draft's evidence hash - a mis-paired draft and original would file
         // the wrong photo. Refuse before any state write or network call.
-        val photoHash = il.sidewalks.reporter.intake.EncryptedPackage.sha256(originalJpeg.readBytes())
+        val originalBytes = try { originalJpeg.readBytes() } catch (_: Exception) {
+            return Outcome.Blocked(Reason.INPUT_INVALID, "original unreadable")
+        }
+        val photoHash = il.sidewalks.reporter.intake.EncryptedPackage.sha256(originalBytes)
         if (photoHash != draft.evidence.originalSha256)
             return Outcome.Blocked(Reason.INPUT_INVALID, "photo bytes do not match the draft evidence hash")
+        val outgoingBytes = outgoingPhoto?.snapshot()
+        if (outgoingPhoto != null && (outgoingPhoto.originalHash != photoHash ||
+                outgoingBytes == null || outgoingBytes.isEmpty() || outgoingBytes.size > 1_100_000))
+            return Outcome.Blocked(Reason.INPUT_INVALID, "outgoing photo does not match the reviewed evidence")
         if (!PassportSubmission.isSupportedPhone(settings.phone)) return Outcome.Blocked(Reason.INPUT_INVALID, "unsupported reporter phone")
         if (!PassportSubmission.hasReviewedDisclosure(draft.exactHebrewText, settings))
             return Outcome.Blocked(Reason.PASSPORT_DISCLOSURE_REQUIRED, "passport disclosure must be saved before sending")
@@ -120,11 +144,9 @@ class SubmissionCoordinator(
         } catch (e: MunicipalInputException) {
             return Outcome.Blocked(Reason.INPUT_INVALID, e.message ?: "report invalid")
         }
-        val jpeg = try {
-            originalJpeg.readBytes()
-        } catch (e: Exception) {
-            return Outcome.Blocked(Reason.INPUT_INVALID, "original unreadable")
-        }
+        // Only the Android app provides a derivative. The workflow-staged JVM
+        // engine keeps its approved original unchanged (owner scope #201).
+        val jpeg = outgoingBytes ?: originalBytes
         val client = try {
             clientFactory(settings)
         } catch (e: MunicipalInputException) {
@@ -132,7 +154,8 @@ class SubmissionCoordinator(
         }
         val store = storeFor(draft.evidence.stableId)
         val result = try {
-            SubmissionStateMachine(client).submit(store, contact, report, jpeg)
+            SubmissionStateMachine(client).submit(store, contact, report, jpeg,
+                photoSha256 = il.sidewalks.reporter.intake.EncryptedPackage.sha256(jpeg))
         } catch (e: MunicipalReviewNeededException) {
             return Outcome.Blocked(Reason.MUNICIPAL_REVIEW_NEEDED, e.message ?: "review needed")
         } catch (e: IllegalStateException) {

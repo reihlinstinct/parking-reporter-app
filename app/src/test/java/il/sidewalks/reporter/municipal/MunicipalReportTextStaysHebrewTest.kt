@@ -63,7 +63,7 @@ class MunicipalReportTextStaysHebrewTest {
         val client = RecordingClient()
         val jpeg = File.createTempFile("original", ".jpg").apply { writeBytes(byteArrayOf(1, 2, 3, 4)); deleteOnExit() }
         val outcome = SubmissionCoordinator({ client }, fixture()) { InMemorySubmissionStateStore() }
-            .submit(draft(category), settings, jpeg)
+            .submitOriginalForWorkflow(draft(category), settings, jpeg)
         assertTrue("$category: $outcome", outcome is SubmissionCoordinator.Outcome.Submitted)
         return client.seenReport!!
     }

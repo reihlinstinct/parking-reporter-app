@@ -139,7 +139,7 @@ fun AppShell(
         }
         return StreetDirectory.load(AddressLookupPin.verifyPinned(bundled))
     }
-    fun submitReport(shown: ReviewDraft) {
+    fun submitReport(shown: ReviewDraft, outgoing: il.sidewalks.reporter.evidence.OutgoingImage?) {
         // Runs 42853563754 / 42880867432: the send tap never reached the
         // submit path. Log every gate so the next live run shows exactly
         // where a tap stops (or that it never arrived - see the ReviewScreen
@@ -157,6 +157,13 @@ fun AppShell(
         if (!SendGate.readyToSend(shown)) {
             Log.i("SUBMIT_FLOW", "submitReport blocked: draft not ready")
             submissionNote = strings.t("shell.submit.blocked.not_ready")
+            return
+        }
+        // #201: never fall back to the original when preview preparation failed
+        // or is still running. Send uses this exact displayed derivative.
+        if (outgoing == null || outgoing.originalHash != shown.evidence.originalSha256) {
+            submissionNote = municipalOutcomeText(strings, SubmissionCoordinator.Outcome.Blocked(
+                SubmissionCoordinator.Reason.INPUT_INVALID, "outgoing image not ready"))
             return
         }
         // Issue #260: without a device credential the unlock intent is null
@@ -231,7 +238,8 @@ fun AppShell(
                             directory,
                             { id -> FileSubmissionStateStore.forReport(
                                 File(context.noBackupFilesDir, "submissions"), id) },
-                        ).submit(shown, settings, file)
+                        ).submit(shown, settings, file,
+                            SubmissionCoordinator.OutgoingPhoto(outgoing.jpeg, outgoing.originalHash))
                     } catch (e: il.sidewalks.reporter.municipal.AddressLookupMismatchException) {
                         SubmissionCoordinator.Outcome.Blocked(
                             SubmissionCoordinator.Reason.LOOKUP_MISMATCH,
@@ -455,16 +463,19 @@ fun AppShell(
         "camera" -> CaptureScreen(onCaptured = { file -> startReview(file) }, onCancel = { page = "home" })
         "reports" -> ReportsScreen(records, open = { openRecord(it) })
         "review" -> draft?.let { value ->
-            val image by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, original) {
+            val preview by produceState<Pair<il.sidewalks.reporter.evidence.OutgoingImage, androidx.compose.ui.graphics.ImageBitmap>?>(null, original) {
                 this.value = withContext(Dispatchers.IO) {
                     try {
                         original?.let { file ->
-                            val prepared = il.sidewalks.reporter.evidence.OutgoingEvidence.prepare(file)
-                            BitmapFactory.decodeByteArray(prepared.jpeg, 0, prepared.jpeg.size)?.asImageBitmap()
+                            val outgoing = il.sidewalks.reporter.evidence.OutgoingEvidence.prepare(file)
+                            BitmapFactory.decodeByteArray(outgoing.jpeg, 0, outgoing.jpeg.size)
+                                ?.asImageBitmap()?.let { outgoing to it }
                         }
                     } catch (_: Exception) { null }
                 }
             }
+            val outgoing = preview?.first
+            val image = preview?.second
             // Live submit is always visible (owner 19:49: no master toggle
             // and no settings pre-read; the per-submit device unlock is the
             // gate, and missing credentials answer after it).
@@ -485,7 +496,7 @@ fun AppShell(
                 val directory = streetsDirectory ?: (streetDirectoryLoader?.invoke() ?: loadStreetDirectory(context)).also { streetsDirectory = it }
                 directory.findConfirmedAddress(street, house)
             }, onBack = { page = "home" },
-                onSubmit = { shown -> submitReport(shown) },
+                onSubmit = { shown -> submitReport(shown, outgoing.takeIf { image != null }) },
                 submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, noDeviceCredential = noDeviceCredential)
             // Save feedback lands in the shell status; show it here as on
             // home/settings so שמור טיוטה visibly confirms (driver waits on it).
