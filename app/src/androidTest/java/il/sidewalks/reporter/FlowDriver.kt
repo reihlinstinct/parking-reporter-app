@@ -10,6 +10,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isEnabled
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.junit4.ComposeTestRule
+import androidx.compose.ui.test.onAllNodes
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -82,6 +83,15 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         // back to disabled, and a disabled button keeps its click action,
         // so the click then no-ops silently (run 42853563754).
         compose.waitForIdle()
+        // Runs 42853563754 / 42880867432: an enabled-button semantics click
+        // no-opped repeatedly. Log every matching node (count, enabled,
+        // bounds) so the next run shows whether onNode's first match is the
+        // visible button or a stale duplicate left by a transition.
+        val matches = compose.onAllNodes(hasText(text) and hasClickAction()).fetchSemanticsNodes()
+        println("FLOW_DRIVER click target '$text': ${matches.size} clickable node(s): " +
+            matches.joinToString { m ->
+                "[enabled=${SemanticsProperties.Disabled !in m.config} bounds=${m.boundsInRoot} visible=${m.layoutInfo.isPlaced}]"
+            })
         compose.onNode(hasText(text) and hasClickAction() and isEnabled())
             .performScrollTo()
             .performSemanticsAction(SemanticsActions.OnClick)
@@ -270,6 +280,13 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         val submissionsDir = File(
             InstrumentationRegistry.getInstrumentation().targetContext.noBackupFilesDir,
             "submissions")
+        // The approval buttons keep their labels after latching, so pixels
+        // cannot show whether they disabled - log their semantics state.
+        for (label in listOf("אשר זמן, מיקום וכתובת שבדקת", "אשר את התוכן לבדיקה")) {
+            val nodes = compose.onAllNodes(hasText(label) and hasClickAction()).fetchSemanticsNodes()
+            println("FLOW_DRIVER approval button '$label': ${nodes.size} node(s): " +
+                nodes.joinToString { "[enabled=${SemanticsProperties.Disabled !in it.config}]" })
+        }
         var tap = 0
         while (true) {
             val enabled = try {

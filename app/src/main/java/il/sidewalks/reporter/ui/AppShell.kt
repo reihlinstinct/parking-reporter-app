@@ -141,25 +141,37 @@ fun AppShell(
         return StreetDirectory.load(AddressLookupPin.verifyPinned(bundled))
     }
     fun submitReport(shown: ReviewDraft) {
-        if (submitting) return
+        // Runs 42853563754 / 42880867432: the send tap never reached the
+        // submit path. Log every gate so the next live run shows exactly
+        // where a tap stops (or that it never arrived - see the ReviewScreen
+        // onClick log).
+        Log.i("SUBMIT_FLOW", "submitReport entered: submitting=$submitting")
+        if (submitting) {
+            Log.i("SUBMIT_FLOW", "submitReport ignored: submitting already true")
+            return
+        }
         // Send exactly what the review screen shows: the shown draft must be
         // the last saved one, and approved. A failed or dropped save must
         // never send stale text.
         if (!SendGate.readyToSend(shown, draft)) {
+            Log.i("SUBMIT_FLOW", "submitReport blocked: send gate not ready")
             submissionNote = strings.t("shell.submit.draft_not_saved")
             return
         }
         // Issue #260: without a device credential the unlock intent is null
         // and the gate would swallow the tap silently; block with a note.
         if (!hasDeviceCredential()) {
+            Log.i("SUBMIT_FLOW", "submitReport blocked: no device credential")
             submissionNote = strings.t("shell.submit.no_device_lock")
             return
         }
+        Log.i("SUBMIT_FLOW", "submitReport requesting device-credential authenticate")
         // Device unlock gates every submit (owner 19:49), reusing the same
         // device-credential flow that protects the settings screen. The
         // prompt states what the unlock authorises: sending this report.
         authenticate(strings.t("shell.unlock.submit_title"),
             strings.t("shell.unlock.submit_subtitle")) {
+            Log.i("SUBMIT_FLOW", "submitReport authenticate callback: setting submitting=true")
             submitting = true
             submissionNote = strings.t("shell.submit.sending")
             scope.launch {
