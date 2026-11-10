@@ -164,20 +164,23 @@ class LiveEmulatorSubmissionTest {
                 categoryLabel = params.getString("categoryLabel")))
             marker("APPROVED")
             driver.screenshot("live-e2e-approved.png")
-            marker("SEND_TAPPED")
-            sendTapped = true
             // The state machine writes its per-report record BEFORE the first
             // network call, so a new record proves a request fired. Snapshot
             // now: it is the arbiter if the sending label never shows.
             val submissionsDir = File(context.noBackupFilesDir, "submissions")
             val submissionsBefore = submissionsDir.list()?.toSet() ?: emptySet()
+            // SEND_TAPPED is emitted by the driver immediately before the
+            // real click (after its pre-tap gates): a gate timeout returns
+            // SEND_NOT_FIRED with no marker, so the public log can never show
+            // a tap that did not happen (#259 review, run 42821291508).
+            val onTap = { marker("SEND_TAPPED"); sendTapped = true }
             // A live call can be slow; the wait is deliberately longer than
             // the stub's. DRAFT_NOT_SAVED means the gate refused and nothing
             // was sent, so only then is a retry safe.
             // 300s: the municipal API through the owner tunnel can answer
             // slowly; a slow-but-successful response must still be caught.
             // The 120s wait is what turned run 42762339581 OUTCOME_UNKNOWN.
-            var outcome = driver.tapSendAndAwaitOnce(300_000, screenshotEveryMs = 20_000)
+            var outcome = driver.tapSendAndAwaitOnce(300_000, screenshotEveryMs = 20_000, onTapAboutToFire = onTap)
             var sendAttempts = 1
             // Only DRAFT_NOT_SAVED retries in-run: the gate's refusal proves
             // no request was made. SEND_NOT_FIRED never retries in-run - a
@@ -186,7 +189,7 @@ class LiveEmulatorSubmissionTest {
             while (outcome == FlowDriver.SendOutcome.DRAFT_NOT_SAVED && sendAttempts < 3) {
                 Thread.sleep(500)
                 sendAttempts += 1
-                outcome = driver.tapSendAndAwaitOnce(300_000, screenshotEveryMs = 20_000)
+                outcome = driver.tapSendAndAwaitOnce(300_000, screenshotEveryMs = 20_000, onTapAboutToFire = onTap)
             }
             when (outcome) {
                 FlowDriver.SendOutcome.SUBMITTED -> {
