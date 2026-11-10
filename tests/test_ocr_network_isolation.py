@@ -8,11 +8,13 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 class NetworkIsolationTest(unittest.TestCase):
     def probe(self, codes, transport=0, error='nc: connect: Network is unreachable', count=None):
         with tempfile.TemporaryDirectory() as directory:
+            error_file = pathlib.Path(directory, "probe-error.txt")
+            error_file.write_text(error)
             script = '''set -euo pipefail
 source "$1"
 codes=($3)
 transport=$4
-error=$5
+error_file=$5
 index=0
 sleeps=0
 trap 'printf "%s %s" "$index" "$sleeps" > "$2/counts"' EXIT
@@ -21,7 +23,7 @@ adb() {
     if [[ "$*" == *toybox* ]]; then
         result=${codes[$index]:-0}
         index=$((index + 1))
-        if [[ "$result" != 0 ]]; then printf '%s\\n' "$error" >&2; fi
+        if [[ "$result" != 0 ]]; then cat "$error_file" >&2; fi
         return "$result"
     fi
     return 0
@@ -32,7 +34,7 @@ status=$?
 printf '%s %s' "$index" "$sleeps" > "$2/counts"
 exit "$status"
 '''
-            result = subprocess.run(['bash', '-c', script, 'test', str(ROOT/'scripts/ocr-network-isolation.sh'), directory, ' '.join(map(str, codes)), str(transport), error], capture_output=True)
+            result = subprocess.run(['bash', '-c', script, 'test', str(ROOT/'scripts/ocr-network-isolation.sh'), directory, ' '.join(map(str, codes)), str(transport), str(error_file)], capture_output=True)
             if error.strip():
                 self.assertNotIn(error.encode(), result.stdout + result.stderr)
             if count is not None:
@@ -61,7 +63,7 @@ exit "$status"
             with self.subTest(error=error):
                 self.assertNotEqual(0, self.probe([0, 1, 1, 1], error=error))
     def test_large_extra_output_refuses_under_pipefail(self):
-        error = 'nc: connect: Network is unreachable\n' + ('unexpected diagnostic line\n' * 3500)
+        error = 'nc: connect: Network is unreachable\n' + ('unexpected diagnostic line\n' * 2100000)
         self.assertNotEqual(0, self.probe([0, 1, 1, 1], error=error))
     def test_cap_boundary(self):
         self.assertEqual(0, self.probe([0]+[0]*7+[1]*3, count=10))
