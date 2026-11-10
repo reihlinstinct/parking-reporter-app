@@ -189,10 +189,12 @@ class LiveEmulatorSubmissionTest {
             // The 120s wait is what turned run 42762339581 OUTCOME_UNKNOWN.
             var outcome = driver.tapSendAndAwaitOnce(300_000, screenshotEveryMs = 20_000, onTapAboutToFire = onTap, devicePin = liveDevicePin)
             var sendAttempts = 1
-            // Only DRAFT_NOT_SAVED retries in-run: the gate's refusal proves
-            // no request was made. SEND_NOT_FIRED never retries in-run - a
-            // missing label is not proof by itself (review on PR #208), it is
-            // arbitrated against the state record below instead.
+            // Only DRAFT_NOT_SAVED retries in-run at this level: the gate's
+            // refusal proves no request was made. The driver itself re-taps a
+            // no-op send click only while the pre-network record proves
+            // nothing fired (FlowDriver.MAX_SEND_TAPS, never after a network
+            // call may have begun); a SEND_NOT_FIRED outcome here is still
+            // arbitrated against the state record below (review on PR #208).
             while (outcome == FlowDriver.SendOutcome.DRAFT_NOT_SAVED && sendAttempts < 3) {
                 Thread.sleep(500)
                 sendAttempts += 1

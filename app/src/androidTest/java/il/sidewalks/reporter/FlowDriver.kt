@@ -78,6 +78,10 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
      */
     private fun clickButton(text: String) {
         compose.waitUntil(SEND_FIRED_WAIT_MS) { hasClickableButton(text) }
+        // Recomposition between the wait and the action can flip the node
+        // back to disabled, and a disabled button keeps its click action,
+        // so the click then no-ops silently (run 42853563754).
+        compose.waitForIdle()
         compose.onNode(hasText(text) and hasClickAction() and isEnabled())
             .performScrollTo()
             .performSemanticsAction(SemanticsActions.OnClick)
@@ -250,36 +254,66 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
             screenshot("live-e2e-send-ime-stuck.png")
             return SendOutcome.SEND_NOT_FIRED
         }
-        val enabled = try {
-            compose.waitUntil(SEND_ENABLED_WAIT_MS) { hasClickableButton("שלח לעירייה") }
-            true
-        } catch (e: ComposeTimeoutException) { false }
-        if (!enabled) {
-            println("FLOW_DRIVER send button never enabled within ${SEND_ENABLED_WAIT_MS}ms - no tap")
-            screenshot("live-e2e-send-never-enabled.png")
-            return SendOutcome.SEND_NOT_FIRED
+        // The state machine writes its per-report record BEFORE the first
+        // network call, so while no record exists a tap provably fired
+        // nothing and re-tapping cannot duplicate anything at the city.
+        // Snapshotted once here and compared before EVERY re-tap below: a
+        // new record after any tap ends the loop with no further tap, and
+        // the caller arbitrates that SEND_NOT_FIRED into OUTCOME_UNKNOWN.
+        val submissionsDir = File(
+            InstrumentationRegistry.getInstrumentation().targetContext.noBackupFilesDir,
+            "submissions")
+        val recordsBefore = submissionsDir.list()?.toSet() ?: emptySet()
+        var tap = 0
+        while (true) {
+            val enabled = try {
+                compose.waitUntil(SEND_ENABLED_WAIT_MS) { hasClickableButton("שלח לעירייה") }
+                true
+            } catch (e: ComposeTimeoutException) { false }
+            if (!enabled) {
+                println("FLOW_DRIVER send button never enabled within ${SEND_ENABLED_WAIT_MS}ms - no tap")
+                screenshot("live-e2e-send-never-enabled.png")
+                return SendOutcome.SEND_NOT_FIRED
+            }
+            // Let in-flight recomposition settle before the real click:
+            // run 42853563754 clicked during the review screen's recompose
+            // churn and the semantics click no-opped silently.
+            compose.waitForIdle()
+            tap += 1
+            onTapAboutToFire()
+            clickButton("שלח לעירייה")
+            // Live path: the submit gate raises the system ConfirmDeviceCredential
+            // prompt (MainActivity.authenticate). Complete it when a PIN was
+            // supplied - live runs only; the synthetic stub has no gate. A prompt
+            // that does not clear means the submit never started, which is a
+            // pre-network SEND_NOT_FIRED like any other.
+            if (devicePin != null && !completeDeviceCredential(devicePin)) {
+                screenshot("live-e2e-credential-stuck.png")
+                return SendOutcome.SEND_NOT_FIRED
+            }
+            // The button must flip to its sending label (or an outcome must
+            // appear) within a few seconds; otherwise the tap never reached
+            // the app's submit path.
+            val fired = try {
+                compose.waitUntil(SEND_FIRED_WAIT_MS) {
+                    compose.onAllNodesWithText("שולח לעירייה", substring = true)
+                        .fetchSemanticsNodes().isNotEmpty() || outcomeShown() || failureNoteShown()
+                }; true
+            } catch (e: ComposeTimeoutException) { false }
+            if (fired) break
+            // The tap no-opped. Re-tap ONLY while the pre-network record
+            // still proves no request fired; never tap again once a network
+            // call may have begun. Bounded by MAX_SEND_TAPS.
+            if ((submissionsDir.list()?.toSet() ?: emptySet()) != recordsBefore) {
+                println("FLOW_DRIVER submission record appeared after send tap $tap - not re-tapping")
+                return SendOutcome.SEND_NOT_FIRED
+            }
+            if (tap >= MAX_SEND_TAPS) {
+                println("FLOW_DRIVER send tap $tap left no sending state and no record - giving up")
+                return SendOutcome.SEND_NOT_FIRED
+            }
+            println("FLOW_DRIVER send tap $tap no-opped (no sending state, no record) - re-tapping")
         }
-        onTapAboutToFire()
-        clickButton("שלח לעירייה")
-        // Live path: the submit gate raises the system ConfirmDeviceCredential
-        // prompt (MainActivity.authenticate). Complete it when a PIN was
-        // supplied - live runs only; the synthetic stub has no gate. A prompt
-        // that does not clear means the submit never started, which is a
-        // pre-network SEND_NOT_FIRED like any other.
-        if (devicePin != null && !completeDeviceCredential(devicePin)) {
-            screenshot("live-e2e-credential-stuck.png")
-            return SendOutcome.SEND_NOT_FIRED
-        }
-        // The button must flip to its sending label (or an outcome must
-        // appear) within a few seconds; otherwise the tap never reached the
-        // app's submit path and retrying is safe - no request was made.
-        val fired = try {
-            compose.waitUntil(SEND_FIRED_WAIT_MS) {
-                compose.onAllNodesWithText("שולח לעירייה", substring = true)
-                    .fetchSemanticsNodes().isNotEmpty() || outcomeShown() || failureNoteShown()
-            }; true
-        } catch (e: ComposeTimeoutException) { false }
-        if (!fired) return SendOutcome.SEND_NOT_FIRED
         screenshot("live-e2e-after-send-tap.png")
         val startedAt = System.currentTimeMillis()
         var shot = 0
@@ -378,6 +412,11 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         const val SEND_FIRED_WAIT_MS = 10_000L
         /** How long to wait for an ENABLED send button before calling the tap missed. Covers async approval/save. */
         const val SEND_ENABLED_WAIT_MS = 30_000L
+
+        /** Total send taps per call: a no-op tap is re-tried only while the
+         * pre-network submission record proves nothing fired (never after a
+         * network call may have begun) - see tapSendAndAwaitOnce. */
+        const val MAX_SEND_TAPS = 3
         /** How long to wait for on-device OCR to go idle before arming the send tap. ML Kit on an emulator can be slow. */
         const val PLATE_ID_WAIT_MS = 120_000L
         /** How long the IME may take to report hidden after an insets-controller hide. */
