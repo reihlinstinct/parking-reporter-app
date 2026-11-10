@@ -91,6 +91,30 @@ class SubmissionCoordinatorTest {
         }
     }
 
+    @Test fun nationalIdContactsKeepRealIdAndIsraeliMobileWhileForeignPhoneUsesReviewedPlaceholder() {
+        for (phone in listOf("0501234567", "+972501234567", "+12025550123", "+97221234567", "14155552671")) {
+            val profile = settings.copy(phone = phone, passportMode = false)
+            val client = RecordingClient()
+            val text = PassportSubmission.reconcileDisclosure(approvedDraft().exactHebrewText, profile)
+            assertTrue(coordinator(client).submitApproved(approvedDraft().edit(text = text).approve(), profile, jpegFile()) is SubmissionCoordinator.Outcome.Submitted)
+            assertEquals(settings.idNumber, client.seenContact?.get("ContactIdNumber"))
+            assertEquals(if (PassportSubmission.isIsraeliPhone(phone)) "0501234567" else PassportSubmission.INTERNATIONAL_PHONE_PLACEHOLDER, client.seenContact?.get("MobilePhoneNumber"))
+        }
+    }
+    @Test fun shortPassportNeverDisclosesWholeValueAndHiddenStaleLinesAreRejected() {
+        val profile = settings.copy(passportMode = true, passportNumber = "ABC")
+        assertTrue(PassportSubmission.validPassport("ABC"))
+        for (invalid in listOf("", "AB", "A!B", "A".repeat(41))) assertTrue(!PassportSubmission.validPassport(invalid))
+        val line = PassportSubmission.disclosure(profile)
+        assertTrue(!line.contains("ABC"))
+        assertTrue(line.contains("xxxxxBC"))
+        for (prefix in listOf(" ", "\u200f", "\u2066 ")) {
+            assertTrue(!PassportSubmission.hasReviewedDisclosure(line + "\n" + prefix + line, profile))
+            assertEquals(line, PassportSubmission.reconcileDisclosure(prefix + line, profile).trim())
+        }
+        assertTrue(!PassportSubmission.hasReviewedDisclosure(line + "\n" + line, profile))
+    }
+
     @Test fun happyPathSubmitsWithPipelinePayloadShape() {
         val client = RecordingClient()
         val outcome = coordinator(client).submitApproved(approvedDraft(), settings, jpegFile())

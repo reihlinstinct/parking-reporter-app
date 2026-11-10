@@ -25,7 +25,7 @@ class ShellSettingsExtractionTest {
         "settings.passport.number" to "מספר דרכון",
         "shell.passport.review_required" to "נדרש גילוי על פרטי הקשר ומספרי מצייני המקום בנוסח הדיווח. בדוק את הנוסח המלא, שמור ואשר מחדש לפני שליחה. אם פרטי הקשר חסרים או אינם תקינים, תקן אותם בהגדרות.",
         "settings.api.advanced" to "חיבור 106 מתקדם",
-        "settings.phone.international" to "אפשר להשתמש במספר בינלאומי. קוד המדינה נשמר כפי שהוזן.",
+        "settings.phone.international" to "מספר שאינו נייד ישראלי: המספר שלך יופיע בנוסח הדיווח; בשדה העירייה יישלח מספר מציין מקום לאחר אישורך.",
         "settings.email.invalid" to "כתובת האימייל אינה תקינה. בדוק את הכתובת.",
 
         "settings.id.invalid" to "מספר תעודת הזהות אינו תקין. בדוק את הספרות וספרת הביקורת.",

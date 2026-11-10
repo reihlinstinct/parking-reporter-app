@@ -103,7 +103,7 @@ fun SettingsScreen(
             isError = phone.isNotBlank() && !ReporterInput.validPhone(phone),
             supportingText = {
                 if (phone.isNotBlank() && !ReporterInput.validPhone(phone)) Text(s.t("settings.phone.invalid"))
-                else if (phone.isNotBlank()) Text(s.t("settings.phone.international"))
+                else if (phone.isNotBlank() && !il.sidewalks.reporter.municipal.PassportSubmission.isIsraeliPhone(phone)) Text(s.t("settings.phone.international"))
             },
             visualTransformation = if (phoneFocused) VisualTransformation.None else PhoneDisplayTransformation,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, autoCorrectEnabled = false),

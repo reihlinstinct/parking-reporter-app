@@ -13,7 +13,7 @@ object PassportSubmission {
         MunicipalPayloads.normalizePhone(phone).matches(Regex("05[0-9]{8}"))
     } catch (_: Exception) { false }
     private val disclosurePrefixes = listOf("הדיווח נשלח על ידי בעל/ת דרכון שמספרו ", "מספר הטלפון של המדווח/ת ליצירת קשר הוא ")
-    private fun isDisclosureLine(line: String): Boolean = disclosurePrefixes.any { line.startsWith(it) }
+    private fun isDisclosureLine(line: String): Boolean = disclosurePrefixes.any { prefix -> line.dropWhile { it.isWhitespace() || Character.getType(it) == Character.FORMAT.toInt() }.startsWith(prefix) }
     fun reconcileDisclosure(text: String, settings: ReporterSettings): String {
         require(validProfile(settings))
         val base = text.lines().filterNot(::isDisclosureLine).joinToString("\n").trimEnd()
@@ -23,12 +23,16 @@ object PassportSubmission {
     fun validProfile(settings: ReporterSettings): Boolean =
         (!settings.passportMode || validPassport(settings.passportNumber)) &&
         try { MunicipalPayloads.normalizePhone(settings.phone); true } catch (_: Exception) { false }
+    // Owner ruling: phone compatibility applies independently of passport mode.
+    // Foreign/non-mobile contact numbers use the shared phone placeholder only after
+    // exact report disclosure approval; national-ID reporters keep their actual ID.
     fun phoneForPayload(settings: ReporterSettings): String = if (isIsraeliPhone(settings.phone))
         MunicipalPayloads.normalizePhone(settings.phone) else INTERNATIONAL_PHONE_PLACEHOLDER
     fun validPassport(number: String): Boolean = number.trim().matches(Regex("[\\p{L}\\p{N} -]{3,40}")) && number.trim().last().isLetterOrDigit()
     fun disclosure(settings: ReporterSettings): String {
         require(validProfile(settings))
-        val suffix = settings.passportNumber.trim().takeLast(3)
+        val passport = settings.passportNumber.trim()
+        val suffix = passport.takeLast(minOf(3, (passport.length - 1).coerceAtLeast(0)))
         val passportLine = if (settings.passportMode) "הדיווח נשלח על ידי בעל/ת דרכון שמספרו xxxxx" + suffix +
             "; המדווח/ת אינו/ה מחזיק/ה בתעודת זהות ישראלית. בשדה תעודת הזהות בממשק נשלח מספר מציין מקום " + COMPATIBILITY_ID + ", ולא מספר תעודת זהות של המדווח/ת." else ""
         val phoneLine = if (!isIsraeliPhone(settings.phone)) "מספר הטלפון של המדווח/ת ליצירת קשר הוא " + MunicipalPayloads.normalizePhone(settings.phone) +
