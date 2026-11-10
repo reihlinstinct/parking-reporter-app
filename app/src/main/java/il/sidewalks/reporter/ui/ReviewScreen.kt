@@ -30,7 +30,7 @@ import il.sidewalks.reporter.i18n.ProvideStringsIfMissing
 private const val LOCAL_TIME_EXAMPLE = "\u206601/01/2026 12:00\u2069"
 
 @Composable
-fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft) -> Unit, onBack: () -> Unit, onOutgoingPreview: (() -> Unit)? = null, onSubmit: ((ReviewDraft) -> Unit)? = null, submitting: Boolean = false, submissionNote: String = "", missingCredentialKeys: List<String> = emptyList(), noDeviceCredential: Boolean = false, addressLookup: (suspend (Double, Double) -> List<il.sidewalks.reporter.evidence.AddressSuggestion>)? = null, plateRecognizer: (suspend () -> List<String>)? = null, manualAddressLookup: (suspend (String, String) -> il.sidewalks.reporter.municipal.StreetDirectory.ConfirmableAddress)? = null) {
+fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft) -> Unit, onBack: () -> Unit, onSubmit: ((ReviewDraft) -> Unit)? = null, submitting: Boolean = false, submissionNote: String = "", missingCredentialKeys: List<String> = emptyList(), noDeviceCredential: Boolean = false, addressLookup: (suspend (Double, Double) -> List<il.sidewalks.reporter.evidence.AddressSuggestion>)? = null, plateRecognizer: (suspend () -> List<String>)? = null, manualAddressLookup: (suspend (String, String) -> il.sidewalks.reporter.municipal.StreetDirectory.ConfirmableAddress)? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var plates by remember(initial.evidence.stableId) { mutableStateOf<List<String>>(emptyList()) }
@@ -55,6 +55,20 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var manualError by remember { mutableStateOf(false) }
     var manualGeneration by remember { mutableIntStateOf(0) }
     var categoryMenu by remember { mutableStateOf(false) }
+    // Owner instruction 2026-11-10 (phonemsg 01M73E6E2S6AZP46K75QS2S1WY):
+    // the separate "confirm time/location/address" and approval buttons are
+    // gone - send is the single confirmation. Saving or sending folds the
+    // checked time and coordinates into the draft exactly like the removed
+    // confirm button did.
+    fun foldedDraft(): ReviewDraft {
+        val iso = ReviewTime.toJerusalemIso(time, draft.confirmedTime)
+        return if (iso != null) draft.confirmEvidence(iso, latitude.toDoubleOrNull(), longitude.toDoubleOrNull()) else draft
+    }
+    fun confirmPendingEvidence() {
+        val iso = ReviewTime.toJerusalemIso(time, draft.confirmedTime)
+        draft = if (iso != null) draft.confirmEvidence(iso, latitude.toDoubleOrNull(), longitude.toDoubleOrNull())
+            else draft.copy(unresolved = draft.unresolved + ReviewWarning.TIME_NEEDS_CONFIRMATION.code)
+    }
     suspend fun findAddress() {
         val lat = latitude.toDoubleOrNull() ?: return
         val lon = longitude.toDoubleOrNull() ?: return
@@ -179,11 +193,8 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         }
         OutlinedTextField(draft.exactHebrewText, { draft = draft.edit(text = it) }, label = { Text(s.t("review.edit.text_field")) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
         Text(LOCAL_TIME_EXAMPLE, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(time, { time = it; draft = draft.copy(unresolved = setOf(ReviewWarning.TIME_NEEDS_CONFIRMATION.code), approvedDigest = null) }, textStyle = TextStyle(textDirection = TextDirection.Ltr), isError = ReviewTime.toJerusalemIso(time, draft.confirmedTime) == null, label = { Text(s.t("review.edit.time_field")) }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(time, { time = it; draft = draft.copy(unresolved = setOf(ReviewWarning.TIME_NEEDS_CONFIRMATION.code)) }, textStyle = TextStyle(textDirection = TextDirection.Ltr), isError = ReviewTime.toJerusalemIso(time, draft.confirmedTime) == null, label = { Text(s.t("review.edit.time_field")) }, modifier = Modifier.fillMaxWidth())
         Text(reviewAddressText(s, draft.address))
-        Button(onClick = { val iso = ReviewTime.toJerusalemIso(time, draft.confirmedTime)
-            if (iso != null) draft = draft.confirmEvidence(iso, latitude.toDoubleOrNull(), longitude.toDoubleOrNull())
-            else draft = draft.copy(unresolved = draft.unresolved + ReviewWarning.TIME_NEEDS_CONFIRMATION.code, approvedDigest = null) }, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.edit.confirm_button")) }
         if (draft.unresolved.isNotEmpty()) Text(unresolvedText(s, draft.unresolved))
         }
         if (latitude.toDoubleOrNull() == null || longitude.toDoubleOrNull() == null) {
@@ -213,16 +224,12 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                     latitude = result.latitude.toString(); longitude = result.longitude.toString()
                     draft = draft.edit(address = result.address).copy(confirmedLatitude = result.latitude,
                         confirmedLongitude = result.longitude,
-                        unresolved = draft.unresolved - ReviewWarning.MISSING_GPS.code - ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code,
-                        approvedDigest = null)
+                        unresolved = draft.unresolved - ReviewWarning.MISSING_GPS.code - ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code)
                     manualResult = null
                 }, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.location.confirm_address")) }
             }
         }
-        Button(enabled = draft.isReady(), onClick = { draft = draft.approve(); onSave(draft) }, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.approve_button")) }
-        Text(s.t(if (draft.isApproved()) "review.approved" else "review.not_approved"))
-        Button(onClick = { onSave(draft) }, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.save_draft")) }
-        onOutgoingPreview?.let { action -> Button(onClick = action, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.outgoing_preview")) } }
+        Button(onClick = { confirmPendingEvidence(); onSave(draft) }, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.save_draft")) }
         if (onSubmit != null && missingCredentialKeys.isNotEmpty()) {
             // Owner 2026-11-09: when required municipal values are unset, say which
             // ones and grey out send (UI only; the unlock gate before submit is unchanged).
@@ -239,11 +246,12 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             // Send the draft this screen actually shows, not some other copy.
             // N4: when the lock state disables send, TalkBack announces why.
             val sendModifier = if (noDeviceCredential) Modifier.fillMaxWidth().semantics { stateDescription = s.t("review.submit.no_device_lock") } else Modifier.fillMaxWidth()
-            Button(enabled = draft.isApproved() && !submitting && missingCredentialKeys.isEmpty() && !noDeviceCredential, onClick = {
+            Button(enabled = foldedDraft().isReady() && !submitting && missingCredentialKeys.isEmpty() && !noDeviceCredential, onClick = {
+                confirmPendingEvidence()
                 // Runs 42853563754 / 42880867432: an ENABLED send button's
                 // semantics click no-opped silently. First proof point:
                 // does the click reach this lambda at all?
-                Log.i("SUBMIT_FLOW", "send onClick reached: approved=${draft.isApproved()} submitting=$submitting")
+                Log.i("SUBMIT_FLOW", "send onClick reached: ready=${draft.isReady()} submitting=$submitting")
                 onSubmit(draft)
             }, modifier = sendModifier) { Text(s.t(if (submitting) "review.submit.sending" else "review.submit.button")) }
             if (submissionNote.isNotEmpty()) Text(submissionNote, style = MaterialTheme.typography.bodySmall)

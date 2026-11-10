@@ -29,7 +29,7 @@ object EncryptedPackage {
         }
     }
     fun reviewedReport(draft: ReviewDraft, reporter: ReporterSettings, jpeg: ByteArray): JSONObject {
-        require(draft.isApproved()) { "Review required" }
+        require(draft.isReady()) { "Review required" }
         require(jpeg.size in 4..1_100_000 && jpeg[0] == 0xff.toByte() && jpeg[1] == 0xd8.toByte() &&
             jpeg[jpeg.lastIndex - 1] == 0xff.toByte() && jpeg.last() == 0xd9.toByte()) { "Bounded JPEG required" }
         require(listOf(reporter.firstName, reporter.lastName, reporter.phone, reporter.idNumber, reporter.email).all { it.isNotBlank() && it.length <= 256 })

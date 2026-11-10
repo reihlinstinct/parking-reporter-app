@@ -44,7 +44,7 @@ class SubmissionCoordinator(
     }
 
     enum class Reason {
-        NOT_APPROVED,
+        NOT_READY,
         PASSPORT_DISCLOSURE_REQUIRED,
         MISSING_CREDENTIALS,
         UNSUPPORTED_CATEGORY,
@@ -59,16 +59,17 @@ class SubmissionCoordinator(
         MUNICIPAL_API_FAILURE,
     }
 
+    /** Submits a complete (SendGate-ready) draft; send is the single confirmation. */
     @Suppress("UNCHECKED_CAST")
-    fun submitApproved(
+    fun submit(
         draft: ReviewDraft,
         settings: ReporterSettings,
         originalJpeg: File,
     ): Outcome {
-        if (!draft.isApproved()) return Outcome.Blocked(Reason.NOT_APPROVED, "draft not approved")
+        if (!draft.isReady()) return Outcome.Blocked(Reason.NOT_READY, "draft not ready")
         if (!PassportSubmission.isSupportedPhone(settings.phone)) return Outcome.Blocked(Reason.INPUT_INVALID, "unsupported reporter phone")
         if (!PassportSubmission.hasReviewedDisclosure(draft.exactHebrewText, settings))
-            return Outcome.Blocked(Reason.PASSPORT_DISCLOSURE_REQUIRED, "passport disclosure must be saved and approved")
+            return Outcome.Blocked(Reason.PASSPORT_DISCLOSURE_REQUIRED, "passport disclosure must be saved before sending")
         if (!settings.hasMunicipalCredentials()) {
             // Name exactly which values are missing (constant field IDs, never
             // values) so the UI can say it (owner 2026-11-09).

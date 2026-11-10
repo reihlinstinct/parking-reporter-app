@@ -41,12 +41,11 @@ class PlateEntryTest {
         val noPlate = d.copy(subject = ReportCategory.entries.first { !it.needsPlate }.code)
         assertEquals(noPlate, PlateEntry.prefill(noPlate, listOf("1234567"), ""))
     }
-    @Test fun oneOcrCandidatePrefillsDigitsButNeverApprovesOrOverwritesTyping() {
+    @Test fun oneOcrCandidatePrefillsDigitsButNeverOverwritesTyping() {
         val d = draft()
         val prefilled = PlateEntry.prefill(d, listOf("1234567"), "")
         assertEquals("1234567", prefilled.plate)
-        assertNull(prefilled.approvedDigest)
-        assertFalse(prefilled.isApproved())
+        assertTrue(prefilled.isReady())
         assertEquals(d, PlateEntry.prefill(d, listOf("1234567", "12345678"), ""))
         assertEquals(d, PlateEntry.prefill(d, listOf("bad"), ""))
         val typed = draft("7654321")

@@ -91,7 +91,6 @@ fun AppShell(
     var page by remember { mutableStateOf("home") }
     var profile by remember { mutableStateOf<ReporterSettings?>(null) }
     var draft by remember { mutableStateOf<ReviewDraft?>(null) }
-    var outgoing by remember { mutableStateOf<il.sidewalks.reporter.evidence.OutgoingImage?>(null) }
     var original by remember { mutableStateOf<File?>(null) }
     var revision by remember { mutableLongStateOf(0) }
     var records by remember { mutableStateOf<List<ReportRecord>>(emptyList()) }
@@ -150,12 +149,14 @@ fun AppShell(
             Log.i("SUBMIT_FLOW", "submitReport ignored: submitting already true")
             return
         }
-        // Send exactly what the review screen shows: the shown draft must be
-        // the last saved one, and approved. A failed or dropped save must
-        // never send stale text.
-        if (!SendGate.readyToSend(shown, draft)) {
-            Log.i("SUBMIT_FLOW", "submitReport blocked: send gate not ready")
-            submissionNote = strings.t("shell.submit.draft_not_saved")
+        // Send is the single confirmation (owner instruction 2026-11-10,
+        // phonemsg 01M73E6E2S6AZP46K75QS2S1WY): no approval latch. The gate
+        // is that the shown draft is complete; the exact shown draft is
+        // persisted below before the first network call, so a failed or
+        // dropped save never sends stale text (issue #153's M-B property).
+        if (!SendGate.readyToSend(shown)) {
+            Log.i("SUBMIT_FLOW", "submitReport blocked: draft not ready")
+            submissionNote = strings.t("shell.submit.blocked.not_ready")
             return
         }
         // Issue #260: without a device credential the unlock intent is null
@@ -175,6 +176,25 @@ fun AppShell(
             submitting = true
             submissionNote = strings.t("shell.submit.sending")
             scope.launch {
+                // Persist the exact shown draft before anything network-bound
+                // unless it is already the last saved copy; a failed save
+                // blocks the send instead of sending stale text.
+                if (shown != draft) {
+                    val stored = withContext(Dispatchers.IO) {
+                        try {
+                            database.reports().store(shown.evidence.stableId, revision,
+                                il.sidewalks.reporter.ledger.DraftCodec.encode(shown), shown.digest()) == 1
+                        } catch (_: Exception) { false }
+                    }
+                    if (!stored) {
+                        submissionNote = strings.t("shell.submit.draft_not_saved")
+                        submitting = false
+                        return@launch
+                    }
+                    revision += 1
+                    draft = shown
+                    reload()
+                }
                 var passportReviewDraft: ReviewDraft? = null
                 val outcome = withContext(Dispatchers.IO) {
                     try {
@@ -185,11 +205,12 @@ fun AppShell(
                             if (il.sidewalks.reporter.municipal.PassportSubmission.validProfile(settings)) {
                                 val updated = shown.edit(text = il.sidewalks.reporter.municipal.PassportSubmission.reconcileDisclosure(shown.exactHebrewText, settings))
                                 check(database.reports().store(updated.evidence.stableId, revision,
-                                    il.sidewalks.reporter.ledger.DraftCodec.encode(updated), null) == 1)
+                                    il.sidewalks.reporter.ledger.DraftCodec.encode(updated),
+                                    updated.digest().takeIf { updated.isReady() }) == 1)
                                 passportReviewDraft = updated
                             }
                             return@withContext SubmissionCoordinator.Outcome.Blocked(
-                                SubmissionCoordinator.Reason.PASSPORT_DISCLOSURE_REQUIRED, "passport disclosure must be saved and approved")
+                                SubmissionCoordinator.Reason.PASSPORT_DISCLOSURE_REQUIRED, "passport disclosure must be saved before sending")
                         }
                         val directory = streetsDirectory
                             ?: (streetDirectoryLoader?.invoke() ?: loadStreetDirectory(context))
@@ -208,7 +229,7 @@ fun AppShell(
                             directory,
                             { id -> FileSubmissionStateStore.forReport(
                                 File(context.noBackupFilesDir, "submissions"), id) },
-                        ).submitApproved(shown, settings, file)
+                        ).submit(shown, settings, file)
                     } catch (e: il.sidewalks.reporter.municipal.AddressLookupMismatchException) {
                         SubmissionCoordinator.Outcome.Blocked(
                             SubmissionCoordinator.Reason.LOOKUP_MISMATCH,
@@ -244,7 +265,7 @@ fun AppShell(
                 val updated = withContext(Dispatchers.IO) {
                     database.reports().store(value.evidence.stableId, revision,
                         il.sidewalks.reporter.ledger.DraftCodec.encode(value),
-                        value.digest().takeIf { value.isApproved() })
+                        value.digest().takeIf { value.isReady() })
                 }
                 check(updated == 1)
                 revision += 1
@@ -293,7 +314,7 @@ fun AppShell(
     }
     fun openRecord(record: ReportRecord) {
         try {
-            draft = il.sidewalks.reporter.ledger.DraftCodec.decode(record.draftJson).copy(approvedDigest = record.reviewedDigest)
+            draft = il.sidewalks.reporter.ledger.DraftCodec.decode(record.draftJson)
             val file = File(context.noBackupFilesDir, record.originalRelativePath)
             check(file.canonicalPath.startsWith(context.noBackupFilesDir.canonicalPath + "/") && file.isFile)
             check(EvidenceReader().read(file, record.stableId).originalSha256 == record.originalSha256)
@@ -452,29 +473,7 @@ fun AppShell(
                 directory.findConfirmedAddress(street, house)
             }, onBack = { page = "home" },
                 onSubmit = { shown -> submitReport(shown) },
-                submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, noDeviceCredential = noDeviceCredential, onOutgoingPreview = {
-                scope.launch {
-                    try {
-                        val derivative = withContext(Dispatchers.IO) {
-                            val file = original ?: error("Missing original")
-                            il.sidewalks.reporter.evidence.OutgoingEvidence.prepare(file)
-                        }
-                        check(derivative.originalHash == value.evidence.originalSha256)
-                        outgoing = derivative; page = "outgoing"
-                    } catch (_: Exception) { status = strings.t("shell.status.outgoing_prepare_failed") }
-                }
-            })
-        }
-        "outgoing" -> outgoing?.let { value ->
-            Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(strings.t("shell.outgoing.title"), style = MaterialTheme.typography.titleLarge)
-                val bitmap = remember(value.hash) { BitmapFactory.decodeByteArray(value.jpeg, 0, value.jpeg.size).asImageBitmap() }
-                Image(bitmap, strings.t("shell.outgoing.image_description"), Modifier.fillMaxWidth().height(360.dp))
-                Text(strings.t("shell.outgoing.explanation"))
-                Text(strings.tp("shell.outgoing.size_summary", value.jpeg.size, mapOf("width" to value.width, "height" to value.height)))
-                Text(strings.t("shell.outgoing.no_sending"))
-                TextButton(onClick = { outgoing = null; page = "review" }, modifier = Modifier.fillMaxWidth()) { Text(strings.t("shell.outgoing.back_to_review")) }
-            }
+                submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, noDeviceCredential = noDeviceCredential)
         }
         "settings" -> SettingsScreen(profile, save = { value, touchedMunicipal, cleared ->
             persistSettings(value, touchedMunicipal, cleared)
@@ -575,7 +574,7 @@ internal fun municipalOutcomeText(strings: Strings, outcome: SubmissionCoordinat
         strings.t("shell.submit.already_sent", mapOf("case_number" to (outcome.caseNumber ?: "")))
     is SubmissionCoordinator.Outcome.Blocked -> when (outcome.reason) {
         SubmissionCoordinator.Reason.PASSPORT_DISCLOSURE_REQUIRED -> strings.t("shell.passport.review_required")
-        SubmissionCoordinator.Reason.NOT_APPROVED -> strings.t("shell.submit.blocked.not_approved")
+        SubmissionCoordinator.Reason.NOT_READY -> strings.t("shell.submit.blocked.not_ready")
         SubmissionCoordinator.Reason.MISSING_CREDENTIALS ->
             strings.t("shell.submit.blocked.missing_credentials") + missingCredentialsSuffix(strings, outcome.missingFields)
         SubmissionCoordinator.Reason.UNSUPPORTED_CATEGORY -> strings.t("shell.submit.blocked.unsupported_category")

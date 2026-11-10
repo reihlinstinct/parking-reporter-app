@@ -26,7 +26,7 @@ Limits of that claim:
 - Residual metadata is accepted explicitly (reversing the earlier position in
   d5365e8 that hashes and digests are sensitive): a holder of a copy of a
   photo can confirm via `originalSha256` that it was reported; row count,
-  ciphertext lengths, and NULL versus non-NULL `reviewedDigest` (approval
+  ciphertext lengths, and NULL versus non-NULL `reviewedDigest` (saved ready digest
   state) also leak. These residuals do not reveal report content.
 
 Out of scope: network, filing, release distribution, production data access.
@@ -80,7 +80,7 @@ per write. AAD =
 where `revision` is an 8-byte big-endian encoding. The column name is part of
 the AAD because `draftJson` and `reviewedDigest` would otherwise share
 identical AAD and could be swapped. `store` increments `revision` in SQL, so
-its ciphertext is bound to `expectedRevision + 1`; `approve` does not bump
+its ciphertext is bound to `expectedRevision + 1` (the removed `approve` statement did not bump
 `revision`, so its ciphertext binds the current value. The AAD prevents
 ciphertext swap between records, between columns, and rollback of one
 encrypted field to its own older revision. Rollback of a field together with
@@ -210,7 +210,7 @@ the repository record type additionally carries an explicit tombstoned
 state with no draft and no digest (never a fake empty string). `all`,
 `find` and `findPhoto` return a tombstoned row marked as such - never null
 and never "not found", so no caller can mistake it for absence; `reserve`,
-`store`, `approve` are unchanged at the repository boundary.
+`store` is unchanged at the repository boundary (the `approve` statement was removed with the approval latch).
 
 Who opens the database during migration: the migration factory is the sole
 opener. It writes journal `state = migrating` durably first, then opens
@@ -291,7 +291,7 @@ The rule above applies to every non-tombstoned row.
 | reload (`all`) | decrypt all rows, any failure stops the ledger | blocked; UI stopped state |
 | startup sweep | runs over plaintext paths of every row | never runs |
 | `reserve` (duplicate guard) | plaintext unique index only; no decryption | blocked (no new reports) |
-| `store` / `approve` | encrypt at the repository boundary | blocked |
+| `store` | encrypt at the repository boundary | blocked |
 | `openRecord` (decode `draftJson`) | decrypt that row; failure stops the ledger | blocked |
 | submit path | reads via repository after open | blocked |
 
@@ -364,8 +364,8 @@ state. The tombstoned flag means:
   them as unreadable; the startup sweep's referenced set includes their
   `originalRelativePath`, so their evidence photos are kept, not deleted
   as "unreferenced".
-- Open, approve and send are permanently refused for tombstoned rows; as
-  defense in depth, the `store` and `approve` UPDATE statements carry
+- Open and send are permanently refused for tombstoned rows; as
+  defense in depth, the `store` UPDATE statement carries
   `AND tombstoned = 0`, so even a repository bug cannot overwrite a
   tombstoned row's ciphertext with new-key data while the flag is set
   (fail closed). If a tombstoned row's `submissions/<stableId>.json`
@@ -430,7 +430,7 @@ plaintext content exposure.
 - Downgrade: source test forbids `fallbackToDestructiveMigration*` on the
   ledger builder.
 - Tombstone recovery: recovery preserves tombstones, tombstoned rows
-  refuse open/approve/send, `reserve` of a tombstoned hash aborts after
+  refuse open/send, `reserve` of a tombstoned hash aborts after
   recovery and after reopen, and after recovery the startup sweep's
   referenced set includes tombstoned rows' `originalRelativePath` so their
   evidence photos are not deleted.

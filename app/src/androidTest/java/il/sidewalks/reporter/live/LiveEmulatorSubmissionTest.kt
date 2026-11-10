@@ -161,7 +161,7 @@ class LiveEmulatorSubmissionTest {
         var sendTapped = false
         var outcomeKnown = false
         try {
-            driver.driveToApproved(FlowFields(
+            driver.driveToSaved(FlowFields(
                 text = text,
                 plate = params.optString("plate").ifBlank { null },
                 address = params.getString("address"),
@@ -169,8 +169,8 @@ class LiveEmulatorSubmissionTest {
                 latitude = params.getString("lat"),
                 longitude = params.getString("lon"),
                 categoryLabel = params.getString("categoryLabel")))
-            marker("APPROVED")
-            driver.screenshot("live-e2e-approved.png")
+            marker("SAVED")
+            driver.screenshot("live-e2e-saved.png")
             // The state machine writes its per-report record BEFORE the first
             // network call, so a new record proves a request fired. Snapshot
             // now: it is the arbiter if the sending label never shows.

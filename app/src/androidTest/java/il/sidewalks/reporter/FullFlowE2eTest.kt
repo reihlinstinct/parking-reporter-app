@@ -122,7 +122,7 @@ class FullFlowE2eTest {
                 }
                 val driver = FlowDriver(compose)
                 val text = "רכב חונה על המדרכה בתרחיש בדיקה סינתטי"
-                driver.driveToApproved(FlowFields(
+                driver.driveToSaved(FlowFields(
                     text = text,
                     plate = "12345678",
                     address = "רחוב בדיקה 1",
@@ -162,11 +162,12 @@ class FullFlowE2eTest {
 
     /**
      * Regression for run 42769339528: a send tap that never reaches the
-     * app's submit path (here: the send button is disabled because the draft
-     * was never approved) must be reported as SEND_NOT_FIRED - provably no
-     * request was made - and never as a municipal-looking timeout.
+     * app's submit path (here: the send button is disabled because the fresh
+     * draft is incomplete, so send is not enabled) must be reported as
+     * SEND_NOT_FIRED - provably no request was made - and never as a
+     * municipal-looking timeout.
      */
-    @Test fun sendTapWithoutApprovalIsNotFired() {
+    @Test fun sendTapOnIncompleteDraftIsNotFired() {
         claimSyntheticPhoto()
         val settings = ReporterSettings(
             firstName = "ישראל", lastName = "ישראלי", phone = "+972501234567",
@@ -229,7 +230,7 @@ class FullFlowE2eTest {
                 blocker.writeText("not a directory - an unreadable listing must fail closed")
                 try {
                     val driver = FlowDriver(compose)
-                    driver.driveToApproved(FlowFields(
+                    driver.driveToSaved(FlowFields(
                         text = "רכב חונה על המדרכה בתרחיש בדיקה סינתטי",
                         plate = "12345678",
                         address = "רחוב בדיקה 1",

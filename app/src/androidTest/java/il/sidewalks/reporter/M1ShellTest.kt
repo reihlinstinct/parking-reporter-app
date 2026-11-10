@@ -47,9 +47,9 @@ class M1ShellTest {
         // send button is greyed out and a small "הגדר נעילת מסך" note shows.
         // No bypass: the tap does nothing. One setContent per test (Compose
         // forbids two), so the lockscreen state has its own test below.
-        val approved = draft().approve()
+        val ready = draft()
         var submitted: ReviewDraft? = null
-        compose.setContent { AppTheme { ReviewScreen(approved, null, {}, onBack = {}, onSubmit = { submitted = it }, noDeviceCredential = true) } }
+        compose.setContent { AppTheme { ReviewScreen(ready, null, {}, onBack = {}, onSubmit = { submitted = it }, noDeviceCredential = true) } }
         screenshot("m1-review-no-lockscreen-synthetic.png")
         compose.onNodeWithText("הגדר נעילת מסך").assertIsDisplayed()
         compose.onNodeWithText("שלח לעירייה").assertIsNotEnabled()
@@ -60,9 +60,9 @@ class M1ShellTest {
         // Issue #260 review blocker 3: the screen must follow the state, so
         // returning from Settings after setting a lock refreshes it (the
         // production wiring re-reads isDeviceSecure in MainActivity.onResume).
-        val approved = draft().approve()
+        val ready = draft()
         var noLock by mutableStateOf(true)
-        compose.setContent { AppTheme { ReviewScreen(approved, null, {}, onBack = {}, onSubmit = {}, noDeviceCredential = noLock) } }
+        compose.setContent { AppTheme { ReviewScreen(ready, null, {}, onBack = {}, onSubmit = {}, noDeviceCredential = noLock) } }
         compose.onNodeWithText("הגדר נעילת מסך").assertIsDisplayed()
         compose.onNodeWithText("שלח לעירייה").assertIsNotEnabled()
         compose.runOnIdle { noLock = false }
@@ -74,24 +74,24 @@ class M1ShellTest {
     }
     @Test fun lockscreenKeepsSendEnabledWithoutNote() {
         // Issue #260: with a lockscreen nothing changes - no note, send enabled.
-        val approved = draft().approve()
-        compose.setContent { AppTheme { ReviewScreen(approved, null, {}, onBack = {}, onSubmit = {}, noDeviceCredential = false) } }
+        val ready = draft()
+        compose.setContent { AppTheme { ReviewScreen(ready, null, {}, onBack = {}, onSubmit = {}, noDeviceCredential = false) } }
         screenshot("m1-review-lockscreen-ok-synthetic.png")
         compose.onNodeWithText("הגדר נעילת מסך").assertDoesNotExist()
         compose.onNodeWithText("שלח לעירייה").assertIsEnabled()
     }
-    @Test fun reviewApprovalThenEditClears() {
+    @Test fun reviewSaveThenEditKeepsLatestSavedCopy() {
         var saved: ReviewDraft? = null
         compose.setContent { AppTheme { ReviewScreen(draft(), null, { saved = it }, onBack = {}) } }
         screenshot("m1-review-synthetic.png")
-        compose.onNodeWithText("אשר את התוכן לבדיקה").performScrollTo().performClick()
-        compose.runOnIdle { assertTrue(saved?.isApproved() == true) }
+        compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
+        compose.runOnIdle { assertTrue(saved?.isReady() == true) }
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
         compose.onNodeWithText("מספר לוחית (ספרות בלבד)").performScrollTo().performTextReplacement("7654321")
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
-        compose.runOnIdle { assertFalse(saved?.isApproved() == true) }
+        compose.runOnIdle { assertEquals("7654321", saved?.plate); assertTrue(saved?.isReady() == true) }
     }
-    @Test fun offlinePlateCandidateRequiresSelectionAndInvalidatesReview() {
+    @Test fun offlinePlateCandidateRequiresSelectionAndSave() {
         val bitmap = Bitmap.createBitmap(1200, 260, Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bitmap); canvas.drawColor(android.graphics.Color.WHITE)
         canvas.drawText("12345678", 65f, 190f, android.graphics.Paint().apply {
@@ -99,14 +99,14 @@ class M1ShellTest {
             typeface = android.graphics.Typeface.create("monospace", android.graphics.Typeface.BOLD)
         })
         var saved: ReviewDraft? = null
-        compose.setContent { AppTheme { ReviewScreen(draft().approve(), bitmap.asImageBitmap(), { saved = it }, {}) } }
+        compose.setContent { AppTheme { ReviewScreen(draft(), bitmap.asImageBitmap(), { saved = it }, {}) } }
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
         compose.onNodeWithText("הצע לוחית מתוך הצילום").performScrollTo().performClick()
         compose.waitUntil(30_000) { compose.onAllNodesWithText("הצעה בלבד: \u2066123-45-678\u2069").fetchSemanticsNodes().isNotEmpty() }
         screenshot("m2-ocr-synthetic.png")
         compose.onNodeWithText("הצעה בלבד: \u2066123-45-678\u2069").performScrollTo().performClick()
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
-        compose.runOnIdle { assertEquals("12345678", saved?.plate); assertFalse(saved?.isApproved() == true) }
+        compose.runOnIdle { assertEquals("12345678", saved?.plate); assertTrue(saved?.isReady() == true) }
     }
     @Test fun settingsStoreManuallyEnteredCredentialsAndClearAfterSave() {
         // Owner decision 2026-11-08: municipal API keys are entered manually here and
@@ -219,7 +219,7 @@ class M1ShellTest {
         compose.onNodeWithText("הבדיקה הסינתטית הצליחה", substring = true).performScrollTo()
         screenshot("m1-home-intake-synthetic.png")
     }
-    @Test fun nonVehicleReviewHasNoPlateAndCorrectionClearsApproval() {
+    @Test fun nonVehicleReviewHasNoPlateAndCorrectionResetsText() {
         var saved: ReviewDraft? = null
         val bitmap = Bitmap.createBitmap(700, 300, Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bitmap)
@@ -227,17 +227,16 @@ class M1ShellTest {
         canvas.drawRect(325f, 120f, 350f, 290f, android.graphics.Paint().apply { color = android.graphics.Color.DKGRAY })
         canvas.drawRect(230f, 20f, 455f, 125f, android.graphics.Paint().apply { color = android.graphics.Color.WHITE })
         canvas.drawText("SYNTHETIC SIGN", 248f, 75f, android.graphics.Paint().apply { color = android.graphics.Color.BLACK; textSize = 22f })
-        compose.setContent { AppTheme { ReviewScreen(draft().approve(), bitmap.asImageBitmap(), { saved = it }, {}) } }
+        compose.setContent { AppTheme { ReviewScreen(draft(), bitmap.asImageBitmap(), { saved = it }, {}) } }
         compose.onNodeWithText("חניה על המדרכה ▾").performClick()
         compose.onNodeWithText("תמרור שבור").performClick()
         compose.onNodeWithText("לוחית:", substring = true).assertDoesNotExist()
         compose.onNodeWithText("רכב חונה על המדרכה").assertDoesNotExist()
-        compose.onNodeWithText("אשר את התוכן לבדיקה").assertIsNotEnabled()
         screenshot("design-sign-synthetic.png")
         compose.onNodeWithText("שלח").performScrollTo()
         screenshot("design-sign-actions-synthetic.png")
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
-        compose.runOnIdle { assertEquals("", saved?.plate); assertFalse(saved?.isApproved() == true) }
+        compose.runOnIdle { assertEquals("", saved?.plate); assertFalse(saved?.isReady() == true) }
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
         compose.onNodeWithText("מספר לוחית (ספרות בלבד)").assertDoesNotExist()
     }

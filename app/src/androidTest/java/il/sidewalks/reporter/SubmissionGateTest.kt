@@ -12,33 +12,33 @@ import il.sidewalks.reporter.ui.ReviewScreen
 import org.junit.Rule
 import org.junit.Test
 
-/** The M-B send gate on the review screen (issue #153, owner 19:49). */
+/** The send gate on the review screen: send is the single confirmation (owner 2026-11-10). */
 class SubmissionGateTest {
     @get:Rule val compose = createComposeRule()
 
-    private fun approvedDraft(): ReviewDraft {
+    private fun readyDraft(): ReviewDraft {
         val evidence = Evidence("stable-gate", "a".repeat(64), "2026-11-08T10:00:00+02:00", 31.7683, 35.2137)
         return ReviewDraft(evidence, "12345678", "רחוב 12", "sidewalk_parking",
-            "רכב חנה על המדרכה", emptySet()).approve()
+            "רכב חנה על המדרכה", emptySet())
     }
 
-    @Test fun sendRequiresApprovalAndGate() {
+    @Test fun sendEnabledForReadyDraft() {
         var submitted = 0
         compose.setContent {
             MaterialTheme {
-                ReviewScreen(approvedDraft(), null, onSave = {}, onBack = {},
+                ReviewScreen(readyDraft(), null, onSave = {}, onBack = {},
                     onSubmit = { submitted++ })
             }
         }
-        // The draft is approved, so the gated send is live.
+        // The draft is complete, so send is live.
         compose.onNodeWithText("שלח לעירייה").assertIsEnabled()
         compose.onNodeWithText("שלח לעירייה").assertExists()
     }
 
-    @Test fun sendStaysDisabledUntilApproved() {
+    @Test fun sendStaysDisabledUntilReady() {
         compose.setContent {
             MaterialTheme {
-                ReviewScreen(approvedDraft().copy(approvedDigest = null), null,
+                ReviewScreen(readyDraft().copy(unresolved = setOf("time_needs_confirmation")), null,
                     onSave = {}, onBack = {}, onSubmit = {})
             }
         }
@@ -48,7 +48,7 @@ class SubmissionGateTest {
     @Test fun sendButtonSubmitsTheShownDraft() {
         // The screen hands the draft it actually shows to the submit
         // callback - AppShell then refuses anything but the saved copy.
-        val shown = approvedDraft()
+        val shown = readyDraft()
         var sent: ReviewDraft? = null
         compose.setContent {
             MaterialTheme {
@@ -63,7 +63,7 @@ class SubmissionGateTest {
     @Test fun noGateKeepsTheDisabledPlaceholder() {
         compose.setContent {
             MaterialTheme {
-                ReviewScreen(approvedDraft(), null, onSave = {}, onBack = {})
+                ReviewScreen(readyDraft(), null, onSave = {}, onBack = {})
             }
         }
         compose.onNodeWithText("שליחה אינה זמינה בגרסת הבדיקה").assertExists()

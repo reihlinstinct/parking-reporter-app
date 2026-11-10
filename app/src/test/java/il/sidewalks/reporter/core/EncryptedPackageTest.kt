@@ -15,7 +15,7 @@ import java.util.Base64
 
 class EncryptedPackageTest {
     private fun draft() = ReviewDraft(Evidence("synthetic-id", "a".repeat(64), "2026-01-01T12:00:00Z", 31.0, 35.0),
-        "1234567", "רחוב בדיקה 1", "sidewalk_parking", "דיווח בדיקה", emptySet()).approve()
+        "1234567", "רחוב בדיקה 1", "sidewalk_parking", "דיווח בדיקה", emptySet())
     private val reporter = ReporterSettings("synthetic-first", "synthetic-last", "0000000", "000000000", "synthetic@example.invalid")
     private val photo = byteArrayOf(0xff.toByte(), 0xd8.toByte()) + ByteArray(68_000) { 4 } + byteArrayOf(0xff.toByte(), 0xd9.toByte())
     private fun seal(): Triple<SealedUpload, KeysetHandle, KeysetHandle> {

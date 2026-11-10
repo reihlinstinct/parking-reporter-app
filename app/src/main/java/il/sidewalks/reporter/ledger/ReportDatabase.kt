@@ -9,6 +9,7 @@ data class ReportRecord(
     val originalRelativePath: String,
     val revision: Long,
     val draftJson: String,
+    /** Digest of the saved draft while it was send-ready; null while incomplete. */
     val reviewedDigest: String?,
 )
 @Dao
@@ -23,8 +24,6 @@ interface ReportDao {
     suspend fun all(): List<ReportRecord>
     @Query("UPDATE reports SET revision = revision + 1, draftJson = :json, reviewedDigest = :digest WHERE stableId = :id AND revision = :expectedRevision")
     suspend fun store(id: String, expectedRevision: Long, json: String, digest: String?): Int
-    @Query("UPDATE reports SET reviewedDigest = :digest WHERE stableId = :id AND revision = :expectedRevision")
-    suspend fun approve(id: String, expectedRevision: Long, digest: String): Int
 }
 @Database(entities = [ReportRecord::class], version = 1, exportSchema = true)
 abstract class ReportDatabase : RoomDatabase() { abstract fun reports(): ReportDao }

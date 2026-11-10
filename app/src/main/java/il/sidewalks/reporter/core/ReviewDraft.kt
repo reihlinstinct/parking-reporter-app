@@ -24,7 +24,6 @@ data class ReviewDraft(
     val subject: String,
     val exactHebrewText: String,
     val unresolved: Set<String>,
-    val approvedDigest: String? = null,
     val confirmedTime: String? = evidence.capturedAtIso,
     val confirmedLatitude: Double? = evidence.latitude,
     val confirmedLongitude: Double? = evidence.longitude,
@@ -48,12 +47,10 @@ data class ReviewDraft(
     } catch (_: Exception) { false }
     fun confirmEvidence(time: String, latitude: Double?, longitude: Double?): ReviewDraft =
         copy(confirmedTime = time, confirmedLatitude = latitude, confirmedLongitude = longitude,
-            unresolved = emptySet(), approvedDigest = null)
-    fun approve(): ReviewDraft { check(isReady()); return copy(approvedDigest = digest()) }
-    fun isApproved(): Boolean = isReady() && approvedDigest == digest()
+            unresolved = emptySet())
     fun edit(plate: String = this.plate, address: String = this.address,
              subject: String = this.subject, text: String = this.exactHebrewText): ReviewDraft =
-        copy(plate = if (ReportCategory.from(subject)?.needsPlate == false) "" else plate, address = address, subject = subject, exactHebrewText = if (subject != this.subject && text == this.exactHebrewText) "" else text, approvedDigest = null,
+        copy(plate = if (ReportCategory.from(subject)?.needsPlate == false) "" else plate, address = address, subject = subject, exactHebrewText = if (subject != this.subject && text == this.exactHebrewText) "" else text,
             confirmedLatitude = if (address != this.address && (evidence.latitude == null || evidence.longitude == null)) null else confirmedLatitude,
             confirmedLongitude = if (address != this.address && (evidence.latitude == null || evidence.longitude == null)) null else confirmedLongitude,
             unresolved = if (address != this.address && (evidence.latitude == null || evidence.longitude == null)) unresolved + "location_needs_confirmation" else unresolved)
