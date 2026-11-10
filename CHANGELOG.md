@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.27.1] - 2026-11-10
+
+### Fixes
+
+- fix: surface fast local submit refusals in the E2E driver (#271) (4973431)
+
 ## [0.27.0] - 2026-11-10
 
 ### Features
