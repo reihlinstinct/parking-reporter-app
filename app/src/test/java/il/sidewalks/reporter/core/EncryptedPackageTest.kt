@@ -50,7 +50,9 @@ class EncryptedPackageTest {
         val r = EncryptedPackage.reviewedReport(draft(), reporter, photo); val digest = EncryptedPackage.approvalDigest(r)
         r.getJSONObject("reporter").put("phone", "synthetic-change")
         assertNotEquals(digest, EncryptedPackage.approvalDigest(r))
-        assertThrows(IllegalArgumentException::class.java) { EncryptedPackage.reviewedReport(draft().edit(), reporter, photo) }
+        // No approval latch anymore (owner instruction 2026-11-10): packaging
+        // gates on readiness - an edit that breaks readiness (invalid plate) throws.
+        assertThrows(IllegalArgumentException::class.java) { EncryptedPackage.reviewedReport(draft().edit(plate = ""), reporter, photo) }
         assertThrows(IllegalArgumentException::class.java) { EncryptedPackage.reviewedReport(draft(), reporter, ByteArray(1_100_001)) }
     }
     @Test fun canonicalOrderDoesNotDependOnInsertionOrder() {
