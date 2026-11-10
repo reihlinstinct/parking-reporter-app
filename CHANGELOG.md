@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.26.8] - 2026-11-10
+
+### Fixes
+
+- fix(driver): set throwaway PIN and complete device credential confirmation (#261) (6e9c4cb)
+
 ## [0.26.7] - 2026-11-10
 
 ### Other changes
