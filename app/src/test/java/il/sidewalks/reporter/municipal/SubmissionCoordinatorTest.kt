@@ -92,13 +92,21 @@ class SubmissionCoordinatorTest {
     }
 
     @Test fun nationalIdContactsKeepRealIdAndIsraeliMobileWhileForeignPhoneUsesReviewedPlaceholder() {
-        for (phone in listOf("0501234567", "+972501234567", "+12025550123", "+97221234567", "14155552671")) {
+        for (phone in listOf("0501234567", "+972501234567", "+12025550123", "14155552671")) {
             val profile = settings.copy(phone = phone, passportMode = false)
             val client = RecordingClient()
             val text = PassportSubmission.reconcileDisclosure(approvedDraft().exactHebrewText, profile)
             assertTrue(coordinator(client).submitApproved(approvedDraft().edit(text = text).approve(), profile, jpegFile()) is SubmissionCoordinator.Outcome.Submitted)
             assertEquals(settings.idNumber, client.seenContact?.get("ContactIdNumber"))
             assertEquals(if (PassportSubmission.isIsraeliPhone(phone)) "0501234567" else PassportSubmission.INTERNATIONAL_PHONE_PLACEHOLDER, client.seenContact?.get("MobilePhoneNumber"))
+        }
+    }
+    @Test fun israeliLandlinesRemainBlockedBeforeAnyNetwork() {
+        for (phone in listOf("+97221234567", "97221234567", "021234567")) {
+            val client = RecordingClient()
+            val outcome = coordinator(client).submitApproved(approvedDraft(), settings.copy(phone = phone), jpegFile())
+            assertEquals(SubmissionCoordinator.Reason.INPUT_INVALID, (outcome as SubmissionCoordinator.Outcome.Blocked).reason)
+            assertEquals(0, client.logins)
         }
     }
     @Test fun shortPassportNeverDisclosesWholeValueAndHiddenStaleLinesAreRejected() {

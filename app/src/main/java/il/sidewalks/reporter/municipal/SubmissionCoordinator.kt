@@ -66,6 +66,7 @@ class SubmissionCoordinator(
         originalJpeg: File,
     ): Outcome {
         if (!draft.isApproved()) return Outcome.Blocked(Reason.NOT_APPROVED, "draft not approved")
+        if (!PassportSubmission.isSupportedPhone(settings.phone)) return Outcome.Blocked(Reason.INPUT_INVALID, "unsupported reporter phone")
         if (!PassportSubmission.hasReviewedDisclosure(draft.exactHebrewText, settings))
             return Outcome.Blocked(Reason.PASSPORT_DISCLOSURE_REQUIRED, "passport disclosure must be saved and approved")
         if (!settings.hasMunicipalCredentials()) {

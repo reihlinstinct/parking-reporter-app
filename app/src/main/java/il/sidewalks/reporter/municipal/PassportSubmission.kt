@@ -20,14 +20,20 @@ object PassportSubmission {
         val current = disclosure(settings)
         return if (current.isEmpty()) base else base + "\n\n" + current
     }
+    fun isSupportedPhone(phone: String): Boolean = try {
+        val normalized = MunicipalPayloads.normalizePhone(phone)
+        isIsraeliPhone(normalized) || (!normalized.removePrefix("+").startsWith("972") && !normalized.startsWith("0"))
+    } catch (_: Exception) { false }
     fun validProfile(settings: ReporterSettings): Boolean =
         (!settings.passportMode || validPassport(settings.passportNumber)) &&
-        try { MunicipalPayloads.normalizePhone(settings.phone); true } catch (_: Exception) { false }
+        isSupportedPhone(settings.phone)
     // Owner ruling: phone compatibility applies independently of passport mode.
-    // Foreign/non-mobile contact numbers use the shared phone placeholder only after
+    // Foreign contact numbers use the shared phone placeholder only after
     // exact report disclosure approval; national-ID reporters keep their actual ID.
-    fun phoneForPayload(settings: ReporterSettings): String = if (isIsraeliPhone(settings.phone))
-        MunicipalPayloads.normalizePhone(settings.phone) else INTERNATIONAL_PHONE_PLACEHOLDER
+    fun phoneForPayload(settings: ReporterSettings): String {
+        require(isSupportedPhone(settings.phone))
+        return if (isIsraeliPhone(settings.phone)) MunicipalPayloads.normalizePhone(settings.phone) else INTERNATIONAL_PHONE_PLACEHOLDER
+    }
     fun validPassport(number: String): Boolean = number.trim().matches(Regex("[\\p{L}\\p{N} -]{3,40}")) && number.trim().last().isLetterOrDigit()
     fun disclosure(settings: ReporterSettings): String {
         require(validProfile(settings))
