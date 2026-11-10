@@ -108,9 +108,19 @@ jobs:
           # it through the owner's home connection (run 42755730613: 1.12 GB,
           # 33 min at ~4.5 Mbps) and congested the tunnel during the filing.
           # The emulator action below reuses an already-installed image.
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager 'platforms;android-30' 'system-images;android-30;default;x86_64' > /tmp/image-predownload.log 2>&1 || {
+          sdkroot=${ANDROID_HOME:-/usr/local/lib/android/sdk}
+          sdkmanager_bin=$(command -v sdkmanager || echo "$sdkroot/cmdline-tools/latest/bin/sdkmanager")
+          "$sdkmanager_bin" --version
+          yes | "$sdkmanager_bin" --licenses > /dev/null 2>&1 || true
+          "$sdkmanager_bin" 'platforms;android-30' 'system-images;android-30;default;x86_64' > /tmp/image-predownload.log 2>&1 || {
             tail -5 /tmp/image-predownload.log
+            exit 1
+          }
+          # Fail now (before the tunnel) if the image did not land where the
+          # emulator action looks - otherwise it downloads through the tunnel.
+          test -d "$sdkroot/system-images/android-30/default/x86_64" || {
+            echo 'FAIL-FAST: system image not where the emulator action expects it'
+            ls "$sdkroot/system-images/android-30" || true
             exit 1
           }
           echo "TIMING image-predownload $(( $(date +%s) - start ))s (direct egress)"
