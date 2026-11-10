@@ -41,8 +41,9 @@ class M1ShellTest {
     }
     @Test fun noLockscreenGreysSendWithNote() {
         // Issue #260 (owner spec 2026-11-10): with no device lockscreen the
-        // send button is greyed out and a small "הגדר נעילת מסך" note shows;
-        // with a lockscreen nothing changes. No bypass: the tap does nothing.
+        // send button is greyed out and a small "הגדר נעילת מסך" note shows.
+        // No bypass: the tap does nothing. One setContent per test (Compose
+        // forbids two), so the lockscreen state has its own test below.
         val approved = draft().approve()
         var submitted: ReviewDraft? = null
         compose.setContent { AppTheme { ReviewScreen(approved, null, {}, onBack = {}, onSubmit = { submitted = it }, noDeviceCredential = true) } }
@@ -51,7 +52,11 @@ class M1ShellTest {
         compose.onNodeWithText("שלח לעירייה").assertIsNotEnabled()
         compose.onNodeWithText("שלח לעירייה").performScrollTo().performClick()
         compose.runOnIdle { assertNull(submitted) }
-        compose.setContent { AppTheme { ReviewScreen(approved, null, {}, onBack = {}, onSubmit = { submitted = it }, noDeviceCredential = false) } }
+    }
+    @Test fun lockscreenKeepsSendEnabledWithoutNote() {
+        // Issue #260: with a lockscreen nothing changes - no note, send enabled.
+        val approved = draft().approve()
+        compose.setContent { AppTheme { ReviewScreen(approved, null, {}, onBack = {}, onSubmit = {}, noDeviceCredential = false) } }
         screenshot("m1-review-lockscreen-ok-synthetic.png")
         compose.onNodeWithText("הגדר נעילת מסך").assertDoesNotExist()
         compose.onNodeWithText("שלח לעירייה").assertIsEnabled()
