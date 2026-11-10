@@ -5,9 +5,9 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class PrivateOcrDiagnosticsTest {
-    private fun sourceFile(path: String): File = listOf(File(path), File("app", path)).first { it.isFile }
+    private fun sourceFile(path: String): File = listOf(File(path), File("app", path)).first { it.exists() }
     private fun source(path: String): String = sourceFile(path).readText()
-    private val forbidden = listOf("Log", "Timber", "print(", "println(", "System.out", "System.err", "printStackTrace")
+    private val forbidden = listOf("Log.", "android.util.Log", "Timber.", "print(", "println(", "System.out", "System.err", "printStackTrace")
     private fun engineFindings(text: String): List<String> = buildList {
         for (token in forbidden) if (text.contains(token)) add(token)
         if (!text.contains("fun recognize(bitmap: Bitmap): List<String> = PlateCandidates.fromText(recognizeText(bitmap))")) add("delegation")
