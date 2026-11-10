@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-11-10
+
+### Features
+
+- feat(review): send is the single confirmation; drawer icon proof in e2e (#266) (c817e34)
+
 ## [0.26.13] - 2026-11-10
 
 ### Other changes
