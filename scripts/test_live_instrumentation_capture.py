@@ -17,6 +17,7 @@ if a[0]=='logcat':
     if os.environ.get('MOCK_LOGCAT_FAIL'): sys.exit(1)
     time.sleep(20)
 elif a[:2]==['shell','pidof']:
+    if os.environ.get('MOCK_HANG'): time.sleep(20)
     f=p/'polls'
     n=int(f.read_text()) if f.exists() else 0
     f.write_text(str(n+1))
@@ -28,8 +29,10 @@ elif a[:3]==['shell','am','instrument']:
     time.sleep(3.3)
     sys.exit(int(os.environ.get('MOCK_RC','0')))
 elif a[:3]==['shell','dumpsys','activity']:
+    if os.environ.get('MOCK_HANG'): time.sleep(20)
     print('PRIVATE synthetic crash exit-info')
 elif a[:3]==['shell','dumpsys','meminfo']:
+    if os.environ.get('MOCK_HANG'): time.sleep(20)
     print('PRIVATE synthetic memory')
 else: sys.exit(88)
 '''
@@ -55,7 +58,7 @@ class CaptureTest(unittest.TestCase):
             self.assertIn('PRIVATE', (out / 'process-exit-info.txt').read_text())
             self.assertIn('PRIVATE', (out / 'process-memory.txt').read_text())
             lifecycle = (out / 'process-lifecycle.txt').read_text()
-            for marker in ['PROCESS_FIRST_SEEN pid=111', 'PROCESS_ABSENT_AFTER_SEEN previous=111',
+            for marker in ['PROCESS_FIRST_SEEN pid=111', 'PROCESS_ABSENT_OR_ADB_ERROR previous=111 pidof_rc=1',
                            'PROCESS_REAPPEARED_OR_CHANGED pid=222']:
                 self.assertIn(marker, lifecycle)
             for path in out.iterdir():
@@ -69,6 +72,29 @@ class CaptureTest(unittest.TestCase):
 
     def test_logcat_failure_does_not_stop_instrument_or_other_collection(self):
         self.capture(0, logcat_fail=True)
+
+    def test_wedged_diagnostics_are_bounded_and_collectors_stop(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            (base / 'adb').write_text(MOCK)
+            (base / 'adb').chmod(0o700)
+            # Exercise real GNU timeout, accelerating only its duration. Keep
+            # kill-after and command arguments so a missing timeout would hang.
+            (base / 'timeout').write_text("#!/bin/sh\nshift 3\nexec /usr/bin/timeout -k 1 0.2 \"$@\"\n")
+            (base / 'timeout').chmod(0o700)
+            env = dict(os.environ, PATH=str(base) + os.pathsep + os.environ['PATH'],
+                       MOCK_STATE=tmp, MOCK_RC='9', MOCK_HANG='1')
+            out = base / 'private'
+            result = subprocess.run(['sh', str(ROOT / 'scripts/capture-live-instrumentation.sh'), str(out)],
+                                    env=env, text=True, capture_output=True, timeout=8)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout + result.stderr, '')
+            self.assertEqual((out / 'instrumentation.rc').read_text().strip(), '9')
+            source = (ROOT / 'scripts/capture-live-instrumentation.sh').read_text()
+            self.assertIn('timeout -k 2 10 adb shell pidof', source)
+            self.assertIn('timeout -k 2 30 adb shell dumpsys activity exit-info', source)
+            self.assertIn('timeout -k 2 30 adb shell dumpsys meminfo', source)
+            self.assertNotIn('pidof "$package" 2>/dev/null', source)
 
     def test_workflow_encrypts_all_diagnostics_without_public_upload(self):
         workflow = (ROOT / '.github/workflows/live-emulator-e2e.yml').read_text()

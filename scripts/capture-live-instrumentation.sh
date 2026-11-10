@@ -15,7 +15,9 @@ log_pid=$!
     seen=''
     previous=''
     while :; do
-        current=$(adb shell pidof "$package" 2>/dev/null | tr -d '\r')
+        current=$(timeout -k 2 10 adb shell pidof "$package")
+        pidof_rc=$?
+        current=$(printf '%s' "$current" | tr -d '\r')
         now=$(date -u +%FT%TZ)
         if [ -n "$current" ]; then
             if [ -z "$seen" ]; then
@@ -27,7 +29,9 @@ log_pid=$!
         elif [ -n "$previous" ]; then
             # Observation, not a diagnosis: crash/LMK/normal exit need logcat
             # and exit-info. A sub-second death+restart can evade polling.
-            printf '%s PROCESS_ABSENT_AFTER_SEEN previous=%s\n' "$now" "$previous"
+            # pidof exit 1 means no match OR an adb transport error. Keep
+            # stderr privately, and never call this proof of process death.
+            printf '%s PROCESS_ABSENT_OR_ADB_ERROR previous=%s pidof_rc=%s\n' "$now" "$previous" "$pidof_rc"
         fi
         previous=$current
         sleep 1 &
@@ -47,7 +51,7 @@ adb shell am instrument -w -r -e class il.sidewalks.reporter.live.LiveEmulatorSu
 printf '%s\n' "$?" > "$work/instrumentation.rc"
 # Android 11+ historical exit reasons distinguish Java/native crashes, LMK,
 # ANR and requested exits where supported. A failed dump is private evidence.
-adb shell dumpsys activity exit-info "$package" > "$work/process-exit-info.txt" 2>&1 || true
-adb shell dumpsys meminfo "$package" > "$work/process-memory.txt" 2>&1 || true
+timeout -k 2 30 adb shell dumpsys activity exit-info "$package" > "$work/process-exit-info.txt" 2>&1 || true
+timeout -k 2 30 adb shell dumpsys meminfo "$package" > "$work/process-memory.txt" 2>&1 || true
 # Match the old workflow contract: record instrument rc but continue collecting.
 exit 0
