@@ -46,7 +46,7 @@ class FullFlowE2eTest {
     @get:Rule val compose = createComposeRule()
 
     @Before fun pinHebrewUiLanguage() {
-        il.sidewalks.reporter.i18n.UiPrefsLanguageStore.of(InstrumentationRegistry.getInstrumentation().targetContext).set("he")
+        InstrumentationRegistry.getInstrumentation().targetContext.let { il.sidewalks.reporter.i18n.UiPrefsLanguageStore.of(it).set(il.sidewalks.reporter.i18n.AppCatalog.defaultCode(it)) }
     }
 
     private val sharedUri = Uri.parse("content://il.sidewalks.reporter.testshare/with-metadata.jpg")

@@ -21,7 +21,7 @@ class ContactInputValidationTest {
         File(context.filesDir, name).outputStream().use { compose.onNode(isRoot() and hasAnyDescendant(hasText("טלפון"))).captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
     }
     @Test fun invalidIdAndEmailBlockSaveAndPhoneStoresCanonical() {
-        UiPrefsLanguageStore.of(InstrumentationRegistry.getInstrumentation().targetContext).set(requireNotNull(AppCatalog.get(InstrumentationRegistry.getInstrumentation().targetContext).defaultLanguage).code)
+        InstrumentationRegistry.getInstrumentation().targetContext.let { UiPrefsLanguageStore.of(it).set(AppCatalog.defaultCode(it)) }
         var saved: ReporterSettings? = null
         compose.setContent { AppTheme { SettingsScreen(null, save = { value, _, clear -> saved = value; clear() }, back = {}, basicSetup = true) } }
         compose.onNodeWithText("שם פרטי").performTextInput("בדיקה1")

@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import il.sidewalks.reporter.security.ReporterSettings
 import androidx.test.platform.app.InstrumentationRegistry
+import il.sidewalks.reporter.i18n.AppCatalog
 import il.sidewalks.reporter.i18n.UiPrefsLanguageStore
 import il.sidewalks.reporter.ui.AppShell
 import il.sidewalks.reporter.ui.FirstRunStore
@@ -34,14 +35,14 @@ class FirstRunScreenTest {
     }
 
     @Before fun pinHebrewAndClearFlag() {
-        UiPrefsLanguageStore.of(context).set("he")
+        UiPrefsLanguageStore.of(context).set(AppCatalog.defaultCode(context))
         clearFirstRunFlag()
     }
 
     @After fun restore() {
         il.sidewalks.reporter.security.SettingsProfileStore(context).clear()
         context.getSharedPreferences(UiPrefsLanguageStore.PREFS_NAME, android.content.Context.MODE_PRIVATE)
-            .edit().putString(UiPrefsLanguageStore.KEY_LANGUAGE, "he").commit()
+            .edit().putString(UiPrefsLanguageStore.KEY_LANGUAGE, AppCatalog.defaultCode(context)).commit()
         clearFirstRunFlag()
     }
 

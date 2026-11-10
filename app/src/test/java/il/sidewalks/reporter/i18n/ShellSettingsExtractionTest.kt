@@ -18,6 +18,9 @@ class ShellSettingsExtractionTest {
 
     private val catalog = I18nTestFiles.realCatalog()
     private val raw = JSONObject(I18nTestFiles.realCatalogText()).getJSONObject("strings")
+    /** The catalog default (the source language, Hebrew) and English, named by its own name (td423). */
+    private val source = I18nTestFiles.defaultCode()
+    private val english = I18nTestFiles.codeNamed("English")
 
     /** Key -> the Hebrew literal it replaced. */
     private val extracted = linkedMapOf(
@@ -133,9 +136,9 @@ class ShellSettingsExtractionTest {
     @Test
     fun extractedHebrewValuesEqualTheOldLiteralsByteForByte() {
         for ((key, literal) in extracted + submitExtracted) {
-            assertEquals("he value of $key", literal, raw.getJSONObject(key).getString("he"))
+            assertEquals("he value of $key", literal, raw.getJSONObject(key).getString(source))
         }
-        val plural = raw.getJSONObject("shell.outgoing.size_summary").getJSONObject("he")
+        val plural = raw.getJSONObject("shell.outgoing.size_summary").getJSONObject(source)
         for (category in listOf("one", "two", "other")) {
             assertEquals("size_summary he/$category", sizeSummaryHe, plural.getString(category))
         }
@@ -145,7 +148,7 @@ class ShellSettingsExtractionTest {
     fun plainHebrewValuesRenderExactlyAsBefore() {
         for ((key, literal) in extracted + submitExtracted) {
             if (literal.contains('{')) continue
-            assertEquals(key, literal, catalog.t("he", key))
+            assertEquals(key, literal, catalog.t(source, key))
         }
     }
 
@@ -153,14 +156,14 @@ class ShellSettingsExtractionTest {
     fun interpolatedValuesKeepTheOldWordingAroundIsolatedValues() {
         val lri = Bidi.LRI
         val pdi = Bidi.PDI
-        assertEquals("פתח טיוטה ${lri}aaaabbbb$pdi", catalog.t("he", "shell.home.open_draft", mapOf("id" to "aaaabbbb")))
-        assertEquals("גרסה ${lri}0.12.1$pdi", catalog.t("he", "settings.version", mapOf("version" to "0.12.1")))
+        assertEquals("פתח טיוטה ${lri}aaaabbbb$pdi", catalog.t(source, "shell.home.open_draft", mapOf("id" to "aaaabbbb")))
+        assertEquals("גרסה ${lri}0.12.1$pdi", catalog.t(source, "settings.version", mapOf("version" to "0.12.1")))
         assertEquals(
             "${lri}1280$pdi × ${lri}960$pdi, ${lri}2048$pdi bytes",
-            catalog.tp("he", "shell.outgoing.size_summary", 2048, mapOf("width" to 1280, "height" to 960)),
+            catalog.tp(source, "shell.outgoing.size_summary", 2048, mapOf("width" to 1280, "height" to 960)),
         )
-        assertEquals("1280 × 960, 1 byte", catalog.tp("en", "shell.outgoing.size_summary", 1, mapOf("width" to 1280, "height" to 960)))
-        assertEquals("Version 0.12.1", catalog.t("en", "settings.version", mapOf("version" to "0.12.1")))
+        assertEquals("1280 × 960, 1 byte", catalog.tp(english, "shell.outgoing.size_summary", 1, mapOf("width" to 1280, "height" to 960)))
+        assertEquals("Version 0.12.1", catalog.t(english, "settings.version", mapOf("version" to "0.12.1")))
     }
 
     @Test
@@ -198,7 +201,7 @@ class ShellSettingsExtractionTest {
      */
     @Test
     fun submissionOutcomesMapToTheSameHebrewTextsAsBefore() {
-        val he = Strings(catalog, "he")
+        val he = Strings(catalog, source)
         val lri = Bidi.LRI
         val fsi = Bidi.FSI
         val pdi = Bidi.PDI
@@ -240,13 +243,13 @@ class ShellSettingsExtractionTest {
 
     @Test
     fun submissionOutcomesFollowTheActiveLanguage() {
-        val en = Strings(catalog, "en")
+        val en = Strings(catalog, english)
         assertEquals("Sent to the municipality. Case number: 42", municipalOutcomeText(en, Outcome.Submitted("42")))
         assertEquals("Invalid input: x", municipalOutcomeText(en, Outcome.Blocked(Reason.INPUT_INVALID, "x")))
-        for (code in listOf("he", "en", "ar", "ru", "am")) {
+        for (code in I18nTestFiles.languageCodes()) {
             for (key in submitExtracted.keys) {
                 assertTrue("$key/$code", raw.getJSONObject(key).optString(code).isNotBlank())
-                val heTokens = SubmissionTokens.of(raw.getJSONObject(key).getString("he"))
+                val heTokens = SubmissionTokens.of(raw.getJSONObject(key).getString(source))
                 assertEquals("$key/$code placeholders", heTokens, SubmissionTokens.of(raw.getJSONObject(key).getString(code)))
             }
         }
@@ -276,7 +279,7 @@ class ShellSettingsExtractionTest {
     @Test
     fun setupKeysExistInAllLanguagesAndNeverReadProfiles() {
         for (key in listOf("setup.title", "setup.description", "setup.save_continue", "setup.later")) {
-            for (code in listOf("he", "en", "ar", "ru", "am"))
+            for (code in I18nTestFiles.languageCodes())
                 assertTrue("$key/$code", raw.getJSONObject(key).optString(code).isNotBlank())
         }
         val shell = source("AppShell.kt")
@@ -289,11 +292,11 @@ class ShellSettingsExtractionTest {
     @Test
     fun pickerTextsExistInAllLanguages() {
         for (key in pickerKeys) {
-            for (code in listOf("he", "en", "ar", "ru", "am")) {
+            for (code in I18nTestFiles.languageCodes()) {
                 assertTrue("$key/$code", raw.getJSONObject(key).optString(code).isNotBlank())
             }
         }
-        assertEquals("System default", catalog.t("en", "settings.language.system_default"))
+        assertEquals("System default", catalog.t(english, "settings.language.system_default"))
     }
 
     /**
