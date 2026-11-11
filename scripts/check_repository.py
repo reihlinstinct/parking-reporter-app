@@ -66,7 +66,7 @@ def check() -> list[str]:
         if path.suffix.lower() in {".jks", ".keystore", ".p12", ".apk", ".aab", ".db"} or path.name == ".env":
             errors.append(f"Forbidden sensitive/generated file: {path.relative_to(ROOT)}")
     wrapper = ROOT / "gradle/wrapper/gradle-wrapper.jar"
-    expected_wrapper = "3b8a25775a69158b5ad2b1d17a80a88dc7b40a352a73eb27d06c612a7ce68e98"
+    expected_wrapper = "621008afc4f5d59357fcf06ffa644dd5aade5e091bdc363742710445f73cdaf8"
     prepare_wrapper = (ROOT / "scripts/prepare_wrapper.sh").read_text(encoding="utf-8")
     shell_pins = re.findall(r"printf '%s  %s\\n' ([a-f0-9]{64}) gradle/wrapper/gradle-wrapper\.jar \| sha256sum -c -", prepare_wrapper)
     if shell_pins != [expected_wrapper]:
