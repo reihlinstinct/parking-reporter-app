@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.34.1] - 2026-11-11
+
+### Other changes
+
+- build(deps): bump gradle-wrapper from 9.8.2 to 9.9.0 (#270) (4020310)
+
 ## [0.34.0] - 2026-11-11
 
 ### Features
