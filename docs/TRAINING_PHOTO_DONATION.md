@@ -42,10 +42,11 @@ guarantee. Street signs, reflections, homes, visible documents and other context
 can still identify people or locations. Reject unsafe samples rather than
 claiming stripping EXIF anonymizes a photo.
 
-Open decision: scene/category training can use redacted plates; plate/OCR tasks
-need a separately approved scope and treatment for visible plate crops. No raw
-original training uploads by default. Do not silently pool scene classification,
-plate OCR or vehicle identification into one permission.
+Owner scope decision (2026-11-11): blurred scene/category photos ONLY for the
+initial pilot. Plate/OCR crops and vehicle-identification training are excluded.
+The shown training derivative must have visible plates and bystanders handled
+before consent. No raw original uploads. A future task expansion needs new
+review and separate explicit consent, not a terms update applied retroactively.
 
 ## Withdrawal and lineage
 
@@ -113,6 +114,7 @@ not consent validated or included in training.
    for training or release when required by those terms. Code approval is not
    consent to collect, and donation consent is not permission to file a city case.
 
-Decisions needed before a real pilot: initial task scope (redacted scene-only
-recommended), allowed model/data release and withdrawal promise, retention, and
+Scope is fixed to blurred scene/category photos. Remaining decisions before a
+real pilot: allowed model/data release and withdrawal promise, retention, and
 local-only versus remote private receiving with its operator/maintenance owner.
+Resolve these one at a time before activation.
