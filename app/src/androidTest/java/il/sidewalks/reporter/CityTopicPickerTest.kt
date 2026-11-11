@@ -54,6 +54,27 @@ class CityTopicPickerTest {
         compose.onNodeWithText("תמרור תנועה נפל / דהוי / שבור / נוטה ליפול", useUnmergedTree = true).performClick()
         compose.runOnIdle { assertEquals("17841", selected?.code) }
     }
+    @Test fun duplicateCodePickerShowsAllPathsForCodeAndPathSearch() {
+        val rows = listOf(
+            MunicipalSubject("5164", "אחר", listOf("בעלי חיים", "אחר")),
+            MunicipalSubject("5164", "אחר", listOf("חניה אסורה", "אחר")),
+            MunicipalSubject("5164", "גרפיטי", listOf("ניקיון", "גרפיטי")))
+        var chosen: MunicipalSubject? = null
+        compose.setContent { AppTheme { CityTopicPicker(rows, null, emptyList(), emptyMap(), {}, { chosen = it }) } }
+        val label = "בעלי חיים / אחר; חניה אסורה / אחר; ניקיון / גרפיטי"
+        val query = compose.onNodeWithText("חפש נושא, תיאור או מספר")
+        query.performTextInput("5164")
+        compose.onNodeWithText(label, useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithContentDescription("אחר / גרפיטי. " + label).assertIsDisplayed()
+        compose.onNodeWithText("\u20661\u2069 תוצאות").assertIsDisplayed()
+        compose.waitForIdle()
+        val bitmap = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+        File(context.filesDir, "picker312-all-paths.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        bitmap.recycle()
+        query.performTextReplacement("חניה")
+        compose.onNodeWithText(label, useUnmergedTree = true).assertIsDisplayed().performClick()
+        compose.runOnIdle { assertEquals("5164", chosen?.code) }
+    }
     @Test fun noCityCredentialsDisablesTopicFieldWithExplanation() {
         compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}) } }
         compose.onNodeWithText("בחר נושא מהעירייה").assertIsNotEnabled()
