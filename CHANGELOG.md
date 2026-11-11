@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.34.5] - 2026-11-11
+
+### Other changes
+
+- docs(accessibility): add the maintainer email as a feedback contact (#298) (ca29db7)
+
 ## [0.34.4] - 2026-11-11
 
 ### Other changes
