@@ -81,7 +81,7 @@ jobs:
             adb pull /sdcard/display-test.mp4 app/build/reports/display/display-test.mp4 || true
             adb logcat -d -v threadtime > app/build/reports/display/logcat.txt || true
             python3 scripts/test_summary.py --title 'Display screenshots (${{ matrix.label }}, API36)' --instrumentation app/build/reports/display/instrumentation.txt --check; echo $? > app/build/reports/display/summary.rc
-            for f in category-picker-open.png category-picker-chosen.png design-home-synthetic.png design-home-camera-scrolled.png design-home-gallery-scrolled.png m1-review-no-lockscreen-synthetic.png settings-save-missing-fields.png; do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/display/screenshots/$f" || true; done
+            for f in category-picker-open.png category-picker-chosen.png design-home-synthetic.png design-home-camera-scrolled.png design-home-gallery-scrolled.png m1-review-no-lockscreen-synthetic.png settings-save-missing-fields.png design303-municipal-settings.png design303-dynamic-settings.png design303-back-home.png; do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/display/screenshots/$f" || true; done
             test -s app/build/reports/display/screenshots/category-picker-open.png
             test -s app/build/reports/display/screenshots/category-picker-chosen.png
             test -s app/build/reports/display/screenshots/design-home-synthetic.png
@@ -89,6 +89,9 @@ jobs:
             test -s app/build/reports/display/screenshots/design-home-gallery-scrolled.png
             test -s app/build/reports/display/screenshots/m1-review-no-lockscreen-synthetic.png
             test -s app/build/reports/display/screenshots/settings-save-missing-fields.png
+            test -s app/build/reports/display/screenshots/design303-municipal-settings.png
+            test -s app/build/reports/display/screenshots/design303-dynamic-settings.png
+            test -s app/build/reports/display/screenshots/design303-back-home.png
             test "$(cat app/build/reports/display/instrumentation.rc)" = 0
             test "$(cat app/build/reports/display/summary.rc)" = 0
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
