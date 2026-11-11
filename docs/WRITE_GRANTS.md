@@ -1,154 +1,78 @@
-# Release and wiki write grants (least privilege)
+# Release and wiki write grants (#71)
 
-This page describes the `GITHUB_TOKEN` grants of every workflow as the
-files on `main` set them today (read at `51d6d88`, v0.9.0). It documents;
-it changes nothing. Every claim names `file:line` under
-`.github/workflows/`. Scorecard's Token-Permissions alerts #9 and #14
-point at the two publishing grants below (`release.yml:21` and
-`wiki-sync.yml:33`); see issue #71.
+Reviewed against main `a13089d0c394a0943260e0b00c765a501bf9f921`.
+This document covers the two publishing grants in issue #71, not a complete
+inventory of every workflow. It changes no permissions, tokens or settings.
 
-## Summary
+## Release
 
-- Every workflow sets a read-only or empty top-level grant, except
-  `manual-gpg-signing.yml`, whose top-level grant is `contents: write`
-  (`manual-gpg-signing.yml:4-5`, tracked in #73).
-- Four jobs can write: `release` (contents), wiki `sync` (contents),
-  Scorecard `analysis` (security-events and id-token) and the manual
-  `signing-test` (contents, inherited from the top level).
-- No workflow grants a write on `packages`, `pull-requests`, `actions`,
-  `issues` or `deployments`. Nothing publishes a package.
-- Every "Run summary" job pins `contents: read` at job level.
-- Every checkout sets `persist-credentials: false` except in the three
-  jobs that push with git: `release` (`release.yml:23-26`), wiki `sync`
-  (`wiki-sync.yml:36`) and `signing-test` (`manual-gpg-signing.yml:15-17`).
-- Scorecard can still warn about the two job-level writes: it flags
-  job-level writes too. Job scoping narrows the grant; it does not make
-  the finding go away.
+`.github/workflows/release.yml` defaults to `contents: read`.
+Only the `release` job retains `contents: write`. This job-token grant is
+unused while RELEASE_PAT is set: git pushes and GitHub release publication
+use the PAT, not the job token. Narrowing the retained grant is a separate
+owner-approved permission change, not part of this PR. The trigger is a push
+to main; the job skips release commits and runs are serialized.
 
-## Per-workflow grants
+Checkout sets `persist-credentials: false`. Release preparation runs the
+repository's script from main, before the publishing step receives credentials.
+The publishing step receives the existing `RELEASE_PAT` and a `GH_TOKEN`
+which uses that PAT when present, otherwise the job token. The explicit git
+fetch/push URLs use `RELEASE_PAT`; the fallback for `gh` does not make the
+whole workflow operable without that secret. No broader credential is added.
 
-| Workflow | Triggers | Top-level | Job grants | Checkout credentials |
+The workflow pushes the release commit directly to main with the PAT. Its
+comments describe a protected-main owner bypass, but current branch-protection
+and bypass settings were not independently verified in this review. That commit is validated by follow-on push CI, not by a PR before
+landing. This is a limit of the current release process, not a permission this
+document grants. The job token grant alone does not constrain the PAT's scopes.
+
+Version and release-note paths enter the shell through environment variables;
+notes are passed as a file. The destination is this repository. The workflow
+writes CHANGELOG.md, app/build.gradle.kts, the version tag and release metadata.
+No PR trigger or untrusted pull-request checkout is used. The separate summary
+job explicitly has `contents: read` and does not persist checkout credentials.
+
+## Wiki
+
+`.github/workflows/wiki-sync.yml` defaults to `contents: read`.
+Only `sync` grants `contents: write`. It runs on main pushes affecting the wiki
+source or workflow, or on manual dispatch. It has no pull-request trigger.
+
+Checkout sets `persist-credentials: false`. The publishing step receives only
+the existing `GITHUB_TOKEN`, clones this repository's own `.wiki.git` into a
+temporary directory and pushes there. No PAT is used. A fallback PAT remains
+outside this scope and requires separate approval.
+
+Only top-level Markdown files from docs/wiki are copied. `rsync --delete`
+removes matching wiki pages absent from the source; excluded files remain.
+The wiki URL is constructed from GitHub's repository identifier, not a PR field.
+The summary job explicitly grants `contents: read` and does not persist checkout
+credentials. The wiki sync job still uses ubuntu-latest and has no explicit
+job timeout; this document does not change those settings.
+
+## Baseline and regression tests
+
+`.github/scorecard-baseline.json` records these exact findings:
+
+| Path | Rule | Job | Evidence | Tracking |
 |---|---|---|---|---|
-| `android.yml` | dispatch, push to main, PR to main, weekly cron (`:2-11`) | `contents: read` (`:12-13`) | `changes`, `build`, `emulator` inherit read; `summary` read (`:172-173`) | not persisted (`:26`, `:58`, `:105`, `:182`) |
-| `city-readonly-checks.yml` | dispatch only (`:2-3`) | `contents: read` (`:4-5`) | `city-readonly-checks` inherits read; owner on main only (`:16`), behind an environment (`:17`) | not persisted (`:24`) |
-| `layout.yml` | push to main, any PR, dispatch (`:3-7`) | `contents: read` (`:9-10`) | `layout` inherits read | not persisted (`:18`) |
-| `manual-gpg-signing.yml` | dispatch only (`:2-3`) | `contents: write` (`:4-5`) | `signing-test` inherits write; owner on main only (`:11`); `summary` read (`:65-66`) | persisted in `signing-test` (`:15-17`, no `persist-credentials`); not persisted in `summary` (`:75`) |
-| `release.yml` | push to main (`:3-5`) | `contents: read` (`:7-8`) | `release` `contents: write` (`:20-21`); `summary` read (`:55-56`) | persisted in `release` (`:23-26`); not persisted in `summary` (`:65`) |
-| `repository-checks.yml` | dispatch, push to main, PR to main (`:3-8`) | `contents: read` (`:9-10`) | `scaffold`, `python-smoke` inherit read; `summary` read (`:50-51`) | not persisted (`:25`, `:38`, `:60`) |
-| `scorecard.yml` | branch protection change, any PR, push to main, weekly cron (`:2-9`) | `read-all` (`:11`) | `guard` `contents: read` (`:18-19`); `analysis` `security-events: write` and `id-token: write` only (`:33-37`), not on PRs (`:29`); `summary` read (`:56-57`) | not persisted (`:23`, `:42`, `:65`) |
-| `vuln-scan.yml` | any PR, weekly cron, dispatch (`:3-7`) | none, `{}` (`:9`) | `scan-pr` `contents: read`, `pull-requests: read` (`:14-16`); `scan-weekly` `contents: read` (`:20-21`) | inside the pinned reusable workflow (`:17`, `:22`); not read here |
-| `wiki-sync.yml` | push to main touching `docs/wiki/**` or the workflow, dispatch (`:15-21`) | `contents: read` (`:23-24`) | `sync` `contents: write` (`:32-33`); `summary` read (`:68-69`) | persisted in `sync` (`:36`, no `with:`); not persisted in `summary` (`:78`) |
+| release.yml | job-write | release | contents: write | #71, retained; unused while RELEASE_PAT is set |
+| wiki-sync.yml | job-write | sync | contents: write | #71, same repository wiki publication |
 
-A job-level `permissions:` block replaces the top-level one for that job,
-so `analysis` (`scorecard.yml:33-37`) holds only the two scopes it names.
+Each reason names this document. The existing guard compares exact path, rule,
+job and evidence: a new write, a top-level write, or a summary write is not
+covered by either exception. Tests exercise these changes against the actual
+repository baseline, check the #71 reasons, and require summary read-only
+permissions and non-persisting checkouts. They do not print secret values.
 
-## Release grant (`release.yml`)
+The other four accepted write findings are enumerated in the same baseline:
+manual signing contents, Scorecard security-events and id-token, and Gemini
+pull-requests. This document does not justify or change those exceptions.
 
-What the grant is for: the `release` job (`release.yml:15`) creates the
-release commit, pushes it and the version tag, and creates the GitHub
-release. `contents: write` (`release.yml:21`) covers all three; no other
-scope is granted.
+The tests do not enforce absence of secret echo, shell tracing or unexpected
+secret env exposure. This remains a security-review limit, not a clean bill.
 
-- Trigger: push to `main` only (`release.yml:3-5`). Runs are serialized,
-  never cancelled (`release.yml:10-12`).
-- Loop guard: the job skips a push whose head commit starts with
-  `chore(release):` (`release.yml:17`). Pushes made with `GITHUB_TOKEN`
-  start no workflow run anyway: at release commit `51d6d88` the API lists
-  no run of this repository's workflows, only GitHub's own dynamic
-  "Push on main" run (read 2026-11-08).
-- Checkout keeps the token in the local git config (`release.yml:23-26`,
-  no `persist-credentials`). The publish step uses it for
-  `git ls-remote` (`:39`), `git push origin main` (`:50`) and the tag
-  push (`:51`). The same token reaches `gh` as `GH_TOKEN` (`:35`) for
-  `gh release create` (`:52`).
-- While that token is in the git config, `python3 scripts/release.py`
-  runs (`release.yml:31`). It is this repository's own script from the
-  pushed `main` commit, not PR code.
-- Data boundary: the release notes are built from commit subjects
-  (`scripts/release.py:49-50`), written to a file
-  (`scripts/release.py:113-114`) and passed with `--notes-file`
-  (`release.yml:52`). No `${{ }}` expression is expanded inside a `run:`
-  script; values arrive through `env:` (`release.yml:29-37`).
-- What it writes: `CHANGELOG.md` and `app/build.gradle.kts`
-  (`release.yml:45`), one commit (`:46`), the `vX.Y.Z` tag (`:49`, `:51`)
-  and one release (`:52`). It pushes to `main` directly (`:50`), so
-  branch protection must allow that push (not checked here).
-- The `summary` job (`release.yml:54-70`) is `contents: read` and does not
-  persist credentials.
-
-## Wiki grant (`wiki-sync.yml`)
-
-What the grant is for: the `sync` job (`wiki-sync.yml:31`) pushes
-`docs/wiki/` to this repository's own wiki (`<repo>.wiki.git`). The
-wiki's git backend is covered by `contents: write` (`wiki-sync.yml:33`).
-The file header states the rule: no PAT, and a fallback PAT needs owner
-approval first (`wiki-sync.yml:7-10`).
-
-- Trigger: push to `main` that touches `docs/wiki/**` or the workflow
-  file, or manual dispatch (`wiki-sync.yml:15-21`). PRs never run it.
-  Newer runs cancel older ones (`wiki-sync.yml:26-28`).
-- The token goes into the wiki remote URL (`wiki-sync.yml:40`, `:43`)
-  of a clone in a temporary directory (`:44-45`). The clone's error
-  output is discarded (`:45`); Actions also masks the token in logs.
-- What it writes: only the `*.md` files at the top level of `docs/wiki/`
-  are copied (`wiki-sync.yml:50-54`). `--delete` removes wiki pages with
-  no source file; files the filter excludes are kept, because
-  `--delete-excluded` is not set. Then one bot commit (`:61-63`) and one
-  push to the wiki's `master` (`:64`). It pushes nothing to this
-  repository.
-- Run 40860886669 (2026-10-29, at `95e2404`, the same grant shape)
-  pushed `HEAD -> master` with this grant. Run 40919834784 (at `99cb783`)
-  logged `Contents: write` in its token permissions and "No wiki changes
-  to publish."
-- The repository checkout (`wiki-sync.yml:36`) keeps the token in the
-  workspace's git config, but the push uses the explicit wiki URL. See
-  "Gaps" below.
-- The `summary` job (`wiki-sync.yml:67-83`) is `contents: read` and does
-  not persist credentials.
-
-## Other write grants
-
-- Scorecard `analysis`: `security-events: write` uploads the SARIF file
-  (`scorecard.yml:35`, `:49-52`); `id-token: write` lets
-  `publish_results` publish to OpenSSF (`scorecard.yml:37`, `:48`). It
-  does not run on pull requests (`scorecard.yml:29`).
-- Manual GPG test: top-level `contents: write` (`manual-gpg-signing.yml:4-5`)
-  so `signing-test` can push one empty signed commit to a new
-  `gpg-signing-test/<run>` branch (`manual-gpg-signing.yml:48-54`).
-  Dispatch only, by the owner, on `main` (`manual-gpg-signing.yml:3`,
-  `:11`). Moving this write to the job is #73.
-
-## How CI holds the line
-
-`.github/scorecard-baseline.json` lists every write grant above as an
-accepted finding with its issue and reason (`:4-43`). The offline guard
-`scripts/security/scorecard_guard.py` runs on every PR and push in the
-`guard` job (`scorecard.yml:14-27`) and fails when:
-
-- a workflow lacks exactly one top-level `permissions` mapping
-  (`scorecard_guard.py:97-99`);
-- `write-all` or an inline mapping is used (`scorecard_guard.py:115-117`);
-- any `write` scope appears, as `top-level-write` at the top or
-  `job-write` in a job (`scorecard_guard.py:127-128`), and it is not in
-  the baseline (`scorecard_guard.py:303-313`, `:330-333`);
-- a baseline entry no longer matches a finding (stale entry,
-  `scorecard_guard.py:331`).
-
-So a new write, a write moved to the top level, or a "Run summary" job
-given a write each fail the guard. The self-tests cover the top-level and
-job-level cases (`tests/security/test_scorecard_guard.py:41-44`).
-
-## Gaps (not changed here)
-
-- The baseline entries for these grants cite #73, not #71, and their
-  reasons are short (`.github/scorecard-baseline.json:13-18`, `:37-42`).
-  The issue asks for the exact grants and reasons to be recorded there;
-  that is a `.github/` change for the maintainer.
-- `wiki-sync.yml:36` does not set `persist-credentials: false`, though
-  the push uses its own URL (`:43`, `:64`). Turning it off would
-  probably not break the sync (not tested in CI).
-- `wiki-sync.yml:34` runs on `ubuntu-latest` and the `sync` job has no
-  `timeout-minutes`.
-
-Not checked here: the live code-scanning alerts themselves, branch
-protection, environment rules and the reusable workflow's own checkout.
+Scorecard may still report Token-Permissions findings #9 and #14 because it
+penalizes job-level writes too. Documenting these retained grants does not
+remove those findings, dismiss alerts or prove the repository has no other
+security gaps. No live release or wiki dispatch is part of this verification.
