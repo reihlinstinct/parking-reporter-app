@@ -5,6 +5,7 @@ on:
   schedule:
     - cron: '30 4 * * 0'
   workflow_dispatch:
+  # Include appearance/back tests in the two visual profiles (#303).
   # Exercise changes to this workflow before merge; ordinary app PRs do not
   # run it. The weekly schedule remains the normal display-check cadence.
   pull_request:
@@ -74,7 +75,7 @@ jobs:
             adb shell wm density >> app/build/reports/display/device.txt
             adb shell settings get system font_scale >> app/build/reports/display/device.txt
             adb shell "screenrecord --time-limit 120 /sdcard/display-test.mp4 >/dev/null 2>&1 &"
-            adb shell am instrument -w -r -e class 'il.sidewalks.reporter.M1ShellTest#categoryPickerCurrentFourTopicsScreenshot,il.sidewalks.reporter.M1ShellTest#photoFirstHomeScreenshot,il.sidewalks.reporter.M1ShellTest#noLockscreenGreysSendWithNote,il.sidewalks.reporter.SettingsSaveGateTest#missingRequiredFieldsAreListedNextToTheButton' il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/display/instrumentation.txt 2>&1; echo $? > app/build/reports/display/instrumentation.rc; cat app/build/reports/display/instrumentation.txt
+            adb shell am instrument -w -r -e class 'il.sidewalks.reporter.M1ShellTest#categoryPickerCurrentFourTopicsScreenshot,il.sidewalks.reporter.M1ShellTest#photoFirstHomeScreenshot,il.sidewalks.reporter.M1ShellTest#noLockscreenGreysSendWithNote,il.sidewalks.reporter.SettingsSaveGateTest#missingRequiredFieldsAreListedNextToTheButton,il.sidewalks.reporter.AndroidDesignTest' il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/display/instrumentation.txt 2>&1; echo $? > app/build/reports/display/instrumentation.rc; cat app/build/reports/display/instrumentation.txt
             adb shell pkill -INT screenrecord || true
             sleep 2
             adb pull /sdcard/display-test.mp4 app/build/reports/display/display-test.mp4 || true

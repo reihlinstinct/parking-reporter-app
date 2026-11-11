@@ -21,6 +21,7 @@ import il.sidewalks.reporter.ui.theme.NavyStatusBar
 import il.sidewalks.reporter.security.SecureSettings
 import il.sidewalks.reporter.security.ReporterSettings
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -82,6 +83,7 @@ class MainActivity : ComponentActivity() {
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         // Only the first creation consumes the entry intent: after a rotation
         // the request has already routed (its draft is reserved in the ledger)

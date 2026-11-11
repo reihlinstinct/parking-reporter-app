@@ -467,6 +467,10 @@ fun AppShell(
         }
         return@ProvideStrings
     }
+    BackHandler(enabled = !showFirstRun && page != "home") {
+        if (page == "licenses") page = "settings"
+        else { profile = null; page = "home" }
+    }
     Scaffold(
         bottomBar = {
             if (page == "home" || page == "settings" || page == "reports") {

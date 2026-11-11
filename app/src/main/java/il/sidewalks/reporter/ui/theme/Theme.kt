@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
@@ -27,7 +30,13 @@ import androidx.core.view.WindowCompat
  */
 @Composable
 fun AppTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = if (darkTheme) AppDarkColors else AppLightColors, content = content)
+    val (useDynamic, _) = rememberDynamicPalette()
+    val context = LocalContext.current
+    val municipal = if (darkTheme) AppDarkColors else AppLightColors
+    val colors = if (useDynamic && Build.VERSION.SDK_INT >= 31) {
+        accessibleDynamicScheme(if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context), municipal)
+    } else municipal
+    MaterialTheme(colorScheme = colors, content = content)
 }
 
 /**
