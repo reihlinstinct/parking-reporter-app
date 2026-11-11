@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-11-11
+
+### Features
+
+- feat: searchable city-sourced topic catalog with last-cache offline mode (#301) (#307) (ac6a228)
+
 ## [0.34.9] - 2026-11-11
 
 ### Other changes
