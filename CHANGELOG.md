@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-11-11
+
+### Features
+
+- feat: add isolated authenticated ledger record envelope (#88) (#280) (b49d045)
+
 ## [0.27.6] - 2026-11-11
 
 ### Other changes
