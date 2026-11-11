@@ -16,10 +16,15 @@ interface LedgerJournalPort {
 /** Inactive authenticated commit protocol. No file I/O adapter, migration,
  * custody, recovery, rollback, reset or production caller. key comes from
  * independently authenticated custody; this protocol grants no key creation. */
-class LedgerJournalCommit(private val port: LedgerJournalPort) {
+class LedgerJournalCommit(private val port: LedgerJournalPort, instanceId: ByteArray) {
+    // Snapshot independently authenticated custody identity; caller mutation
+    // cannot retarget an existing store to another ledger instance.
+    private val instance = instanceId.copyOf().also {
+        require(it.size == 32) { "Invalid ledger instance identity" }
+    }
     fun read(key: ByteArray): LedgerJournalEnvelope.Entry? = port.exclusive {
         port.readCommitted()?.let { bytes ->
-            try { LedgerJournalEnvelope.open(bytes, key) } finally { bytes.fill(0) }
+            try { LedgerJournalEnvelope.open(bytes, key, instance) } finally { bytes.fill(0) }
         }
     }
 
@@ -28,17 +33,17 @@ class LedgerJournalCommit(private val port: LedgerJournalPort) {
     fun commit(next: LedgerJournalEnvelope.Entry, key: ByteArray) = port.exclusive {
         val oldBytes = port.readCommitted()
         val old = oldBytes?.let {
-            try { LedgerJournalEnvelope.open(it, key) } finally { it.fill(0) }
+            try { LedgerJournalEnvelope.open(it, key, instance) } finally { it.fill(0) }
         }
         check(validTransition(old, next)) { "Invalid ledger journal transition" }
-        val envelope = LedgerJournalEnvelope.seal(next, key)
+        val envelope = LedgerJournalEnvelope.seal(next, key, instance)
         try {
             port.writeTempAndSync(envelope)
             port.renameTempToCommitted()
             port.syncParentDirectory()
             val readback = port.readCommitted() ?: error("Ledger journal read-back missing")
             try {
-                val actual = LedgerJournalEnvelope.open(readback, key)
+                val actual = LedgerJournalEnvelope.open(readback, key, instance)
                 check(java.security.MessageDigest.isEqual(envelope, readback) &&
                     actual.origin == next.origin && actual.phase == next.phase) {
                     "Ledger journal read-back mismatch"

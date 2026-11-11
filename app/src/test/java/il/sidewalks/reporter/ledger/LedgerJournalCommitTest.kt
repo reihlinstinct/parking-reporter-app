@@ -5,6 +5,7 @@ import org.junit.Test
 
 class LedgerJournalCommitTest {
     private val key = ByteArray(32) { it.toByte() }
+    private val instance = ByteArray(32) { (it + 50).toByte() }
     private val fresh = LedgerJournalEnvelope.Origin.FRESH
     private val migrated = LedgerJournalEnvelope.Origin.MIGRATED
     private val creating = LedgerJournalEnvelope.Phase.FRESH_CREATING
@@ -44,7 +45,7 @@ class LedgerJournalCommitTest {
     }
 
     @Test fun exactOrderLockReadbackAndAllowedForwardSequence() {
-        val p = Port(); val store = LedgerJournalCommit(p)
+        val p = Port(); val store = LedgerJournalCommit(p, instance)
         store.commit(entry(migrated, migrating), key)
         assertEquals(listOf("read", "temp-sync", "rename", "dir-sync", "read"), p.events)
         p.events.clear()
@@ -60,7 +61,7 @@ class LedgerJournalCommitTest {
 
     @Test fun everyDurabilityFailureThrowsRetainsAuthenticatedOldOrNewAndUnlocks() {
         for (fault in listOf("read", "temp-sync", "rename", "dir-sync")) {
-            val p = Port(); val store = LedgerJournalCommit(p)
+            val p = Port(); val store = LedgerJournalCommit(p, instance)
             store.commit(entry(migrated, migrating), key)
             p.events.clear(); p.stopAfter = fault
             fails { store.commit(entry(migrated, cleaning), key) }
@@ -73,7 +74,7 @@ class LedgerJournalCommitTest {
     }
 
     @Test fun backwardsSkipAndOriginChangeDoNotWrite() {
-        val p = Port(); val store = LedgerJournalCommit(p)
+        val p = Port(); val store = LedgerJournalCommit(p, instance)
         fails { store.commit(entry(migrated, complete), key) }
         assertNull(p.committed)
         store.commit(entry(migrated, migrating), key)
@@ -91,7 +92,7 @@ class LedgerJournalCommitTest {
 
     @Test fun freshSequenceAndMissingCorruptReadbackRefuseSuccess() {
         for (missing in listOf(false, true)) {
-            val p = Port(); val store = LedgerJournalCommit(p)
+            val p = Port(); val store = LedgerJournalCommit(p, instance)
             store.commit(entry(fresh, creating), key)
             p.events.clear()
             if (missing) p.missingReadback = true else p.corruptReadback = true
@@ -101,7 +102,7 @@ class LedgerJournalCommitTest {
     }
 
     @Test fun corruptOrWrongKeyExistingJournalNeverOverwritten() {
-        val p = Port(); val store = LedgerJournalCommit(p)
+        val p = Port(); val store = LedgerJournalCommit(p, instance)
         store.commit(entry(migrated, migrating), key)
         val before = p.committed!!.copyOf(); p.events.clear()
         fails { store.commit(entry(migrated, cleaning), ByteArray(32) { 99 }) }
@@ -111,4 +112,31 @@ class LedgerJournalCommitTest {
         fails { store.commit(entry(migrated, cleaning), key) }
         assertArrayEquals(corrupt, p.committed); assertEquals(listOf("read"), p.events)
     }
+    @Test fun staleCompleteOfOtherInstanceNeverReadOrOverwritten() {
+        val p = Port()
+        val old = LedgerJournalCommit(p, instance)
+        old.commit(entry(fresh, creating), key)
+        old.commit(entry(fresh, complete), key)
+        val before = p.committed!!.copyOf()
+        val other = instance.copyOf().also { it[0] = (it[0].toInt() xor 1).toByte() }
+        val newLedger = LedgerJournalCommit(p, other)
+        p.events.clear()
+        fails { newLedger.read(key) }
+        fails { newLedger.commit(entry(fresh, creating), key) }
+        fails { newLedger.commit(entry(fresh, complete), key) }
+        assertArrayEquals(before, p.committed)
+        assertTrue(p.events.all { it == "read" })
+        assertFalse(p.locked)
+    }
+
+    @Test fun identitySnapshotAndLengthValidation() {
+        val p = Port()
+        val supplied = instance.copyOf()
+        val store = LedgerJournalCommit(p, supplied)
+        supplied.fill(0)
+        store.commit(entry(fresh, creating), key)
+        assertEquals(creating, LedgerJournalCommit(p, instance).read(key)!!.phase)
+        for (size in listOf(0, 31, 33)) fails { LedgerJournalCommit(p, ByteArray(size)) }
+    }
+
 }
