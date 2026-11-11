@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.36.1] - 2026-11-11
+
+### Fixes
+
+- fix: show every municipal path for duplicate picker codes (#313) (f11c883)
+
 ## [0.36.0] - 2026-11-11
 
 ### Features
