@@ -2,6 +2,8 @@ package io.github.reihlinstinct.reporter
 
 import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
+import org.junit.Before
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.core.view.ViewCompat
@@ -19,6 +21,12 @@ import java.io.File
 
 class KeyboardInsetTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @Before fun productionEdgeToEdgeAndRealIme() {
+        compose.activityRule.scenario.onActivity { it.enableEdgeToEdge() }
+        InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(
+            "settings put secure show_ime_with_hard_keyboard 1").close()
+    }
 
     @Test fun settingsLastEmailAndSaveReasonStayReachableWithRealKeyboard() {
         compose.setContent { AppTheme { SettingsScreen(null, { _, _, _ -> }, {}) } }
