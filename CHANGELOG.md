@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.31.2] - 2026-11-11
+
+### Other changes
+
+- test: pin private-photo staging redirect and size boundaries (#293) (8e45487)
+
 ## [0.31.1] - 2026-11-11
 
 ### Other changes
