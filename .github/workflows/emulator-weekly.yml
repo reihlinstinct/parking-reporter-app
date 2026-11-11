@@ -1,0 +1,112 @@
+name: Weekly emulator matrix
+
+# Issue #297: per-PR checks run API 30 + 36. This weekly job runs
+# API 29, 33, 34, 35, 36 and 37.0 on main. API 26 is not covered:
+# its emulator image failed on CI and the owner accepted dropping it.
+# API 29 and 37.0 remain known-unstable weekly probes, not proven green.
+# Public repo Linux minutes are free. Failures open a deduped issue.
+
+on:
+  schedule:
+    # Sunday 04:00 UTC (06:00-07:00 in Israel).
+    - cron: '0 4 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  emulator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        # Issue #297: floor is API 29, not minSdk 26 (API 26 image proved
+        # unusable on CI). Quoted: an unquoted 37.0 is a YAML float and
+        # reaches the action as "37", which does not resolve in sdkmanager.
+        api: ["29", "33", "34", "35", "36", "37.0"]
+        include:
+          # Mitigations retained for the experimental 37.0 probe. Neither
+          # guest GPU nor disabled ReadColorBufferDma has proven sufficient
+          # to prevent the image's system_server buffer-readback crash.
+          - api: "37.0"
+            emu_gpu: guest
+            emu_features: -feature -ReadColorBufferDma
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - run: sh scripts/prepare_wrapper.sh
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: ${{ matrix.api }}
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          # Explicit options (the input replaces the action defaults):
+          # swiftshader_indirect everywhere except API 37.0's guest (above).
+          emulator-options: -no-window -gpu ${{ matrix.emu_gpu || 'swiftshader_indirect' }} -no-snapshot -noaudio -no-boot-anim ${{ matrix.emu_features }}
+          script: |
+            sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            sh gradlew --stop || true
+            # Local OCR tests must work without emulator networking. On API 26
+            # adbd is fragile: svc can take the whole session down (exit 137
+            # on CI). Keep the command best-effort; the offline behavior is
+            # asserted by the OCR tests themselves.
+            adb shell svc wifi disable || echo "warning: svc wifi disable failed on API ${{ matrix.api }}"
+            adb shell svc data disable || echo "warning: svc data disable failed on API ${{ matrix.api }}"
+            mkdir -p app/build/reports/androidTests/screenshots
+            # The emulator action runs every script line in its own sh:
+            # no variables, background jobs or shell options survive across
+            # lines. The instrumented exit code therefore goes to a file.
+            adb shell am instrument -w -r il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/androidTests/instrumentation.txt 2>&1; echo $? > app/build/reports/androidTests/instrumentation.rc; cat app/build/reports/androidTests/instrumentation.txt
+            adb logcat -d -v threadtime > app/build/reports/androidTests/logcat.txt || true
+            python3 scripts/test_summary.py --title 'Instrumented tests (emulator, API ${{ matrix.api }})' --instrumentation app/build/reports/androidTests/instrumentation.txt --check; echo $? > app/build/reports/androidTests/summary.rc
+            for f in $(adb shell run-as il.sidewalks.reporter ls files/ | tr -d '\r' | grep '\.png$'); do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/androidTests/screenshots/$f" || true; done
+            test "$(cat app/build/reports/androidTests/instrumentation.rc)" = "0"
+            test "$(cat app/build/reports/androidTests/summary.rc)" = "0"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: weekly-emulator-results-api${{ matrix.api }}
+          path: app/build/reports/androidTests/
+          retention-days: 14
+
+  report-failure:
+    needs: emulator
+    if: failure()
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write
+    steps:
+      - name: Open one issue per failing run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # Dedupe: one open issue pins an already-reported broken week.
+          # Assignment preserves a lookup error under bash -e; never turn
+          # an API failure into an empty count and create a duplicate.
+          count=$(gh issue list --state open --search "Weekly emulator matrix failed in:title" --json number --jq 'length')
+          if [ "$count" -gt 0 ]; then
+            echo "an open weekly-matrix issue already exists; not opening another"
+            exit 0
+          fi
+          gh issue create --label ci --label "area: ci" \
+            --title "Weekly emulator matrix failed ($(date -u +%Y-%m-%d))" \
+            --body "The weekly emulator matrix failed on main at $RUN_SHA. See $RUN_URL - each failing job name identifies its API level, and its uploaded artifact carries the instrumentation log, logcat and screenshots. The workflow matrix at this commit is the source of truth for the tested API levels."

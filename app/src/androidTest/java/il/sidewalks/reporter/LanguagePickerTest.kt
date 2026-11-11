@@ -1,6 +1,6 @@
 package il.sidewalks.reporter
 
-import androidx.compose.material3.MaterialTheme
+import il.sidewalks.reporter.ui.theme.AppTheme
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -35,7 +35,7 @@ class LanguagePickerTest {
         var settingsReads = 0
         var settingsWrites = 0
         val prompts = mutableListOf<Pair<String, String>>()
-        compose.setContent { MaterialTheme {
+        compose.setContent { AppTheme {
             AppShell(
                 authenticate = { title, subtitle, action -> authCalls++; prompts += title to subtitle; action() },
                 requestCamera = {},
