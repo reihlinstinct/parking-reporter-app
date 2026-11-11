@@ -13,7 +13,14 @@ object LedgerJournalEnvelope {
     private const val VERSION: Byte = 1
     private const val NONCE_BYTES = 12
     private const val TAG_BYTES = 16
-    private val aad = "parking-reporter/ledger-migration-journal/v1".toByteArray(Charsets.UTF_8)
+    private val domain = "parking-reporter/ledger-migration-journal/v1".toByteArray(Charsets.UTF_8)
+
+    // Supplied from independently authenticated custody, never from the journal.
+    // A fresh ledger must get a fresh instance ID even if a key is reused.
+    private fun aad(instanceId: ByteArray): ByteArray {
+        require(instanceId.size == 32) { "Invalid ledger instance identity" }
+        return domain + byteArrayOf(0) + instanceId
+    }
 
     enum class Origin(val code: Byte) { FRESH(1), MIGRATED(2) }
     enum class Phase(val code: Byte) { FRESH_CREATING(1), MIGRATING(2), CLEANING(3), COMPLETE(4) }
@@ -28,13 +35,14 @@ object LedgerJournalEnvelope {
         override fun toString() = "LedgerJournalEntry(redacted)"
     }
 
-    fun seal(entry: Entry, key: ByteArray): ByteArray {
+    fun seal(entry: Entry, key: ByteArray, instanceId: ByteArray): ByteArray {
         require(key.size == 32) { "Invalid ledger key size" }
+        val boundAad = aad(instanceId)
         val bytes = byteArrayOf(entry.origin.code, entry.phase.code)
         try {
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"))
-            cipher.updateAAD(aad)
+            cipher.updateAAD(boundAad)
             val ciphertext = cipher.doFinal(bytes)
             check(cipher.iv.size == NONCE_BYTES) { "Invalid journal nonce" }
             return ByteBuffer.allocate(1 + NONCE_BYTES + ciphertext.size)
@@ -42,8 +50,9 @@ object LedgerJournalEnvelope {
         } finally { bytes.fill(0) }
     }
 
-    fun open(envelope: ByteArray, key: ByteArray): Entry {
+    fun open(envelope: ByteArray, key: ByteArray, instanceId: ByteArray): Entry {
         require(key.size == 32) { "Invalid ledger key size" }
+        val boundAad = aad(instanceId)
         // Payload is exactly two enum bytes. Unknown versions, appended bytes,
         // truncated tags and extra future fields all fail closed.
         require(envelope.size == 1 + NONCE_BYTES + 2 + TAG_BYTES && envelope[0] == VERSION) {
@@ -52,7 +61,7 @@ object LedgerJournalEnvelope {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"),
             GCMParameterSpec(128, envelope.copyOfRange(1, 1 + NONCE_BYTES)))
-        cipher.updateAAD(aad)
+        cipher.updateAAD(boundAad)
         val bytes = cipher.doFinal(envelope.copyOfRange(1 + NONCE_BYTES, envelope.size))
         try {
             require(bytes.size == 2) { "Invalid journal payload" }
