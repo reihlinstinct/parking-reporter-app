@@ -7,8 +7,10 @@ inventory of every workflow. It changes no permissions, tokens or settings.
 ## Release
 
 `.github/workflows/release.yml` defaults to `contents: read`.
-Only the `release` job grants `contents: write`: it creates the release
-commit and version tag and publishes a GitHub release. The trigger is a push
+Only the `release` job retains `contents: write`. This job-token grant is
+unused while RELEASE_PAT is set: git pushes and GitHub release publication
+use the PAT, not the job token. Narrowing the retained grant is a separate
+owner-approved permission change, not part of this PR. The trigger is a push
 to main; the job skips release commits and runs are serialized.
 
 Checkout sets `persist-credentials: false`. Release preparation runs the
@@ -18,8 +20,9 @@ which uses that PAT when present, otherwise the job token. The explicit git
 fetch/push URLs use `RELEASE_PAT`; the fallback for `gh` does not make the
 whole workflow operable without that secret. No broader credential is added.
 
-The PAT pushes the release commit directly to protected main using the existing
-owner bypass. That commit is validated by follow-on push CI, not by a PR before
+The workflow pushes the release commit directly to main with the PAT. Its
+comments describe a protected-main owner bypass, but current branch-protection
+and bypass settings were not independently verified in this review. That commit is validated by follow-on push CI, not by a PR before
 landing. This is a limit of the current release process, not a permission this
 document grants. The job token grant alone does not constrain the PAT's scopes.
 
@@ -53,7 +56,7 @@ job timeout; this document does not change those settings.
 
 | Path | Rule | Job | Evidence | Tracking |
 |---|---|---|---|---|
-| release.yml | job-write | release | contents: write | #71, release commit/tag/release publication |
+| release.yml | job-write | release | contents: write | #71, retained; unused while RELEASE_PAT is set |
 | wiki-sync.yml | job-write | sync | contents: write | #71, same repository wiki publication |
 
 Each reason names this document. The existing guard compares exact path, rule,
@@ -62,7 +65,14 @@ covered by either exception. Tests exercise these changes against the actual
 repository baseline, check the #71 reasons, and require summary read-only
 permissions and non-persisting checkouts. They do not print secret values.
 
+The other four accepted write findings are enumerated in the same baseline:
+manual signing contents, Scorecard security-events and id-token, and Gemini
+pull-requests. This document does not justify or change those exceptions.
+
+The tests do not enforce absence of secret echo, shell tracing or unexpected
+secret env exposure. This remains a security-review limit, not a clean bill.
+
 Scorecard may still report Token-Permissions findings #9 and #14 because it
-penalizes job-level writes too. Documenting these necessary grants does not
+penalizes job-level writes too. Documenting these retained grants does not
 remove those findings, dismiss alerts or prove the repository has no other
 security gaps. No live release or wiki dispatch is part of this verification.

@@ -264,6 +264,42 @@ class PublishingGrantTests(unittest.TestCase):
         import json
         self.baseline=json.loads((ROOT/'.github/scorecard-baseline.json').read_text())
 
+    def assert_checkouts_do_not_persist(self, text):
+        import re
+        # Supported repository block-style steps only; each checkout must have
+        # its own explicit with mapping. Quotes/comments cannot count as fields.
+        steps=[];current=[]
+        for line in text.splitlines():
+            if re.match(r'^      - ',line):
+                if current: steps.append(current)
+                current=[line]
+            elif current:
+                if line.strip() and not line.lstrip().startswith('#') and len(line)-len(line.lstrip()) < 8:
+                    steps.append(current);current=[]
+                else: current.append(line)
+        if current: steps.append(current)
+        checkouts=0
+        for step in steps:
+            code=[l for l in step if not l.lstrip().startswith('#')]
+            if not any(re.match(r'^      (?:- |  )uses:\s*[\"\']?actions/checkout@',l) for l in code): continue
+            checkouts+=1
+            self.assertTrue(any(re.fullmatch(r'        with:\s*(?:#.*)?',l) for l in code))
+            self.assertEqual(1,sum(bool(re.fullmatch(r'          persist-credentials:\s*false\s*(?:#.*)?',l)) for l in code))
+        self.assertGreater(checkouts,0)
+
+    def test_checkout_wiring_mutants_refuse(self):
+        text=(ROOT/'.github/workflows/release.yml').read_text()
+        self.assert_checkouts_do_not_persist(text)
+        for mutated in [
+            text.replace('persist-credentials: false','# persist-credentials: false',1),
+            text.replace('uses: actions/checkout@'+SHA,'uses: "actions/checkout@'+SHA+'"').replace('          persist-credentials: false','',1),
+            text.replace('          persist-credentials: false','          persist-credentials: true',1),
+        ]:
+            # Real checkout SHA is not the synthetic SHA; quote it separately.
+            import re
+            mutated=re.sub(r'uses: (actions/checkout@[a-f0-9]{40})',r'uses: "\1"',mutated)
+            with self.assertRaises(AssertionError): self.assert_checkouts_do_not_persist(mutated)
+
     def test_exact_release_and_wiki_reasons(self):
         for filename,job in [('release.yml','release'),('wiki-sync.yml','sync')]:
             path='.github/workflows/'+filename
@@ -278,8 +314,7 @@ class PublishingGrantTests(unittest.TestCase):
             findings=g.scan_text(path,text)
             self.assertFalse(g.evaluate(findings,self.baseline)[0])
             self.assertRegex(text,r'(?m)^  summary:\n    permissions:\n      contents: read$')
-            self.assertEqual(text.count('uses: actions/checkout@'),
-                             text.count('persist-credentials: false'))
+            self.assert_checkouts_do_not_persist(text)
             self.assertNotIn('pull_request',text)
 
     def test_new_or_broader_write_not_baselined(self):

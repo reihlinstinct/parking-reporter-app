@@ -15,7 +15,7 @@
       "scope": "release",
       "evidence": "contents: write",
       "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/71",
-      "reason": "release job only (push to main, skips chore(release) commits): pushes the release commit and vX.Y.Z tag and creates the GitHub release; top level stays contents: read; see docs/WRITE_GRANTS.md."
+      "reason": "Retained release-job contents: write; unused while RELEASE_PAT is set because pushes and release publication use that PAT. Narrowing is a separate owner-approved change. Top level remains contents: read; see docs/WRITE_GRANTS.md."
     },
     {
       "path": ".github/workflows/scorecard.yml",
