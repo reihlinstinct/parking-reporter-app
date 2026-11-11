@@ -248,6 +248,26 @@ class M1ShellTest {
         compose.onNodeWithText("הבדיקה הסינתטית הצליחה", substring = true).assertExists()
         screenshot("m1-home-intake-synthetic.png")
     }
+    @Test fun categoryPickerCurrentFourTopicsScreenshot() {
+        compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}) } }
+        // A popup is a separate root. Capture the full device to include both
+        // the popup and underlying review, not an arbitrary Compose root.
+        Thread.sleep(1500)
+        compose.onNodeWithText("חניה על המדרכה ▾").performClick()
+        compose.onNodeWithText("תמרור שבור").assertIsDisplayed()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().let { image ->
+            File(context.filesDir, "category-picker-open.png").outputStream().use {
+                image.compress(Bitmap.CompressFormat.PNG, 100, it)
+            }
+            image.recycle()
+        }
+        Thread.sleep(2000)
+        compose.onNodeWithText("תמרור שבור").performClick()
+        compose.onNodeWithText("תמרור שבור ▾").assertIsDisplayed()
+        screenshot("category-picker-chosen.png")
+        Thread.sleep(1500)
+    }
     @Test fun nonVehicleReviewHasNoPlateAndCorrectionResetsText() {
         var saved: ReviewDraft? = null
         val bitmap = Bitmap.createBitmap(700, 300, Bitmap.Config.ARGB_8888)
@@ -279,6 +299,22 @@ class M1ShellTest {
         compose.onNodeWithText("הגדרות").assertExists()
         compose.onNodeWithText("בדיקת פיתוח: חבילה מוצפנת ללא רשת").assertDoesNotExist()
         screenshot("design-home-synthetic.png")
+        // Issues #304/#306: at 200% text on a compact viewport the actions
+        // may begin below the fold. Prove the existing scroll container can
+        // reveal each complete button instead of treating a viewport crop as
+        // an unreachable action. Full visible bounds are stronger than exists.
+        for ((label, file) in listOf(
+            "צלם תמונה" to "design-home-camera-scrolled.png",
+            "העלה תמונה" to "design-home-gallery-scrolled.png",
+        )) {
+            val action = compose.onNodeWithText(label).performScrollTo().assertIsDisplayed()
+            val bounds = action.fetchSemanticsNode().boundsInRoot
+            val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+            assertTrue("$label must be fully inside viewport: $bounds vs $root",
+                bounds.top >= root.top && bounds.bottom <= root.bottom &&
+                    bounds.left >= root.left && bounds.right <= root.right)
+            screenshot(file)
+        }
     }
     @Test fun originalEvidenceHashAndMissingMetadata() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
