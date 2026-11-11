@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.34.9] - 2026-11-11
+
+### Other changes
+
+- ci: weekly compact 200% and foldable API36 screenshot checks (#304) (#305) (b3a1a94)
+
 ## [0.34.8] - 2026-11-11
 
 ### Other changes
