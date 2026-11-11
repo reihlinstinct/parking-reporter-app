@@ -417,9 +417,11 @@ fun AppShell(
                     // Issue #295: keep the freshly stored profile as the screen's
                     // baseline (fields themselves stay cleared) so the
                     // required-fields gate still sees complete effective values
-                    // when the user edits again right after a save. A read
-                    // failure here must not fail the save that just succeeded.
-                    profile = try { readSettings() } catch (_: Exception) { null }; cleared(); status = strings.t("shell.status.settings_saved")
+                    // when the user edits again right after a save. `merged` is
+                    // derived from the fresh read above and is exactly what was
+                    // just persisted, so no second read (and no extra decryption
+                    // failure mode) is needed here.
+                    profile = merged; cleared(); status = strings.t("shell.status.settings_saved")
                 }
                 catch (_: Exception) { status = strings.t("shell.status.settings_save_failed"); failed() }
             }
