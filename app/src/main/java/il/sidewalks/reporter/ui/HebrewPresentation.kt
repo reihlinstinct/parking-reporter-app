@@ -23,5 +23,6 @@ object HebrewPresentation {
     }
 
     fun category(strings: Strings, code: String): String =
-        strings.t(il.sidewalks.reporter.core.ReportCategory.from(code)?.labelKey ?: "category.needs_correction")
+        if (code.startsWith("municipal:")) code.removePrefix("municipal:")
+        else strings.t(il.sidewalks.reporter.core.ReportCategory.from(code)?.labelKey ?: "category.needs_correction")
 }

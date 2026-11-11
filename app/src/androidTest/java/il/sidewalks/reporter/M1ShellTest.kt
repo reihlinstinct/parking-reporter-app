@@ -32,6 +32,8 @@ class M1ShellTest {
     // en-US on the CI emulator. These tests look texts up by their Hebrew wording, so the
     // UI language is pinned to he through the real "ui-prefs" store.
     @Before fun pinHebrewUiLanguage() {
+        seedSyntheticCityTopics()
+
         InstrumentationRegistry.getInstrumentation().targetContext.let { il.sidewalks.reporter.i18n.UiPrefsLanguageStore.of(it).set(il.sidewalks.reporter.i18n.AppCatalog.defaultCode(it)) }
     }
     private fun draft() = ReviewDraft(Evidence("synthetic", "a".repeat(64), "2026-01-01T12:00:00Z", 31.0, 35.0),
@@ -49,7 +51,7 @@ class M1ShellTest {
         // forbids two), so the lockscreen state has its own test below.
         val ready = draft()
         var submitted: ReviewDraft? = null
-        compose.setContent { AppTheme { ReviewScreen(ready, null, {}, onBack = {}, onSubmit = { submitted = it }, noDeviceCredential = true) } }
+        compose.setContent { AppTheme { ReviewScreen(ready, null, {}, onBack = {}, onSubmit = { submitted = it }, noDeviceCredential = true, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         screenshot("m1-review-no-lockscreen-synthetic.png")
         compose.onNodeWithText("הגדר נעילת מסך").assertIsDisplayed()
         compose.onNodeWithText("שלח לעירייה").assertIsNotEnabled()
@@ -62,7 +64,7 @@ class M1ShellTest {
         // production wiring re-reads isDeviceSecure in MainActivity.onResume).
         val ready = draft()
         var noLock by mutableStateOf(true)
-        compose.setContent { AppTheme { ReviewScreen(ready, null, {}, onBack = {}, onSubmit = {}, noDeviceCredential = noLock) } }
+        compose.setContent { AppTheme { ReviewScreen(ready, null, {}, onBack = {}, onSubmit = {}, noDeviceCredential = noLock, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         compose.onNodeWithText("הגדר נעילת מסך").assertIsDisplayed()
         compose.onNodeWithText("שלח לעירייה").assertIsNotEnabled()
         compose.runOnIdle { noLock = false }
@@ -75,14 +77,14 @@ class M1ShellTest {
     @Test fun lockscreenKeepsSendEnabledWithoutNote() {
         // Issue #260: with a lockscreen nothing changes - no note, send enabled.
         val ready = draft()
-        compose.setContent { AppTheme { ReviewScreen(ready, null, {}, onBack = {}, onSubmit = {}, noDeviceCredential = false) } }
+        compose.setContent { AppTheme { ReviewScreen(ready, null, {}, onBack = {}, onSubmit = {}, noDeviceCredential = false, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         screenshot("m1-review-lockscreen-ok-synthetic.png")
         compose.onNodeWithText("הגדר נעילת מסך").assertDoesNotExist()
         compose.onNodeWithText("שלח לעירייה").assertIsEnabled()
     }
     @Test fun reviewSaveThenEditKeepsLatestSavedCopy() {
         var saved: ReviewDraft? = null
-        compose.setContent { AppTheme { ReviewScreen(draft(), null, { saved = it }, onBack = {}) } }
+        compose.setContent { AppTheme { ReviewScreen(draft(), null, { saved = it }, onBack = {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         screenshot("m1-review-synthetic.png")
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
         compose.runOnIdle { assertTrue(saved?.isReady() == true) }
@@ -99,7 +101,7 @@ class M1ShellTest {
             typeface = android.graphics.Typeface.create("monospace", android.graphics.Typeface.BOLD)
         })
         var saved: ReviewDraft? = null
-        compose.setContent { AppTheme { ReviewScreen(draft(), bitmap.asImageBitmap(), { saved = it }, {}) } }
+        compose.setContent { AppTheme { ReviewScreen(draft(), bitmap.asImageBitmap(), { saved = it }, {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
         compose.onNodeWithText("הצע לוחית מתוך הצילום").performScrollTo().performClick()
         compose.waitUntil(30_000) { compose.onAllNodesWithText("הצעה בלבד: \u2066123-45-678\u2069").fetchSemanticsNodes().isNotEmpty() }
@@ -169,8 +171,8 @@ class M1ShellTest {
         assertFalse(file.exists())
     }
     @Test fun rtlReviewUsesHebrewCategoryAndReadableDate() {
-        compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}) } }
-        compose.onNodeWithText("חניה על המדרכה ▾").assertExists()
+        compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
+        compose.onNodeWithText("חנייה אסורה - חנייה על מדרכה").assertExists()
         compose.onNodeWithText("sidewalk_parking").assertDoesNotExist()
         compose.onNodeWithText("זמן: \u206601/01/2026 14:00\u2069").assertExists()
     }
@@ -249,12 +251,13 @@ class M1ShellTest {
         screenshot("m1-home-intake-synthetic.png")
     }
     @Test fun categoryPickerCurrentFourTopicsScreenshot() {
-        compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}) } }
+        compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         // A popup is a separate root. Capture the full device to include both
         // the popup and underlying review, not an arbitrary Compose root.
         Thread.sleep(1500)
-        compose.onNodeWithText("חניה על המדרכה ▾").performClick()
-        compose.onNodeWithText("תמרור שבור").assertIsDisplayed()
+        compose.onNodeWithText("חנייה אסורה - חנייה על מדרכה").performClick()
+        compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextInput("17841")
+        compose.onNodeWithText("תמרור תנועה נפל / דהוי / שבור / נוטה ליפול").assertIsDisplayed()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().let { image ->
             File(context.filesDir, "category-picker-open.png").outputStream().use {
@@ -263,8 +266,8 @@ class M1ShellTest {
             image.recycle()
         }
         Thread.sleep(2000)
-        compose.onNodeWithText("תמרור שבור").performClick()
-        compose.onNodeWithText("תמרור שבור ▾").assertIsDisplayed()
+        compose.onNodeWithText("תמרור תנועה נפל / דהוי / שבור / נוטה ליפול").performClick()
+        compose.onNodeWithText("תמרור תנועה נפל / דהוי / שבור / נוטה ליפול").assertIsDisplayed()
         screenshot("category-picker-chosen.png")
         Thread.sleep(1500)
     }
@@ -276,9 +279,10 @@ class M1ShellTest {
         canvas.drawRect(325f, 120f, 350f, 290f, android.graphics.Paint().apply { color = android.graphics.Color.DKGRAY })
         canvas.drawRect(230f, 20f, 455f, 125f, android.graphics.Paint().apply { color = android.graphics.Color.WHITE })
         canvas.drawText("SYNTHETIC SIGN", 248f, 75f, android.graphics.Paint().apply { color = android.graphics.Color.BLACK; textSize = 22f })
-        compose.setContent { AppTheme { ReviewScreen(draft(), bitmap.asImageBitmap(), { saved = it }, {}) } }
-        compose.onNodeWithText("חניה על המדרכה ▾").performClick()
-        compose.onNodeWithText("תמרור שבור").performClick()
+        compose.setContent { AppTheme { ReviewScreen(draft(), bitmap.asImageBitmap(), { saved = it }, {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
+        compose.onNodeWithText("חנייה אסורה - חנייה על מדרכה").performClick()
+        compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextInput("17841")
+        compose.onNodeWithText("תמרור תנועה נפל / דהוי / שבור / נוטה ליפול").performClick()
         compose.onNodeWithText("לוחית:", substring = true).assertDoesNotExist()
         compose.onNodeWithText("רכב חונה על המדרכה").assertDoesNotExist()
         screenshot("design-sign-synthetic.png")

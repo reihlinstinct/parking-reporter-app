@@ -29,7 +29,7 @@ data class ReviewDraft(
     val confirmedLongitude: Double? = evidence.longitude,
 ) {
     fun isReady(): Boolean = unresolved.isEmpty() &&
-        ReportCategory.from(subject)?.let { if (it.needsPlate) plate.matches(Regex("[0-9]{7,8}")) else plate.isEmpty() } == true && address.isNotBlank() &&
+        TopicIdentity.isKnownShape(subject) && (if (TopicIdentity.needsPlate(subject)) plate.matches(Regex("[0-9]{7,8}")) else plate.isEmpty()) && address.isNotBlank() &&
         exactHebrewText.isNotBlank() && validTime(confirmedTime) &&
         confirmedLatitude?.let { it.isFinite() && it in -90.0..90.0 } == true &&
         confirmedLongitude?.let { it.isFinite() && it in -180.0..180.0 } == true
@@ -50,7 +50,7 @@ data class ReviewDraft(
             unresolved = emptySet())
     fun edit(plate: String = this.plate, address: String = this.address,
              subject: String = this.subject, text: String = this.exactHebrewText): ReviewDraft =
-        copy(plate = if (ReportCategory.from(subject)?.needsPlate == false) "" else plate, address = address, subject = subject, exactHebrewText = if (subject != this.subject && text == this.exactHebrewText) "" else text,
+        copy(plate = if (!TopicIdentity.needsPlate(subject)) "" else plate, address = address, subject = subject, exactHebrewText = if (subject != this.subject && text == this.exactHebrewText) "" else text,
             confirmedLatitude = if (address != this.address && (evidence.latitude == null || evidence.longitude == null)) null else confirmedLatitude,
             confirmedLongitude = if (address != this.address && (evidence.latitude == null || evidence.longitude == null)) null else confirmedLongitude,
             unresolved = if (address != this.address && (evidence.latitude == null || evidence.longitude == null)) unresolved + "location_needs_confirmation" else unresolved)

@@ -158,7 +158,8 @@ class ShellSettingsExtractionTest {
         for (key in used) assertTrue("$key is used but missing from strings.json", catalog.rawEntry(key) != null)
         // SettingsScreen also links to the Licenses screen using that screen's own
         // title key (#163); it is not one of the two screens' shell./settings. keys.
-        val ownUsed = used - "licenses.screen.title" - setOf("setup.title", "setup.description", "setup.save_continue", "setup.later")
+        // Topic unlock reuses the same catalog texts as the picker (#301).
+        val ownUsed = used - "licenses.screen.title" - setOf("topics.connect_title", "topics.connection_needed") - setOf("setup.title", "setup.description", "setup.save_continue", "setup.later")
         // The expected key set is derived - catalog keys versus keys the two screens
         // use - so adding a catalog key and using it needs no test edit. Both
         // directions are checked with the mismatch named, sorted, one per line (the
@@ -245,7 +246,8 @@ class ShellSettingsExtractionTest {
         val shell = source("AppShell.kt")
         assertEquals(1, Regex("""authenticate\(strings\.t\("shell\.unlock\.submit_title"\),\s*strings\.t\("shell\.unlock\.submit_subtitle"\)\)""").findAll(shell).count())
         assertEquals(2, Regex("""authenticate\(strings\.t\("shell\.unlock\.settings_title"\), strings\.t\("shell\.unlock\.settings_subtitle"\)\)""").findAll(shell).count())
-        assertEquals("every authenticate call uses catalog texts", 3, Regex("""authenticate\(""").findAll(shell).count())
+        assertEquals(1, Regex("""authenticate\(strings\.t\("topics\.connect_title"\), strings\.t\("topics\.connection_needed"\)\)""").findAll(shell).count())
+        assertEquals("every authenticate call uses catalog texts", 4, Regex("""authenticate\(""").findAll(shell).count())
     }
 
     private object SubmissionTokens {
@@ -254,7 +256,8 @@ class ShellSettingsExtractionTest {
 
     @Test
     fun appShellKeysUseTheShellPrefixAndSettingsKeysTheSettingsPrefix() {
-        assertTrue(keysUsedIn("AppShell.kt").all { it.startsWith("shell.") })
+        val sharedTopicKeys = setOf("topics.connect_title", "topics.connection_needed")
+        assertTrue(keysUsedIn("AppShell.kt").all { it.startsWith("shell.") || it in sharedTopicKeys })
         // The one allowed exception is the Licenses-screen link button (#163), which
         // shows that screen's own licenses.screen.title rather than duplicating it.
         assertTrue(keysUsedIn("SettingsScreen.kt").all { it.startsWith("settings.") || it.startsWith("setup.") || it == "licenses.screen.title" })

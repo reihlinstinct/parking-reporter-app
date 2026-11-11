@@ -13,6 +13,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.platform.testTag
@@ -31,7 +32,11 @@ import il.sidewalks.reporter.i18n.ProvideStringsIfMissing
 private const val LOCAL_TIME_EXAMPLE = "\u206601/01/2026 12:00\u2069"
 
 @Composable
-fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft) -> Unit, onBack: () -> Unit, onSubmit: ((ReviewDraft) -> Unit)? = null, submitting: Boolean = false, submissionNote: String = "", missingCredentialKeys: List<String> = emptyList(), noDeviceCredential: Boolean = false, addressLookup: (suspend (Double, Double) -> List<il.sidewalks.reporter.evidence.AddressSuggestion>)? = null, plateRecognizer: (suspend () -> List<String>)? = null, manualAddressLookup: (suspend (String, String) -> il.sidewalks.reporter.municipal.StreetDirectory.ConfirmableAddress)? = null) {
+fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft) -> Unit, onBack: () -> Unit, onSubmit: ((ReviewDraft) -> Unit)? = null, submitting: Boolean = false, submissionNote: String = "", missingCredentialKeys: List<String> = emptyList(), noDeviceCredential: Boolean = false, addressLookup: (suspend (Double, Double) -> List<il.sidewalks.reporter.evidence.AddressSuggestion>)? = null, plateRecognizer: (suspend () -> List<String>)? = null, manualAddressLookup: (suspend (String, String) -> il.sidewalks.reporter.municipal.StreetDirectory.ConfirmableAddress)? = null,
+    topicSnapshot: il.sidewalks.reporter.core.CityTopicCache.Snapshot? = null,
+    topicsAvailable: Boolean = false, topicsLoading: Boolean = false,
+    openTopics: (() -> Unit)? = null, topicSelected: ((String) -> Unit)? = null,
+    recentTopics: List<String> = emptyList(), topicAliases: Map<String, List<String>> = emptyMap()) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var plates by remember(initial.evidence.stableId) { mutableStateOf<List<String>>(emptyList()) }
@@ -121,13 +126,13 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
                 catch (_: Exception) { emptyList() }
             }
-            if (il.sidewalks.reporter.core.ReportCategory.from(draft.subject)?.needsPlate == false) plates = emptyList()
+            if (!il.sidewalks.reporter.core.TopicIdentity.needsPlate(draft.subject)) plates = emptyList()
             if (plateEdits == editsBefore) draft = PlateEntry.prefill(draft, plates, plateBefore)
             ocrStatus = if (plates.isEmpty()) "review.ocr.no_plate" else "review.ocr.suggestions_found"
         } finally { recognizing = false }
     }
     LaunchedEffect(initial.evidence.stableId, image) {
-        if (image != null && draft.plate.isEmpty() && il.sidewalks.reporter.core.ReportCategory.from(draft.subject)?.needsPlate != false) recognize()
+        if (image != null && draft.plate.isEmpty() && il.sidewalks.reporter.core.TopicIdentity.needsPlate(draft.subject)) recognize()
     }
     ProvideStringsIfMissing {
     val s = LocalStrings.current
@@ -144,19 +149,42 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             TextButton(onClick = { editing = !editing }) { Text(s.t(if (editing) "review.edit.done" else "review.edit.start")) }
         }
         image?.let { Image(it, s.t("review.image_description"), modifier = Modifier.fillMaxWidth().height(220.dp)) }
-        Box {
-            TextButton(onClick = { categoryMenu = true }) { Text("${HebrewPresentation.category(s, draft.subject)} ▾") }
-            DropdownMenu(expanded = categoryMenu, onDismissRequest = { categoryMenu = false }) {
-                il.sidewalks.reporter.core.ReportCategory.entries.forEach { category ->
-                    DropdownMenuItem(text = { Text(s.t(category.labelKey)) }, onClick = {
-                        draft = draft.edit(subject = category.code); if (!category.needsPlate) plates = emptyList(); categoryMenu = false
-                    })
-                }
-            }
+        val selectedCode = il.sidewalks.reporter.core.TopicIdentity.code(draft.subject)
+        val selectedRows = topicSnapshot?.topics.orEmpty().filter { it.code == selectedCode }
+        val selectedTopic = selectedRows.firstOrNull()
+        val selectedLabel = selectedRows.map { it.path.joinToString(" / ") }.distinct().let { paths ->
+            if (paths.size > 1) paths.joinToString("; ") else selectedTopic?.name
         }
+        val removed = topicSnapshot != null && selectedCode != null && selectedTopic == null
+        val canBrowseTopics = topicSnapshot != null || topicsAvailable
+        val topicNote = when {
+            topicSnapshot == null && noDeviceCredential -> s.t("review.submit.no_device_lock")
+            topicsLoading -> s.t("topics.loading")
+            removed -> s.t("topics.removed")
+            !canBrowseTopics -> s.t("topics.connection_needed")
+            topicSnapshot == null -> s.t("topics.unavailable")
+            else -> ""
+        }
+        TextButton(enabled = canBrowseTopics && !topicsLoading && (topicSnapshot != null || !noDeviceCredential), onClick = {
+            openTopics?.invoke(); categoryMenu = true
+        }, modifier = Modifier.semantics { stateDescription = topicNote }) {
+            Text(selectedLabel ?: s.t("topics.choose"), Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
+        }
+        if (topicNote.isNotBlank()) Text(topicNote, Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
+        topicSnapshot?.let { snapshot ->
+            Text(s.t("topics.updated", mapOf("date" to snapshot.checkedAt.atZone(java.time.ZoneId.of("Asia/Jerusalem")).toLocalDate().toString())))
+            if (snapshot.stale(java.time.Instant.now())) Text(s.t("topics.stale"), Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
+        }
+        if (categoryMenu && topicSnapshot != null && canBrowseTopics) CityTopicPicker(
+            topicSnapshot.topics, selectedCode, recentTopics, topicAliases,
+            dismiss = { categoryMenu = false }, choose = { topic ->
+                draft = draft.edit(subject = "municipal:" + topic.code)
+                if (!il.sidewalks.reporter.core.TopicIdentity.needsPlate(draft.subject)) plates = emptyList()
+                topicSelected?.invoke(topic.code); categoryMenu = false
+            })
         Text(s.t("review.category_note"), style = MaterialTheme.typography.bodySmall)
         if (!editing) {
-            if (il.sidewalks.reporter.core.ReportCategory.from(draft.subject)?.needsPlate == true) {
+            if (il.sidewalks.reporter.core.TopicIdentity.needsPlate(draft.subject)) {
                 Text(reviewPlateText(s, draft.plate), style = MaterialTheme.typography.titleMedium)
                 if (recognizing) { LinearProgressIndicator(Modifier.fillMaxWidth()); Text(s.t("review.ocr.analyzing")) }
                 Text(ocrStatus?.let { s.t(it) }.orEmpty(), style = MaterialTheme.typography.bodySmall)
@@ -182,12 +210,12 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         Text("\u2066${HebrewPresentation.evidenceTime(s, draft.evidence.capturedAtIso)}\u2069", modifier = Modifier.fillMaxWidth(), style = TextStyle(textDirection = TextDirection.Ltr))
 
         Text(s.t("review.edit.privacy_note"))
-        if (il.sidewalks.reporter.core.ReportCategory.from(draft.subject)?.needsPlate != false) {
+        if (il.sidewalks.reporter.core.TopicIdentity.needsPlate(draft.subject)) {
         Row { Checkbox(checked = useGoogle, enabled = !recognizing, onCheckedChange = { useGoogle = it; plates = emptyList(); ocrStatus = null }); Text(s.t("review.edit.use_mlkit")) }
         Button(enabled = image != null && !recognizing, onClick = { scope.launch { recognize() } }, modifier = Modifier.fillMaxWidth()) { Text(s.t(if (recognizing) "review.edit.recognizing" else "review.edit.suggest_plate")) }
         Text(ocrStatus?.let { s.t(it) }.orEmpty())
         plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate) }) { Text(reviewPlateSuggestionText(s, plate)) } }
-        if (il.sidewalks.reporter.core.ReportCategory.from(draft.subject)?.needsPlate == true) OutlinedTextField(draft.plate, { plateEdits++; draft = draft.edit(plate = PlateEntry.digits(it)) }, singleLine = true,
+        if (il.sidewalks.reporter.core.TopicIdentity.needsPlate(draft.subject)) OutlinedTextField(draft.plate, { plateEdits++; draft = draft.edit(plate = PlateEntry.digits(it)) }, singleLine = true,
             isError = draft.plate.isNotBlank() && !draft.plate.matches(Regex("[0-9]{7,8}")),
             visualTransformation = PlateEntry, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, autoCorrectEnabled = false),
             textStyle = MaterialTheme.typography.titleLarge.copy(textDirection = TextDirection.Ltr),
@@ -277,7 +305,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             // Send the draft this screen actually shows, not some other copy.
             // N4: when the lock state disables send, TalkBack announces why.
             val sendModifier = if (noDeviceCredential) Modifier.fillMaxWidth().semantics { stateDescription = s.t("review.submit.no_device_lock") } else Modifier.fillMaxWidth()
-            Button(enabled = foldedDraft().isReady() && !submitting && missingCredentialKeys.isEmpty() && !noDeviceCredential, onClick = {
+            Button(enabled = selectedTopic != null && topicsAvailable && foldedDraft().isReady() && !submitting && missingCredentialKeys.isEmpty() && !noDeviceCredential, onClick = {
                 confirmPendingEvidence()
                 // Runs 42853563754 / 42880867432: an ENABLED send button's
                 // semantics click no-opped silently. First proof point:

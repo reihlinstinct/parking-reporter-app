@@ -51,6 +51,8 @@ class FullFlowE2eTest {
     @get:Rule val compose = createComposeRule()
 
     @Before fun pinHebrewUiLanguage() {
+        seedSyntheticCityTopics()
+
         InstrumentationRegistry.getInstrumentation().targetContext.let { il.sidewalks.reporter.i18n.UiPrefsLanguageStore.of(it).set(il.sidewalks.reporter.i18n.AppCatalog.defaultCode(it)) }
     }
 

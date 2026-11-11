@@ -61,7 +61,10 @@ class SubmissionStateMachine(
         jpeg: ByteArray,
         retryPhoto: Boolean = false,
         photoSha256: String? = null,
-    ): SubmissionResult = store.withSubmissionLock {
+        afterSuccessfulSubmission: ((MunicipalClient, String) -> Unit)? = null,
+    ): SubmissionResult {
+        var completedToken: String? = null
+        val result = store.withSubmissionLock {
         // The helper mutates the caller's contact dict (Token, ContactIdInCRM);
         // the port works on a copy so a caller-side map never changes mid-flight.
         val contact: LinkedHashMap<String, Any?> = LinkedHashMap(contact)
@@ -163,6 +166,10 @@ class SubmissionStateMachine(
         }
         state["status"] = "complete"
         store.write(state)
+        completedToken = token
         return@withSubmissionLock SubmissionResult.Submitted(case)
+        }
+        completedToken?.let { token -> runCatching { afterSuccessfulSubmission?.invoke(client, token) } }
+        return result
     }
 }

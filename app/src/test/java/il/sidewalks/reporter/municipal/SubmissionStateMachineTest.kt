@@ -78,6 +78,40 @@ class SubmissionStateMachineTest {
     private fun machine(client: FakeClient) =
         SubmissionStateMachine(client) { "synthetic-file-name.jpg" }
 
+    @Test fun catalogCallbackRunsOnlyAfterDurableCompletionAndNeverOnAlreadySubmitted() {
+        val client = FakeClient()
+        val store = InMemorySubmissionStateStore()
+        var refreshes = 0
+        val callback: (MunicipalClient, String) -> Unit = { seen, token ->
+            assertTrue(seen === client)
+            assertEquals("synthetic-token", token)
+            assertEquals("complete", store.stored!!["status"])
+            store.withSubmissionLock { assertEquals("complete", store.read()!!["status"]) }
+            assertEquals("attach", client.calls.last())
+            refreshes++
+            throw MunicipalApiException("synthetic catalog unavailable")
+        }
+        assertTrue(machine(client).submit(store, contact, report, jpeg,
+            afterSuccessfulSubmission = callback) is SubmissionResult.Submitted)
+        assertEquals(1, refreshes)
+        assertTrue(machine(client).submit(store, contact, report, jpeg,
+            afterSuccessfulSubmission = callback) is SubmissionResult.AlreadySubmitted)
+        assertEquals(1, refreshes)
+        assertEquals(1, client.calls.count { it == "create" })
+    }
+
+    @Test fun failedSubmissionNeverFetchesCatalog() {
+        for (client in listOf(FakeClient(createError = MunicipalApiException("synthetic create failure")),
+            FakeClient(attachError = MunicipalApiException("synthetic photo failure")))) {
+            var refreshes = 0
+            assertThrows(MunicipalReviewNeededException::class.java) {
+                machine(client).submit(InMemorySubmissionStateStore(), contact, report, jpeg,
+                    afterSuccessfulSubmission = { _, _ -> refreshes++ })
+            }
+            assertEquals(0, refreshes)
+        }
+    }
+
     @Test
     fun freshRunCompletesWithHelperTransitions() {
         val client = FakeClient()

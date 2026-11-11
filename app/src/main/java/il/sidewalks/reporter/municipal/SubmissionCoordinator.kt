@@ -21,7 +21,14 @@ class SubmissionCoordinator(
     private val clientFactory: (ReporterSettings) -> MunicipalClient,
     private val streets: StreetDirectory,
     private val storeFor: (stableId: String) -> SubmissionStateStore,
+    private val activeTopicCodes: (() -> Set<String>)?,
+    private val afterSuccessfulSubmission: ((MunicipalClient, String) -> Unit)?,
 ) {
+    /** Preserve the legacy JVM workflow's three-argument/trailing-lambda API. */
+    constructor(clientFactory: (ReporterSettings) -> MunicipalClient,
+                streets: StreetDirectory, storeFor: (String) -> SubmissionStateStore) :
+        this(clientFactory, streets, storeFor, null, null)
+
     /** Snapshot of the exact reviewed outgoing bytes, bound to their source original. */
     class OutgoingPhoto(jpeg: ByteArray, val originalHash: String) {
         private val bytes = jpeg.copyOf()
@@ -107,8 +114,12 @@ class SubmissionCoordinator(
                 "municipal credentials absent: " + settings.missingMunicipalFields().joinToString(", "),
                 missingFields = settings.missingMunicipalFields())
         }
-        val category = ReportCategory.from(draft.subject)
+        val topicCode = il.sidewalks.reporter.core.TopicIdentity.code(draft.subject)
             ?: return Outcome.Blocked(Reason.UNSUPPORTED_CATEGORY, draft.subject)
+        // App path validates against its last-good city cache. Legacy JVM
+        // workflow keeps only its existing four supported category codes.
+        val allowed = activeTopicCodes?.invoke() ?: ReportCategory.entries.map { it.municipalSubjectCode }.toSet()
+        if (topicCode !in allowed) return Outcome.Blocked(Reason.UNSUPPORTED_CATEGORY, draft.subject)
         val gps = if (draft.confirmedLatitude != null && draft.confirmedLongitude != null) {
             draft.confirmedLatitude to draft.confirmedLongitude
         } else {
@@ -134,7 +145,7 @@ class SubmissionCoordinator(
         val report = try {
             MunicipalPayloads.buildReport(MunicipalPayloads.ReportFields(
                 description = draft.exactHebrewText,
-                subjectCode = category.municipalSubjectCode,
+                subjectCode = topicCode,
                 streetCode = resolved.streetCode,
                 streetName = resolved.streetName,
                 houseNumber = resolved.house,
@@ -155,7 +166,8 @@ class SubmissionCoordinator(
         val store = storeFor(draft.evidence.stableId)
         val result = try {
             SubmissionStateMachine(client).submit(store, contact, report, jpeg,
-                photoSha256 = il.sidewalks.reporter.intake.EncryptedPackage.sha256(jpeg))
+                photoSha256 = il.sidewalks.reporter.intake.EncryptedPackage.sha256(jpeg),
+                afterSuccessfulSubmission = afterSuccessfulSubmission)
         } catch (e: MunicipalReviewNeededException) {
             return Outcome.Blocked(Reason.MUNICIPAL_REVIEW_NEEDED, e.message ?: "review needed")
         } catch (e: IllegalStateException) {
