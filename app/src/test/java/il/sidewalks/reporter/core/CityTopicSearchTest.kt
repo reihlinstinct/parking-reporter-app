@@ -36,6 +36,17 @@ class CityTopicSearchTest {
         assertEquals(listOf("גדרות", "עמוד נפל"), CityTopicCache.flatten(tree).single().path)
         try { CityTopicCache.flatten(JSONArray("""[{"categoryName":"bad","subjectCode":1280}]""")); fail("numeric code") } catch (_: Exception) { }
     }
+    @Test fun reviewedAliasAssetReferencesExistingCityCodesWithoutCollisions() {
+        val module = java.io.File("src/main/assets").takeIf { it.isDirectory } ?: java.io.File("app/src/main/assets")
+        val catalog = java.io.File(module, "taxonomy/municipal_subjects.json").inputStream().use { MunicipalSubjects.load(it) }
+        val aliases = org.json.JSONObject(java.io.File(module, "taxonomy/topic_aliases.json").readText())
+        val seen = mutableSetOf<String>()
+        for (code in aliases.keys()) {
+            assertTrue("unknown alias code $code", catalog.hasCode(code))
+            val values = aliases.getJSONArray(code)
+            for (i in 0 until values.length()) assertTrue("alias collision", seen.add(LocalTopicRanker.normalize(values.getString(i))))
+        }
+    }
     @Test fun legacyMigrationDoesNotCreateASecondCategorySource() {
         assertEquals("1145", TopicIdentity.code("sidewalk_parking"))
         assertEquals("5164", TopicIdentity.code("municipal:5164"))
