@@ -7,6 +7,7 @@ import il.sidewalks.reporter.core.*
 import il.sidewalks.reporter.ui.CityTopicPicker
 import il.sidewalks.reporter.ui.theme.AppTheme
 import org.json.JSONObject
+import org.json.JSONArray
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -24,11 +25,15 @@ class LiveCatalogRecordingTest {
             val row = rawRows.getJSONObject(i); val path = row.getJSONArray("path")
             MunicipalSubject(row.getString("code"), row.getString("name"), (0 until path.length()).map { path.getString(it) })
         }
+        val tree = JSONArray(instrumentation.context.assets.open("live-city-tree-20261111.json").bufferedReader().use { it.readText() })
+        assertEquals(12, tree.length())
+        val parsedRows = CityTopicCache.flatten(tree)
+        assertEquals(rows, parsedRows)
         assertEquals(86, rows.size)
         assertEquals(72, rows.map { it.code }.toSet().size)
         assertEquals(root.getString("fingerprint"), MunicipalSubjects.canonicalFingerprint(rows))
         val cache = CityTopicCache(File(context.cacheDir, "live-public-catalog/catalog.json"))
-        cache.replace(rows)
+        cache.replace(parsedRows)
         val cached = cache.read()!!.topics
         assertEquals(rows, cached)
         assertTrue(cached.count { it.code == "5164" } > 1)
