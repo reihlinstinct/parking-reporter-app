@@ -182,7 +182,12 @@ class FullFlowE2eTest {
             // Dispose ReviewScreen and restore from the actual persisted ledger row.
             compose.onNodeWithText("חזור").performScrollTo().performClick()
             compose.onNodeWithText("הדיווחים שלי").performClick()
-            compose.onNodeWithText("פתח דיווח " + revised.stableId.take(8)).performScrollTo().performClick()
+            compose.waitUntil(10_000) {
+                compose.onAllNodesWithText(revised.stableId.take(8), substring = true).fetchSemanticsNodes().isNotEmpty()
+            }
+            // Catalog placeholders insert bidi isolates around IDs, so do not
+            // hardcode a visually equivalent but byte-different button label.
+            compose.onNodeWithText(revised.stableId.take(8), substring = true).performScrollTo().performClick()
             compose.onNodeWithText("xxxxxORT", substring = true).assertExists()
             assertEquals(revised, row())
             assertEquals(0, clientCreations.get())
