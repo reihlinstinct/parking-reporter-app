@@ -1,97 +1,63 @@
-name: Weekly display screenshots
-
-# Issue #304: two display configurations, not the full API/test matrix.
+name: Namespace install upgrade proof
 on:
-  schedule:
-    - cron: '30 4 * * 0'
   workflow_dispatch:
-  # Include appearance/back tests in the two visual profiles (#303).
-  # Exercise changes to this workflow before merge; ordinary app PRs do not
-  # run it. The weekly schedule remains the normal display-check cadence.
-  pull_request:
-    paths:
-      - '.github/workflows/display-weekly.yml'
-
 permissions:
   contents: read
-
-concurrency:
-  group: display-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  display:
-    name: display (${{ matrix.label }})
+  install-upgrade:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(github.event_name == 'pull_request' && '[{"label":"foldable-normal","profile":"7.6in Foldable","font_scale":"1.0","size":"","density":""}]' || '[{"label":"compact-200pct","profile":"pixel_2","font_scale":"2.0","size":"720x1280","density":"320"},{"label":"foldable-normal","profile":"7.6in Foldable","font_scale":"1.0","size":"","density":""}]') }}
-    # 200% is a periodic accessibility stress check, not a PR/demo default.
-    # Workflow PR self-tests keep the normal foldable profile only.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: reihlinstinct/parking-reporter-app
+          ref: f0cf7a8b75fa5cb686cbc5bd6235a4dfeb16b3fa
+          path: upgrade-baseline
           persist-credentials: false
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
         with:
           distribution: temurin
           java-version: '17'
           cache: gradle
+      - name: Build pinned old source with synthetic local seed test
+        run: |
+          cp app/src/androidTest/assets/namespace-upgrade/NamespaceUpgradeSeedTest.kt.txt upgrade-baseline/app/src/androidTest/java/il/sidewalks/reporter/NamespaceUpgradeSeedTest.kt
+          cd upgrade-baseline
+          sh scripts/prepare_wrapper.sh
+          sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
       - run: sh scripts/prepare_wrapper.sh
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Record available device profiles
-        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" list device'
       - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
           api-level: '36'
           arch: x86_64
-          profile: ${{ matrix.profile }}
+          profile: pixel_2
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
             sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+            sh gradlew --stop || true
+            mkdir -p app/build/reports/namespace-upgrade
+            python3 scripts/emulator_preflight.py --report-dir app/build/reports/namespace-upgrade
+            adb install -r upgrade-baseline/app/build/outputs/apk/debug/app-debug.apk
+            adb install -r upgrade-baseline/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            adb shell am instrument -w -r -e class il.sidewalks.reporter.NamespaceUpgradeSeedTest il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/namespace-upgrade/seed.txt
+            python3 scripts/test_summary.py --title 'Old installed app seed' --instrumentation app/build/reports/namespace-upgrade/seed.txt --check
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-            sh gradlew --stop || true
-            python3 scripts/emulator_preflight.py --report-dir app/build/reports/display
-            if [ -n '${{ matrix.size }}' ]; then adb shell wm size '${{ matrix.size }}'; adb shell wm density '${{ matrix.density }}'; fi
-            adb shell settings put system font_scale '${{ matrix.font_scale }}'
-            test "$(adb shell settings get system font_scale | tr -d '\r')" = '${{ matrix.font_scale }}'
-            mkdir -p app/build/reports/display/screenshots
-            adb shell wm size > app/build/reports/display/device.txt
-            adb shell wm density >> app/build/reports/display/device.txt
-            adb shell settings get system font_scale >> app/build/reports/display/device.txt
-            adb shell "screenrecord --time-limit 120 /sdcard/display-test.mp4 >/dev/null 2>&1 &"
-            adb shell am instrument -w -r -e class 'io.github.reihlinstinct.reporter.M1ShellTest#categoryPickerCurrentFourTopicsScreenshot,io.github.reihlinstinct.reporter.M1ShellTest#photoFirstHomeScreenshot,io.github.reihlinstinct.reporter.M1ShellTest#noLockscreenGreysSendWithNote,io.github.reihlinstinct.reporter.SettingsSaveGateTest#missingRequiredFieldsAreListedNextToTheButton,io.github.reihlinstinct.reporter.AndroidDesignTest,io.github.reihlinstinct.reporter.CityTopicPickerTest#duplicateCodePickerShowsAllPathsForCodeAndPathSearch' il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/display/instrumentation.txt 2>&1; echo $? > app/build/reports/display/instrumentation.rc; cat app/build/reports/display/instrumentation.txt
-            adb shell pkill -INT screenrecord || true
-            sleep 2
-            adb pull /sdcard/display-test.mp4 app/build/reports/display/display-test.mp4 || true
-            adb logcat -d -v threadtime > app/build/reports/display/logcat.txt || true
-            python3 scripts/test_summary.py --title 'Display screenshots (${{ matrix.label }}, API36)' --instrumentation app/build/reports/display/instrumentation.txt --check; echo $? > app/build/reports/display/summary.rc
-            for f in picker312-all-paths.png category-picker-open.png category-picker-chosen.png design-home-synthetic.png design-home-camera-scrolled.png design-home-gallery-scrolled.png m1-review-no-lockscreen-synthetic.png settings-save-missing-fields.png design303-municipal-settings.png design303-dynamic-settings.png design303-back-home.png; do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/display/screenshots/$f" || true; done
-            test -s app/build/reports/display/screenshots/picker312-all-paths.png
-            test -s app/build/reports/display/screenshots/category-picker-open.png
-            test -s app/build/reports/display/screenshots/category-picker-chosen.png
-            test -s app/build/reports/display/screenshots/design-home-synthetic.png
-            test -s app/build/reports/display/screenshots/design-home-camera-scrolled.png
-            test -s app/build/reports/display/screenshots/design-home-gallery-scrolled.png
-            test -s app/build/reports/display/screenshots/m1-review-no-lockscreen-synthetic.png
-            test -s app/build/reports/display/screenshots/settings-save-missing-fields.png
-            test -s app/build/reports/display/screenshots/design303-municipal-settings.png
-            test -s app/build/reports/display/screenshots/design303-dynamic-settings.png
-            test -s app/build/reports/display/screenshots/design303-back-home.png
-            test "$(cat app/build/reports/display/instrumentation.rc)" = 0
-            test "$(cat app/build/reports/display/summary.rc)" = 0
+            adb shell am instrument -w -r -e namespaceUpgrade 1 -e class io.github.reihlinstinct.reporter.InstalledNamespaceUpgradeTest il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/namespace-upgrade/verify.txt
+            python3 scripts/test_summary.py --title 'New installed namespace preserves old data' --instrumentation app/build/reports/namespace-upgrade/verify.txt --check
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
-          name: display-api36-${{ matrix.label }}
-          path: app/build/reports/display/
-          retention-days: 14
+          name: namespace-install-upgrade-proof
+          path: app/build/reports/namespace-upgrade/
           if-no-files-found: error
+          retention-days: 14
