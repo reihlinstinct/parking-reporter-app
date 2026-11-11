@@ -56,7 +56,7 @@ class LauncherLabelResourcesTest {
     @Test
     fun theAppNameStaysTheManifestsHebrewLabel() {
         val manifest = I18nTestFiles.moduleFile("src/main/AndroidManifest.xml").readText(Charsets.UTF_8)
-        assertTrue("application label is the literal app name", manifest.contains("android:label=\"מדרכות פנויות\""))
+        assertTrue("application label is the literal app name", manifest.contains("android:label=\"דיווח 106 ירושלים\""))
         for ((code, dir) in languageDirs() + ("" to File(res, "values"))) {
             assertTrue("values-$code must not define app_name", "app_name" !in stringsIn(dir))
         }

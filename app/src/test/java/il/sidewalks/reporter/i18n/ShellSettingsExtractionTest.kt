@@ -37,7 +37,7 @@ class ShellSettingsExtractionTest {
         "shell.nav.home" to "בית",
         "shell.nav.reports" to "הדיווחים שלי",
         "shell.nav.settings" to "הגדרות",
-        "shell.home.title" to "מדרכות פנויות",
+        "shell.home.title" to "דיווח ל-106 עיריית ירושלים",
         "shell.home.subtitle" to "צלם תמונה כדי להתחיל דיווח",
         "shell.home.on_device_note" to "הניתוח נעשה במכשיר. תוכל לבדוק ולתקן לפני שליחה.",
         "shell.home.take_photo" to "צלם תמונה",

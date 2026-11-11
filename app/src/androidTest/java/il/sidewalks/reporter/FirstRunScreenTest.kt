@@ -58,7 +58,7 @@ class FirstRunScreenTest {
                 onFirstRunDone = { done.value = true },
             )
         } }
-        compose.onNodeWithText("ברוכים הבאים למדרכות פנויות").assertExists()
+        compose.onNodeWithText("ברוכים הבאים לדיווח ל-106 עיריית ירושלים").assertExists()
         compose.onNodeWithText("מתחילים").assertExists()
         File(context.filesDir, "first-run-welcome-synthetic.png").outputStream().use {
             compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
@@ -67,7 +67,7 @@ class FirstRunScreenTest {
         compose.onNodeWithText("הגדרות").assertDoesNotExist()
         compose.onNodeWithText("מתחילים").performClick()
         compose.onNodeWithText("הגדרות בסיסיות").assertExists()
-        compose.onNodeWithText("ברוכים הבאים למדרכות פנויות").assertDoesNotExist()
+        compose.onNodeWithText("ברוכים הבאים לדיווח ל-106 עיריית ירושלים").assertDoesNotExist()
         compose.onNodeWithText("מפתח מנוי לעירייה").assertDoesNotExist()
         compose.onNodeWithText("Google ML Kit", substring = true).assertDoesNotExist()
         File(context.filesDir, "first-run-basic-setup-synthetic.png").outputStream().use {

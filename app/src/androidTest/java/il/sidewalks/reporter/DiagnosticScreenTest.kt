@@ -72,7 +72,7 @@ fun DiagnosticScreen(runner: DiagnosticRunner, isMobile: () -> Boolean) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     Surface(Modifier.fillMaxSize()) {
         Column(Modifier.systemBarsPadding().padding(20.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("מדרכות פנויות", style = MaterialTheme.typography.headlineMedium)
+            Text("דיווח ל-106 עיריית ירושלים", style = MaterialTheme.typography.headlineMedium)
             Text("בדיקת התחברות בלבד - ⁦M0⁩", style = MaterialTheme.typography.titleLarge)
             Text("בדיקה מקומית של פרטי הגישה לאפליקציית 106. ללא יצירת פנייה, ללא העלאה.")
             OutlinedTextField(key, { key = it; approved = false }, label = { Text("מפתח מנוי") }, visualTransformation = PasswordVisualTransformation(), enabled = !running, modifier = Modifier.fillMaxWidth())
