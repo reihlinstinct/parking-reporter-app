@@ -111,4 +111,62 @@ class EncryptedLedgerRepositoryTest {
             repository.close(); wrong.close()
         } finally { db.close() }
     }
+    @Test fun staleDaoStoreReturnsZeroAndPreservesEveryEncryptedByte() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(context, SyntheticEncryptedDatabase::class.java).build()
+        try {
+            val repository = EncryptedLedgerRepository(db.rows(), key)
+            repository.reserve(record())
+            assertEquals(1, repository.store("a", 0, "winning update", "winner"))
+            val before = db.rows().find("a")!!
+            assertEquals(0, db.rows().store("a", 0, byteArrayOf(9), byteArrayOf(8)))
+            val after = db.rows().find("a")!!
+            assertEquals(before.revision, after.revision)
+            assertArrayEquals(before.draftJson, after.draftJson)
+            assertArrayEquals(before.reviewedDigest, after.reviewedDigest)
+            repository.close()
+        } finally { db.close() }
+    }
+
+    @Test fun secondRepositoryWinningBetweenFindAndStoreCannotBeOverwritten() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(context, SyntheticEncryptedDatabase::class.java).build()
+        try {
+            val dao = db.rows()
+            val winner = EncryptedLedgerRepository(dao, key)
+            winner.reserve(record())
+            var interleaved = false
+            var winningRow: EncryptedReportEntity? = null
+            val racingDao = object : EncryptedReportDao by dao {
+                override suspend fun find(id: String): EncryptedReportEntity? {
+                    val stale = dao.find(id)
+                    if (!interleaved) {
+                        interleaved = true
+                        assertEquals(1, winner.store(id, 0, "winning interleaved text", "winner"))
+                        winningRow = dao.find(id)
+                    }
+                    return stale
+                }
+            }
+            val loser = EncryptedLedgerRepository(racingDao, key)
+            assertEquals(0, loser.store("a", 0, "loser must not win", "loser"))
+            assertTrue(interleaved)
+            val actual = dao.find("a")!!
+            assertEquals(1L, actual.revision)
+            assertArrayEquals(winningRow!!.draftJson, actual.draftJson)
+            assertArrayEquals(winningRow!!.reviewedDigest, actual.reviewedDigest)
+            assertEquals("winning interleaved text", (winner.find("a") as DecodedLedgerRecord.Readable).draftJson)
+            loser.close(); winner.close()
+        } finally { db.close() }
+    }
+
+    @Test fun closeBeforeFirstWriteRefusesReserveAndStore() = runBlocking {
+        val db = Room.inMemoryDatabaseBuilder(context, SyntheticEncryptedDatabase::class.java).build()
+        try {
+            val repository = EncryptedLedgerRepository(db.rows(), key)
+            repository.close()
+            fails { repository.reserve(record()) }
+            fails { repository.store("a", 0, "must not write", null) }
+            assertTrue(db.rows().all().isEmpty())
+        } finally { db.close() }
+    }
+
 }
