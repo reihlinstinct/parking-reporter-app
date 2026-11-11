@@ -22,9 +22,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Quoted: an unquoted 37.0 is a YAML float and reaches the action as
-        # "37", which does not resolve in sdkmanager.
-        api: ["26", "33", "34", "35", "36", "37.0"]
+        # Issue #297: floor is API 29, not minSdk 26 (API 26 image proved
+        # unusable on CI). Quoted: an unquoted 37.0 is a YAML float and
+        # reaches the action as "37", which does not resolve in sdkmanager.
+        api: ["29", "33", "34", "35", "36", "37.0"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:

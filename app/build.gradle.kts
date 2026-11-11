@@ -72,6 +72,11 @@ dependencies {
     androidTestImplementation(platform("androidx.compose:compose-bom:2025.02.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    // Issue #297: compose ui-test idles through espresso, whose pre-3.7.0
+    // releases reflect on InputManager.getInstance - removed in Android 17
+    // (API 37). 3.7.0 uses getSystemService instead (androidx.test release
+    // notes), unbreaking every compose test on the API 37 emulator.
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
     androidTestImplementation("com.squareup.okhttp3:mockwebserver:5.5.1")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

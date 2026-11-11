@@ -102,15 +102,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Issue #297 (owner 2026-11-11): per-PR the two extremes - the minSdk
-        # floor and the latest API. The popular mid versions (33-36) run in
+        # Issue #297 (owner 2026-11-11): per-PR the two extremes - the floor
+        # and the latest API. The popular mid versions (33-36) run in
         # the weekly matrix (emulator-weekly.yml). Public repo: Linux minutes
         # are free, the only cost is queue time. Android 17 SDK packages are
         # minor-versioned (platforms;android-37.0), so the level is 37.0 -
         # plain "37" no longer resolves in sdkmanager.
+        # Issue #297: the floor runs on API 29, not minSdk 26 - the API 26 image
+        # keeps failing in new ways (adbd exit 137, then camera frames the
+        # evidence EXIF path rejects). 29 is the approved fallback floor.
         # Quoted: an unquoted 37.0 is a YAML float and reaches the action as
         # "37", which does not resolve in sdkmanager.
-        api: ["26", "37.0"]
+        api: ["29", "37.0"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
