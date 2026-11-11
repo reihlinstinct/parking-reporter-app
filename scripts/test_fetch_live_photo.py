@@ -85,6 +85,24 @@ class PhotoTests(unittest.TestCase):
         self.assertEqual(b'prior', self.dest.read_bytes())
         self.assertEqual([self.dest], list(self.dest.parent.iterdir()))
 
+    def test_cumulative_size_cap_with_small_chunks(self):
+        class ChunkedResponse(io.BytesIO):
+            def read(self, size=-1):
+                return super().read(min(size, 10) if size >= 0 else 10)
+
+        for size in (101, 150):
+            with self.subTest(size=size):
+                data = b'x' * size
+                self.dest.write_bytes(b'prior')
+                env = {**self.env, 'APPROVED_PHOTO_SHA256_INPUT': hashlib.sha256(data).hexdigest()}
+                opener = FakeOpener(data)
+                with patch.object(opener, 'open', return_value=ChunkedResponse(data)):
+                    with patch.object(fetch, 'MAX_BYTES', 100):
+                        with self.assertRaisesRegex(ValueError, 'photo exceeds size limit'):
+                            fetch.stage(self.dest, env, opener)
+                self.assertEqual(b'prior', self.dest.read_bytes())
+                self.assertEqual([self.dest], list(self.dest.parent.iterdir()))
+
     def test_matching_digest_accepts_exact_limit(self):
         data = b'photo' * 20
         env = {**self.env, 'APPROVED_PHOTO_SHA256_INPUT': hashlib.sha256(data).hexdigest()}
