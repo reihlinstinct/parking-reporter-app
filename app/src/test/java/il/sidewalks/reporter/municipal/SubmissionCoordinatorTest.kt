@@ -41,6 +41,23 @@ class SubmissionCoordinatorTest {
         return f
     }
 
+    @Test fun anyActiveCityTopicCanSubmitButRemovedCodeNeverReachesNetwork() {
+        val draft = readyDraft().copy(subject = "municipal:5164", plate = "", exactHebrewText = "synthetic city topic")
+        val client = RecordingClient()
+        var refreshed = 0
+        val coordinator = SubmissionCoordinator({ client }, fixture(), { InMemorySubmissionStateStore() },
+            { setOf("5164") }, { seen, token -> assertTrue(seen === client); assertTrue(token.isNotBlank()); refreshed++ })
+        val result = coordinator.submitOriginalForWorkflow(draft, settings, jpegFile())
+        assertTrue(result is SubmissionCoordinator.Outcome.Submitted)
+        assertEquals("5164", client.seenReport?.get("CaseSubjectCode"))
+        assertEquals(1, refreshed)
+        val blockedClient = RecordingClient()
+        val removed = SubmissionCoordinator({ blockedClient }, fixture(), { InMemorySubmissionStateStore() },
+            { emptySet() }, null).submitOriginalForWorkflow(draft, settings, jpegFile())
+        assertEquals(SubmissionCoordinator.Reason.UNSUPPORTED_CATEGORY, (removed as SubmissionCoordinator.Outcome.Blocked).reason)
+        assertEquals(0, blockedClient.logins)
+    }
+
     @Test fun appAttachesOnlyThePreviewedSnapshotAndPersistsItsDigest() {
         val client = RecordingClient()
         val store = InMemorySubmissionStateStore()

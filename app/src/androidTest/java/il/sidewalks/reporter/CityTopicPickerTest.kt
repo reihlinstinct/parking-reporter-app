@@ -26,6 +26,31 @@ class CityTopicPickerTest {
         compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextReplacement("17841")
         compose.onNodeWithText("תמרור תנועה נפל / דהוי / שבור / נוטה ליפול", useUnmergedTree = true).assertIsDisplayed()
     }
+    @Test fun searchableMunicipalCatalogRecordingUsesMockRefreshNotLiveCity() {
+        il.sidewalks.reporter.i18n.UiPrefsLanguageStore.of(context).set(il.sidewalks.reporter.i18n.AppCatalog.defaultCode(context))
+        val cache = CityTopicCache(File(context.cacheDir, "topic-recording/catalog.json"))
+        cache.replace(syntheticCityTopics().topics)
+        var selected: MunicipalSubject? = null
+        compose.setContent { AppTheme { CityTopicPicker(cache.read()!!.topics, null, emptyList(),
+            mapOf("1280" to listOf("התקנת עמודים")), {}, { selected = it }) } }
+        fun capture(name: String) {
+            compose.waitForIdle()
+            val bitmap = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+            File(context.filesDir, name).outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            bitmap.recycle()
+        }
+        Thread.sleep(1200)
+        capture("city-topic-search-open.png")
+        compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextInput("התקנת עמודים")
+        compose.onNodeWithText("עמוד מחסום ברזל נוטה ליפול / נפל", useUnmergedTree = true).assertIsDisplayed()
+        Thread.sleep(1800)
+        capture("city-topic-search-alias.png")
+        compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextReplacement("17841")
+        Thread.sleep(1800)
+        capture("city-topic-search-code.png")
+        compose.onNodeWithText("תמרור תנועה נפל / דהוי / שבור / נוטה ליפול", useUnmergedTree = true).performClick()
+        compose.runOnIdle { assertEquals("17841", selected?.code) }
+    }
     @Test fun noCityCredentialsDisablesTopicFieldWithExplanation() {
         compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}) } }
         compose.onNodeWithText("בחר נושא מהעירייה").assertIsNotEnabled()
