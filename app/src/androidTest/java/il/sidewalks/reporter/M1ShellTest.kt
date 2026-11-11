@@ -242,7 +242,10 @@ class M1ShellTest {
         compose.waitUntil(15_000) {
             compose.onAllNodesWithText("הבדיקה הסינתטית הצליחה", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("הבדיקה הסינתטית הצליחה", substring = true).performScrollTo()
+        // Issue #295: save/debug feedback lives in the shell's shared status slot
+        // above the bottom bar now, outside the settings scroll container, so it
+        // is asserted, not scrolled to (a scroll would fail: no scrollable parent).
+        compose.onNodeWithText("הבדיקה הסינתטית הצליחה", substring = true).assertExists()
         screenshot("m1-home-intake-synthetic.png")
     }
     @Test fun nonVehicleReviewHasNoPlateAndCorrectionResetsText() {
