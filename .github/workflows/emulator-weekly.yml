@@ -32,6 +32,7 @@ jobs:
           # renders fully in the guest (see android.yml).
           - api: "37.0"
             emu_gpu: guest
+            emu_features: -feature -ReadColorBufferDma
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -55,7 +56,7 @@ jobs:
           disable-animations: true
           # Explicit options (the input replaces the action defaults):
           # swiftshader_indirect everywhere except API 37.0's guest (above).
-          emulator-options: -no-window -gpu ${{ matrix.emu_gpu || 'swiftshader_indirect' }} -no-snapshot -noaudio -no-boot-anim
+          emulator-options: -no-window -gpu ${{ matrix.emu_gpu || 'swiftshader_indirect' }} -no-snapshot -noaudio -no-boot-anim ${{ matrix.emu_features }}
           script: |
             sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
             adb install -r app/build/outputs/apk/debug/app-debug.apk
