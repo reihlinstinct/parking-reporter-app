@@ -50,3 +50,16 @@ Never commit real plates, evidence, profiles, keys or tokens. Fixtures are expli
 ## Offline recognition preview
 
 Explicit local Tesseract OCR offers plate candidates, with manual fallback and required review. Optional bundled Google ML Kit recognition sends API usage/performance metrics to Google; photos and plate results stay on-device. See [OCR limits, model provenance and licensing](docs/OFFLINE_OCR.md). This does not complete field validation or enable live reporting.
+
+### Emulator health and display cadence
+
+UI CI checks stable boot, focused window and active process ANR/crash state before
+starting tests. One bounded reboot is allowed before tests; persistent failure
+stops the job and preserves preflight diagnostics. App tests are never retried or
+weakened by this gate. A healthy preflight is not proof that the device cannot
+fail later in a test run.
+
+The display workflow's PR self-test uses normal-font foldable coverage. Compact
+200% font scaling remains in weekly and manual runs as an accessibility stress
+check, not the default recording/demo format. Ordinary app PRs do not trigger
+this display workflow unless its workflow file changes.

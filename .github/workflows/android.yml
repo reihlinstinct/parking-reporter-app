@@ -134,6 +134,7 @@ jobs:
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             sh gradlew --stop || true
+            python3 scripts/emulator_preflight.py --report-dir app/build/reports/androidTests
             # Local OCR tests must work without emulator networking. On API 26
             # adbd is fragile: svc can take the whole session down (exit 137
             # on CI). Keep the command best-effort; the offline behavior is

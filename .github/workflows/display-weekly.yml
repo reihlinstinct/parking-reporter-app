@@ -27,17 +27,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - label: compact-200pct
-            profile: pixel_2
-            font_scale: '2.0'
-            size: '720x1280'
-            density: '320'
-          - label: foldable-normal
-            profile: '7.6in Foldable'
-            font_scale: '1.0'
-            size: ''
-            density: ''
+        include: ${{ fromJSON(github.event_name == 'pull_request' && '[{"label":"foldable-normal","profile":"7.6in Foldable","font_scale":"1.0","size":"","density":""}]' || '[{"label":"compact-200pct","profile":"pixel_2","font_scale":"2.0","size":"720x1280","density":"320"},{"label":"foldable-normal","profile":"7.6in Foldable","font_scale":"1.0","size":"","density":""}]') }}
+    # 200% is a periodic accessibility stress check, not a PR/demo default.
+    # Workflow PR self-tests keep the normal foldable profile only.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -67,6 +59,7 @@ jobs:
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             sh gradlew --stop || true
+            python3 scripts/emulator_preflight.py --report-dir app/build/reports/display
             if [ -n '${{ matrix.size }}' ]; then adb shell wm size '${{ matrix.size }}'; adb shell wm density '${{ matrix.density }}'; fi
             adb shell settings put system font_scale '${{ matrix.font_scale }}'
             test "$(adb shell settings get system font_scale | tr -d '\r')" = '${{ matrix.font_scale }}'
