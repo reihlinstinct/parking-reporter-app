@@ -64,5 +64,28 @@ if sys.argv[1:3] == ['issue', 'list']:
         self.assertIn('test -s app/build/reports/androidTests/screenshots/design-sign-actions-synthetic.png', source)
 
 
+    def test_required_emulator_aggregate_fails_closed(self):
+        source = (ROOT / '.github/workflows/android.yml').read_text()
+        job = source.split('  emulator:\n', 1)[1].split('  summary:', 1)[0]
+        self.assertIn('    name: emulator\n', job)
+        self.assertIn('    if: always()\n', job)
+        self.assertIn('    needs: [changes, emulator-matrix]\n', job)
+        script = textwrap.dedent(job.split('        run: |\n', 1)[1])
+        cases = [('success', 'true', 'success', True),
+                 ('success', 'false', 'skipped', True),
+                 ('success', 'true', 'failure', False),
+                 ('success', 'true', 'cancelled', False),
+                 ('success', 'true', 'skipped', False),
+                 ('failure', 'false', 'skipped', False),
+                 ('success', '', 'success', False)]
+        for changes, code, matrix, passed in cases:
+            with self.subTest(changes=changes, code=code, matrix=matrix):
+                result = subprocess.run(['bash', '-e', '-c', script],
+                    env=dict(os.environ, CHANGES_RESULT=changes,
+                             CODE_CHANGED=code, MATRIX_RESULT=matrix),
+                    capture_output=True, text=True)
+                self.assertEqual(result.returncode == 0, passed, result.stderr)
+
+
 if __name__ == '__main__':
     unittest.main()

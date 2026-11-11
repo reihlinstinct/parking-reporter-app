@@ -94,7 +94,8 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
-  emulator:
+  emulator-matrix:
+    name: emulator (${{ matrix.api }})
     needs: [changes]
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
@@ -186,12 +187,33 @@ jobs:
           path: app/build/reports/androidTests/
           retention-days: 14
 
+  # Preserve the existing branch-protection context without changing settings.
+  emulator:
+    name: emulator
+    if: always()
+    needs: [changes, emulator-matrix]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every API leg, allowing only deliberate docs-only skips
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CODE_CHANGED: ${{ needs.changes.outputs.code }}
+          MATRIX_RESULT: ${{ needs.emulator-matrix.result }}
+        run: |
+          test "$CHANGES_RESULT" = success
+          if [ "$CODE_CHANGED" = false ] && [ "$MATRIX_RESULT" = skipped ]; then
+            echo 'Docs-only change: emulator matrix deliberately skipped.'
+          else
+            test "$CODE_CHANGED" = true
+            test "$MATRIX_RESULT" = success
+          fi
+
   summary:
     permissions:
       contents: read
     name: Run summary
     if: always()
-    needs: [changes, build, emulator]
+    needs: [changes, build, emulator-matrix, emulator]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
