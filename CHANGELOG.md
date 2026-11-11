@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-11-11
+
+### Features
+
+- feat: stable Android design updates and opt-in dynamic palette (#303) (#309) (81e68b7)
+
 ## [0.35.0] - 2026-11-11
 
 ### Features
