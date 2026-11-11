@@ -102,6 +102,9 @@ class EncryptedLedgerRepositoryTest {
             supplied.fill(0)
             repository.reserve(record())
             assertEquals(record().draftJson, (repository.find("a") as DecodedLedgerRecord.Readable).draftJson)
+            val independent = EncryptedLedgerRepository(db.rows(), key)
+            assertEquals(record().draftJson, (independent.find("a") as DecodedLedgerRecord.Readable).draftJson)
+            independent.close()
             fails { repository.store("a", Long.MAX_VALUE, "overflow", null) }
             assertEquals(0L, db.rows().find("a")!!.revision)
             val wrong = EncryptedLedgerRepository(db.rows(), ByteArray(32) { 99 })
@@ -119,6 +122,7 @@ class EncryptedLedgerRepositoryTest {
             assertEquals(1, repository.store("a", 0, "winning update", "winner"))
             val before = db.rows().find("a")!!
             assertEquals(0, db.rows().store("a", 0, byteArrayOf(9), byteArrayOf(8)))
+            assertEquals(0, db.rows().store("a", 2, byteArrayOf(9), byteArrayOf(8)))
             val after = db.rows().find("a")!!
             assertEquals(before.revision, after.revision)
             assertArrayEquals(before.draftJson, after.draftJson)
