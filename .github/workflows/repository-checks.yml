@@ -42,6 +42,8 @@ jobs:
         run: bash scripts/test-stage-live-files.sh
       - name: Test encrypted live process diagnostics (mock adb only)
         run: python3 scripts/test_live_instrumentation_capture.py
+      - name: Private live photo staging safety tests
+        run: python3 scripts/test_fetch_live_photo.py
   python-smoke:
     name: Python tooling smoke test
     runs-on: ubuntu-24.04
