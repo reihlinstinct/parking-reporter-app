@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.34.8] - 2026-11-11
+
+### Other changes
+
+- ci(emulator): per-PR API 26 + 37, weekly mid-version matrix (#297) (#302) (df0b489)
+
 ## [0.34.7] - 2026-11-11
 
 ### Fixes
