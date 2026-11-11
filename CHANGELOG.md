@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-11-11
+
+### Features
+
+- feat: #88 inactive typed encrypted storage codec (#283) (6833775)
+
 ## [0.29.1] - 2026-11-11
 
 ### Other changes
