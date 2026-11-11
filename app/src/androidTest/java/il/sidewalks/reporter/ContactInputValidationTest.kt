@@ -25,6 +25,7 @@ class ContactInputValidationTest {
         var saved: ReporterSettings? = null
         compose.setContent { AppTheme { SettingsScreen(null, save = { value, _, clear -> saved = value; clear() }, back = {}, basicSetup = true) } }
         compose.onNodeWithText("שם פרטי").performTextInput("בדיקה1")
+        compose.onNodeWithText("שם משפחה").performTextInput("מדווח")
         compose.onNodeWithText("מספר זהות").performScrollTo().performTextReplacement("000000019")
         compose.onNodeWithText("שמור והמשך").performScrollTo().assertIsNotEnabled()
         screenshot("contact-invalid-synthetic.png")

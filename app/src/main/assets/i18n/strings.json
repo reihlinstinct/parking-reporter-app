@@ -1470,6 +1470,34 @@
       "ru": "Номер паспорта",
       "am": "የፓስፖርት ቁጥር"
     },
+    "settings.passport.invalid": {
+      "he": "מספר הדרכון אינו תקין. בדוק את המספר.",
+      "en": "Invalid passport number. Check the number.",
+      "ar": "رقم جواز السفر غير صالح. تحقق من الرقم.",
+      "ru": "Неверный номер паспорта. Проверьте номер.",
+      "am": "የፓስፖርት ቁጥር ልክ አይደለም። ቁጥሩን ያረጋግጡ።"
+    },
+    "settings.passport.required": {
+      "he": "הזן מספר דרכון כדי לשמור, או בטל את הסימון \"אין לי תעודת זהות\".",
+      "en": "Enter a passport number to save, or uncheck \"I don't have an ID card\".",
+      "ar": "أدخل رقم جواز السفر للحفظ، أو ألغِ تحديد \"بدون هوية إسرائيلية\".",
+      "ru": "Введите номер паспорта для сохранения или снимите отметку \"Без израильского удостоверения\".",
+      "am": "ለማስቀመጥ የፓስፖርት ቁጥር ያስገቡ፣ ወይም \"የእስራኤል መታወቂያ የለም\" ምልክቱን ያስወግዱ።"
+    },
+    "settings.save.missing_fields": {
+      "he": "חסרים או לא תקינים:",
+      "en": "Missing or invalid:",
+      "ar": "حقول ناقصة أو غير صالحة:",
+      "ru": "Не заполнены или неверны:",
+      "am": "የጎደሉ ወይም ትክክል ያልሆኑ:"
+    },
+    "settings.save.no_device_lock": {
+      "he": "הגדר נעילת מסך",
+      "en": "Set a screen lock",
+      "ar": "اضبط قفل الشاشة",
+      "ru": "Задайте блокировку экрана",
+      "am": "የማያ ገጽ መቆለፊያ ያዘጋጁ"
+    },
     "shell.passport.review_required": {
       "he": "נדרש גילוי על פרטי הקשר ומספרי מצייני המקום בנוסח הדיווח. בדוק את הנוסח המלא ושמור מחדש לפני שליחה. אם פרטי הקשר חסרים או אינם תקינים, תקן אותם בהגדרות.",
       "en": "Contact and placeholder details must appear in the report. Check the full text and save again before sending. If contact details are missing or invalid, fix them in Settings.",

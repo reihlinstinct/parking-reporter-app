@@ -14,8 +14,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
-/** Mirrors AppShell's settings save callback: after a save the screen clears itself
- *  and the stored profile is dropped, so the callback merges blank personal fields
+/** Mirrors AppShell's settings save callback: after a save the screen clears its
+ *  fields and the freshly stored profile becomes the screen's new baseline
+ *  (issue #295: the required-fields gate needs the stored values to keep the
+ *  edit-again flow working), so the callback merges blank personal fields
  *  against a fresh read; a municipal credential field saves as typed only when the
  *  user touched it, and an untouched one keeps its stored value (owner 2026-11-09:
  *  clearing a credential field and saving removes its value, and a save that never
@@ -30,7 +32,7 @@ class SettingsScreenSecondSaveTest {
     fun secondSaveAfterPersonalEditKeepsCredentials() {
         val profile = mutableStateOf<ReporterSettings?>(stored)
         var saved: ReporterSettings? = null
-        compose.setContent { AppTheme { SettingsScreen(profile.value, { s, touched, done -> saved = mergeReporterSettings(s, stored, touched); profile.value = null; done() }, {}) } }
+        compose.setContent { AppTheme { SettingsScreen(profile.value, { s, touched, done -> saved = mergeReporterSettings(s, stored, touched); profile.value = saved; done() }, {}) } }
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().performClick()
         compose.onNodeWithText("טלפון").performScrollTo().performTextReplacement("0500000001")
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().performClick()
@@ -48,7 +50,7 @@ class SettingsScreenSecondSaveTest {
     fun clearingAPrefilledCredentialOnFirstSaveRemovesIt() {
         val profile = mutableStateOf<ReporterSettings?>(stored)
         var saved: ReporterSettings? = null
-        compose.setContent { AppTheme { SettingsScreen(profile.value, { s, touched, done -> saved = mergeReporterSettings(s, stored, touched); profile.value = null; done() }, {}) } }
+        compose.setContent { AppTheme { SettingsScreen(profile.value, { s, touched, done -> saved = mergeReporterSettings(s, stored, touched); profile.value = saved; done() }, {}) } }
         compose.onNodeWithText("חיבור 106 מתקדם").performScrollTo().performClick()
         compose.onNodeWithText("סיסמת API").performScrollTo().performTextReplacement("")
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().performClick()

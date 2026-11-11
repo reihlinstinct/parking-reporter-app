@@ -117,6 +117,10 @@ class M1ShellTest {
         screenshot("m1-settings-synthetic.png")
         compose.onNodeWithText("שם פרטי").performTextInput("בדיקה")
         compose.onNodeWithText("שם משפחה").performTextInput("מדווח")
+        // Issue #295: the save button requires every reporter field filled and valid.
+        compose.onNodeWithText("מספר זהות").performScrollTo().performTextReplacement("000000018")
+        compose.onNodeWithText("טלפון").performScrollTo().performTextReplacement("050-123-4567")
+        compose.onNodeWithText("אימייל").performScrollTo().performTextReplacement("synthetic@example.com")
         compose.onNodeWithText("חיבור 106 מתקדם").performScrollTo().performClick()
         compose.onNodeWithText("מפתח מנוי").performScrollTo().performTextInput("synthetic-subscription-key")
         compose.onNodeWithText("שם משתמש API").performScrollTo().performTextInput("synthetic-api-user")
@@ -238,7 +242,10 @@ class M1ShellTest {
         compose.waitUntil(15_000) {
             compose.onAllNodesWithText("הבדיקה הסינתטית הצליחה", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("הבדיקה הסינתטית הצליחה", substring = true).performScrollTo()
+        // Issue #295: save/debug feedback lives in the shell's shared status slot
+        // above the bottom bar now, outside the settings scroll container, so it
+        // is asserted, not scrolled to (a scroll would fail: no scrollable parent).
+        compose.onNodeWithText("הבדיקה הסינתטית הצליחה", substring = true).assertExists()
         screenshot("m1-home-intake-synthetic.png")
     }
     @Test fun nonVehicleReviewHasNoPlateAndCorrectionResetsText() {
@@ -291,6 +298,14 @@ class M1ShellTest {
         compose.setContent { AppTheme { SettingsScreen(null, { s, _, done -> saved = s; done() }, {}) } }
         compose.onNodeWithText("אמת זהות ושמור מוצפן").assertIsNotEnabled()
         compose.onNodeWithText("שם פרטי").performTextInput("בדיקה")
+        // Issue #295 (owner 2026-11-11): one field is not enough - the button
+        // stays greyed, and the reason next to it names the missing fields.
+        compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().assertIsNotEnabled()
+        compose.onNode(hasText("חסרים או לא תקינים", substring = true)).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("שם משפחה").performTextInput("מדווח")
+        compose.onNodeWithText("מספר זהות").performScrollTo().performTextReplacement("000000018")
+        compose.onNodeWithText("טלפון").performScrollTo().performTextReplacement("050-123-4567")
+        compose.onNodeWithText("אימייל").performScrollTo().performTextReplacement("synthetic@example.com")
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().assertIsEnabled().performClick()
         compose.runOnIdle { assertEquals("בדיקה", saved?.firstName) }
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().assertIsNotEnabled()

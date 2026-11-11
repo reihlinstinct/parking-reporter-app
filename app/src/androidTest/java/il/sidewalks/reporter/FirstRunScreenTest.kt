@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import il.sidewalks.reporter.security.ReporterSettings
 import androidx.test.platform.app.InstrumentationRegistry
 import il.sidewalks.reporter.i18n.AppCatalog
@@ -44,6 +45,15 @@ class FirstRunScreenTest {
         context.getSharedPreferences(UiPrefsLanguageStore.PREFS_NAME, android.content.Context.MODE_PRIVATE)
             .edit().putString(UiPrefsLanguageStore.KEY_LANGUAGE, AppCatalog.defaultCode(context)).commit()
         clearFirstRunFlag()
+    }
+
+    /** Issue #295: the save button requires every reporter field filled and valid. */
+    private fun fillRequiredReporterFields() {
+        compose.onNodeWithText("שם פרטי").performScrollTo().performTextInput("בדיקה")
+        compose.onNodeWithText("שם משפחה").performScrollTo().performTextInput("מדווח")
+        compose.onNodeWithText("מספר זהות").performScrollTo().performTextReplacement("000000018")
+        compose.onNodeWithText("טלפון").performScrollTo().performTextReplacement("050-123-4567")
+        compose.onNodeWithText("אימייל").performScrollTo().performTextReplacement("synthetic@example.com")
     }
 
     @Test fun firstRunShowsWelcomeAndStartEntersTheShell() {
@@ -91,7 +101,7 @@ class FirstRunScreenTest {
         } }
         compose.onNodeWithText("מתחילים").performClick()
         compose.runOnIdle { assertEquals(0, reads); assertEquals(0, authentications) }
-        compose.onNodeWithText("שם פרטי").performScrollTo().performTextInput("בדיקה")
+        fillRequiredReporterFields()
         compose.onNodeWithText("שמור והמשך").performScrollTo().performClick()
         compose.runOnIdle {
             assertEquals(1, authentications)
@@ -115,7 +125,7 @@ class FirstRunScreenTest {
                 showFirstRun = true, onFirstRunDone = { done = true })
         } }
         compose.onNodeWithText("מתחילים").performClick()
-        compose.onNodeWithText("שם פרטי").performScrollTo().performTextInput("בדיקה")
+        fillRequiredReporterFields()
         compose.onNodeWithText("שמור והמשך").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(0, reads); assertEquals(0, saves); assertFalse(done) }
         compose.onNodeWithText("הגדרות בסיסיות").assertExists()
@@ -130,7 +140,7 @@ class FirstRunScreenTest {
                 showFirstRun = true, onFirstRunDone = { done = true })
         } }
         compose.onNodeWithText("מתחילים").performClick()
-        compose.onNodeWithText("שם פרטי").performScrollTo().performTextInput("בדיקה")
+        fillRequiredReporterFields()
         compose.onNodeWithText("שמור והמשך").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(1, saves); assertFalse(done) }
         compose.onNodeWithText("שמור והמשך").performScrollTo().performClick()
