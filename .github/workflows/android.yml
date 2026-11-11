@@ -114,6 +114,14 @@ jobs:
         # Quoted: an unquoted 37.0 is a YAML float and reaches the action as
         # "37", which does not resolve in sdkmanager.
         api: ["29", "37.0"]
+        include:
+          # Issue #297: on the 37.0 image, screenrecord's virtual display hits
+          # a guest graphics assertion (mapper.ranchu
+          # hasReadColorBufferDma) under the default host-GPU path, killing
+          # mediaswcodec and then system_server. -gpu guest renders fully in
+          # the guest, away from that negotiation; screenshots still work.
+          - api: "37.0"
+            emu_gpu: guest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -135,6 +143,9 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
+          # Explicit options (the input replaces the action defaults):
+          # swiftshader_indirect everywhere except API 37.0's guest (above).
+          emulator-options: -no-window -gpu ${{ matrix.emu_gpu || 'swiftshader_indirect' }} -no-snapshot -noaudio -no-boot-anim
           script: |
             sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
             adb install -r app/build/outputs/apk/debug/app-debug.apk
@@ -161,15 +172,17 @@ jobs:
             adb logcat -d -v threadtime > app/build/reports/androidTests/logcat.txt || true
             python3 scripts/test_summary.py --title 'Instrumented tests (emulator, API ${{ matrix.api }})' --instrumentation app/build/reports/androidTests/instrumentation.txt --check; echo $? > app/build/reports/androidTests/summary.rc
             for f in $(adb shell run-as il.sidewalks.reporter ls files/ | tr -d '\r' | grep '\.png$'); do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/androidTests/screenshots/$f" || true; done
-            adb shell run-as il.sidewalks.reporter cat files/m0-synthetic.png > app/build/reports/androidTests/screenshots/m0-synthetic.png
-            adb shell run-as il.sidewalks.reporter cat files/m1-review-synthetic.png > app/build/reports/androidTests/screenshots/m1-review-synthetic.png
-            adb shell run-as il.sidewalks.reporter cat files/m1-settings-synthetic.png > app/build/reports/androidTests/screenshots/m1-settings-synthetic.png
-            adb shell run-as il.sidewalks.reporter cat files/m1-home-intake-synthetic.png > app/build/reports/androidTests/screenshots/m1-home-intake-synthetic.png
-            adb shell run-as il.sidewalks.reporter cat files/m2-ocr-synthetic.png > app/build/reports/androidTests/screenshots/m2-ocr-synthetic.png
-            adb shell run-as il.sidewalks.reporter cat files/design-home-synthetic.png > app/build/reports/androidTests/screenshots/design-home-synthetic.png
-            adb shell run-as il.sidewalks.reporter cat files/design-sign-synthetic.png > app/build/reports/androidTests/screenshots/design-sign-synthetic.png
-            adb shell run-as il.sidewalks.reporter cat files/design-sign-actions-synthetic.png > app/build/reports/androidTests/screenshots/design-sign-actions-synthetic.png
-            adb shell run-as il.sidewalks.reporter cat files/ocr-comparison.json > app/build/reports/androidTests/ocr-comparison.json
+            # Best-effort: a crashed run must still reach the presence checks
+            # below, which are the real gate on required evidence files.
+            adb shell run-as il.sidewalks.reporter cat files/m0-synthetic.png > app/build/reports/androidTests/screenshots/m0-synthetic.png || true
+            adb shell run-as il.sidewalks.reporter cat files/m1-review-synthetic.png > app/build/reports/androidTests/screenshots/m1-review-synthetic.png || true
+            adb shell run-as il.sidewalks.reporter cat files/m1-settings-synthetic.png > app/build/reports/androidTests/screenshots/m1-settings-synthetic.png || true
+            adb shell run-as il.sidewalks.reporter cat files/m1-home-intake-synthetic.png > app/build/reports/androidTests/screenshots/m1-home-intake-synthetic.png || true
+            adb shell run-as il.sidewalks.reporter cat files/m2-ocr-synthetic.png > app/build/reports/androidTests/screenshots/m2-ocr-synthetic.png || true
+            adb shell run-as il.sidewalks.reporter cat files/design-home-synthetic.png > app/build/reports/androidTests/screenshots/design-home-synthetic.png || true
+            adb shell run-as il.sidewalks.reporter cat files/design-sign-synthetic.png > app/build/reports/androidTests/screenshots/design-sign-synthetic.png || true
+            adb shell run-as il.sidewalks.reporter cat files/design-sign-actions-synthetic.png > app/build/reports/androidTests/screenshots/design-sign-actions-synthetic.png || true
+            adb shell run-as il.sidewalks.reporter cat files/ocr-comparison.json > app/build/reports/androidTests/ocr-comparison.json || true
             # Evidence is collected first, so a failing run still ships its
             # video, screenshots and summaries; only then the presence checks
             # and the recorded exit codes fail the job.
