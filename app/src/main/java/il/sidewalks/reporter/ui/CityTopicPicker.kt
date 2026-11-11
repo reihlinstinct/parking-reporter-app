@@ -19,6 +19,12 @@ fun CityTopicPicker(topics: List<MunicipalSubject>, selected: String?, recent: L
     il.sidewalks.reporter.i18n.ProvideStringsIfMissing {
     val s = LocalStrings.current
     var query by remember { mutableStateOf("") }
+    val pathsByCode = remember(topics) { topics.groupBy { it.code }.mapValues { (_, rows) ->
+        rows.map { it.path.joinToString(" / ") }.distinct().joinToString("; ")
+    } }
+    val namesByCode = remember(topics) { topics.groupBy { it.code }.mapValues { (_, rows) ->
+        rows.map { it.name }.distinct().joinToString(" / ")
+    } }
     val ranker = remember(aliases) { LocalTopicRanker(aliases) }
     val results = remember(query, topics, recent) { ranker.search(query, topics, recent) }
     Dialog(onDismissRequest = dismiss) {
@@ -33,11 +39,11 @@ fun CityTopicPicker(topics: List<MunicipalSubject>, selected: String?, recent: L
                     items(results, key = { it.code }) { topic ->
                         TextButton(onClick = { choose(topic) }, modifier = Modifier.fillMaxWidth().semantics {
                             this.selected = topic.code == selected
-                            contentDescription = topic.name + ". " + topic.path.joinToString(" / ")
+                            contentDescription = namesByCode.getValue(topic.code) + ". " + pathsByCode.getValue(topic.code)
                         }) {
                             Column(Modifier.fillMaxWidth()) {
-                                Text(topic.name)
-                                Text(topic.path.joinToString(" / "), style = MaterialTheme.typography.bodySmall)
+                                Text(namesByCode.getValue(topic.code))
+                                Text(pathsByCode.getValue(topic.code), style = MaterialTheme.typography.bodySmall)
                             }
                         }
                     }
