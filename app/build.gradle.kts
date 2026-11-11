@@ -4,10 +4,12 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 android {
-    namespace = "il.sidewalks.reporter"
+    namespace = "io.github.reihlinstinct.reporter"
     compileSdk = 37
     defaultConfig {
+        // Installed identity stays stable across the source namespace rename.
         applicationId = "il.sidewalks.reporter"
+        testApplicationId = "il.sidewalks.reporter.test"
         minSdk = 26
         targetSdk = 37
         if (providers.gradleProperty("previewArm64").isPresent) { ndk { abiFilters += "arm64-v8a" } }

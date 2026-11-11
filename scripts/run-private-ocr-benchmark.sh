@@ -42,7 +42,7 @@ for f in "$work/input"/*; do
 done
 adb logcat -c
 set +e
-adb shell am instrument -w -r -e class il.sidewalks.reporter.PrivateRealPhotoOcrTest il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > "$work/output/instrumentation.txt" 2>&1
+adb shell am instrument -w -r -e class io.github.reihlinstinct.reporter.PrivateRealPhotoOcrTest il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > "$work/output/instrumentation.txt" 2>&1
 rc=$?
 adb shell run-as il.sidewalks.reporter cat files/ocr-private-results.json > "$work/output/results.json" 2> "$work/output/results.stderr"
 adb logcat -d -v threadtime > "$work/output/logcat.txt" 2>&1

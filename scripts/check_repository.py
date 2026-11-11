@@ -95,10 +95,10 @@ def check() -> list[str]:
                 ).is_file():
                     errors.append(f"Launcher {name} needs a valid {layer} resource")
     # The recorded live flow must use the shipped palette, not M3 baseline purple.
-    live_test = ROOT / "app/src/androidTest/java/il/sidewalks/reporter/live/LiveEmulatorSubmissionTest.kt"
+    live_test = ROOT / "app/src/androidTest/java/io/github/reihlinstinct/reporter/live/LiveEmulatorSubmissionTest.kt"
     if live_test.is_file():
         live_source = live_test.read_text(encoding="utf-8")
-        if ("import il.sidewalks.reporter.ui.theme.AppTheme" not in live_source
+        if ("import io.github.reihlinstinct.reporter.ui.theme.AppTheme" not in live_source
                 or not re.search(r"compose\.setContent\s*\{\s*AppTheme\s*\{", live_source)
                 or re.search(r"\bMaterialTheme\s*\{", live_source)):
             errors.append("Live emulator flow must render with AppTheme, never baseline MaterialTheme")

@@ -11,7 +11,7 @@ on a schedule.
 
 ## What runs where
 
-- `app/src/androidTest/java/il/sidewalks/reporter/live/LiveEmulatorSubmissionTest.kt`
+- `app/src/androidTest/java/io/github/reihlinstinct/reporter/live/LiveEmulatorSubmissionTest.kt`
   is compiled into the regular test APK but **returns immediately unless the
   workflow staged `live-params.json`** into the app's private files directory.
   Regular CI (android.yml) never stages it, so the suite stays green.

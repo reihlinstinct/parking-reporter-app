@@ -6,10 +6,10 @@ Status: development preview. Everything here is synthetic. No live transport, re
 
 Sources, all on `main`:
 
-- Sender: `app/src/main/java/il/sidewalks/reporter/intake/EncryptedPackage.kt` (`EncryptedPackage`, `SealedUpload`).
-- Receiver reference: `app/src/main/java/il/sidewalks/reporter/intake/OfflineReceiver.kt` (`OfflineReceiver.open`).
-- Review digest: `app/src/main/java/il/sidewalks/reporter/core/ReviewDraft.kt`.
-- Tests: `app/src/test/java/il/sidewalks/reporter/core/EncryptedPackageTest.kt` and `OfflineReceiverTest.kt`.
+- Sender: `app/src/main/java/io/github/reihlinstinct/reporter/intake/EncryptedPackage.kt` (`EncryptedPackage`, `SealedUpload`).
+- Receiver reference: `app/src/main/java/io/github/reihlinstinct/reporter/intake/OfflineReceiver.kt` (`OfflineReceiver.open`).
+- Review digest: `app/src/main/java/io/github/reihlinstinct/reporter/core/ReviewDraft.kt`.
+- Tests: `app/src/test/java/io/github/reihlinstinct/reporter/core/EncryptedPackageTest.kt` and `OfflineReceiverTest.kt`.
 
 ## Version markers
 

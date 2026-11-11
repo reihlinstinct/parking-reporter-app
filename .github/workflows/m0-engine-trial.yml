@@ -45,7 +45,7 @@ jobs:
           TRIAL_RESULT_PATH: /tmp/trial-result.txt
           EGRESS_MARKER_PATH: /tmp/egress-blocked
         run: |
-          sh gradlew --no-daemon testDebugUnitTest --tests 'il.sidewalks.reporter.municipal.EngineLiveTrialTest'
+          sh gradlew --no-daemon testDebugUnitTest --tests 'io.github.reihlinstinct.reporter.municipal.EngineLiveTrialTest'
       - name: Bring up owner L2TP fallback (only after proven egress block)
         id: vpn
         if: steps.direct.outcome == 'failure'
@@ -78,7 +78,7 @@ jobs:
           TRIAL_STATE_DIR: /tmp/trial-state
           TRIAL_RESULT_PATH: /tmp/trial-result.txt
         run: |
-          sh gradlew --no-daemon testDebugUnitTest --tests 'il.sidewalks.reporter.municipal.EngineLiveTrialTest'
+          sh gradlew --no-daemon testDebugUnitTest --tests 'io.github.reihlinstinct.reporter.municipal.EngineLiveTrialTest'
       - name: Show trial result markers
         if: always()
         run: cat /tmp/trial-result.txt 2>/dev/null || echo 'no TRIAL_RESULT markers produced'
@@ -191,7 +191,7 @@ jobs:
           TRIAL_STATE_DIR: /tmp/trial-state
           TRIAL_RESULT_PATH: /tmp/trial-result.txt
         run: |
-          sh gradlew --no-daemon testDebugUnitTest --tests 'il.sidewalks.reporter.municipal.EngineLiveTrialTest'
+          sh gradlew --no-daemon testDebugUnitTest --tests 'io.github.reihlinstinct.reporter.municipal.EngineLiveTrialTest'
       - name: Show trial result markers
         if: always()
         run: cat /tmp/trial-result.txt 2>/dev/null || echo 'no TRIAL_RESULT markers produced'
