@@ -28,5 +28,13 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+        <!-- Disabled on older Android releases before the API36 base service exists. -->
+        <service android:name="io.github.reihlinstinct.reporter.assistant.ReportAppFunctionService"
+            android:enabled="@bool/appfunctions_supported" android:exported="true"
+            android:permission="android.permission.BIND_APP_FUNCTION_SERVICE">
+            <property android:name="android.app.appfunctions.schema" android:value="app_functions_schema.xsd" />
+            <property android:name="android.app.appfunctions.v2" android:value="report_app_functions.xml" />
+            <intent-filter><action android:name="android.app.appfunctions.AppFunctionService" /></intent-filter>
+        </service>
     </application>
 </manifest>

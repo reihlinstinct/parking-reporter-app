@@ -1,0 +1,99 @@
+package io.github.reihlinstinct.reporter
+
+import android.app.PendingIntent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.appfunctions.AppFunctionAppUnknownException
+import androidx.appfunctions.AppFunctionData
+import androidx.appfunctions.AppFunctionManager
+import androidx.appfunctions.ExecuteAppFunctionRequest
+import androidx.appfunctions.ExecuteAppFunctionResponse
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.delay
+import org.junit.Assume.assumeTrue
+import androidx.test.platform.app.InstrumentationRegistry
+import io.github.reihlinstinct.reporter.assistant.AssistantEntry
+import io.github.reihlinstinct.reporter.assistant.AssistantEntryStore
+import org.junit.Assert.*
+import org.junit.Test
+
+class AssistantEntryTest {
+    @Test fun disabledByDefaultAndOnlyOffersImmutableVisibleCaptureAction() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val store = AssistantEntryStore(context)
+        store.save(false)
+        assertFalse(store.enabled())
+        if (Build.VERSION.SDK_INT < 36) {
+            assertFalse(AssistantEntry.supported())
+            return
+        }
+        try {
+            try {
+                AssistantEntry.entryAction(context)
+                fail("Disabled entry must reject calls")
+            } catch (_: AppFunctionAppUnknownException) { }
+            store.save(true)
+            val action = AssistantEntry.entryAction(context)
+            assertTrue(action.isImmutable)
+            assertEquals("il.sidewalks.reporter", action.creatorPackage)
+            val intent = AssistantEntry.captureIntent(context)
+            assertEquals("il.sidewalks.reporter.MainActivity", intent.component!!.className)
+            assertEquals(EntryIntents.ACTION_TILE_NEW_REPORT, intent.action)
+            assertTrue(intent.extras == null || intent.extras!!.isEmpty)
+            store.save(false)
+            try {
+                AssistantEntry.entryAction(context)
+                fail("Revoked entry must reject calls")
+            } catch (_: AppFunctionAppUnknownException) { }
+        } finally {
+            store.save(false)
+        }
+    }
+
+    @Test fun systemManagerExecutesGeneratedFunctionWithoutFiling() = runBlocking {
+        assumeTrue(Build.VERSION.SDK_INT >= 36)
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val manager = AppFunctionManager.getInstance(context)
+        assertNotNull("API36 AppFunctions manager", manager)
+        val store = AssistantEntryStore(context)
+        try {
+            // Wait for initial package indexing only, not a failed test or app assertion.
+            var indexed = false
+            for (attempt in 0 until 15) {
+                if (AssistantEntry.setEnabled(context, true)) { indexed = true; break }
+                delay(2000)
+            }
+            assertTrue("AppFunction must become indexed within 30 seconds", indexed)
+            val request = ExecuteAppFunctionRequest(context.packageName, AssistantEntry.FUNCTION_ID, AppFunctionData.EMPTY)
+            val response = manager!!.executeAppFunction(request)
+            assertTrue("System invocation must succeed: $response", response is ExecuteAppFunctionResponse.Success)
+            val action = (response as ExecuteAppFunctionResponse.Success).returnValue.getParcelable(
+                ExecuteAppFunctionResponse.Success.PROPERTY_RETURN_VALUE, PendingIntent::class.java)
+            assertNotNull("System must return an action, never submit", action)
+            assertTrue(action!!.isImmutable)
+            assertEquals(context.packageName, action.creatorPackage)
+            // Do not send the action: this proof never captures a photo or files a report.
+            assertTrue(AssistantEntry.setEnabled(context, false))
+            val disabled = manager.executeAppFunction(request)
+            assertTrue("System must reject after revocation", disabled is ExecuteAppFunctionResponse.Error)
+        } finally {
+            store.save(false)
+            AssistantEntry.setEnabled(context, false)
+        }
+    }
+
+    @Test fun generatedServiceIsSystemProtectedAndMetadataStartsDisabled() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val services = context.packageManager.getPackageInfo(context.packageName,
+            PackageManager.GET_SERVICES or PackageManager.MATCH_DISABLED_COMPONENTS).services.orEmpty()
+        val service = services.single { it.name.endsWith(".assistant.ReportAppFunctionService") }
+        assertEquals("android.permission.BIND_APP_FUNCTION_SERVICE", service.permission)
+        assertTrue(service.exported)
+        assertEquals(Build.VERSION.SDK_INT >= 36, service.enabled)
+        val xml = context.assets.open("report_app_functions.xml").bufferedReader().use { it.readText() }
+        assertTrue(xml.contains("startNewReport"))
+        assertTrue(xml.contains("false"))
+        assertFalse(xml.contains("submitReport"))
+        assertFalse(xml.contains("password"))
+    }
+}

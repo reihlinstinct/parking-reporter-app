@@ -203,6 +203,9 @@ fun SettingsScreen(
             }
             AnnouncedNote(if (supported) s.t("settings.appearance.dynamic_note") else s.t("settings.appearance.needs_android12"))
         }
+        if (!basicSetup) {
+            io.github.reihlinstinct.reporter.assistant.AssistantEntrySettings()
+        }
         if (!basicSetup) onLanguageSelected?.let { select ->
             HorizontalDivider()
             LanguagePicker(s.catalog.languages, selectedLanguage, select)
