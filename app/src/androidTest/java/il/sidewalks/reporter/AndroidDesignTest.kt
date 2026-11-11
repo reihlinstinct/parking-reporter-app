@@ -43,7 +43,7 @@ class AndroidDesignTest {
         if (Build.VERSION.SDK_INT >= 31) {
             toggle.assertIsEnabled().performClick().assertIsOn()
             compose.runOnIdle { assertTrue(DynamicPaletteStore(context).enabled()) }
-            compose.onNodeWithText(il.sidewalks.reporter.i18n.AppCatalog.get(context).t("he", "settings.appearance.dynamic_note")).performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText(il.sidewalks.reporter.i18n.AppCatalog.get(context).t(il.sidewalks.reporter.i18n.AppCatalog.defaultCode(context), "settings.appearance.dynamic_note")).performScrollTo().assertIsDisplayed()
             screenshot("design303-dynamic-settings.png")
             for (candidate in listOf(dynamicLightColorScheme(context), dynamicDarkColorScheme(context))) {
                 val safe = accessibleDynamicScheme(candidate, AppLightColors)
