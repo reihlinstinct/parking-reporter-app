@@ -84,6 +84,14 @@ fun AppShell(
     DisposableEffect(Unit) { onDispose { database.close() } }
     // Issue #115: the UI language comes from "ui-prefs" (no authentication) and switches
     // text and layout direction live through ProvideStrings below.
+    val topicRepository = remember(context) { il.sidewalks.reporter.municipal.CityTopicRepository(context) }
+    var topicSnapshot by remember { mutableStateOf(topicRepository.snapshot()) }
+    var topicsLoading by remember { mutableStateOf(false) }
+    var topicsConnection by remember { mutableStateOf(false) }
+    val topicAliases = remember(context) {
+        val root = org.json.JSONObject(context.assets.open("taxonomy/topic_aliases.json").bufferedReader().use { it.readText() })
+        root.keys().asSequence().associateWith { code -> root.getJSONArray(code).let { a -> (0 until a.length()).map { a.getString(it) } } }
+    }
     val catalog = rememberAppCatalog()
     val languageController = rememberLanguageController()
     val selectedLanguage by languageController.selected.collectAsState()
@@ -241,6 +249,8 @@ fun AppShell(
                             directory,
                             { id -> FileSubmissionStateStore.forReport(
                                 File(context.noBackupFilesDir, "submissions"), id) },
+                            activeTopicCodes = { topicRepository.topics().map { it.code }.toSet() },
+                            afterSuccessfulSubmission = { client, token -> topicRepository.afterSuccess(client, token) },
                         ).submit(shown, settings, file,
                             SubmissionCoordinator.OutgoingPhoto(outgoing.jpeg, outgoing.originalHash))
                     } catch (e: il.sidewalks.reporter.municipal.AddressLookupMismatchException) {
@@ -271,6 +281,7 @@ fun AppShell(
                 if (outcome is SubmissionCoordinator.Outcome.Submitted ||
                     outcome is SubmissionCoordinator.Outcome.AlreadySubmitted) {
                     status = submissionNote
+                    topicSnapshot = topicRepository.snapshot()
                 }
                 submitting = false
             }
@@ -520,12 +531,35 @@ fun AppShell(
             LaunchedEffect(noDeviceCredential) {
                 if (!noDeviceCredential && submissionNote == strings.t("shell.submit.no_device_lock")) submissionNote = ""
             }
+            LaunchedEffect(value.evidence.stableId) {
+                topicsConnection = il.sidewalks.reporter.security.SettingsProfileStore(context).read()?.isEmpty() == true
+            }
+            fun openCityTopics() {
+                if (topicSnapshot != null || topicsLoading) return
+                authenticate(strings.t("topics.connect_title"), strings.t("topics.connection_needed")) {
+                    scope.launch {
+                        topicsLoading = true
+                        try {
+                            topicSnapshot = withContext(Dispatchers.IO) {
+                                val settings = readSettings() ?: error("Settings unavailable")
+                                topicRepository.initial(settings, municipalClientFactory ?: { stored ->
+                                    OkHttpMunicipalClient(stored.municipalSubscriptionKey, stored.municipalUsername, stored.municipalPassword)
+                                })
+                            }
+                        } catch (_: Exception) { /* visible no-cache state; never overwrite last good cache */ }
+                        finally { topicsLoading = false }
+                    }
+                }
+            }
             ReviewScreen(value, image, ::saveDraft, manualAddressLookup = { street, house ->
                 val directory = streetsDirectory ?: (streetDirectoryLoader?.invoke() ?: loadStreetDirectory(context)).also { streetsDirectory = it }
                 directory.findConfirmedAddress(street, house)
             }, onBack = { page = "home" },
                 onSubmit = { shown -> submitReport(shown, outgoing.takeIf { image != null }) },
-                submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, noDeviceCredential = noDeviceCredential)
+                submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, noDeviceCredential = noDeviceCredential,
+                topicSnapshot = topicSnapshot, topicsAvailable = topicsConnection,
+                topicsLoading = topicsLoading, openTopics = ::openCityTopics,
+                topicSelected = { topicRepository.selected(it) }, recentTopics = topicRepository.recentCodes(), topicAliases = topicAliases)
             // Save feedback lands in the shell status; the review page has no
             // bottom bar, so it keeps its own announced slot (home/settings/
             // reports share the one above the bar).

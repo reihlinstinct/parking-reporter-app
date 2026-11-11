@@ -26,6 +26,8 @@ class EntryPointsTest {
     // The share test looks for the Hebrew review title; the review screen follows the UI
     // language since #115 PR-2b, so pin he through the real "ui-prefs" store (as M1ShellTest).
     @Before fun pinHebrewUiLanguage() {
+        seedSyntheticCityTopics()
+
         InstrumentationRegistry.getInstrumentation().targetContext.let { il.sidewalks.reporter.i18n.UiPrefsLanguageStore.of(it).set(il.sidewalks.reporter.i18n.AppCatalog.defaultCode(it)) }
     }
 

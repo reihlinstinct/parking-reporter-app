@@ -28,7 +28,7 @@ class SubmissionGateTest {
         compose.setContent {
             MaterialTheme {
                 ReviewScreen(readyDraft(), null, onSave = {}, onBack = {},
-                    onSubmit = { submitted++ })
+                    onSubmit = { submitted++ }, topicSnapshot = syntheticCityTopics(), topicsAvailable = true)
             }
         }
         // The draft is complete, so send is live.
@@ -44,7 +44,7 @@ class SubmissionGateTest {
         compose.setContent {
             MaterialTheme {
                 ReviewScreen(readyDraft().copy(plate = ""), null,
-                    onSave = {}, onBack = {}, onSubmit = {})
+                    onSave = {}, onBack = {}, onSubmit = {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true)
             }
         }
         compose.onNodeWithText("שלח לעירייה").assertIsNotEnabled()
@@ -57,7 +57,7 @@ class SubmissionGateTest {
         compose.setContent {
             MaterialTheme {
                 ReviewScreen(readyDraft().copy(unresolved = setOf("time_needs_confirmation")), null,
-                    onSave = { saved = it }, onBack = {}, onSubmit = {})
+                    onSave = { saved = it }, onBack = {}, onSubmit = {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true)
             }
         }
         compose.onNodeWithText("שמור טיוטה").performClick()
@@ -72,7 +72,7 @@ class SubmissionGateTest {
         compose.setContent {
             MaterialTheme {
                 ReviewScreen(readyDraft().copy(unresolved = setOf("suggested_address_needs_confirmation")), null,
-                    onSave = {}, onBack = {}, onSubmit = {})
+                    onSave = {}, onBack = {}, onSubmit = {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true)
             }
         }
         compose.onNodeWithText("שמור טיוטה").performClick()
@@ -87,7 +87,7 @@ class SubmissionGateTest {
         compose.setContent {
             MaterialTheme {
                 ReviewScreen(readyDraft().copy(unresolved = setOf("suggested_address_needs_confirmation")), null,
-                    onSave = {}, onBack = {}, onSubmit = {})
+                    onSave = {}, onBack = {}, onSubmit = {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true)
             }
         }
         compose.onNodeWithText("ערוך").performClick()
@@ -102,7 +102,7 @@ class SubmissionGateTest {
         compose.setContent {
             MaterialTheme {
                 ReviewScreen(readyDraft().copy(unresolved = setOf("suggested_address_needs_confirmation")), null,
-                    onSave = {}, onBack = {}, onSubmit = {})
+                    onSave = {}, onBack = {}, onSubmit = {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true)
             }
         }
         compose.onNodeWithText("ערוך").performClick()
@@ -121,7 +121,7 @@ class SubmissionGateTest {
         compose.setContent {
             MaterialTheme {
                 ReviewScreen(readyDraft().copy(confirmedLatitude = null, confirmedLongitude = null,
-                    unresolved = setOf("missing_gps")), null, onSave = {}, onBack = {}, onSubmit = {})
+                    unresolved = setOf("missing_gps")), null, onSave = {}, onBack = {}, onSubmit = {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true)
             }
         }
         compose.onNodeWithText("שמור טיוטה").performClick()
@@ -137,7 +137,7 @@ class SubmissionGateTest {
         compose.setContent {
             MaterialTheme {
                 ReviewScreen(shown, null, onSave = {}, onBack = {},
-                    onSubmit = { sent = it })
+                    onSubmit = { sent = it }, topicSnapshot = syntheticCityTopics(), topicsAvailable = true)
             }
         }
         compose.onNodeWithText("שלח לעירייה").performClick()
@@ -147,7 +147,7 @@ class SubmissionGateTest {
     @Test fun noGateKeepsTheDisabledPlaceholder() {
         compose.setContent {
             MaterialTheme {
-                ReviewScreen(readyDraft(), null, onSave = {}, onBack = {})
+                ReviewScreen(readyDraft(), null, onSave = {}, onBack = {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true)
             }
         }
         compose.onNodeWithText("שליחה אינה זמינה בגרסת הבדיקה").assertExists()

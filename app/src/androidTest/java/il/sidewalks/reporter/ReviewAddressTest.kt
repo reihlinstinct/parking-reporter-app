@@ -37,7 +37,7 @@ class ReviewAddressTest {
         compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {}, manualAddressLookup = { street, house ->
             assertEquals("רחוב בדיקה", street); assertEquals("12", house)
             il.sidewalks.reporter.municipal.StreetDirectory.ConfirmableAddress("רחוב בדיקה 12", 31.77, 35.21)
-        }) } }
+        }, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         compose.onNodeWithText("שלח").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithText("רחוב בירושלים").performScrollTo().performTextReplacement("רחוב בדיקה")
         compose.onNodeWithText("מספר בית").performScrollTo().performTextReplacement("12")
@@ -66,7 +66,7 @@ class ReviewAddressTest {
     @Test fun localTimeFieldKeepsOriginalSecondsAndRemovesRedundantNotes() {
         val initial = draft().copy(address = "רחוב בדיקה 12", confirmedTime = "2026-01-01T12:00:47+02:00")
         var saved: ReviewDraft? = null
-        compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {}, addressLookup = { _, _ -> emptyList() }) } }
+        compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {}, addressLookup = { _, _ -> emptyList() }, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         compose.onNodeWithText("זמן: \u206601/01/2026 12:00\u2069").assertExists()
         compose.onNodeWithText("כל שינוי מבטל אישור", substring = true).assertDoesNotExist()
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
@@ -84,7 +84,7 @@ class ReviewAddressTest {
     @Test fun plateEntryFormatsDigitsButStoresNoDashes() {
         val initial = draft().copy(address = "רחוב בדיקה 12")
         var saved: ReviewDraft? = null
-        compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {}) } }
+        compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
         compose.onNodeWithText("מספר לוחית (ספרות בלבד)").performScrollTo().performTextReplacement("ab123-45-678")
         val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -99,7 +99,7 @@ class ReviewAddressTest {
         val initial = draft().copy(address = "רחוב בדיקה 12", plate = "")
         var saved: ReviewDraft? = null
         val bitmap = android.graphics.Bitmap.createBitmap(20, 20, android.graphics.Bitmap.Config.ARGB_8888)
-        compose.setContent { AppTheme { ReviewScreen(initial, bitmap.asImageBitmap(), { saved = it }, {}, plateRecognizer = { listOf("1234567") }) } }
+        compose.setContent { AppTheme { ReviewScreen(initial, bitmap.asImageBitmap(), { saved = it }, {}, plateRecognizer = { listOf("1234567") }, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         compose.waitUntil(10_000) { compose.onAllNodesWithText("לוחית: \u206612-345-67\u2069").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
         compose.runOnIdle { assertEquals("1234567", saved?.plate) }
@@ -111,7 +111,7 @@ class ReviewAddressTest {
         compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {}, addressLookup = { lat, lon ->
             assertEquals(31.77, lat, 0.0); assertEquals(35.21, lon, 0.0)
             listOf(AddressSuggestion("רחוב בדיקה", "12", "provider full address should not be used"))
-        }) } }
+        }, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         compose.onNodeWithText("כן, חפש כתובת").performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithText("הצעה בלבד: \u2068רחוב בדיקה 12\u2069").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("הצעה בלבד: \u2068רחוב בדיקה 12\u2069").performScrollTo().assertExists()
@@ -143,7 +143,7 @@ class ReviewAddressTest {
     }
 
     @Test fun lookupFailureLeavesManualAddressAndNoInventedNumber() {
-        compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}, addressLookup = { _, _ -> error("offline") }) } }
+        compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}, addressLookup = { _, _ -> error("offline") }, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         compose.onNodeWithText("כן, חפש כתובת").performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithText("אין הצעות, הזן כתובת שבדקת").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("אין הצעות, הזן כתובת שבדקת").performScrollTo().assertExists()
@@ -154,7 +154,7 @@ class ReviewAddressTest {
     }
     @Test fun decliningProviderConsentDoesNotLookup() {
         var calls = 0
-        compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}, addressLookup = { _, _ -> calls += 1; emptyList() }) } }
+        compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}, addressLookup = { _, _ -> calls += 1; emptyList() }, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         compose.onNodeWithText("לא עכשיו").performClick()
         compose.waitForIdle()
         compose.runOnIdle { assertEquals(0, calls) }
@@ -164,7 +164,7 @@ class ReviewAddressTest {
     @Test fun missingGpsHasVisibleCorrectionRouteAndNeverInventsCoordinates() {
         val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null), confirmedLatitude = null, confirmedLongitude = null)
         var saved: ReviewDraft? = null
-        compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {}) } }
+        compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         compose.onNodeWithText("לא נמצא מיקום בתמונה.", substring = true).performScrollTo().assertExists()
         compose.onNodeWithText("קו רוחב").assertDoesNotExist()
         compose.onNodeWithText("קו אורך").assertDoesNotExist()
@@ -180,7 +180,7 @@ class ReviewAddressTest {
     @Test fun decliningConsentSurvivesSavedStateRestoration() {
         var calls = 0
         val restoration = StateRestorationTester(compose)
-        restoration.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}, addressLookup = { _, _ -> calls += 1; emptyList() }) } }
+        restoration.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}, addressLookup = { _, _ -> calls += 1; emptyList() }, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         compose.onNodeWithText("לא עכשיו").performClick()
         restoration.emulateSavedInstanceStateRestore()
         compose.onNodeWithText("למצוא רחוב ומספר בית?").assertDoesNotExist()

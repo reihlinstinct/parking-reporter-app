@@ -31,6 +31,10 @@ import java.util.concurrent.TimeUnit
  * - Errors never contain credentials, tokens, URLs, or response bodies.
  */
 interface MunicipalClient {
+    /** Read-only catalog GET. Default keeps old fake clients explicit/compatible. */
+    fun subjectCategories(token: String): List<il.sidewalks.reporter.core.MunicipalSubject> =
+        throw MunicipalApiException("Subject catalog unavailable.")
+
     /** POST Login; returns the session token. */
     fun login(): String
 
@@ -93,6 +97,27 @@ class OkHttpMunicipalClient private constructor(
         val token = result["Token"] as? String
         if (token.isNullOrEmpty()) throw MunicipalApiException("Login returned no token.")
         return token
+    }
+
+    override fun subjectCategories(token: String): List<il.sidewalks.reporter.core.MunicipalSubject> {
+        if (token.isBlank() || token.length > 4096 || token.any { it.isWhitespace() || it.code < 32 })
+            throw MunicipalInputException("Invalid session token.")
+        val url = baseUrl.newBuilder().addPathSegment("GetSubjectCategories").addQueryParameter("token", token).build()
+        val request = Request.Builder().url(url).header("Ocp-Apim-Subscription-Key", subscriptionKey)
+            .header("Content-Type", "text/plain").header("User-Agent", "App 106").get().build()
+        try {
+            http.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw MunicipalApiException("Subject catalog: HTTP ${response.code}.")
+                val source = response.body.source(); val buffer = okio.Buffer()
+                while (true) {
+                    val read = source.read(buffer, CHUNK_BYTES)
+                    if (read == -1L) break
+                    if (buffer.size > MAX_RESPONSE_BYTES) throw MunicipalApiException("Subject catalog response too large.")
+                }
+                return il.sidewalks.reporter.core.CityTopicCache.flatten(org.json.JSONArray(buffer.readUtf8()))
+            }
+        } catch (e: MunicipalApiException) { throw e }
+        catch (_: Exception) { throw MunicipalApiException("Subject catalog unavailable or invalid.") }
     }
 
     override fun upsertContact(token: String, contact: LinkedHashMap<String, Any?>): Map<String, Any?> {

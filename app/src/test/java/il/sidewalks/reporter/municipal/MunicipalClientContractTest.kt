@@ -47,6 +47,21 @@ class MunicipalClientContractTest {
         coordinateY = 630500,
     )
 
+    @Test fun catalogUsesReadOnlyGetAndRefusesRedirectsWithoutLeakingToken() {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setBody("""[{"categoryName":"parent","children":[{"categoryName":"topic","subjectCode":"5164"}]}]"""))
+            val rows = client(server).subjectCategories("synthetic-token")
+            assertEquals("5164", rows.single().code)
+            val request = server.takeRequest()
+            assertEquals("GET", request.method)
+            assertEquals("synthetic-token", request.requestUrl!!.queryParameter("token"))
+            server.enqueue(MockResponse().setResponseCode(302).addHeader("Location", "https://example.invalid/"))
+            val failure = assertThrows(MunicipalApiException::class.java) { client(server).subjectCategories("synthetic-secret-token") }
+            assertFalse(failure.message!!.contains("synthetic-secret-token"))
+            assertEquals(2, server.requestCount)
+        }
+    }
+
     @Test
     fun happyPathSendsByteIdenticalGoldenBodies() {
         MockWebServer().use { server ->

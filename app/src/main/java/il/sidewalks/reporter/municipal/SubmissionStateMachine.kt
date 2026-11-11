@@ -61,6 +61,7 @@ class SubmissionStateMachine(
         jpeg: ByteArray,
         retryPhoto: Boolean = false,
         photoSha256: String? = null,
+        afterSuccessfulSubmission: ((MunicipalClient, String) -> Unit)? = null,
     ): SubmissionResult = store.withSubmissionLock {
         // The helper mutates the caller's contact dict (Token, ContactIdInCRM);
         // the port works on a copy so a caller-side map never changes mid-flight.
@@ -163,6 +164,7 @@ class SubmissionStateMachine(
         }
         state["status"] = "complete"
         store.write(state)
+        runCatching { afterSuccessfulSubmission?.invoke(client, token) }
         return@withSubmissionLock SubmissionResult.Submitted(case)
     }
 }

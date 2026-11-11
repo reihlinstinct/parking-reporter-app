@@ -1,0 +1,46 @@
+package il.sidewalks.reporter.core
+
+import org.junit.Assert.*
+import org.junit.Test
+import org.json.JSONArray
+import java.nio.file.Files
+import java.time.Instant
+
+class CityTopicSearchTest {
+    private val rows = listOf(MunicipalSubject("1280", "עמוד נפל", listOf("גדרות", "עמוד נפל")), MunicipalSubject("1145", "חניה על מדרכה", listOf("חניה", "חניה על מדרכה")))
+    @Test fun aliasesAndHebrewNormalizationAreOfflineAndDeterministic() {
+        val ranker = LocalTopicRanker(mapOf("1280" to listOf("התקנת עמודים")))
+        assertEquals("1280", ranker.search("הַתְקָנַת עמודים", rows, emptyList()).first().code)
+        assertEquals("1145", ranker.search("1145", rows, emptyList()).single().code)
+        assertEquals("1280", ranker.search("", rows, listOf("1280")).first().code)
+        assertTrue(ranker.search("לא קיים בכלל", rows, emptyList()).isEmpty())
+        assertEquals(1, LocalTopicRanker.distance("abcd", "acbd"))
+    }
+    @Test fun cachePreservesLastGoodListAndDates() {
+        val dir = Files.createTempDirectory("topics-test").toFile()
+        try {
+            val now = Instant.parse("2026-11-11T00:00:00Z")
+            val cache = CityTopicCache(java.io.File(dir, "catalog.json")) { now }
+            assertNull(cache.read())
+            val saved = cache.replace(rows)
+            assertEquals(rows, cache.read()!!.topics)
+            assertFalse(saved.refreshDue(now.plusSeconds(7*86400L)))
+            assertTrue(saved.refreshDue(now.plusSeconds(7*86400L+1)))
+            assertTrue(saved.stale(now.plusSeconds(91*86400L)))
+            try { cache.replace(emptyList()); fail("empty catalog") } catch (_: IllegalArgumentException) { }
+            assertEquals(rows, cache.read()!!.topics)
+        } finally { dir.deleteRecursively() }
+    }
+    @Test fun flattenKeepsPathsAndRejectsMalformedNodes() {
+        val tree = JSONArray("""[{"categoryName":"גדרות","children":[{"categoryName":"עמוד נפל","subjectCode":"1280"}]}]""")
+        assertEquals(listOf("גדרות", "עמוד נפל"), CityTopicCache.flatten(tree).single().path)
+        try { CityTopicCache.flatten(JSONArray("""[{"categoryName":"bad","subjectCode":1280}]""")); fail("numeric code") } catch (_: Exception) { }
+    }
+    @Test fun legacyMigrationDoesNotCreateASecondCategorySource() {
+        assertEquals("1145", TopicIdentity.code("sidewalk_parking"))
+        assertEquals("5164", TopicIdentity.code("municipal:5164"))
+        assertFalse(TopicIdentity.needsPlate("municipal:5164"))
+        assertTrue(TopicIdentity.needsPlate("municipal:1145"))
+        assertNull(TopicIdentity.code("municipal:../bad"))
+    }
+}

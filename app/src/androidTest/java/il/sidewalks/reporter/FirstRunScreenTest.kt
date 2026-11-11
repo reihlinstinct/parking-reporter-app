@@ -36,6 +36,8 @@ class FirstRunScreenTest {
     }
 
     @Before fun pinHebrewAndClearFlag() {
+        seedSyntheticCityTopics()
+
         UiPrefsLanguageStore.of(context).set(AppCatalog.defaultCode(context))
         clearFirstRunFlag()
     }

@@ -26,7 +26,9 @@ class LanguagePickerTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
     private val prefs get() = context.getSharedPreferences(UiPrefsLanguageStore.PREFS_NAME, android.content.Context.MODE_PRIVATE)
 
-    @Before fun pinHebrew() { UiPrefsLanguageStore.of(context).set(AppCatalog.defaultCode(context)) }
+    @Before fun pinHebrew() {
+        seedSyntheticCityTopics()
+ UiPrefsLanguageStore.of(context).set(AppCatalog.defaultCode(context)) }
 
     @After fun restoreHebrew() { prefs.edit().putString(UiPrefsLanguageStore.KEY_LANGUAGE, AppCatalog.defaultCode(context)).commit() }
 
