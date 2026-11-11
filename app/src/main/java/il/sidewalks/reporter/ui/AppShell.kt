@@ -21,6 +21,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.room.Room
 import il.sidewalks.reporter.BuildConfig
@@ -292,6 +295,9 @@ fun AppShell(
         }
     }
     fun openSettings() {
+        // Issue #295: same silent swallow as the save path - on a lock-less
+        // device the הגדרות tap opened nothing and said nothing.
+        if (!hasDeviceCredential()) { status = strings.t("shell.submit.no_device_lock"); return }
         authenticate(strings.t("shell.unlock.settings_title"), strings.t("shell.unlock.settings_subtitle")) {
             try { profile = readSettings(); page = "settings" }
             catch (_: Exception) { status = strings.t("shell.status.settings_read_failed") }
@@ -384,6 +390,9 @@ fun AppShell(
     // Shared authenticated, fresh-read merge for onboarding and normal Settings. Neither
     // onboarding nor its language picker decrypts any existing profile on entry.
     fun persistSettings(value: ReporterSettings, touchedMunicipal: Set<String>, cleared: () -> Unit, failed: () -> Unit = {}) {
+            // Issue #295: on a lock-less device the unlock intent is null and
+            // authenticate swallows the save silently; block with a note instead.
+            if (!hasDeviceCredential()) { status = strings.t("shell.submit.no_device_lock"); failed(); return }
             authenticate(strings.t("shell.unlock.settings_title"), strings.t("shell.unlock.settings_subtitle")) {
                 try {
                     // The screen clears itself and profile is dropped after a save: blank
@@ -408,7 +417,14 @@ fun AppShell(
                         } catch (_: Exception) { profileStore.clear() }
                         throw failure
                     }
-                    profile = null; cleared(); status = strings.t("shell.status.settings_saved")
+                    // Issue #295: keep the freshly stored profile as the screen's
+                    // baseline (fields themselves stay cleared) so the
+                    // required-fields gate still sees complete effective values
+                    // when the user edits again right after a save. `merged` is
+                    // derived from the fresh read above and is exactly what was
+                    // just persisted, so no second read (and no extra decryption
+                    // failure mode) is needed here.
+                    profile = merged; cleared(); status = strings.t("shell.status.settings_saved")
                 }
                 catch (_: Exception) { status = strings.t("shell.status.settings_save_failed"); failed() }
             }
@@ -424,10 +440,12 @@ fun AppShell(
             SettingsScreen(null, basicSetup = true, setupError = setupError,
                 selectedLanguage = selectedLanguage,
                 onLanguageSelected = languageController::select,
+                noDeviceCredential = !hasDeviceCredential(),
                 save = { value, touched, cleared ->
                     setupError = ""
                     persistSettings(value, touched, { cleared(); onFirstRunDone() },
-                        { setupError = strings.t("shell.status.settings_save_failed") })
+                        // #295: a no-credential block must not surface as a generic save failure.
+                        { setupError = strings.t(if (!hasDeviceCredential()) "shell.submit.no_device_lock" else "shell.status.settings_save_failed") })
                 }, back = onFirstRunDone)
         }
         return@ProvideStrings
@@ -435,6 +453,15 @@ fun AppShell(
     Scaffold(
         bottomBar = {
             if (page == "home" || page == "settings" || page == "reports") {
+                Column {
+                // Issue #295: one shared status slot above the bar on every page
+                // that has it, so a note (e.g. "set a screen lock" when the
+                // Settings tap is blocked) is visible from Reports too, not
+                // only from Home. The polite live region makes TalkBack
+                // announce it when it appears.
+                if (status.isNotEmpty()) {
+                    Text(status, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).semantics { liveRegion = LiveRegionMode.Polite })
+                }
                 NavigationBar {
                     NavigationBarItem(
                         selected = page == "home",
@@ -454,6 +481,7 @@ fun AppShell(
                         icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                         label = { Text(strings.t("shell.nav.settings")) },
                     )
+                }
                 }
             }
         },
@@ -498,13 +526,14 @@ fun AppShell(
             }, onBack = { page = "home" },
                 onSubmit = { shown -> submitReport(shown, outgoing.takeIf { image != null }) },
                 submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, noDeviceCredential = noDeviceCredential)
-            // Save feedback lands in the shell status; show it here as on
-            // home/settings so שמור טיוטה visibly confirms (driver waits on it).
-            if (status.isNotEmpty()) Text(status)
+            // Save feedback lands in the shell status; the review page has no
+            // bottom bar, so it keeps its own announced slot (home/settings/
+            // reports share the one above the bar).
+            if (status.isNotEmpty()) Text(status, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         }
         "settings" -> SettingsScreen(profile, save = { value, touchedMunicipal, cleared ->
             persistSettings(value, touchedMunicipal, cleared)
-        }, back = { profile = null; page = "home" }, debugTools = if (BuildConfig.DEBUG) {
+        }, back = { profile = null; page = "home" }, noDeviceCredential = !hasDeviceCredential(), debugTools = if (BuildConfig.DEBUG) {
             {
                 Text(strings.t("shell.debug.title"), style = MaterialTheme.typography.titleMedium)
                 Text(strings.t("shell.debug.description"))
@@ -517,7 +546,6 @@ fun AppShell(
                         }
                     }
                 }, modifier = Modifier.fillMaxWidth()) { Text(strings.t("shell.debug.run_button")) }
-                if (status.isNotEmpty()) Text(status)
             }
         } else null, selectedLanguage = selectedLanguage, onLanguageSelected = languageController::select,
             onLicenses = { page = "licenses" })
@@ -545,7 +573,6 @@ fun AppShell(
                 OutlinedButton(onClick = { openRecord(record) }, modifier = Modifier.fillMaxWidth()) { Text(strings.t("shell.home.open_draft", mapOf("id" to record.stableId.take(8)))) }
             }
             if (draft != null) OutlinedButton(onClick = { page = "review" }, modifier = Modifier.fillMaxWidth()) { Text(strings.t("shell.home.continue_review")) }
-            if (status.isNotEmpty()) Text(status)
             Text(strings.t("shell.home.login_unavailable"), style = MaterialTheme.typography.bodySmall)
             Text(strings.t("shell.home.permission_note"), style = MaterialTheme.typography.bodySmall)
         }

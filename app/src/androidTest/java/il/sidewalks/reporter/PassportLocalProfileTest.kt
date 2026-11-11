@@ -24,6 +24,11 @@ class PassportLocalProfileTest {
         compose.onNodeWithText("אין לי תעודת זהות").performScrollTo()
         compose.onNode(isToggleable()).performClick()
         compose.onNodeWithText("מספר דרכון").performScrollTo().performTextInput("SYNTHETIC-PASSPORT")
+        // Issue #295: the save button requires every reporter field filled and valid.
+        compose.onNodeWithText("שם פרטי").performTextInput("בדיקה")
+        compose.onNodeWithText("שם משפחה").performTextInput("מדווח")
+        compose.onNodeWithText("טלפון").performScrollTo().performTextReplacement("050-123-4567")
+        compose.onNodeWithText("אימייל").performScrollTo().performTextReplacement("synthetic@example.com")
         compose.onNodeWithText("במצב דרכון נשלח בממשק", substring = true).assertDoesNotExist()
         File(context.filesDir, "passport-local-profile-synthetic.png").outputStream().use { compose.onNode(isRoot() and hasAnyDescendant(hasText("טלפון"))).captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
         compose.onNodeWithText("שמור והמשך").performScrollTo().performClick()
