@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.27.6] - 2026-11-11
+
+### Other changes
+
+- test: verify outgoing pixels for all eight EXIF orientations (#278) (6693c20)
+
 ## [0.27.5] - 2026-11-10
 
 ### Fixes
