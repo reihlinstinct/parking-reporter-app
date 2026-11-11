@@ -87,6 +87,33 @@ class EntryPointsTest {
         }
     }
 
+    @Test fun noLockCatalogBootstrapAnnouncesReasonWithoutAuthentication() {
+        cleanLedgerAndOriginals()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        File(context.noBackupFilesDir, "city-topics/catalog.json").delete()
+        il.sidewalks.reporter.security.SettingsProfileStore(context).save(emptyList())
+        var authentications = 0
+        var reads = 0
+        val signal = mutableStateOf(EntrySignal(1, EntryIntents.Request.SharedPhoto(
+            "content://il.sidewalks.reporter.testshare/topic-no-lock.jpg")))
+        try {
+            compose.setContent {
+                il.sidewalks.reporter.ui.theme.AppTheme {
+                    AppShell(authenticate = { _, _, _ -> authentications++ }, hasDeviceCredential = { false },
+                        requestCamera = {}, readSettings = { reads++; null }, saveSettings = {}, entry = signal)
+                }
+            }
+            compose.waitUntil(15_000) { compose.onAllNodesWithText("בדיקת הדיווח").fetchSemanticsNodes().isNotEmpty() }
+            if (compose.onAllNodesWithText("למצוא רחוב ומספר בית?").fetchSemanticsNodes().isNotEmpty())
+                compose.onNodeWithText("לא עכשיו").performClick()
+            compose.onNodeWithText("בחר נושא מהעירייה").performScrollTo().assertIsNotEnabled().performClick()
+            compose.onAllNodesWithText("הגדר נעילת מסך")[0]
+                .assert(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.LiveRegion,
+                    androidx.compose.ui.semantics.LiveRegionMode.Polite))
+            compose.runOnIdle { assertEquals(0, authentications); assertEquals(0, reads) }
+        } finally { cleanLedgerAndOriginals(); seedSyntheticCityTopics() }
+    }
+
     @Test fun deepLinkNewReportRequestsCamera() {
         var cameraRequested = false
         val signal = mutableStateOf(EntrySignal(1, EntryIntents.Request.NewReport))

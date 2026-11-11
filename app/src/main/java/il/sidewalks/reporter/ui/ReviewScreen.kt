@@ -150,20 +150,25 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         }
         image?.let { Image(it, s.t("review.image_description"), modifier = Modifier.fillMaxWidth().height(220.dp)) }
         val selectedCode = il.sidewalks.reporter.core.TopicIdentity.code(draft.subject)
-        val selectedTopic = topicSnapshot?.topics?.firstOrNull { it.code == selectedCode }
+        val selectedRows = topicSnapshot?.topics.orEmpty().filter { it.code == selectedCode }
+        val selectedTopic = selectedRows.firstOrNull()
+        val selectedLabel = selectedRows.map { it.path.joinToString(" / ") }.distinct().let { paths ->
+            if (paths.size > 1) paths.joinToString("; ") else selectedTopic?.name
+        }
         val removed = topicSnapshot != null && selectedCode != null && selectedTopic == null
         val canBrowseTopics = topicSnapshot != null || topicsAvailable
         val topicNote = when {
+            topicSnapshot == null && noDeviceCredential -> s.t("review.submit.no_device_lock")
             topicsLoading -> s.t("topics.loading")
             removed -> s.t("topics.removed")
             !canBrowseTopics -> s.t("topics.connection_needed")
             topicSnapshot == null -> s.t("topics.unavailable")
             else -> ""
         }
-        TextButton(enabled = canBrowseTopics && !topicsLoading, onClick = {
+        TextButton(enabled = canBrowseTopics && !topicsLoading && (topicSnapshot != null || !noDeviceCredential), onClick = {
             openTopics?.invoke(); categoryMenu = true
         }, modifier = Modifier.semantics { stateDescription = topicNote }) {
-            Text(selectedTopic?.name ?: s.t("topics.choose"), Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
+            Text(selectedLabel ?: s.t("topics.choose"), Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
         }
         if (topicNote.isNotBlank()) Text(topicNote, Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
         topicSnapshot?.let { snapshot ->

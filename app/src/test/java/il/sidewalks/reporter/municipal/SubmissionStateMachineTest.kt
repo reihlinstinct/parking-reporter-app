@@ -86,6 +86,7 @@ class SubmissionStateMachineTest {
             assertTrue(seen === client)
             assertEquals("synthetic-token", token)
             assertEquals("complete", store.stored!!["status"])
+            store.withSubmissionLock { assertEquals("complete", store.read()!!["status"]) }
             assertEquals("attach", client.calls.last())
             refreshes++
             throw MunicipalApiException("synthetic catalog unavailable")

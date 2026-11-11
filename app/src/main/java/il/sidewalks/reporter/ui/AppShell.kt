@@ -250,7 +250,13 @@ fun AppShell(
                             { id -> FileSubmissionStateStore.forReport(
                                 File(context.noBackupFilesDir, "submissions"), id) },
                             activeTopicCodes = { topicRepository.topics().map { it.code }.toSet() },
-                            afterSuccessfulSubmission = { client, token -> topicRepository.afterSuccess(client, token) },
+                            afterSuccessfulSubmission = { client, token ->
+                                scope.launch(Dispatchers.IO) {
+                                    topicRepository.afterSuccess(client, token)
+                                    val refreshed = topicRepository.snapshot()
+                                    withContext(Dispatchers.Main) { topicSnapshot = refreshed }
+                                }
+                            },
                         ).submit(shown, settings, file,
                             SubmissionCoordinator.OutgoingPhoto(outgoing.jpeg, outgoing.originalHash))
                     } catch (e: il.sidewalks.reporter.municipal.AddressLookupMismatchException) {
@@ -537,7 +543,7 @@ fun AppShell(
             // A missing profile is an older install, not proof that credentials are absent.
             // Let its first authenticated catalog read establish that state.
             fun openCityTopics() {
-                if (topicSnapshot != null || topicsLoading) return
+                if (topicSnapshot != null || topicsLoading || !hasDeviceCredential()) return
                 authenticate(strings.t("topics.connect_title"), strings.t("topics.connection_needed")) {
                     scope.launch {
                         topicsLoading = true

@@ -21,20 +21,26 @@ class CityTopicCache(private val file: File, private val now: () -> Instant = In
         validate(topics)
         val fingerprint = MunicipalSubjects.canonicalFingerprint(topics)
         require(root.getString("fingerprint") == fingerprint)
-        Snapshot(topics, Instant.parse(root.getString("checked_at")), fingerprint)
+        val checkedAt = Instant.parse(root.getString("checked_at"))
+        // A clock correction must never suppress the next successful-send refresh.
+        Snapshot(topics, checkedAt.takeUnless { it.isAfter(now()) } ?: Instant.EPOCH, fingerprint)
     } catch (_: Exception) { null }
 
     @Synchronized fun replace(topics: List<MunicipalSubject>): Snapshot {
         validate(topics)
+        val previous = read()
+        // A dramatically truncated city reply must not remove most existing topics.
+        require(previous == null || topics.map { it.code }.distinct().size * 2 >= previous.topics.map { it.code }.distinct().size)
         val checkedAt = now(); val fingerprint = MunicipalSubjects.canonicalFingerprint(topics)
+        val rows = if (previous?.fingerprint == fingerprint) previous.topics else topics
         val array = JSONArray()
-        topics.forEach { array.put(JSONObject().put("code", it.code).put("name", it.name).put("path", JSONArray(it.path))) }
+        rows.forEach { array.put(JSONObject().put("code", it.code).put("name", it.name).put("path", JSONArray(it.path))) }
         val root = JSONObject().put("version", 1).put("checked_at", checkedAt.toString()).put("fingerprint", fingerprint).put("subjects", array)
         file.parentFile?.let { check(it.mkdirs() || it.isDirectory) }
-        val temporary = File(file.path + ".tmp")
+        val temporary = File.createTempFile(file.name, ".tmp", file.parentFile)
         java.io.FileOutputStream(temporary).use { it.write(root.toString().toByteArray(Charsets.UTF_8)); it.fd.sync() }
         check(temporary.renameTo(file))
-        return Snapshot(topics.toList(), checkedAt, fingerprint)
+        return Snapshot(rows.toList(), checkedAt, fingerprint)
     }
     companion object {
         private fun validate(topics: List<MunicipalSubject>) {

@@ -65,6 +65,14 @@ class CityTopicPickerTest {
         compose.onNodeWithText("חנייה אסורה - חנייה על מדרכה").assertIsEnabled().performClick()
         compose.onNodeWithText("חפש נושא, תיאור או מספר").assertIsDisplayed()
     }
+    @Test fun duplicateCodeShowsEveryMunicipalPathRatherThanMislabelingTheChoice() {
+        val rows = listOf(MunicipalSubject("5164", "נושא א", listOf("גינון", "נושא א")),
+            MunicipalSubject("5164", "נושא ב", listOf("תאורה", "נושא ב")))
+        val snap = syntheticCityTopics().copy(topics = rows)
+        compose.setContent { AppTheme { ReviewScreen(draft().copy(subject = "municipal:5164", plate = ""),
+            null, {}, {}, topicSnapshot = snap, topicsAvailable = true) } }
+        compose.onNodeWithText("גינון / נושא א; תאורה / נושא ב").assertIsDisplayed()
+    }
     @Test fun removedCodeCannotBeSubmittedAndDraftRemains() {
         var submitted = false
         val snap = syntheticCityTopics().copy(topics = syntheticCityTopics().topics.filter { it.code != "1145" })

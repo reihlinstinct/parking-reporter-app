@@ -36,6 +36,31 @@ class CityTopicSearchTest {
             assertEquals(rows, cache.read()!!.topics)
         } finally { dir.deleteRecursively() }
     }
+    @Test fun cacheRejectsTruncationDetectsCorruptionAndClampsFutureDate() {
+        val dir = Files.createTempDirectory("topics-sanity").toFile()
+        try {
+            var now = Instant.parse("2026-11-11T00:00:00Z")
+            val file = java.io.File(dir, "catalog.json")
+            val cache = CityTopicCache(file) { now }
+            val topics = (1..10).map { MunicipalSubject(it.toString(), "topic$it", listOf("root", "topic$it")) }
+            val initial = cache.replace(topics)
+            try { cache.replace(topics.take(1)); fail("partial catalog must not replace last-good") } catch (_: IllegalArgumentException) { }
+            assertEquals(topics, cache.read()!!.topics)
+            now = now.plusSeconds(86400)
+            val unchanged = cache.replace(topics.reversed())
+            assertEquals(initial.fingerprint, unchanged.fingerprint)
+            assertEquals(topics, unchanged.topics)
+            assertEquals(now, unchanged.checkedAt)
+            val root = org.json.JSONObject(file.readText())
+            root.put("checked_at", now.plusSeconds(365*86400L).toString()); file.writeText(root.toString())
+            assertEquals(Instant.EPOCH, cache.read()!!.checkedAt)
+            assertTrue(cache.read()!!.refreshDue(now))
+            root.put("fingerprint", "invalid"); file.writeText(root.toString())
+            assertNull(cache.read())
+            file.writeText("broken JSON"); assertNull(cache.read())
+        } finally { dir.deleteRecursively() }
+    }
+
     @Test fun flattenKeepsPathsAndRejectsMalformedNodes() {
         val tree = JSONArray("""[{"categoryName":"גדרות","children":[{"categoryName":"עמוד נפל","subjectCode":"1280"}]}]""")
         assertEquals(listOf("גדרות", "עמוד נפל"), CityTopicCache.flatten(tree).single().path)
