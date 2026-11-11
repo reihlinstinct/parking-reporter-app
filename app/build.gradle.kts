@@ -53,6 +53,7 @@ dependencies {
     implementation("androidx.room:room-runtime:2.8.5")
     implementation("androidx.room:room-ktx:2.8.5")
     ksp("androidx.room:room-compiler:2.8.5")
+    kspAndroidTest("androidx.room:room-compiler:2.8.5")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.fragment:fragment-ktx:1.9.1")
