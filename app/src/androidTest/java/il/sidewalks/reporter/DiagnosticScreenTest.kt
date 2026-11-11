@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import androidx.compose.material3.MaterialTheme
+import il.sidewalks.reporter.ui.theme.AppTheme
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import org.junit.Assert.assertEquals
@@ -31,7 +32,7 @@ class DiagnosticScreenTest {
     @Test fun exactConsentRequiredAndSecretsCleared() {
         var calls = 0
         val fake = DiagnosticRunner { _, _ -> calls++; DiagnosticResult(DiagnosticOutcome.SUCCESS, 200) }
-        compose.setContent { MaterialTheme { DiagnosticScreen(fake) { true } } }
+        compose.setContent { AppTheme { DiagnosticScreen(fake) { true } } }
         compose.onNodeWithText("בדוק התחברות בלבד").assertIsNotEnabled()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val image = compose.onRoot().captureToImage().asAndroidBitmap()
@@ -49,7 +50,7 @@ class DiagnosticScreenTest {
         assertEquals(1, calls)
     }
     @Test fun editingCredentialsRevokesConsent() {
-        compose.setContent { MaterialTheme { DiagnosticScreen(DiagnosticRunner { _, _ -> error("must not run") }) { true } } }
+        compose.setContent { AppTheme { DiagnosticScreen(DiagnosticRunner { _, _ -> error("must not run") }) { true } } }
         compose.onNodeWithText("מפתח מנוי").performTextInput("synthetic-key")
         compose.onNodeWithText("שם משתמש").performTextInput("synthetic-user")
         compose.onNodeWithText("סיסמה").performTextInput("synthetic-password")

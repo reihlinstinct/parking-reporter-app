@@ -1,6 +1,6 @@
 package il.sidewalks.reporter
 
-import androidx.compose.material3.MaterialTheme
+import il.sidewalks.reporter.ui.theme.AppTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -30,7 +30,7 @@ class SettingsScreenSecondSaveTest {
     fun secondSaveAfterPersonalEditKeepsCredentials() {
         val profile = mutableStateOf<ReporterSettings?>(stored)
         var saved: ReporterSettings? = null
-        compose.setContent { MaterialTheme { SettingsScreen(profile.value, { s, touched, done -> saved = mergeReporterSettings(s, stored, touched); profile.value = null; done() }, {}) } }
+        compose.setContent { AppTheme { SettingsScreen(profile.value, { s, touched, done -> saved = mergeReporterSettings(s, stored, touched); profile.value = null; done() }, {}) } }
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().performClick()
         compose.onNodeWithText("טלפון").performScrollTo().performTextReplacement("0500000001")
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().performClick()
@@ -48,7 +48,7 @@ class SettingsScreenSecondSaveTest {
     fun clearingAPrefilledCredentialOnFirstSaveRemovesIt() {
         val profile = mutableStateOf<ReporterSettings?>(stored)
         var saved: ReporterSettings? = null
-        compose.setContent { MaterialTheme { SettingsScreen(profile.value, { s, touched, done -> saved = mergeReporterSettings(s, stored, touched); profile.value = null; done() }, {}) } }
+        compose.setContent { AppTheme { SettingsScreen(profile.value, { s, touched, done -> saved = mergeReporterSettings(s, stored, touched); profile.value = null; done() }, {}) } }
         compose.onNodeWithText("חיבור 106 מתקדם").performScrollTo().performClick()
         compose.onNodeWithText("סיסמת API").performScrollTo().performTextReplacement("")
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().performClick()
