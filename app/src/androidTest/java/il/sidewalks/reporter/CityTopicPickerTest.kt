@@ -20,6 +20,7 @@ class CityTopicPickerTest {
         compose.setContent { AppTheme { CityTopicPicker(syntheticCityTopics().topics, null, emptyList(),
             mapOf("1280" to listOf("התקנת עמודים")), {}, { chosen = it }) } }
         compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextInput("התקנת עמודים")
+        compose.waitUntil(5_000) { compose.onNodeWithText("1 תוצאות").isDisplayed() }
         compose.onNodeWithText("1 תוצאות").assertIsDisplayed()
         compose.onNodeWithText("עמוד מחסום ברזל נוטה ליפול / נפל", useUnmergedTree = true).assertIsDisplayed().performClick()
         compose.runOnIdle { assertEquals("1280", chosen?.code) }
@@ -55,6 +56,12 @@ class CityTopicPickerTest {
         compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}) } }
         compose.onNodeWithText("בחר נושא מהעירייה").assertIsNotEnabled()
         compose.onNodeWithText("נדרשים פרטי גישה וחיבור לעירייה לטעינה ראשונה של הרשימה").assertExists()
+    }
+    @Test fun cachedCityListRemainsBrowsableWithoutCurrentCredentials() {
+        compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {},
+            topicSnapshot = syntheticCityTopics(), topicsAvailable = false) } }
+        compose.onNodeWithText("חנייה אסורה - חנייה על מדרכה").assertIsEnabled().performClick()
+        compose.onNodeWithText("חפש נושא, תיאור או מספר").assertIsDisplayed()
     }
     @Test fun removedCodeCannotBeSubmittedAndDraftRemains() {
         var submitted = false

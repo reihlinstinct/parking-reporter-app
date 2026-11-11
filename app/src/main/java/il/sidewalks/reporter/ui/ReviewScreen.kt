@@ -152,14 +152,15 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         val selectedCode = il.sidewalks.reporter.core.TopicIdentity.code(draft.subject)
         val selectedTopic = topicSnapshot?.topics?.firstOrNull { it.code == selectedCode }
         val removed = topicSnapshot != null && selectedCode != null && selectedTopic == null
+        val canBrowseTopics = topicSnapshot != null || topicsAvailable
         val topicNote = when {
             topicsLoading -> s.t("topics.loading")
             removed -> s.t("topics.removed")
-            !topicsAvailable -> s.t("topics.connection_needed")
+            !canBrowseTopics -> s.t("topics.connection_needed")
             topicSnapshot == null -> s.t("topics.unavailable")
             else -> ""
         }
-        TextButton(enabled = topicsAvailable && !topicsLoading, onClick = {
+        TextButton(enabled = canBrowseTopics && !topicsLoading, onClick = {
             openTopics?.invoke(); categoryMenu = true
         }, modifier = Modifier.semantics { stateDescription = topicNote }) {
             Text(selectedTopic?.name ?: s.t("topics.choose"), Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
@@ -169,7 +170,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             Text(s.t("topics.updated", mapOf("date" to snapshot.checkedAt.atZone(java.time.ZoneId.of("Asia/Jerusalem")).toLocalDate().toString())))
             if (snapshot.stale(java.time.Instant.now())) Text(s.t("topics.stale"), Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
         }
-        if (categoryMenu && topicSnapshot != null && topicsAvailable) CityTopicPicker(
+        if (categoryMenu && topicSnapshot != null && canBrowseTopics) CityTopicPicker(
             topicSnapshot.topics, selectedCode, recentTopics, topicAliases,
             dismiss = { categoryMenu = false }, choose = { topic ->
                 draft = draft.edit(subject = "municipal:" + topic.code)

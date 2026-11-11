@@ -183,8 +183,21 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         if (compose.onAllNodesWithText("למצוא רחוב ומספר בית?").fetchSemanticsNodes().isNotEmpty()) {
             compose.onNodeWithText("לא עכשיו").performClick()
         }
-        compose.onNodeWithText("נדרש תיקון קטגוריה ▾").performScrollTo().performClick()
-        compose.onNodeWithText(fields.categoryLabel).performClick()
+        compose.onNodeWithText("בחר נושא מהעירייה").performScrollTo().performClick()
+        // Search the city catalog, never the retired enum dropdown labels.
+        val code = when (fields.categoryLabel) {
+            "חניה על המדרכה" -> "1145"
+            "תמרור שבור" -> "17841"
+            "עמוד / מחסום פגום" -> "1280"
+            else -> fields.categoryLabel
+        }
+        compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextReplacement(code)
+        val topic = il.sidewalks.reporter.municipal.CityTopicRepository(
+            InstrumentationRegistry.getInstrumentation().targetContext).topics().first { it.code == code }
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithText(topic.name, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText(topic.name, useUnmergedTree = true).performClick()
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
         if (fields.plate != null) {
             compose.onNodeWithText("מספר לוחית (ספרות בלבד)").performScrollTo().performTextReplacement(fields.plate)

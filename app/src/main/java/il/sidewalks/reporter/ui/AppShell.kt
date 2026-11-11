@@ -532,8 +532,10 @@ fun AppShell(
                 if (!noDeviceCredential && submissionNote == strings.t("shell.submit.no_device_lock")) submissionNote = ""
             }
             LaunchedEffect(value.evidence.stableId) {
-                topicsConnection = il.sidewalks.reporter.security.SettingsProfileStore(context).read()?.isEmpty() == true
+                topicsConnection = il.sidewalks.reporter.security.SettingsProfileStore(context).read()?.isEmpty() != false
             }
+            // A missing profile is an older install, not proof that credentials are absent.
+            // Let its first authenticated catalog read establish that state.
             fun openCityTopics() {
                 if (topicSnapshot != null || topicsLoading) return
                 authenticate(strings.t("topics.connect_title"), strings.t("topics.connection_needed")) {
