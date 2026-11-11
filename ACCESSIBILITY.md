@@ -15,7 +15,9 @@ Accessibility work is ongoing. If something blocks you, we want to know.
 
 ## Feedback
 
-Report an accessibility problem by opening an issue:
-https://github.com/reihlinstinct/parking-reporter-app/issues/new/choose
+Report an accessibility problem by email or by opening an issue:
+- Email: [reihlinstinct@gmail.com](mailto:reihlinstinct@gmail.com)
+- Issues: https://github.com/reihlinstinct/parking-reporter-app/issues/new/choose
+
 If the report is sensitive, use a private security advisory instead:
 https://github.com/reihlinstinct/parking-reporter-app/security/advisories/new
