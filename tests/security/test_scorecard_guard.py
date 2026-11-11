@@ -257,7 +257,6 @@ class DocsAndScriptsTests(unittest.TestCase):
     def test_python_argv_install(self):
         self.assertIn(('unhashed-pip-install','scripts/t.py'),self.scan_file('scripts/t.py','import subprocess,sys\nsubprocess.run([sys.executable,"-m","pip","install","pillow"])\n'))
         self.assertEqual(self.scan_file('scripts/t.py','import subprocess,sys\nsubprocess.run([sys.executable,"-m","pip","install","--require-hashes","-r","req.txt"])\n',{'req.txt':'x==1 '+H+'a'*64+'\n'}),set())
-if __name__=='__main__':unittest.main()
 
 class PublishingGrantTests(unittest.TestCase):
     """#71: exact existing exceptions must not cover broader publishing grants."""
@@ -279,7 +278,8 @@ class PublishingGrantTests(unittest.TestCase):
             findings=g.scan_text(path,text)
             self.assertFalse(g.evaluate(findings,self.baseline)[0])
             self.assertRegex(text,r'(?m)^  summary:\n    permissions:\n      contents: read$')
-            self.assertIn('persist-credentials: false',text)
+            self.assertEqual(text.count('uses: actions/checkout@'),
+                             text.count('persist-credentials: false'))
             self.assertNotIn('pull_request',text)
 
     def test_new_or_broader_write_not_baselined(self):
@@ -295,3 +295,5 @@ class PublishingGrantTests(unittest.TestCase):
             for changed in mutations:
                 with self.subTest(filename=filename,changed=changed):
                     self.assertTrue(g.evaluate(g.scan_text(path,changed),self.baseline)[0])
+
+if __name__=='__main__':unittest.main()
