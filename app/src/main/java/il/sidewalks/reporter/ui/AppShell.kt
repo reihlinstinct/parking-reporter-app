@@ -467,6 +467,10 @@ fun AppShell(
         }
         return@ProvideStrings
     }
+    BackHandler(enabled = !showFirstRun && page != "home") {
+        if (page == "licenses") page = "settings"
+        else { profile = null; page = "home" }
+    }
     Scaffold(
         bottomBar = {
             if (page == "home" || page == "settings" || page == "reports") {
@@ -479,20 +483,29 @@ fun AppShell(
                 if (status.isNotEmpty()) {
                     Text(status, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).semantics { liveRegion = LiveRegionMode.Polite })
                 }
+                val navigationColors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant)
                 NavigationBar {
                     NavigationBarItem(
+                        colors = navigationColors,
                         selected = page == "home",
                         onClick = { profile = null; page = "home" },
                         icon = { Icon(Icons.Default.Home, contentDescription = null) },
                         label = { Text(strings.t("shell.nav.home")) },
                     )
                     NavigationBarItem(
+                        colors = navigationColors,
                         selected = page == "reports",
                         onClick = { profile = null; page = "reports" },
                         icon = { Icon(Icons.Default.List, contentDescription = null) },
                         label = { Text(strings.t("shell.nav.reports")) },
                     )
                     NavigationBarItem(
+                        colors = navigationColors,
                         selected = page == "settings",
                         onClick = { openSettings() },
                         icon = { Icon(Icons.Default.Settings, contentDescription = null) },

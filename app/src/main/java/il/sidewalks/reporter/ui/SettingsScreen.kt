@@ -2,6 +2,7 @@ package il.sidewalks.reporter.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
@@ -189,6 +190,19 @@ fun SettingsScreen(
         if (saved) Text(s.t("settings.save.done"))
         // The UI language lives in "ui-prefs": picking one never calls save, never asks for
         // authentication and never touches the fields above or the encrypted settings.
+        if (!basicSetup) {
+            val (dynamic, setDynamic) = il.sidewalks.reporter.ui.theme.rememberDynamicPalette()
+            val supported = il.sidewalks.reporter.ui.theme.supportsDynamicPalette()
+            HorizontalDivider()
+            Text(s.t("settings.appearance.title"), style = MaterialTheme.typography.titleMedium)
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                .toggleable(value = dynamic, enabled = supported, role = Role.Switch, onValueChange = setDynamic),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(s.t("settings.appearance.dynamic"), Modifier.weight(1f))
+                Switch(checked = dynamic, onCheckedChange = null, enabled = supported)
+            }
+            AnnouncedNote(if (supported) s.t("settings.appearance.dynamic_note") else s.t("settings.appearance.needs_android12"))
+        }
         if (!basicSetup) onLanguageSelected?.let { select ->
             HorizontalDivider()
             LanguagePicker(s.catalog.languages, selectedLanguage, select)

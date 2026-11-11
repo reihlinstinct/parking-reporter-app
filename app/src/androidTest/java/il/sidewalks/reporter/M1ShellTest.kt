@@ -52,8 +52,8 @@ class M1ShellTest {
         val ready = draft()
         var submitted: ReviewDraft? = null
         compose.setContent { AppTheme { ReviewScreen(ready, null, {}, onBack = {}, onSubmit = { submitted = it }, noDeviceCredential = true, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
+        compose.onNodeWithText("הגדר נעילת מסך").performScrollTo().assertIsDisplayed()
         screenshot("m1-review-no-lockscreen-synthetic.png")
-        compose.onNodeWithText("הגדר נעילת מסך").assertIsDisplayed()
         compose.onNodeWithText("שלח לעירייה").assertIsNotEnabled()
         compose.onNodeWithText("שלח לעירייה").performScrollTo().performClick()
         compose.runOnIdle { assertNull(submitted) }
