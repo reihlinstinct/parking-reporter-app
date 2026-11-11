@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.30.2] - 2026-11-11
+
+### Other changes
+
+- test: first-send disclosure revision and reload before explicit resend (#244) (#279) (553166c)
+
 ## [0.30.1] - 2026-11-11
 
 ### Other changes
