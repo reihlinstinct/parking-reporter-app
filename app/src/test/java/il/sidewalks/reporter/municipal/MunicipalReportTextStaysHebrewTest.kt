@@ -171,6 +171,8 @@ class MunicipalReportTextStaysHebrewTest {
         }
         val coordinator = files.single { it.name == "SubmissionCoordinator.kt" }.readText(Charsets.UTF_8)
         assertEquals(1, coordinator.split("description = draft.exactHebrewText,").size - 1)
-        assertEquals(1, coordinator.split("subjectCode = category.municipalSubjectCode,").size - 1)
+        assertEquals(1, coordinator.split("subjectCode = topicCode,").size - 1)
+        assertTrue(coordinator.contains("TopicIdentity.code(draft.subject)"))
+        assertTrue(coordinator.contains("if (topicCode !in allowed)"))
     }
 }
