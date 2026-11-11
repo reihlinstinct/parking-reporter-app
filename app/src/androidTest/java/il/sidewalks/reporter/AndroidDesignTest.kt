@@ -43,6 +43,7 @@ class AndroidDesignTest {
         if (Build.VERSION.SDK_INT >= 31) {
             toggle.assertIsEnabled().performClick().assertIsOn()
             compose.runOnIdle { assertTrue(DynamicPaletteStore(context).enabled()) }
+            compose.onNodeWithText(il.sidewalks.reporter.i18n.AppCatalog.get(context).t("he", "settings.appearance.dynamic_note")).performScrollTo().assertIsDisplayed()
             screenshot("design303-dynamic-settings.png")
             for (candidate in listOf(dynamicLightColorScheme(context), dynamicDarkColorScheme(context))) {
                 val safe = accessibleDynamicScheme(candidate, AppLightColors)
@@ -50,7 +51,7 @@ class AndroidDesignTest {
             }
             val unreadable = AppLightColors.copy(onPrimary = AppLightColors.primary)
             assertEquals(AppLightColors, accessibleDynamicScheme(unreadable, AppLightColors))
-            toggle.performClick().assertIsOff()
+            toggle.performScrollTo().performClick().assertIsOff()
         } else {
             toggle.assertIsNotEnabled()
             compose.onNodeWithText("צבעים דינמיים דורשים Android 12 ומעלה. פלטת ירושלים נשארת פעילה.").assertExists()

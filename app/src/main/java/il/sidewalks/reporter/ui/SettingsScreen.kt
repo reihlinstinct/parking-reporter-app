@@ -201,7 +201,7 @@ fun SettingsScreen(
                 Text(s.t("settings.appearance.dynamic"), Modifier.weight(1f))
                 Switch(checked = dynamic, onCheckedChange = null, enabled = supported)
             }
-            AnnouncedNote(s.t(if (supported) "settings.appearance.dynamic_note" else "settings.appearance.needs_android12"))
+            AnnouncedNote(if (supported) s.t("settings.appearance.dynamic_note") else s.t("settings.appearance.needs_android12"))
         }
         if (!basicSetup) onLanguageSelected?.let { select ->
             HorizontalDivider()

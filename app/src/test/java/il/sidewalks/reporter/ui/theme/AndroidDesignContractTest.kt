@@ -12,6 +12,12 @@ class AndroidDesignContractTest {
         val activity = I18nTestFiles.moduleFile("src/main/java/il/sidewalks/reporter/MainActivity.kt").readText()
         assertEquals(1, activity.split("enableEdgeToEdge()").size - 1)
     }
+    @Test fun selectedNavigationLabelUsesPrimaryNotGoldOnLightSurface() {
+        val shell = I18nTestFiles.moduleFile("src/main/java/il/sidewalks/reporter/ui/AppShell.kt").readText()
+        assertTrue(shell.contains("selectedTextColor = MaterialTheme.colorScheme.primary"))
+        assertTrue(shell.contains("selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer"))
+        assertTrue(Palette.contrast(Palette.light.primary, Palette.light.surfaceContainer) >= 4.5)
+    }
     @Test fun bothAdaptiveIconsAlreadyHaveMonochromeLayers() {
         for (name in listOf("ic_launcher.xml", "ic_launcher_round.xml")) {
             val icon = I18nTestFiles.moduleFile("src/main/res/mipmap-anydpi-v26/$name").readText()
