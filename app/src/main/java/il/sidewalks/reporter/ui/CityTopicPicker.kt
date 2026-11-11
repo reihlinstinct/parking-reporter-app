@@ -16,6 +16,7 @@ import il.sidewalks.reporter.i18n.LocalStrings
 @Composable
 fun CityTopicPicker(topics: List<MunicipalSubject>, selected: String?, recent: List<String>,
                     aliases: Map<String, List<String>>, dismiss: () -> Unit, choose: (MunicipalSubject) -> Unit) {
+    il.sidewalks.reporter.i18n.ProvideStringsIfMissing {
     val s = LocalStrings.current
     var query by remember { mutableStateOf("") }
     val ranker = remember(aliases) { LocalTopicRanker(aliases) }
@@ -45,4 +46,5 @@ fun CityTopicPicker(topics: List<MunicipalSubject>, selected: String?, recent: L
             }
         }
     }
+}
 }
