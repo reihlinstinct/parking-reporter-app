@@ -102,31 +102,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Issue #297 (owner 2026-11-11): per-PR the two extremes - the floor
-        # and the latest API. The popular mid versions (33-36) run in
-        # the weekly matrix (emulator-weekly.yml). Public repo: Linux minutes
-        # are free, the only cost is queue time. Android 17 SDK packages are
-        # minor-versioned (platforms;android-37.0), so the level is 37.0 -
-        # plain "37" no longer resolves in sdkmanager.
-        # Issue #297: the floor runs on API 29, not minSdk 26 - the API 26 image
-        # keeps failing in new ways (adbd exit 137, then camera frames the
-        # evidence EXIF path rejects). 29 is the approved fallback floor.
-        # Quoted: an unquoted 37.0 is a YAML float and reaches the action as
-        # "37", which does not resolve in sdkmanager.
-        api: ["29", "37.0"]
-        include:
-          # Issue #297: on the 37.0 image, screenrecord's virtual display hits
-          # a guest graphics assertion (mapper.ranchu
-          # hasReadColorBufferDma) under the default host-GPU path, killing
-          # mediaswcodec and then system_server. -gpu guest renders fully in
-          # the guest, away from that negotiation; screenshots still work.
-          - api: "37.0"
-            emu_gpu: guest
-            # The 37.0 image's guest graphics mapper asserts on the
-            # ReadColorBufferDma RenderControl feature whenever a buffer is
-            # read back (task snapshots on activity switch, screenrecord).
-            # Disabling the feature removes the negotiation that trips it.
-            emu_features: -feature -ReadColorBufferDma
+        # Issue #297 (owner 2026-11-11): per-PR the two extremes that are
+        # stable on CI - API 30 and the latest stable API 36. Older images
+        # (26: adbd exit 137, camera/EXIF breakage; 29: IME-never-hidden
+        # races) and the brand-new 37.0 image (system_server aborts on any
+        # buffer readback - a platform bug) are covered by the weekly matrix
+        # instead, whose auto-issue reports when they heal. Public repo:
+        # Linux minutes are free, the only cost is queue time.
+        api: ["30", "36"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -148,9 +131,7 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          # Explicit options (the input replaces the action defaults):
-          # swiftshader_indirect everywhere except API 37.0's guest (above).
-          emulator-options: -no-window -gpu ${{ matrix.emu_gpu || 'swiftshader_indirect' }} -no-snapshot -noaudio -no-boot-anim ${{ matrix.emu_features }}
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
             sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
             adb install -r app/build/outputs/apk/debug/app-debug.apk
@@ -166,13 +147,7 @@ jobs:
             # The emulator action runs every script line in its own sh:
             # no variables, background jobs or shell options survive across
             # lines. The instrumented exit code therefore goes to a file.
-            # Issue #297: screenrecord crashes the 37.0 system image itself -
-            # its encoder aborts in the guest graphics mapper
-            # (mapper.ranchu: !rcEnc->featureInfo()->hasReadColorBufferDma),
-            # then system_server follows; -gpu guest does not help. Platform
-            # bug in the new image, so 37.0 runs screenshots only; the video
-            # is recorded on the other levels.
-            if [ "${{ matrix.api }}" != "37.0" ]; then adb shell screenrecord --time-limit 180 /sdcard/test-run.mp4 > /dev/null 2>&1 & fi
+            adb shell screenrecord --time-limit 180 /sdcard/test-run.mp4 > /dev/null 2>&1 &
             adb shell am instrument -w -r il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/androidTests/instrumentation.txt 2>&1; echo $? > app/build/reports/androidTests/instrumentation.rc; cat app/build/reports/androidTests/instrumentation.txt
             adb shell pkill -INT screenrecord || true
             sleep 2
