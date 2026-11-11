@@ -29,6 +29,7 @@ class PhotoConsentTest {
         assertEquals(photo.processingVersion, receipt.processingVersion)
         assertEquals(terms.sha256, receipt.termsSha256)
         assertEquals(terms.version, receipt.termsVersion)
+        assertEquals("blurred-scene-category-v1", receipt.purpose)
         assertEquals("he", receipt.locale)
         assertEquals(1000L, receipt.grantedAtEpochMillis)
         assertEquals("TrainingConsentReceipt(redacted)", receipt.toString())

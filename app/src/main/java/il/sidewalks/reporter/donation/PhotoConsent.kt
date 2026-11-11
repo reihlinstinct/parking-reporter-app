@@ -31,6 +31,8 @@ class PhotoConsent(private val photo: TrainingPhoto, private val terms: Training
         val derivativeSha256: String, val processingVersion: String,
         val termsVersion: String, val termsSha256: String,
         val locale: String, val grantedAtEpochMillis: Long) {
+        /** Fixed initial pilot scope; no OCR/plate/identity purpose is selectable. */
+        val purpose: String = "blurred-scene-category-v1"
         override fun toString() = "TrainingConsentReceipt(redacted)"
     }
 
