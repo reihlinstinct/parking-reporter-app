@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.30.4] - 2026-11-11
+
+### Other changes
+
+- docs: built-in opt-in training donation, no collection activation (#286) (d942341)
+
 ## [0.30.3] - 2026-11-11
 
 ### Other changes
