@@ -166,7 +166,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         }
         if (topicNote.isNotBlank()) Text(topicNote, Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
         topicSnapshot?.let { snapshot ->
-            Text(s.t("topics.updated", mapOf("date" to snapshot.checkedAt.atZone(java.time.ZoneId.of("Asia/Jerusalem")).toLocalDate().toString())))
+            Text(snapshot.knownCheckDate()?.let { date -> s.t("topics.updated", mapOf("date" to date.toString())) } ?: s.t("topics.updated_unknown"))
             if (snapshot.stale(java.time.Instant.now())) Text(s.t("topics.stale"), Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
         }
         if (categoryMenu && topicSnapshot != null && canBrowseTopics) CityTopicPicker(

@@ -75,6 +75,29 @@ class CityTopicPickerTest {
         compose.onNodeWithText(label, useUnmergedTree = true).assertIsDisplayed().performClick()
         compose.runOnIdle { assertEquals("5164", chosen?.code) }
     }
+    @Test fun futureCatalogTimestampShowsUnknownDateNotEpoch() {
+        io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set(io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(context))
+        val file = File(context.cacheDir, "future-date-synthetic/catalog.json")
+        val now = java.time.Instant.parse("2026-11-11T12:00:00Z")
+        val cache = CityTopicCache(file, { now })
+        cache.replace(syntheticCityTopics().topics)
+        val json = org.json.JSONObject(file.readText()).put("checked_at", now.plusSeconds(86400).toString())
+        file.writeText(json.toString())
+        val snapshot = cache.read()!!
+        assertNull(snapshot.knownCheckDate())
+        assertTrue(snapshot.refreshDue(now))
+        compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}, topicSnapshot = snapshot) } }
+        compose.onNodeWithText("מועד הבדיקה האחרון אינו ידוע").assertIsDisplayed()
+        compose.onNodeWithText("1970-01-01", substring = true).assertDoesNotExist()
+        compose.waitForIdle()
+        val bitmap = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+        File(context.filesDir, "catalog-unknown-date-synthetic.png").outputStream().use {
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+        }
+        bitmap.recycle()
+        file.delete()
+    }
+
     @Test fun noCityCredentialsDisablesTopicFieldWithExplanation() {
         compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}) } }
         compose.onNodeWithText("בחר נושא מהעירייה").assertIsNotEnabled()

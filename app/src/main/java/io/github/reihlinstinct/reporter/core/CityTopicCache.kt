@@ -8,6 +8,9 @@ import java.time.Instant
 /** Public catalog only, never credentials or query text. Atomic last-good replacement. */
 class CityTopicCache(private val file: File, private val now: () -> Instant = Instant::now) {
     data class Snapshot(val topics: List<MunicipalSubject>, val checkedAt: Instant, val fingerprint: String) {
+        /** A clamped future timestamp is refresh-due, not a genuine 1970 check. */
+        fun knownCheckDate(): java.time.LocalDate? = checkedAt.takeUnless { it == Instant.EPOCH }
+            ?.atZone(java.time.ZoneId.of("Asia/Jerusalem"))?.toLocalDate()
         fun stale(now: Instant): Boolean = checkedAt.plusSeconds(90L * 86400).isBefore(now)
         fun refreshDue(now: Instant): Boolean = checkedAt.plusSeconds(7L * 86400).isBefore(now)
     }
