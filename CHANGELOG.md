@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.34.4] - 2026-11-11
+
+### Other changes
+
+- build(deps): bump com.android.application from 9.5.0 to 9.5.1 (#269) (030105c)
+
 ## [0.34.3] - 2026-11-11
 
 ### Other changes
