@@ -21,6 +21,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.room.Room
 import il.sidewalks.reporter.BuildConfig
@@ -450,6 +453,15 @@ fun AppShell(
     Scaffold(
         bottomBar = {
             if (page == "home" || page == "settings" || page == "reports") {
+                Column {
+                // Issue #295: one shared status slot above the bar on every page
+                // that has it, so a note (e.g. "set a screen lock" when the
+                // Settings tap is blocked) is visible from Reports too, not
+                // only from Home. The polite live region makes TalkBack
+                // announce it when it appears.
+                if (status.isNotEmpty()) {
+                    Text(status, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).semantics { liveRegion = LiveRegionMode.Polite })
+                }
                 NavigationBar {
                     NavigationBarItem(
                         selected = page == "home",
@@ -469,6 +481,7 @@ fun AppShell(
                         icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                         label = { Text(strings.t("shell.nav.settings")) },
                     )
+                }
                 }
             }
         },
@@ -513,9 +526,10 @@ fun AppShell(
             }, onBack = { page = "home" },
                 onSubmit = { shown -> submitReport(shown, outgoing.takeIf { image != null }) },
                 submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, noDeviceCredential = noDeviceCredential)
-            // Save feedback lands in the shell status; show it here as on
-            // home/settings so שמור טיוטה visibly confirms (driver waits on it).
-            if (status.isNotEmpty()) Text(status)
+            // Save feedback lands in the shell status; the review page has no
+            // bottom bar, so it keeps its own announced slot (home/settings/
+            // reports share the one above the bar).
+            if (status.isNotEmpty()) Text(status, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         }
         "settings" -> SettingsScreen(profile, save = { value, touchedMunicipal, cleared ->
             persistSettings(value, touchedMunicipal, cleared)
@@ -532,7 +546,6 @@ fun AppShell(
                         }
                     }
                 }, modifier = Modifier.fillMaxWidth()) { Text(strings.t("shell.debug.run_button")) }
-                if (status.isNotEmpty()) Text(status)
             }
         } else null, selectedLanguage = selectedLanguage, onLanguageSelected = languageController::select,
             onLicenses = { page = "licenses" })
@@ -560,7 +573,6 @@ fun AppShell(
                 OutlinedButton(onClick = { openRecord(record) }, modifier = Modifier.fillMaxWidth()) { Text(strings.t("shell.home.open_draft", mapOf("id" to record.stableId.take(8)))) }
             }
             if (draft != null) OutlinedButton(onClick = { page = "review" }, modifier = Modifier.fillMaxWidth()) { Text(strings.t("shell.home.continue_review")) }
-            if (status.isNotEmpty()) Text(status)
             Text(strings.t("shell.home.login_unavailable"), style = MaterialTheme.typography.bodySmall)
             Text(strings.t("shell.home.permission_note"), style = MaterialTheme.typography.bodySmall)
         }

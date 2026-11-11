@@ -154,4 +154,30 @@ class SettingsSaveGateTest {
         context.getSharedPreferences(il.sidewalks.reporter.ui.FirstRunStore.PREFS_NAME, android.content.Context.MODE_PRIVATE)
             .edit().remove(il.sidewalks.reporter.ui.FirstRunStore.KEY_FIRST_RUN_SEEN).commit()
     }
+
+    @Test fun settingsTapFromReportsOnALocklessDeviceShowsTheNote() {
+        pinHebrew()
+        var authentications = 0
+        compose.setContent { AppTheme {
+            AppShell(
+                authenticate = { _, _, action -> authentications++; action() },
+                hasDeviceCredential = { false },
+                requestCamera = {},
+                readSettings = { null },
+                saveSettings = {},
+            )
+        } }
+        compose.onNodeWithText("הדיווחים שלי").performClick()
+        compose.onNodeWithText("הגדרות").performClick()
+        // The blocked tap surfaces the note on the Reports page too (the
+        // shared status slot above the bar), politely announced, and never
+        // reaches authenticate.
+        compose.onNodeWithText("הגדר נעילת מסך")
+            .assertIsDisplayed()
+            .assert(androidx.compose.ui.test.SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+        screenshot("reports-settings-tap-no-device-lock.png")
+        compose.runOnIdle { assertEquals(0, authentications) }
+        // Still on Reports: the settings form never opened.
+        compose.onNodeWithText("אמת זהות ושמור מוצפן").assertDoesNotExist()
+    }
 }
