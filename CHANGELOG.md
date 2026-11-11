@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-11-11
+
+### Features
+
+- feat: #88 inactive journal commit protocol and fault tests (#289) (ebaeac2)
+
 ## [0.33.1] - 2026-11-11
 
 ### Fixes
