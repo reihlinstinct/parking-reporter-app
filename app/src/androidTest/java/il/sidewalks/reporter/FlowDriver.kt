@@ -191,6 +191,9 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
             "עמוד / מחסום פגום" -> "1280"
             else -> fields.categoryLabel
         }
+        compose.waitUntil(15_000) {
+            compose.onAllNodesWithText("חפש נושא, תיאור או מספר").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextReplacement(code)
         val topic = il.sidewalks.reporter.municipal.CityTopicRepository(
             InstrumentationRegistry.getInstrumentation().targetContext).topics().first { it.code == code }

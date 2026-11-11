@@ -20,8 +20,10 @@ class CityTopicPickerTest {
         compose.setContent { AppTheme { CityTopicPicker(syntheticCityTopics().topics, null, emptyList(),
             mapOf("1280" to listOf("התקנת עמודים")), {}, { chosen = it }) } }
         compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextInput("התקנת עמודים")
-        compose.waitUntil(5_000) { compose.onNodeWithText("1 תוצאות").isDisplayed() }
-        compose.onNodeWithText("1 תוצאות").assertIsDisplayed()
+        compose.waitUntil(5_000) { compose.onNodeWithText("\u20661\u2069 תוצאות").isDisplayed() }
+        compose.onNodeWithText("\u20661\u2069 תוצאות").assertIsDisplayed()
+            .assert(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.LiveRegion,
+                androidx.compose.ui.semantics.LiveRegionMode.Polite))
         compose.onNodeWithText("עמוד מחסום ברזל נוטה ליפול / נפל", useUnmergedTree = true).assertIsDisplayed().performClick()
         compose.runOnIdle { assertEquals("1280", chosen?.code) }
         compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextReplacement("17841")
