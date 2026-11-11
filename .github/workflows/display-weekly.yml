@@ -73,10 +73,16 @@ jobs:
             adb shell wm size > app/build/reports/display/device.txt
             adb shell wm density >> app/build/reports/display/device.txt
             adb shell settings get system font_scale >> app/build/reports/display/device.txt
-            adb shell am instrument -w -r -e class 'il.sidewalks.reporter.M1ShellTest#photoFirstHomeScreenshot,il.sidewalks.reporter.M1ShellTest#noLockscreenGreysSendWithNote,il.sidewalks.reporter.SettingsSaveGateTest#missingRequiredFieldsAreListedNextToTheButton' il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/display/instrumentation.txt 2>&1; echo $? > app/build/reports/display/instrumentation.rc; cat app/build/reports/display/instrumentation.txt
+            adb shell "screenrecord --time-limit 120 /sdcard/display-test.mp4 >/dev/null 2>&1 &"
+            adb shell am instrument -w -r -e class 'il.sidewalks.reporter.M1ShellTest#categoryPickerCurrentFourTopicsScreenshot,il.sidewalks.reporter.M1ShellTest#photoFirstHomeScreenshot,il.sidewalks.reporter.M1ShellTest#noLockscreenGreysSendWithNote,il.sidewalks.reporter.SettingsSaveGateTest#missingRequiredFieldsAreListedNextToTheButton' il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/display/instrumentation.txt 2>&1; echo $? > app/build/reports/display/instrumentation.rc; cat app/build/reports/display/instrumentation.txt
+            adb shell pkill -INT screenrecord || true
+            sleep 2
+            adb pull /sdcard/display-test.mp4 app/build/reports/display/display-test.mp4 || true
             adb logcat -d -v threadtime > app/build/reports/display/logcat.txt || true
             python3 scripts/test_summary.py --title 'Display screenshots (${{ matrix.label }}, API36)' --instrumentation app/build/reports/display/instrumentation.txt --check; echo $? > app/build/reports/display/summary.rc
-            for f in design-home-synthetic.png design-home-camera-scrolled.png design-home-gallery-scrolled.png m1-review-no-lockscreen-synthetic.png settings-save-missing-fields.png; do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/display/screenshots/$f" || true; done
+            for f in category-picker-open.png category-picker-chosen.png design-home-synthetic.png design-home-camera-scrolled.png design-home-gallery-scrolled.png m1-review-no-lockscreen-synthetic.png settings-save-missing-fields.png; do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/display/screenshots/$f" || true; done
+            test -s app/build/reports/display/screenshots/category-picker-open.png
+            test -s app/build/reports/display/screenshots/category-picker-chosen.png
             test -s app/build/reports/display/screenshots/design-home-synthetic.png
             test -s app/build/reports/display/screenshots/design-home-camera-scrolled.png
             test -s app/build/reports/display/screenshots/design-home-gallery-scrolled.png

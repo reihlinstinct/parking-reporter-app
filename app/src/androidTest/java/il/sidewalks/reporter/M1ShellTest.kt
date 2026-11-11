@@ -248,6 +248,26 @@ class M1ShellTest {
         compose.onNodeWithText("הבדיקה הסינתטית הצליחה", substring = true).assertExists()
         screenshot("m1-home-intake-synthetic.png")
     }
+    @Test fun categoryPickerCurrentFourTopicsScreenshot() {
+        compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}) } }
+        // A popup is a separate root. Capture the full device to include both
+        // the popup and underlying review, not an arbitrary Compose root.
+        Thread.sleep(1500)
+        compose.onNodeWithText("חניה על המדרכה ▾").performClick()
+        compose.onNodeWithText("תמרור שבור").assertIsDisplayed()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().let { image ->
+            File(context.filesDir, "category-picker-open.png").outputStream().use {
+                image.compress(Bitmap.CompressFormat.PNG, 100, it)
+            }
+            image.recycle()
+        }
+        Thread.sleep(2000)
+        compose.onNodeWithText("תמרור שבור").performClick()
+        compose.onNodeWithText("תמרור שבור ▾").assertIsDisplayed()
+        screenshot("category-picker-chosen.png")
+        Thread.sleep(1500)
+    }
     @Test fun nonVehicleReviewHasNoPlateAndCorrectionResetsText() {
         var saved: ReviewDraft? = null
         val bitmap = Bitmap.createBitmap(700, 300, Bitmap.Config.ARGB_8888)
