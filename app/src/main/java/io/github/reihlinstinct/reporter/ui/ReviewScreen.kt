@@ -137,7 +137,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             confirmButton = { TextButton(onClick = { askAddressConsent = false; scope.launch { findAddress() } }) { Text(s.t("review.location.lookup_yes")) } },
             dismissButton = { TextButton(onClick = { askAddressConsent = false }) { Text(s.t("review.location.lookup_later")) } })
     }
-    Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxSize().systemBarsPadding().imePadding().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(s.t("review.title"), style = MaterialTheme.typography.titleLarge)
             TextButton(onClick = { editing = !editing }) { Text(s.t(if (editing) "review.edit.done" else "review.edit.start")) }
