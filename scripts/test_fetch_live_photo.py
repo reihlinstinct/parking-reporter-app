@@ -65,6 +65,33 @@ class PhotoTests(unittest.TestCase):
             self.assertEqual(b'prior', self.dest.read_bytes())
             self.assertEqual([self.dest], list(self.dest.parent.iterdir()))
 
+    def test_default_opener_wires_no_redirect(self):
+        opener = FakeOpener(b'photo')
+        with patch.object(fetch.urllib.request, 'build_opener', return_value=opener) as build:
+            fetch.stage(self.dest, self.env)
+        build.assert_called_once()
+        self.assertEqual(1, len(build.call_args.args))
+        self.assertIsInstance(build.call_args.args[0], fetch.NoRedirect)
+        self.assertEqual(b'photo', self.dest.read_bytes())
+        self.assertEqual(1, len(opener.requests))
+
+    def test_matching_digest_still_refuses_over_limit(self):
+        data = b'photo' * 30
+        self.dest.write_bytes(b'prior')
+        env = {**self.env, 'APPROVED_PHOTO_SHA256_INPUT': hashlib.sha256(data).hexdigest()}
+        with patch.object(fetch, 'MAX_BYTES', 100):
+            with self.assertRaisesRegex(ValueError, 'photo exceeds size limit'):
+                fetch.stage(self.dest, env, FakeOpener(data))
+        self.assertEqual(b'prior', self.dest.read_bytes())
+        self.assertEqual([self.dest], list(self.dest.parent.iterdir()))
+
+    def test_matching_digest_accepts_exact_limit(self):
+        data = b'photo' * 20
+        env = {**self.env, 'APPROVED_PHOTO_SHA256_INPUT': hashlib.sha256(data).hexdigest()}
+        with patch.object(fetch, 'MAX_BYTES', len(data)):
+            fetch.stage(self.dest, env, FakeOpener(data))
+        self.assertEqual(data, self.dest.read_bytes())
+
     def test_network_failure_cleans_temp(self):
         opener = FakeOpener(b'photo')
         with patch.object(opener, 'open', side_effect=OSError('synthetic failure')):
