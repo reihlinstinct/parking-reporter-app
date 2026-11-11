@@ -4,11 +4,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class PhotoConsentTest {
+    private val locale = il.sidewalks.reporter.i18n.I18nTestFiles.realCatalog().defaultLanguage!!.code
     private val photo = TrainingPhoto("a".repeat(64), "synthetic-processing-v1")
     private val terms = TrainingTerms("synthetic-v1", "b".repeat(64))
     private fun review() = PhotoConsent(photo, terms)
     private fun confirm(review: PhotoConsent) = review.confirmExplicitly("synthetic-contribution-id",
-        photo.derivativeSha256, terms.sha256, "he", 1000)
+        photo.derivativeSha256, terms.sha256, locale, 1000)
     private fun fails(action: () -> Unit) {
         try { action(); fail("Must refuse") } catch (e: Exception) { /* expected */ }
     }
@@ -30,15 +31,15 @@ class PhotoConsentTest {
         assertEquals(terms.sha256, receipt.termsSha256)
         assertEquals(terms.version, receipt.termsVersion)
         assertEquals("blurred-scene-category-v1", receipt.purpose)
-        assertEquals("he", receipt.locale)
+        assertEquals(locale, receipt.locale)
         assertEquals(1000L, receipt.grantedAtEpochMillis)
         assertEquals("TrainingConsentReceipt(redacted)", receipt.toString())
         fails { confirm(review) }
     }
     @Test fun mismatchedReviewNeverGrants() {
         val review = review()
-        fails { review.confirmExplicitly("synthetic-contribution-id", "c".repeat(64), terms.sha256, "he", 1) }
-        fails { review.confirmExplicitly("synthetic-contribution-id", photo.derivativeSha256, "c".repeat(64), "he", 1) }
+        fails { review.confirmExplicitly("synthetic-contribution-id", "c".repeat(64), terms.sha256, locale, 1) }
+        fails { review.confirmExplicitly("synthetic-contribution-id", photo.derivativeSha256, "c".repeat(64), locale, 1) }
         assertEquals(PhotoConsent.State.OFF, review.state)
         assertNull(review.receiptForCurrentReview())
     }
@@ -54,8 +55,8 @@ class PhotoConsentTest {
         }
     }
     @Test fun malformedContextsRefusedNoGrant() {
-        for ((id, locale, time) in listOf(Triple("short", "he", 1L),
-            Triple("synthetic-contribution-id", "", 1L), Triple("synthetic-contribution-id", "he", 0L))) {
+        for ((id, locale, time) in listOf(Triple("short", locale, 1L),
+            Triple("synthetic-contribution-id", "", 1L), Triple("synthetic-contribution-id", locale, 0L))) {
             val review = review()
             fails { review.confirmExplicitly(id, photo.derivativeSha256, terms.sha256, locale, time) }
             assertEquals(PhotoConsent.State.OFF, review.state)
