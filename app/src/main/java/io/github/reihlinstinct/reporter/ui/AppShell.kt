@@ -612,15 +612,21 @@ fun AppShell(
             Text(strings.t("shell.home.title"), style = MaterialTheme.typography.headlineMedium)
             Text(strings.t("shell.home.subtitle"), style = MaterialTheme.typography.titleLarge)
             Text(strings.t("shell.home.on_device_note"))
-            Button(onClick = { requestCamera { page = "camera" } }, modifier = Modifier.fillMaxWidth()) {
-                Icon(PhotoCameraIcon, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(strings.t("shell.home.take_photo"))
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(onClick = { requestCamera { page = "camera" } },
+                    modifier = Modifier.weight(1f).fillMaxHeight().heightIn(min = 56.dp)) {
+                    Icon(PhotoCameraIcon, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(strings.t("shell.home.take_photo"), modifier = Modifier.weight(1f))
+                }
+                OutlinedButton(onClick = {
+                    pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }, modifier = Modifier.weight(1f).fillMaxHeight().heightIn(min = 56.dp)) {
+                    Icon(PhotoFolderIcon, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(strings.t("shell.home.upload_photo"), modifier = Modifier.weight(1f))
+                }
             }
-            OutlinedButton(onClick = {
-                pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-            }, modifier = Modifier.fillMaxWidth()) { Text(strings.t("shell.home.upload_photo")) }
-            Text(strings.t("shell.home.upload_note"), style = MaterialTheme.typography.bodySmall)
             Text(strings.t("shell.home.test_build_note"), style = MaterialTheme.typography.bodySmall)
             Text(strings.t("shell.home.drafts_title"), style = MaterialTheme.typography.titleMedium)
             if (records.isEmpty() && draft == null) Text(strings.t("shell.home.no_drafts"), style = MaterialTheme.typography.bodySmall)
@@ -629,7 +635,6 @@ fun AppShell(
             }
             if (draft != null) OutlinedButton(onClick = { page = "review" }, modifier = Modifier.fillMaxWidth()) { Text(strings.t("shell.home.continue_review")) }
             Text(strings.t("shell.home.login_unavailable"), style = MaterialTheme.typography.bodySmall)
-            Text(strings.t("shell.home.permission_note"), style = MaterialTheme.typography.bodySmall)
         }
     }
     }

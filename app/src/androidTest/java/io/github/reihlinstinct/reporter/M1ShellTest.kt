@@ -302,6 +302,14 @@ class M1ShellTest {
         compose.onNodeWithText("בית").assertExists()
         compose.onNodeWithText("הגדרות").assertExists()
         compose.onNodeWithText("בדיקת פיתוח: חבילה מוצפנת ללא רשת").assertDoesNotExist()
+        // Same row, separate click targets, equal heights, and no stale instructions.
+        compose.onNodeWithText("העלה תמונה").assertExists()
+        val camera = compose.onNodeWithText("צלם תמונה").fetchSemanticsNode().boundsInRoot
+        val gallery = compose.onNodeWithText("העלה תמונה").fetchSemanticsNode().boundsInRoot
+        assertTrue("Photo actions share a row", kotlin.math.abs(camera.top - gallery.top) < 2f)
+        assertTrue("Photo actions do not overlap", camera.right <= gallery.left || gallery.right <= camera.left)
+        compose.onNodeWithText("העלאה מהגלריה אינה דורשת הרשאות", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("ביטול הרשאת מצלמה או אימות", substring = true).assertDoesNotExist()
         screenshot("design-home-synthetic.png")
         // Issues #304/#306: at 200% text on a compact viewport the actions
         // may begin below the fold. Prove the existing scroll container can
