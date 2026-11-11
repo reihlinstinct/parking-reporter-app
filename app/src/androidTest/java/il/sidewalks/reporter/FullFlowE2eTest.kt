@@ -351,6 +351,13 @@ class FullFlowE2eTest {
                 val blocker = File(
                     InstrumentationRegistry.getInstrumentation().targetContext.noBackupFilesDir,
                     "submissions")
+                // Earlier tests may leave the empty submissions directory.
+                // Remove only a provably empty directory, never other records.
+                if (blocker.isDirectory) {
+                    assumeTrue("Preserve existing submission records", blocker.list()?.isEmpty() == true)
+                    assertTrue("Remove empty synthetic-state directory", blocker.delete())
+                }
+                assumeTrue("Preserve a pre-existing non-directory", !blocker.exists())
                 blocker.writeText("not a directory - an unreadable listing must fail closed")
                 try {
                     val driver = FlowDriver(compose)
