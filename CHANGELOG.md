@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.30.1] - 2026-11-11
+
+### Other changes
+
+- ci: stage digest-bound live photos from immutable private inputs (#281) (5c8037a)
+
 ## [0.30.0] - 2026-11-11
 
 ### Features
