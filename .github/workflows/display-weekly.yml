@@ -76,8 +76,10 @@ jobs:
             adb shell am instrument -w -r -e class 'il.sidewalks.reporter.M1ShellTest#photoFirstHomeScreenshot,il.sidewalks.reporter.M1ShellTest#noLockscreenGreysSendWithNote,il.sidewalks.reporter.SettingsSaveGateTest#missingRequiredFieldsAreListedNextToTheButton' il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/display/instrumentation.txt 2>&1; echo $? > app/build/reports/display/instrumentation.rc; cat app/build/reports/display/instrumentation.txt
             adb logcat -d -v threadtime > app/build/reports/display/logcat.txt || true
             python3 scripts/test_summary.py --title 'Display screenshots (${{ matrix.label }}, API36)' --instrumentation app/build/reports/display/instrumentation.txt --check; echo $? > app/build/reports/display/summary.rc
-            for f in design-home-synthetic.png m1-review-no-lockscreen-synthetic.png settings-save-missing-fields.png; do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/display/screenshots/$f" || true; done
+            for f in design-home-synthetic.png design-home-camera-scrolled.png design-home-gallery-scrolled.png m1-review-no-lockscreen-synthetic.png settings-save-missing-fields.png; do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/display/screenshots/$f" || true; done
             test -s app/build/reports/display/screenshots/design-home-synthetic.png
+            test -s app/build/reports/display/screenshots/design-home-camera-scrolled.png
+            test -s app/build/reports/display/screenshots/design-home-gallery-scrolled.png
             test -s app/build/reports/display/screenshots/m1-review-no-lockscreen-synthetic.png
             test -s app/build/reports/display/screenshots/settings-save-missing-fields.png
             test "$(cat app/build/reports/display/instrumentation.rc)" = 0

@@ -279,6 +279,22 @@ class M1ShellTest {
         compose.onNodeWithText("הגדרות").assertExists()
         compose.onNodeWithText("בדיקת פיתוח: חבילה מוצפנת ללא רשת").assertDoesNotExist()
         screenshot("design-home-synthetic.png")
+        // Issues #304/#306: at 200% text on a compact viewport the actions
+        // may begin below the fold. Prove the existing scroll container can
+        // reveal each complete button instead of treating a viewport crop as
+        // an unreachable action. Full visible bounds are stronger than exists.
+        for ((label, file) in listOf(
+            "צלם תמונה" to "design-home-camera-scrolled.png",
+            "העלה תמונה" to "design-home-gallery-scrolled.png",
+        )) {
+            val action = compose.onNodeWithText(label).performScrollTo().assertIsDisplayed()
+            val bounds = action.fetchSemanticsNode().boundsInRoot
+            val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+            assertTrue("$label must be fully inside viewport: $bounds vs $root",
+                bounds.top >= root.top && bounds.bottom <= root.bottom &&
+                    bounds.left >= root.left && bounds.right <= root.right)
+            screenshot(file)
+        }
     }
     @Test fun originalEvidenceHashAndMissingMetadata() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
