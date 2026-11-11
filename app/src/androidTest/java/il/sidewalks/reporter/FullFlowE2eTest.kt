@@ -5,6 +5,7 @@ import il.sidewalks.reporter.ui.theme.AppTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.room.Room
@@ -27,6 +28,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
@@ -122,6 +124,81 @@ class FullFlowE2eTest {
             assertEquals(FlowDriver.SendOutcome.SUBMIT_FAILED, driver.tapSendAndAwaitOnce(5_000))
             assertEquals(0, clientCalls)
         } finally { cleanOwnedState() }
+    }
+
+    /** #244, current single-confirmation UX: first tap may add disclosure,
+     * but must not send it until a later explicit Send on the revised text. */
+    @Test fun firstSendDisclosurePersistsRevisionAndReloadsWithoutNetworkUntilSecondSend() {
+        claimSyntheticPhoto()
+        val settings = ReporterSettings(
+            firstName = "ישראל", lastName = "ישראלי", phone = "+12025550123",
+            idNumber = "", email = "synthetic@example.com", passportMode = true,
+            passportNumber = "SYNTHETIC-PASSPORT", municipalSubscriptionKey = "synthetic-key",
+            municipalUsername = "synthetic-user", municipalPassword = "synthetic-pass")
+        val clientCreations = java.util.concurrent.atomic.AtomicInteger()
+        val calls = java.util.concurrent.CopyOnWriteArrayList<String>()
+        val reports = java.util.concurrent.CopyOnWriteArrayList<String>()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val db = Room.databaseBuilder(context, ReportDatabase::class.java, "report-ledger.db").build()
+        fun row() = requireNotNull(runBlocking { db.reports().findPhoto(requireNotNull(ownedPhotoHash)) })
+        try {
+            launchFlow(settings) { _ ->
+                clientCreations.incrementAndGet()
+                object : MunicipalClient {
+                    override fun login(): String { calls += "login"; return "synthetic-token" }
+                    override fun upsertContact(token: String, contact: LinkedHashMap<String, Any?>): Map<String, Any?> {
+                        calls += "contact"
+                        assertEquals(il.sidewalks.reporter.municipal.PassportSubmission.COMPATIBILITY_ID, contact["ContactIdNumber"])
+                        assertEquals(il.sidewalks.reporter.municipal.PassportSubmission.INTERNATIONAL_PHONE_PLACEHOLDER, contact["MobilePhoneNumber"])
+                        return mapOf("ContactIdInCRM" to "synthetic-contact")
+                    }
+                    override fun createCase(token: String, contact: LinkedHashMap<String, Any?>, report: LinkedHashMap<String, Any?>): Map<String, Any?> {
+                        calls += "create"; reports += report["CaseDescription"].toString()
+                        return mapOf("CaseIdInCRM" to "synthetic-case", "WebCaseIdInCRM" to "synthetic-web", "CaseNumberInCRM" to "2000-0000000")
+                    }
+                    override fun attachPhoto(token: String, caseIdInCRM: String, webCaseIdInCRM: String, fileName: String, jpeg: ByteArray) {
+                        calls += "attach"
+                    }
+                }
+            }
+            val driver = FlowDriver(compose)
+            val text = "רכב חונה על המדרכה בתרחיש בדיקה סינתטי"
+            driver.driveToSaved(FlowFields(text, "12345678", "רחוב בדיקה 1",
+                "2026-01-01T12:00:00+02:00", "31.77", "35.2137", "חניה על המדרכה"))
+            val before = row()
+            assertEquals(FlowDriver.SendOutcome.SUBMIT_FAILED, driver.tapSendAndAwaitOnce(10_000))
+            val revised = row()
+            val decoded = il.sidewalks.reporter.ledger.DraftCodec.decode(revised.draftJson)
+            val expected = il.sidewalks.reporter.municipal.PassportSubmission.reconcileDisclosure(text, settings)
+            assertEquals(before.revision + 1, revised.revision)
+            assertEquals(expected, decoded.exactHebrewText)
+            assertEquals(decoded.digest(), revised.reviewedDigest)
+            assertTrue(il.sidewalks.reporter.municipal.PassportSubmission.hasReviewedDisclosure(decoded.exactHebrewText, settings))
+            assertEquals(0, clientCreations.get())
+            assertTrue(calls.isEmpty())
+            assertFalse(File(context.noBackupFilesDir, "submissions/${revised.stableId}.json").exists())
+            compose.onNodeWithText("xxxxxORT", substring = true).assertExists()
+            driver.screenshot("disclosure-first-send-revised.png")
+            // Dispose ReviewScreen and restore from the actual persisted ledger row.
+            compose.onNodeWithText("חזור").performScrollTo().performClick()
+            compose.onNodeWithText("הדיווחים שלי").performClick()
+            compose.waitUntil(10_000) {
+                compose.onAllNodesWithText(revised.stableId.take(8), substring = true).fetchSemanticsNodes().isNotEmpty()
+            }
+            // Catalog placeholders insert bidi isolates around IDs, so do not
+            // hardcode a visually equivalent but byte-different button label.
+            compose.onNodeWithText(revised.stableId.take(8), substring = true).performScrollTo().performClick()
+            compose.onNodeWithText("xxxxxORT", substring = true).assertExists()
+            assertEquals(revised, row())
+            assertEquals(0, clientCreations.get())
+            assertTrue(calls.isEmpty())
+            // Re-saving/reloading is not sending. Only the second explicit Send
+            // can authorize the now-visible full disclosure and contact details.
+            driver.tapSendAndAwaitCaseNumber()
+            assertEquals(1, clientCreations.get())
+            assertEquals(listOf("login", "contact", "create", "attach"), calls.toList())
+            assertEquals(listOf(expected), reports.toList())
+        } finally { db.close(); cleanOwnedState() }
     }
 
     @Test fun fullReportFlowStubbedServer() {
@@ -274,6 +351,13 @@ class FullFlowE2eTest {
                 val blocker = File(
                     InstrumentationRegistry.getInstrumentation().targetContext.noBackupFilesDir,
                     "submissions")
+                // Earlier tests may leave the empty submissions directory.
+                // Remove only a provably empty directory, never other records.
+                if (blocker.isDirectory) {
+                    assumeTrue("Preserve existing submission records", blocker.list()?.isEmpty() == true)
+                    assertTrue("Remove empty synthetic-state directory", blocker.delete())
+                }
+                assumeTrue("Preserve a pre-existing non-directory", !blocker.exists())
                 blocker.writeText("not a directory - an unreadable listing must fail closed")
                 try {
                     val driver = FlowDriver(compose)
