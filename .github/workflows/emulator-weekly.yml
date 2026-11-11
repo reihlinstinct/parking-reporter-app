@@ -1,0 +1,89 @@
+name: Weekly emulator matrix
+
+# Issue #297 (owner 2026-11-11): the per-PR emulator job covers only the two
+# extremes (API 26 floor + latest). The popular mid versions run here weekly
+# on main: every Android version with >10% real-world share (33-36, per
+# apilevels.com / Statcounter 2026-10) plus the extremes. A failure opens an
+# issue. Public repo: Linux minutes are free; the only cost is queue time.
+
+on:
+  schedule:
+    # Sunday 04:00 UTC (06:00-07:00 in Israel).
+    - cron: '0 4 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  emulator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [26, 33, 34, 35, 36, 37]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - run: sh scripts/prepare_wrapper.sh
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: ${{ matrix.api }}
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            # Local OCR tests must work without emulator networking.
+            adb shell svc wifi disable
+            adb shell svc data disable
+            mkdir -p app/build/reports/androidTests/screenshots
+            # The emulator action runs every script line in its own sh:
+            # no variables, background jobs or shell options survive across
+            # lines. The instrumented exit code therefore goes to a file.
+            adb shell am instrument -w -r il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/androidTests/instrumentation.txt 2>&1; echo $? > app/build/reports/androidTests/instrumentation.rc; cat app/build/reports/androidTests/instrumentation.txt
+            adb logcat -d -v threadtime > app/build/reports/androidTests/logcat.txt || true
+            python3 scripts/test_summary.py --title 'Instrumented tests (emulator, API ${{ matrix.api }})' --instrumentation app/build/reports/androidTests/instrumentation.txt --check; echo $? > app/build/reports/androidTests/summary.rc
+            for f in $(adb shell run-as il.sidewalks.reporter ls files/ | tr -d '\r' | grep '\.png$'); do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/androidTests/screenshots/$f" || true; done
+            test "$(cat app/build/reports/androidTests/instrumentation.rc)" = "0"
+            test "$(cat app/build/reports/androidTests/summary.rc)" = "0"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: weekly-emulator-results-api${{ matrix.api }}
+          path: app/build/reports/androidTests/
+          retention-days: 14
+
+  report-failure:
+    needs: emulator
+    if: failure()
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write
+    steps:
+      - name: Open one issue per failing run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Dedupe: one open issue pins an already-reported broken week.
+          if gh issue list --state open --search "Weekly emulator matrix failed in:title" --json number --jq 'length' | grep -qv '^0$'; then
+            echo "an open weekly-matrix issue already exists; not opening another"
+            exit 0
+          fi
+          gh issue create --label ci --label "area: ci" \
+            --title "Weekly emulator matrix failed ($(date -u +%Y-%m-%d))" \
+            --body "The weekly API matrix (26, 33, 34, 35, 36, 37) failed on main at ${{ github.sha }}. See https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }} - the failing job name names the API level, and its uploaded artifact carries the instrumentation log, logcat and screenshots."
