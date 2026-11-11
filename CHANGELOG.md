@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-11-11
+
+### Features
+
+- feat: #88 inactive encrypted DAO and session repository (#284) (1694b79)
+
 ## [0.31.2] - 2026-11-11
 
 ### Other changes
