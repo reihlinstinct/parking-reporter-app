@@ -4,6 +4,7 @@ from pathlib import Path
 import re
 import hashlib
 import sys
+import subprocess
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -101,6 +102,12 @@ def check() -> list[str]:
                 or not re.search(r"compose\.setContent\s*\{\s*AppTheme\s*\{", live_source)
                 or re.search(r"\bMaterialTheme\s*\{", live_source)):
             errors.append("Live emulator flow must render with AppTheme, never baseline MaterialTheme")
+    # The existing scaffold CI invokes this checker. Keep icon geometry tests
+    # in that path without adding a workflow or third-party dependency.
+    icon_tests = subprocess.run([sys.executable, str(ROOT / "tests/test_launcher_geometry.py")],
+        capture_output=True, text=True)
+    if icon_tests.returncode:
+        errors.append("Launcher geometry regression failed: " + icon_tests.stderr)
     return errors
 
 
