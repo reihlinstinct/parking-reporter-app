@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.34.3] - 2026-11-11
+
+### Other changes
+
+- build(deps): bump actions/setup-java from 6.1.0 to 6.2.0 (#268) (23b8e88)
+
 ## [0.34.2] - 2026-11-11
 
 ### Other changes
