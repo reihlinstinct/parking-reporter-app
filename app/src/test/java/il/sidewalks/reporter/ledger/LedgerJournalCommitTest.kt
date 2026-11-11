@@ -1,0 +1,182 @@
+package il.sidewalks.reporter.ledger
+
+import org.junit.Assert.*
+import org.junit.Test
+
+class LedgerJournalCommitTest {
+    private val key = ByteArray(32) { it.toByte() }
+    private val instance = ByteArray(32) { (it + 50).toByte() }
+    private val fresh = LedgerJournalEnvelope.Origin.FRESH
+    private val migrated = LedgerJournalEnvelope.Origin.MIGRATED
+    private val creating = LedgerJournalEnvelope.Phase.FRESH_CREATING
+    private val migrating = LedgerJournalEnvelope.Phase.MIGRATING
+    private val cleaning = LedgerJournalEnvelope.Phase.CLEANING
+    private val complete = LedgerJournalEnvelope.Phase.COMPLETE
+    private fun entry(origin: LedgerJournalEnvelope.Origin, phase: LedgerJournalEnvelope.Phase) =
+        LedgerJournalEnvelope.Entry(origin, phase)
+    private fun fails(action: () -> Unit) {
+        try { action(); fail("Must fail closed") } catch (e: Exception) { /* expected */ }
+    }
+
+    /** Logical protocol fake, not a claim about actual filesystem crash durability. */
+    private class Port : LedgerJournalPort {
+        var committed: ByteArray? = null
+        var temp: ByteArray? = null
+        var locked = false
+        var stopAfter: String? = null
+        var corruptReadback = false
+        var missingReadback = false
+        val events = mutableListOf<String>()
+        private fun step(name: String) { check(locked); events += name; if (stopAfter == name) error("synthetic fault") }
+        override fun <T> exclusive(block: () -> T): T {
+            check(!locked); locked = true
+            return try { block() } finally { locked = false }
+        }
+        override fun readCommitted(): ByteArray? {
+            step("read")
+            if (events.contains("dir-sync") && missingReadback) return null
+            return committed?.copyOf()?.also {
+                if (events.contains("dir-sync") && corruptReadback) it[it.lastIndex] = (it.last().toInt() xor 1).toByte()
+            }
+        }
+        override fun writeTempAndSync(bytes: ByteArray) { temp = bytes.copyOf(); step("temp-sync") }
+        override fun renameTempToCommitted() { committed = requireNotNull(temp); temp = null; step("rename") }
+        override fun syncParentDirectory() { step("dir-sync") }
+    }
+
+    @Test fun exactOrderLockReadbackAndAllowedForwardSequence() {
+        val p = Port(); val store = LedgerJournalCommit(p, instance)
+        store.commit(entry(migrated, migrating), key)
+        assertEquals(listOf("read", "temp-sync", "rename", "dir-sync", "read"), p.events)
+        p.events.clear()
+        store.commit(entry(migrated, cleaning), key)
+        store.commit(entry(migrated, complete), key)
+        val result = store.read(key)!!
+        assertEquals(migrated, result.origin); assertEquals(complete, result.phase)
+        assertFalse(p.locked)
+        // Same-state write is safe when caller retries after an uncertain journal
+        // receipt; it never means retrying a municipal submission.
+        store.commit(entry(migrated, complete), key)
+    }
+
+    @Test fun everyDurabilityFailureThrowsRetainsAuthenticatedOldOrNewAndUnlocks() {
+        for (fault in listOf("read", "temp-sync", "rename", "dir-sync")) {
+            val p = Port(); val store = LedgerJournalCommit(p, instance)
+            store.commit(entry(migrated, migrating), key)
+            p.events.clear(); p.stopAfter = fault
+            fails { store.commit(entry(migrated, cleaning), key) }
+            assertFalse(p.locked)
+            p.stopAfter = null
+            val recovered = store.read(key)!!
+            assertEquals(migrated, recovered.origin)
+            assertEquals(if (fault == "rename" || fault == "dir-sync") cleaning else migrating, recovered.phase)
+        }
+    }
+
+    @Test fun backwardsSkipAndOriginChangeDoNotWrite() {
+        val p = Port(); val store = LedgerJournalCommit(p, instance)
+        fails { store.commit(entry(migrated, complete), key) }
+        assertNull(p.committed)
+        store.commit(entry(migrated, migrating), key)
+        for (next in listOf(entry(migrated, complete), entry(fresh, creating))) {
+            val before = p.committed!!.copyOf(); p.events.clear()
+            fails { store.commit(next, key) }
+            assertEquals(listOf("read"), p.events)
+            assertArrayEquals(before, p.committed)
+        }
+        store.commit(entry(migrated, cleaning), key)
+        fails { store.commit(entry(migrated, migrating), key) }
+        store.commit(entry(migrated, complete), key)
+        fails { store.commit(entry(migrated, cleaning), key) }
+    }
+
+    @Test fun freshSequenceAndMissingCorruptReadbackRefuseSuccess() {
+        for (missing in listOf(false, true)) {
+            val p = Port(); val store = LedgerJournalCommit(p, instance)
+            store.commit(entry(fresh, creating), key)
+            p.events.clear()
+            if (missing) p.missingReadback = true else p.corruptReadback = true
+            fails { store.commit(entry(fresh, complete), key) }
+            assertFalse(p.locked)
+        }
+    }
+
+    @Test fun corruptOrWrongKeyExistingJournalNeverOverwritten() {
+        val p = Port(); val store = LedgerJournalCommit(p, instance)
+        store.commit(entry(migrated, migrating), key)
+        val before = p.committed!!.copyOf(); p.events.clear()
+        fails { store.commit(entry(migrated, cleaning), ByteArray(32) { 99 }) }
+        assertArrayEquals(before, p.committed); assertEquals(listOf("read"), p.events)
+        p.committed = before.copyOf().also { it[it.lastIndex] = (it.last().toInt() xor 1).toByte() }
+        val corrupt = p.committed!!.copyOf(); p.events.clear()
+        fails { store.commit(entry(migrated, cleaning), key) }
+        assertArrayEquals(corrupt, p.committed); assertEquals(listOf("read"), p.events)
+    }
+    @Test fun staleCompleteOfOtherInstanceNeverReadOrOverwritten() {
+        val p = Port()
+        val old = LedgerJournalCommit(p, instance)
+        old.commit(entry(fresh, creating), key)
+        old.commit(entry(fresh, complete), key)
+        val before = p.committed!!.copyOf()
+        val other = instance.copyOf().also { it[0] = (it[0].toInt() xor 1).toByte() }
+        val newLedger = LedgerJournalCommit(p, other)
+        p.events.clear()
+        fails { newLedger.read(key) }
+        fails { newLedger.commit(entry(fresh, creating), key) }
+        fails { newLedger.commit(entry(fresh, complete), key) }
+        assertArrayEquals(before, p.committed)
+        assertTrue(p.events.all { it == "read" })
+        assertFalse(p.locked)
+    }
+
+    @Test fun identitySnapshotAndLengthValidation() {
+        val p = Port()
+        val supplied = instance.copyOf()
+        val store = LedgerJournalCommit(p, supplied)
+        supplied.fill(0)
+        store.commit(entry(fresh, creating), key)
+        assertEquals(creating, LedgerJournalCommit(p, instance).read(key)!!.phase)
+        for (size in listOf(0, 31, 33)) fails { LedgerJournalCommit(p, ByteArray(size)) }
+    }
+
+    @Test fun invalidOldJournalCannotBeOverwrittenByEitherInitialPhase() {
+        for (initial in listOf(entry(migrated, migrating), entry(fresh, creating))) {
+            for (invalid in listOf("corrupt", "wrong-key", "truncated")) {
+                val p = Port(); val store = LedgerJournalCommit(p, instance)
+                store.commit(entry(migrated, migrating), key)
+                if (invalid == "corrupt") p.committed = p.committed!!.copyOf().also {
+                    it[it.lastIndex] = (it.last().toInt() xor 1).toByte()
+                }
+                if (invalid == "truncated") p.committed = p.committed!!.copyOf(1)
+                val before = p.committed!!.copyOf(); p.events.clear()
+                val readKey = if (invalid == "wrong-key") ByteArray(32) { 99 } else key
+                fails { store.commit(initial, readKey) }
+                assertArrayEquals(before, p.committed)
+                assertNull(p.temp)
+                assertEquals(listOf("read"), p.events)
+                assertFalse(p.locked)
+            }
+        }
+    }
+
+    @Test fun readCannotExposePhaseUntilParentDirectorySyncSucceeds() {
+        val p = Port(); val store = LedgerJournalCommit(p, instance)
+        store.commit(entry(migrated, migrating), key)
+        p.events.clear(); p.stopAfter = "dir-sync"
+        fails { store.commit(entry(migrated, cleaning), key) }
+        // Rename is visible in this fake, but directory sync did not succeed.
+        p.events.clear()
+        fails { store.read(key) }
+        assertEquals(listOf("read", "dir-sync"), p.events)
+        assertFalse(p.locked)
+        // A new wrapper cannot bypass the read durability check either.
+        p.events.clear()
+        fails { LedgerJournalCommit(p, instance).read(key) }
+        assertEquals(listOf("read", "dir-sync"), p.events)
+        p.stopAfter = null; p.events.clear()
+        assertEquals(cleaning, store.read(key)!!.phase)
+        assertEquals(listOf("read", "dir-sync"), p.events)
+        assertFalse(p.locked)
+    }
+
+}
