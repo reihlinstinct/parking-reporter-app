@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-11-11
+
+### Features
+
+- feat: #88 inactive authenticated migration-journal codec (#288) (2c6ab3e)
+
 ## [0.32.0] - 2026-11-11
 
 ### Features
