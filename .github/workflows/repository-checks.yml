@@ -61,6 +61,8 @@ jobs:
         run: |
           /tmp/venv/bin/python -m unittest discover -s tests -p 'test_trial_submit_preflight.py' -v
           /tmp/venv/bin/python -m unittest discover -s tests -p 'test_vpn_submit.py' -v
+      - name: Weekly matrix failure reporter regression (mock gh, no network)
+        run: python3 -m unittest discover -s tests -p 'test_weekly_matrix_reporter.py' -v
       - name: Offline OCR network-isolation behavioral regression tests
         run: /tmp/venv/bin/python -m unittest discover -s tests -p 'test_ocr_network_isolation.py' -v
       - name: Run synthetic intake smoke tests

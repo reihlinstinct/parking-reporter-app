@@ -1,10 +1,10 @@
 name: Weekly emulator matrix
 
-# Issue #297 (owner 2026-11-11): the per-PR emulator job covers only the two
-# extremes (API 26 floor + latest). The popular mid versions run here weekly
-# on main: every Android version with >10% real-world share (33-36, per
-# apilevels.com / Statcounter 2026-10) plus the extremes. A failure opens an
-# issue. Public repo: Linux minutes are free; the only cost is queue time.
+# Issue #297: per-PR checks run API 30 + 36. This weekly job runs
+# API 29, 33, 34, 35, 36 and 37.0 on main. API 26 is not covered:
+# its emulator image failed on CI and the owner accepted dropping it.
+# API 29 and 37.0 remain known-unstable weekly probes, not proven green.
+# Public repo Linux minutes are free. Failures open a deduped issue.
 
 on:
   schedule:
@@ -27,9 +27,9 @@ jobs:
         # reaches the action as "37", which does not resolve in sdkmanager.
         api: ["29", "33", "34", "35", "36", "37.0"]
         include:
-          # Issue #297: on the 37.0 image the host-GPU path asserts in the
-          # guest graphics mapper and crashes system_server; -gpu guest
-          # renders fully in the guest (see android.yml).
+          # Mitigations retained for the experimental 37.0 probe. Neither
+          # guest GPU nor disabled ReadColorBufferDma has proven sufficient
+          # to prevent the image's system_server buffer-readback crash.
           - api: "37.0"
             emu_gpu: guest
             emu_features: -feature -ReadColorBufferDma
@@ -95,12 +95,18 @@ jobs:
       - name: Open one issue per failing run
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           # Dedupe: one open issue pins an already-reported broken week.
-          if gh issue list --state open --search "Weekly emulator matrix failed in:title" --json number --jq 'length' | grep -qv '^0$'; then
+          # Assignment preserves a lookup error under bash -e; never turn
+          # an API failure into an empty count and create a duplicate.
+          count=$(gh issue list --state open --search "Weekly emulator matrix failed in:title" --json number --jq 'length')
+          if [ "$count" -gt 0 ]; then
             echo "an open weekly-matrix issue already exists; not opening another"
             exit 0
           fi
           gh issue create --label ci --label "area: ci" \
             --title "Weekly emulator matrix failed ($(date -u +%Y-%m-%d))" \
-            --body "The weekly API matrix (26, 33, 34, 35, 36, 37) failed on main at ${{ github.sha }}. See https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }} - the failing job name names the API level, and its uploaded artifact carries the instrumentation log, logcat and screenshots."
+            --body "The weekly emulator matrix failed on main at $RUN_SHA. See $RUN_URL - each failing job name identifies its API level, and its uploaded artifact carries the instrumentation log, logcat and screenshots. The workflow matrix at this commit is the source of truth for the tested API levels."

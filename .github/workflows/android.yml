@@ -102,13 +102,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Issue #297 (owner 2026-11-11): per-PR the two extremes that are
-        # stable on CI - API 30 and the latest stable API 36. Older images
-        # (26: adbd exit 137, camera/EXIF breakage; 29: IME-never-hidden
-        # races) and the brand-new 37.0 image (system_server aborts on any
-        # buffer readback - a platform bug) are covered by the weekly matrix
-        # instead, whose auto-issue reports when they heal. Public repo:
-        # Linux minutes are free, the only cost is queue time.
+        # Issue #297: preserve API 30 coverage and add stable API 36.
+        # Weekly probes cover 29/33/34/35/36/37.0. API 26 is deliberately
+        # uncovered after its CI image failures; minSdk remains 26.
         api: ["30", "36"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -179,6 +175,7 @@ jobs:
             test -s app/build/reports/androidTests/screenshots/m2-ocr-synthetic.png
             test -s app/build/reports/androidTests/screenshots/design-home-synthetic.png
             test -s app/build/reports/androidTests/screenshots/design-sign-synthetic.png
+            test -s app/build/reports/androidTests/screenshots/design-sign-actions-synthetic.png
             test -s app/build/reports/androidTests/ocr-comparison.json
             test "$(cat app/build/reports/androidTests/instrumentation.rc)" = "0"
             test "$(cat app/build/reports/androidTests/summary.rc)" = "0"
