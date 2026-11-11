@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.33.1] - 2026-11-11
+
+### Fixes
+
+- fix: selected Ai06 launcher proportions and equal strokes (#291) (6f3ec6c)
+
 ## [0.33.0] - 2026-11-11
 
 ### Features
