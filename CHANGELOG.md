@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.34.6] - 2026-11-11
+
+### Fixes
+
+- fix(ui): reframe the app as reporting to Jerusalem 106, not "free sidewalks" (#299) (#300) (c4847e6)
+
 ## [0.34.5] - 2026-11-11
 
 ### Other changes
