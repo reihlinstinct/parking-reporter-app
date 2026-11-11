@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
 import il.sidewalks.reporter.ledger.ReportDatabase
@@ -192,6 +193,13 @@ class FullFlowE2eTest {
             assertEquals(revised, row())
             assertEquals(0, clientCreations.get())
             assertTrue(calls.isEmpty())
+            // Reopening starts derivative preparation asynchronously. Restored
+            // text alone does not mean the exact outgoing image is ready.
+            // Wait for the real preview, without another send attempt or delay.
+            compose.waitUntil(10_000) {
+                compose.onAllNodesWithContentDescription("צילום ראיה")
+                    .fetchSemanticsNodes().isNotEmpty()
+            }
             // Re-saving/reloading is not sending. Only the second explicit Send
             // can authorize the now-visible full disclosure and contact details.
             driver.tapSendAndAwaitCaseNumber()
