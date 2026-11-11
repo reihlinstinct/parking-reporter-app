@@ -93,6 +93,7 @@ class LedgerJournalCommitTest {
         for (missing in listOf(false, true)) {
             val p = Port(); val store = LedgerJournalCommit(p)
             store.commit(entry(fresh, creating), key)
+            p.events.clear()
             if (missing) p.missingReadback = true else p.corruptReadback = true
             fails { store.commit(entry(fresh, complete), key) }
             assertFalse(p.locked)
