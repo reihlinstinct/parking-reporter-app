@@ -161,7 +161,13 @@ jobs:
             # The emulator action runs every script line in its own sh:
             # no variables, background jobs or shell options survive across
             # lines. The instrumented exit code therefore goes to a file.
-            adb shell screenrecord --time-limit 180 /sdcard/test-run.mp4 > /dev/null 2>&1 &
+            # Issue #297: screenrecord crashes the 37.0 system image itself -
+            # its encoder aborts in the guest graphics mapper
+            # (mapper.ranchu: !rcEnc->featureInfo()->hasReadColorBufferDma),
+            # then system_server follows; -gpu guest does not help. Platform
+            # bug in the new image, so 37.0 runs screenshots only; the video
+            # is recorded on the other levels.
+            if [ "${{ matrix.api }}" != "37.0" ]; then adb shell screenrecord --time-limit 180 /sdcard/test-run.mp4 > /dev/null 2>&1 & fi
             adb shell am instrument -w -r il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/androidTests/instrumentation.txt 2>&1; echo $? > app/build/reports/androidTests/instrumentation.rc; cat app/build/reports/androidTests/instrumentation.txt
             adb shell pkill -INT screenrecord || true
             sleep 2
