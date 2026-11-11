@@ -18,6 +18,10 @@ import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import il.sidewalks.reporter.BuildConfig
 import il.sidewalks.reporter.i18n.Language
@@ -48,7 +52,17 @@ internal fun mergeReporterSettings(value: ReporterSettings, stored: ReporterSett
         municipalPassword = if ("api_password" in touchedMunicipal) merged.municipalPassword else stored?.municipalPassword.orEmpty())
 }
 
-/** Caller obtains fresh system authentication before opening and again before saving. */
+/** Issue #295: an inline error or hint announced to screen readers when it
+ *  appears; without a live region TalkBack never says why save is unavailable. */
+@Composable
+private fun AnnouncedNote(text: String) {
+    Text(text, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+}
+
+/** Caller obtains fresh system authentication before opening and again before saving.
+ *  [noDeviceCredential] greys the save button and says why (issue #295): the unlock
+ *  gate cannot run on a lock-less device, and without this the tap was swallowed
+ *  silently - the same swallow issue #260 fixed on the review screen's send. */
 @Composable
 fun SettingsScreen(
     initial: ReporterSettings?,
@@ -60,6 +74,7 @@ fun SettingsScreen(
     onLicenses: (() -> Unit)? = null,
     basicSetup: Boolean = false,
     setupError: String = "",
+    noDeviceCredential: Boolean = false,
 ) {
     var firstName by remember { mutableStateOf(initial?.firstName.orEmpty()) }
     var lastName by remember { mutableStateOf(initial?.lastName.orEmpty()) }
@@ -84,7 +99,7 @@ fun SettingsScreen(
             Text(s.t("setup.title"), style = MaterialTheme.typography.headlineMedium)
             Text(s.t("setup.description"))
             onLanguageSelected?.let { LanguageMenu(s.catalog.languages, selectedLanguage, it) }
-            if (setupError.isNotBlank()) Text(setupError, color = MaterialTheme.colorScheme.error)
+            if (setupError.isNotBlank()) Text(setupError, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         } else Text(s.t("settings.privacy.mlkit_note"))
         Text(s.t("settings.privacy.title"), style = MaterialTheme.typography.titleLarge)
         if (!basicSetup) Text(s.t("settings.privacy.description"))
@@ -94,16 +109,21 @@ fun SettingsScreen(
             Checkbox(checked = passportMode, onCheckedChange = { passportMode = it; saved = false })
             Text(s.t("settings.passport.mode"))
         }
+        // Issue #295: the passport field shows why it blocks the save button, like the
+        // ID/phone/email fields already do; before this an invalid (or, on first run,
+        // empty) passport greyed the button with no message anywhere.
+        val passportInvalid = passport.isNotBlank() && !il.sidewalks.reporter.municipal.PassportSubmission.validPassport(passport)
+        val passportMissing = passport.isBlank() && initial?.passportNumber.isNullOrBlank()
         if (passportMode) {
-            OutlinedTextField(passport, { passport = it; saved = false }, label = { Text(s.t("settings.passport.number")) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
-        } else OutlinedTextField(id, { id = ReporterInput.digits(it); saved = false }, label = { Text(s.t("settings.field.id_number")) }, isError = id.isNotBlank() && !ReporterInput.validId(id), supportingText = { if (id.isNotBlank() && !ReporterInput.validId(id)) Text(s.t("settings.id.invalid")) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(passport, { passport = it; saved = false }, label = { Text(s.t("settings.passport.number")) }, isError = passportInvalid, supportingText = { if (passportInvalid) AnnouncedNote(s.t("settings.passport.invalid")) else if (passportMissing) AnnouncedNote(s.t("settings.passport.required")) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
+        } else OutlinedTextField(id, { id = ReporterInput.digits(it); saved = false }, label = { Text(s.t("settings.field.id_number")) }, isError = id.isNotBlank() && !ReporterInput.validId(id), supportingText = { if (id.isNotBlank() && !ReporterInput.validId(id)) AnnouncedNote(s.t("settings.id.invalid")) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
         OutlinedTextField(phone, { phone = ReporterInput.phoneInput(it); saved = false },
             label = { Text(s.t("settings.field.phone")) },
             textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
             isError = phone.isNotBlank() && !ReporterInput.validPhone(phone),
             supportingText = {
-                if (phone.isNotBlank() && !ReporterInput.validPhone(phone)) Text(s.t("settings.phone.invalid"))
-                else if (phone.isNotBlank() && !il.sidewalks.reporter.municipal.PassportSubmission.isIsraeliPhone(phone)) Text(s.t("settings.phone.international"))
+                if (phone.isNotBlank() && !ReporterInput.validPhone(phone)) AnnouncedNote(s.t("settings.phone.invalid"))
+                else if (phone.isNotBlank() && !il.sidewalks.reporter.municipal.PassportSubmission.isIsraeliPhone(phone)) AnnouncedNote(s.t("settings.phone.international"))
             },
             visualTransformation = if (phoneFocused) VisualTransformation.None else PhoneDisplayTransformation,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, autoCorrectEnabled = false),
@@ -111,7 +131,7 @@ fun SettingsScreen(
                 phoneFocused = focus.isFocused
                 if (!focus.isFocused) phone = ReporterInput.canonicalPhone(phone)
             })
-        OutlinedTextField(email, { email = it; saved = false }, label = { Text(s.t("settings.field.email")) }, isError = email.isNotBlank() && !ReporterInput.validEmail(email), supportingText = { if (email.isNotBlank() && !ReporterInput.validEmail(email)) Text(s.t("settings.email.invalid")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(email, { email = it; saved = false }, label = { Text(s.t("settings.field.email")) }, isError = email.isNotBlank() && !ReporterInput.validEmail(email), supportingText = { if (email.isNotBlank() && !ReporterInput.validEmail(email)) AnnouncedNote(s.t("settings.email.invalid")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
         if (!basicSetup) {
         HorizontalDivider()
         TextButton(onClick = { advanced106 = !advanced106 }) { Text(s.t("settings.api.advanced")) }
@@ -130,7 +150,34 @@ fun SettingsScreen(
         // blanked credential still enables the button, so clearing works on a blank screen too.
         // stays disabled when every field is blank (and nothing was touched) or right after a save.
         val anyField = listOf(firstName, lastName, id, passport, phone, email, subscriptionKey, apiUsername, apiPassword).any { it.isNotBlank() }
-        Button(enabled = !saved && (anyField || touchedMunicipal.isNotEmpty()) && (if (passportMode) il.sidewalks.reporter.municipal.PassportSubmission.validPassport(passport.ifBlank { initial?.passportNumber.orEmpty() }) else id.isBlank() || ReporterInput.validId(id)) && (phone.isBlank() || ReporterInput.validPhone(phone)) && (email.isBlank() || ReporterInput.validEmail(email)), onClick = { save(ReporterSettings(firstName.trim(), lastName.trim(), ReporterInput.canonicalPhone(phone), id.trim(), email.trim(),
+        // Issue #295 (owner 2026-11-11): the button stays greyed until every field a 106
+        // report needs is filled and valid, and says next to the button what is missing.
+        // Blank personal fields keep their stored values, so the check runs on the
+        // effective (typed-or-stored) values; municipal credentials stay optional and
+        // are named at send time instead.
+        val effFirstName = firstName.ifBlank { initial?.firstName.orEmpty() }
+        val effLastName = lastName.ifBlank { initial?.lastName.orEmpty() }
+        val effPhone = if (phone.isBlank()) initial?.phone.orEmpty() else ReporterInput.canonicalPhone(phone)
+        val effEmail = email.ifBlank { initial?.email.orEmpty() }
+        val effId = id.ifBlank { initial?.idNumber.orEmpty() }
+        val effPassport = passport.ifBlank { initial?.passportNumber.orEmpty() }
+        val missingRequired = buildList {
+            if (effFirstName.isBlank()) add("settings.field.first_name")
+            if (effLastName.isBlank()) add("settings.field.last_name")
+            if (effPhone.isBlank() || !ReporterInput.validPhone(effPhone)) add("settings.field.phone")
+            if (effEmail.isBlank() || !ReporterInput.validEmail(effEmail)) add("settings.field.email")
+            if (passportMode) {
+                if (!il.sidewalks.reporter.municipal.PassportSubmission.validPassport(effPassport)) add("settings.passport.number")
+            } else if (effId.isBlank() || !ReporterInput.validId(effId)) add("settings.field.id_number")
+        }
+        val missingNote = if (missingRequired.isEmpty()) "" else s.t("settings.save.missing_fields") + " " + missingRequired.joinToString(", ") { s.t(it) }
+        // Issue #295: no lockscreen - the save's unlock gate can never succeed, so
+        // grey the button and say why (visible and TalkBack) instead of swallowing taps.
+        if (noDeviceCredential) AnnouncedNote(s.t("settings.save.no_device_lock"))
+        if (missingNote.isNotEmpty()) AnnouncedNote(missingNote)
+        val saveDisabledReason = listOf(if (noDeviceCredential) s.t("settings.save.no_device_lock") else "", missingNote).filter { it.isNotEmpty() }.joinToString(". ")
+        val saveModifier = if (saveDisabledReason.isNotEmpty()) Modifier.fillMaxWidth().semantics { stateDescription = saveDisabledReason } else Modifier.fillMaxWidth()
+        Button(enabled = !noDeviceCredential && !saved && (anyField || touchedMunicipal.isNotEmpty()) && missingRequired.isEmpty(), onClick = { save(ReporterSettings(firstName.trim(), lastName.trim(), ReporterInput.canonicalPhone(phone), id.trim(), email.trim(),
             passportMode = passportMode, passportNumber = passport.trim(),
             municipalSubscriptionKey = subscriptionKey.trim(),
             municipalUsername = apiUsername.trim(),
@@ -138,7 +185,7 @@ fun SettingsScreen(
             firstName = ""; lastName = ""; id = ""; passport = ""; phone = ""; email = ""
             subscriptionKey = ""; apiUsername = ""; apiPassword = ""
             touchedMunicipal = setOf(); saved = true
-        } }, modifier = Modifier.fillMaxWidth()) { Text(if (basicSetup) s.t("setup.save_continue") else s.t("settings.save.button")) }
+        } }, modifier = saveModifier) { Text(if (basicSetup) s.t("setup.save_continue") else s.t("settings.save.button")) }
         if (saved) Text(s.t("settings.save.done"))
         // The UI language lives in "ui-prefs": picking one never calls save, never asks for
         // authentication and never touches the fields above or the encrypted settings.

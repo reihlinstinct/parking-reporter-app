@@ -292,6 +292,9 @@ fun AppShell(
         }
     }
     fun openSettings() {
+        // Issue #295: same silent swallow as the save path - on a lock-less
+        // device the הגדרות tap opened nothing and said nothing.
+        if (!hasDeviceCredential()) { status = strings.t("shell.submit.no_device_lock"); return }
         authenticate(strings.t("shell.unlock.settings_title"), strings.t("shell.unlock.settings_subtitle")) {
             try { profile = readSettings(); page = "settings" }
             catch (_: Exception) { status = strings.t("shell.status.settings_read_failed") }
@@ -384,6 +387,9 @@ fun AppShell(
     // Shared authenticated, fresh-read merge for onboarding and normal Settings. Neither
     // onboarding nor its language picker decrypts any existing profile on entry.
     fun persistSettings(value: ReporterSettings, touchedMunicipal: Set<String>, cleared: () -> Unit, failed: () -> Unit = {}) {
+            // Issue #295: on a lock-less device the unlock intent is null and
+            // authenticate swallows the save silently; block with a note instead.
+            if (!hasDeviceCredential()) { status = strings.t("shell.submit.no_device_lock"); failed(); return }
             authenticate(strings.t("shell.unlock.settings_title"), strings.t("shell.unlock.settings_subtitle")) {
                 try {
                     // The screen clears itself and profile is dropped after a save: blank
@@ -424,10 +430,12 @@ fun AppShell(
             SettingsScreen(null, basicSetup = true, setupError = setupError,
                 selectedLanguage = selectedLanguage,
                 onLanguageSelected = languageController::select,
+                noDeviceCredential = !hasDeviceCredential(),
                 save = { value, touched, cleared ->
                     setupError = ""
                     persistSettings(value, touched, { cleared(); onFirstRunDone() },
-                        { setupError = strings.t("shell.status.settings_save_failed") })
+                        // #295: a no-credential block must not surface as a generic save failure.
+                        { setupError = strings.t(if (!hasDeviceCredential()) "shell.submit.no_device_lock" else "shell.status.settings_save_failed") })
                 }, back = onFirstRunDone)
         }
         return@ProvideStrings
@@ -504,7 +512,7 @@ fun AppShell(
         }
         "settings" -> SettingsScreen(profile, save = { value, touchedMunicipal, cleared ->
             persistSettings(value, touchedMunicipal, cleared)
-        }, back = { profile = null; page = "home" }, debugTools = if (BuildConfig.DEBUG) {
+        }, back = { profile = null; page = "home" }, noDeviceCredential = !hasDeviceCredential(), debugTools = if (BuildConfig.DEBUG) {
             {
                 Text(strings.t("shell.debug.title"), style = MaterialTheme.typography.titleMedium)
                 Text(strings.t("shell.debug.description"))
