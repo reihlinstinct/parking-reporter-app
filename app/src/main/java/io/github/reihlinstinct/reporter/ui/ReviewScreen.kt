@@ -1,6 +1,7 @@
 package io.github.reihlinstinct.reporter.ui
 
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
@@ -67,6 +68,18 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     }
     var manualGeneration by remember { mutableIntStateOf(0) }
     var categoryMenu by remember { mutableStateOf(false) }
+    var confirmExit by remember(initial.evidence.stableId) { mutableStateOf(false) }
+    val savedManualStreet = remember(initial) { manualStreet }
+    val savedManualHouse = remember(initial) { manualHouse }
+    val hasUnsavedEdits = draft != initial ||
+        time != ReviewTime.display(initial.confirmedTime) ||
+        latitude != initial.confirmedLatitude?.toString().orEmpty() ||
+        longitude != initial.confirmedLongitude?.toString().orEmpty() ||
+        manualStreet != savedManualStreet || manualHouse != savedManualHouse
+    fun requestExit() {
+        if (hasUnsavedEdits) confirmExit = true else onBack()
+    }
+
     // Owner instruction 2026-11-10 (phonemsg 01M73E6E2S6AZP46K75QS2S1WY):
     // the separate "confirm time/location/address" and approval buttons are
     // gone - send is the single confirmation. Saving or sending folds the
@@ -130,6 +143,14 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     }
     ProvideStringsIfMissing {
     val s = LocalStrings.current
+    BackHandler(enabled = !categoryMenu && !askAddressConsent) { requestExit() }
+    if (confirmExit) AlertDialog(
+        onDismissRequest = { confirmExit = false },
+        title = { Text(s.t("review.unsaved.title")) },
+        text = { Text(s.t("review.unsaved.note")) },
+        confirmButton = { TextButton(onClick = { confirmExit = false; onBack() }) { Text(s.t("review.unsaved.discard")) } },
+        dismissButton = { TextButton(onClick = { confirmExit = false }) { Text(s.t("review.unsaved.keep")) } },
+    )
     if (askAddressConsent) {
         AlertDialog(onDismissRequest = { askAddressConsent = false },
             title = { Text(s.t("review.location.lookup_title")) },
@@ -307,7 +328,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.submit.disabled_button")) }
             Text(s.t("review.submit.unavailable"), style = MaterialTheme.typography.bodySmall)
         }
-        TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.back")) }
+        TextButton(onClick = ::requestExit, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.back")) }
     }
     }
 }
