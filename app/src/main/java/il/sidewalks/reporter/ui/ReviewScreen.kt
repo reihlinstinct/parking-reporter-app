@@ -162,7 +162,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         TextButton(enabled = topicsAvailable && !topicsLoading, onClick = {
             openTopics?.invoke(); categoryMenu = true
         }, modifier = Modifier.semantics { stateDescription = topicNote }) {
-            Text(selectedTopic?.name ?: s.t("topics.choose"))
+            Text(selectedTopic?.name ?: s.t("topics.choose"), Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
         }
         if (topicNote.isNotBlank()) Text(topicNote, Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
         topicSnapshot?.let { snapshot ->

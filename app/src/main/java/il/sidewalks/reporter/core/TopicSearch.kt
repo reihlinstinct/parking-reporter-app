@@ -20,7 +20,7 @@ fun interface TopicRanker {
 class LocalTopicRanker(private val aliases: Map<String, List<String>> = emptyMap()) : TopicRanker {
     override fun search(query: String, topics: List<MunicipalSubject>, recentCodes: List<String>): List<MunicipalSubject> {
         val q = normalize(query)
-        return topics.distinctBy { it.code }.mapNotNull { topic ->
+        return topics.mapNotNull { topic ->
             val name = normalize(topic.name)
             val path = normalize(topic.path.joinToString(" "))
             val terms = aliases[topic.code].orEmpty().map(::normalize)
@@ -37,7 +37,7 @@ class LocalTopicRanker(private val aliases: Map<String, List<String>> = emptyMap
             }
             topic to score
         }.sortedWith(compareByDescending<Pair<MunicipalSubject, Int>> { it.second }.thenBy { it.first.name })
-            .map { it.first }
+            .map { it.first }.distinctBy { it.code }
     }
     companion object {
         fun normalize(text: String): String = Normalizer.normalize(text, Normalizer.Form.NFD)

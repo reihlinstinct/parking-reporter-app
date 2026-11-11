@@ -16,6 +16,11 @@ class CityTopicSearchTest {
         assertTrue(ranker.search("לא קיים בכלל", rows, emptyList()).isEmpty())
         assertEquals(1, LocalTopicRanker.distance("abcd", "acbd"))
     }
+    @Test fun repeatedCodeStillSearchesEveryMunicipalHierarchyPath() {
+        val copies = listOf(MunicipalSubject("1", "אחר", listOf("גינון", "אחר")), MunicipalSubject("1", "אחר", listOf("תאורה", "אחר")))
+        assertEquals("1", LocalTopicRanker().search("תאורה", copies, emptyList()).single().code)
+        assertEquals(1, LocalTopicRanker().search("", copies, emptyList()).size)
+    }
     @Test fun cachePreservesLastGoodListAndDates() {
         val dir = Files.createTempDirectory("topics-test").toFile()
         try {

@@ -166,7 +166,7 @@ class MainCategoryPresentationExtractionTest {
         val screen = source("ReviewScreen.kt")
         // #301: the city's Hebrew name is verbatim, not an enum label or a
         // translated local shortcut. Topic chrome still uses the UI catalog.
-        assertTrue(screen.contains("Text(selectedTopic?.name ?: s.t(\"topics.choose\"))"))
+        assertTrue(screen.contains("Text(selectedTopic?.name ?: s.t(\"topics.choose\")"))
         assertFalse(screen.contains("ReportCategory.entries"))
         assertEquals(1, screen.split("HebrewPresentation.evidenceTime(s, draft.evidence.capturedAtIso)").size - 1)
         assertFalse(screen.contains(".hebrew"))
