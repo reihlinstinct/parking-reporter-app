@@ -48,6 +48,14 @@
       "evidence": "pull-requests: write",
       "issue": "https://github.com/reihlinstinct/gemini-pr-review/issues/1",
       "reason": "Owner-approved event-driven Gemini PR review; COMMENT-only advisory reviews, idempotent per head SHA. Tracked in reihlinstinct/gemini-pr-review#1."
+    },
+    {
+      "path": ".github/workflows/emulator-weekly.yml",
+      "rule": "job-write",
+      "scope": "report-failure",
+      "evidence": "issues: write",
+      "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/297",
+      "reason": "Owner-approved 2026-11-11 (#297): the weekly API-matrix failure reporter opens one deduped issue; job-scoped, top level stays contents: read, no PAT, runs only on schedule/dispatch from main."
     }
   ]
 }
