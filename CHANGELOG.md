@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.30.3] - 2026-11-11
+
+### Other changes
+
+- docs: stage ledger encryption storage wiring behind activation gates (#282) (caa72bf)
+
 ## [0.30.2] - 2026-11-11
 
 ### Other changes
