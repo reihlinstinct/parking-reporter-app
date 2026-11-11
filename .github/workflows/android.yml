@@ -134,9 +134,13 @@ jobs:
             sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-            # Local OCR tests must work without emulator networking.
-            adb shell svc wifi disable
-            adb shell svc data disable
+            sh gradlew --stop || true
+            # Local OCR tests must work without emulator networking. On API 26
+            # adbd is fragile: svc can take the whole session down (exit 137
+            # on CI). Keep the command best-effort; the offline behavior is
+            # asserted by the OCR tests themselves.
+            adb shell svc wifi disable || echo "warning: svc wifi disable failed on API ${{ matrix.api }}"
+            adb shell svc data disable || echo "warning: svc data disable failed on API ${{ matrix.api }}"
             mkdir -p app/build/reports/androidTests/screenshots
             # The emulator action runs every script line in its own sh:
             # no variables, background jobs or shell options survive across
