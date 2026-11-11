@@ -61,11 +61,11 @@ class CityTopicPickerTest {
             MunicipalSubject("5164", "גרפיטי", listOf("ניקיון", "גרפיטי")))
         var chosen: MunicipalSubject? = null
         compose.setContent { AppTheme { CityTopicPicker(rows, null, emptyList(), emptyMap(), {}, { chosen = it }) } }
-        val label = "בעלי חיים / אחר; חניה אסורה / אחר; ניקיון / גרפיטי"
+        val label = "בעלי חיים › אחר\nחניה אסורה › אחר\nניקיון › גרפיטי"
         val query = compose.onNodeWithText("חפש נושא, תיאור או מספר")
         query.performTextInput("5164")
         compose.onNodeWithText(label, useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithContentDescription("אחר / גרפיטי. " + label).assertIsDisplayed()
+        compose.onNodeWithContentDescription("אחר · גרפיטי. " + label).assertIsDisplayed()
         compose.onNodeWithText("\u20661\u2069 תוצאות").assertIsDisplayed()
         compose.waitForIdle()
         val bitmap = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
@@ -105,6 +105,39 @@ class CityTopicPickerTest {
         compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}, topicSnapshot = snapshot) } }
         compose.onNodeWithText("מועד הבדיקה האחרון אינו ידוע").assertDoesNotExist()
         compose.onNodeWithText("90 ימים", substring = true).assertIsDisplayed()
+    }
+
+    @Test fun realDuplicate5164PathsRemainReadableAndOneSelectableIdentity() {
+        io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set(io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(context))
+        val testContext = InstrumentationRegistry.getInstrumentation().context
+        val json = org.json.JSONObject(testContext.assets.open("city-subjects-public-20261111.json").bufferedReader().use { it.readText() })
+        val array = json.getJSONArray("subject_rows")
+        val rows = (0 until array.length()).map { i ->
+            val row = array.getJSONObject(i); val path = row.getJSONArray("path")
+            MunicipalSubject(row.getString("code"), row.getString("name"), (0 until path.length()).map { path.getString(it) })
+        }
+        assertTrue(rows.size > 3)
+        var choices = 0
+        compose.setContent { AppTheme { CityTopicPicker(rows, null, emptyList(), emptyMap(), {}, {
+            assertEquals("5164", it.code); choices++
+        }) } }
+        compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextInput("5164")
+        compose.onNodeWithText("\u20661\u2069 תוצאות").assertIsDisplayed()
+        val paths = rows.map { it.path.joinToString(" › ") }.distinct().joinToString("\n")
+        val names = rows.map { it.name }.distinct().joinToString(" · ")
+        compose.onNodeWithContentDescription(names + ". " + paths).assertExists().assertHasClickAction()
+        fun capture(name: String) {
+            compose.waitForIdle()
+            val bitmap = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+            File(context.filesDir, name).outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            bitmap.recycle()
+        }
+        capture("picker315-real-paths-top.png")
+        compose.onNodeWithTag("topic-results").performTouchInput { swipeUp() }
+        capture("picker315-real-paths-bottom.png")
+        compose.onNodeWithText("סגור").assertIsDisplayed()
+        compose.onNodeWithContentDescription(names + ". " + paths).performClick()
+        compose.runOnIdle { assertEquals(1, choices) }
     }
 
     @Test fun noCityCredentialsDisablesTopicFieldWithExplanation() {

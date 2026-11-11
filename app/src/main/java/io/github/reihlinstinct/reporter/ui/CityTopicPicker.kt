@@ -1,11 +1,14 @@
 package io.github.reihlinstinct.reporter.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -20,10 +23,10 @@ fun CityTopicPicker(topics: List<MunicipalSubject>, selected: String?, recent: L
     val s = LocalStrings.current
     var query by remember { mutableStateOf("") }
     val pathsByCode = remember(topics) { topics.groupBy { it.code }.mapValues { (_, rows) ->
-        rows.map { it.path.joinToString(" / ") }.distinct().joinToString("; ")
+        rows.map { it.path.joinToString(" › ") }.distinct().joinToString("\n")
     } }
     val namesByCode = remember(topics) { topics.groupBy { it.code }.mapValues { (_, rows) ->
-        rows.map { it.name }.distinct().joinToString(" / ")
+        rows.map { it.name }.distinct().joinToString(" · ")
     } }
     val ranker = remember(aliases) { LocalTopicRanker(aliases) }
     val results = remember(query, topics, recent) { ranker.search(query, topics, recent) }
@@ -35,17 +38,21 @@ fun CityTopicPicker(topics: List<MunicipalSubject>, selected: String?, recent: L
                     modifier = Modifier.fillMaxWidth(), singleLine = true)
                 Text(s.t("topics.results", mapOf("count" to results.size.toString())),
                     Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                LazyColumn(Modifier.weight(1f, fill = false)) {
+                LazyColumn(Modifier.weight(1f, fill = false).testTag("topic-results")) {
                     items(results, key = { it.code }) { topic ->
-                        TextButton(onClick = { choose(topic) }, modifier = Modifier.fillMaxWidth().semantics {
-                            this.selected = topic.code == selected
-                            contentDescription = namesByCode.getValue(topic.code) + ". " + pathsByCode.getValue(topic.code)
-                        }) {
-                            Column(Modifier.fillMaxWidth()) {
-                                Text(namesByCode.getValue(topic.code))
-                                Text(pathsByCode.getValue(topic.code), style = MaterialTheme.typography.bodySmall)
-                            }
+                        Column(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                            .clickable(role = Role.Button, onClick = { choose(topic) })
+                            .semantics {
+                                this.selected = topic.code == selected
+                                contentDescription = namesByCode.getValue(topic.code) + ". " + pathsByCode.getValue(topic.code)
+                            }.padding(horizontal = 12.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(namesByCode.getValue(topic.code), color = MaterialTheme.colorScheme.primary,
+                                style = MaterialTheme.typography.labelLarge.copy(platformStyle = PlatformTextStyle(includeFontPadding = true)))
+                            Text(pathsByCode.getValue(topic.code),
+                                style = MaterialTheme.typography.bodySmall.copy(platformStyle = PlatformTextStyle(includeFontPadding = true)))
                         }
+
                     }
                 }
                 TextButton(onClick = dismiss) { Text(s.t("topics.close")) }
