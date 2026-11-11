@@ -33,7 +33,7 @@ jobs:
             size: '720x1280'
             density: '320'
           - label: foldable-normal
-            profile: pixel_fold
+            profile: '7.6in Foldable'
             font_scale: '1.0'
             size: ''
             density: ''
