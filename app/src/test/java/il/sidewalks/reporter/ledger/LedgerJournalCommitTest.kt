@@ -139,4 +139,44 @@ class LedgerJournalCommitTest {
         for (size in listOf(0, 31, 33)) fails { LedgerJournalCommit(p, ByteArray(size)) }
     }
 
+    @Test fun invalidOldJournalCannotBeOverwrittenByEitherInitialPhase() {
+        for (initial in listOf(entry(migrated, migrating), entry(fresh, creating))) {
+            for (invalid in listOf("corrupt", "wrong-key", "truncated")) {
+                val p = Port(); val store = LedgerJournalCommit(p, instance)
+                store.commit(entry(migrated, migrating), key)
+                if (invalid == "corrupt") p.committed = p.committed!!.copyOf().also {
+                    it[it.lastIndex] = (it.last().toInt() xor 1).toByte()
+                }
+                if (invalid == "truncated") p.committed = p.committed!!.copyOf(1)
+                val before = p.committed!!.copyOf(); p.events.clear()
+                val readKey = if (invalid == "wrong-key") ByteArray(32) { 99 } else key
+                fails { store.commit(initial, readKey) }
+                assertArrayEquals(before, p.committed)
+                assertNull(p.temp)
+                assertEquals(listOf("read"), p.events)
+                assertFalse(p.locked)
+            }
+        }
+    }
+
+    @Test fun readCannotExposePhaseUntilParentDirectorySyncSucceeds() {
+        val p = Port(); val store = LedgerJournalCommit(p, instance)
+        store.commit(entry(migrated, migrating), key)
+        p.events.clear(); p.stopAfter = "dir-sync"
+        fails { store.commit(entry(migrated, cleaning), key) }
+        // Rename is visible in this fake, but directory sync did not succeed.
+        p.events.clear()
+        fails { store.read(key) }
+        assertEquals(listOf("read", "dir-sync"), p.events)
+        assertFalse(p.locked)
+        // A new wrapper cannot bypass the read durability check either.
+        p.events.clear()
+        fails { LedgerJournalCommit(p, instance).read(key) }
+        assertEquals(listOf("read", "dir-sync"), p.events)
+        p.stopAfter = null; p.events.clear()
+        assertEquals(cleaning, store.read(key)!!.phase)
+        assertEquals(listOf("read", "dir-sync"), p.events)
+        assertFalse(p.locked)
+    }
+
 }

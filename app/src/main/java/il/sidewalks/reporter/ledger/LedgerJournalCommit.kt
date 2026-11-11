@@ -24,7 +24,14 @@ class LedgerJournalCommit(private val port: LedgerJournalPort, instanceId: ByteA
     }
     fun read(key: ByteArray): LedgerJournalEnvelope.Entry? = port.exclusive {
         port.readCommitted()?.let { bytes ->
-            try { LedgerJournalEnvelope.open(bytes, key, instance) } finally { bytes.fill(0) }
+            try {
+                val entry = LedgerJournalEnvelope.open(bytes, key, instance)
+                // A preceding uncertain rename may be visible but not durable.
+                // Establish directory durability under the same lock before
+                // exposing its phase. A sync failure must fail this read.
+                port.syncParentDirectory()
+                entry
+            } finally { bytes.fill(0) }
         }
     }
 

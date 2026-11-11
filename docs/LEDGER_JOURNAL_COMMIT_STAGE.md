@@ -4,13 +4,16 @@ Depends on restart planner #285 and authenticated envelope #288. This small unit
 specifies an abstract exclusive durable-storage port and commit protocol:
 authenticate old state, validate forward phase, temp write+sync, rename, directory
 sync, exact authenticated read-back. Any exception refuses success. Invalid old
-journal and wrong key never permit overwrite. No complete-to-empty reset exists. The store snapshots a required 32-byte ledger
+journal and wrong key never permit overwrite. Read-only access also syncs the parent directory under the lock before exposing
+a phase. This prevents a visible but not-yet-durable rename from being returned
+after a failed commit. Sync failure refuses the read, including in a fresh store
+wrapper. No complete-to-empty reset exists. The store snapshots a required 32-byte ledger
 instance ID from independently authenticated custody and binds it into every
 journal operation. Stale COMPLETE from another instance fails before any write,
 even if the same data key is reused. This unit does not create or authenticate
 that custody identity; future fresh-create/reset/restore adapters must prove it.
 
-Seven logical fault-injection tests verify ordering, lock scope, old/new state,
+Nine logical fault-injection tests verify ordering, lock scope, old/new state,
 transition refusal and failed read-back. These are NOT actual filesystem crash
 proofs: the OS adapter, bounded private reads, process locks, file permissions,
 rename semantics and physical sync errors still need separate Android tests.
