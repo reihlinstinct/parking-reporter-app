@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-11-11
+
+### Features
+
+- feat: inactive default-off per-photo donation consent model (#287) (8f2cc11)
+
 ## [0.30.4] - 2026-11-11
 
 ### Other changes
