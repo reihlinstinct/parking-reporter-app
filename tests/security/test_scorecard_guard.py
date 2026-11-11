@@ -258,3 +258,40 @@ class DocsAndScriptsTests(unittest.TestCase):
         self.assertIn(('unhashed-pip-install','scripts/t.py'),self.scan_file('scripts/t.py','import subprocess,sys\nsubprocess.run([sys.executable,"-m","pip","install","pillow"])\n'))
         self.assertEqual(self.scan_file('scripts/t.py','import subprocess,sys\nsubprocess.run([sys.executable,"-m","pip","install","--require-hashes","-r","req.txt"])\n',{'req.txt':'x==1 '+H+'a'*64+'\n'}),set())
 if __name__=='__main__':unittest.main()
+
+class PublishingGrantTests(unittest.TestCase):
+    """#71: exact existing exceptions must not cover broader publishing grants."""
+    def setUp(self):
+        import json
+        self.baseline=json.loads((ROOT/'.github/scorecard-baseline.json').read_text())
+
+    def test_exact_release_and_wiki_reasons(self):
+        for filename,job in [('release.yml','release'),('wiki-sync.yml','sync')]:
+            path='.github/workflows/'+filename
+            entries=[e for e in self.baseline['findings'] if e['path']==path]
+            self.assertEqual(len(entries),1)
+            entry=entries[0]
+            self.assertEqual((entry['rule'],entry['scope'],entry['evidence']),
+                             ('job-write',job,'contents: write'))
+            self.assertEqual(entry['issue'],'https://github.com/reihlinstinct/parking-reporter-app/issues/71')
+            self.assertIn('docs/WRITE_GRANTS.md',entry['reason'])
+            text=(ROOT/path).read_text()
+            findings=g.scan_text(path,text)
+            self.assertFalse(g.evaluate(findings,self.baseline)[0])
+            self.assertRegex(text,r'(?m)^  summary:\n    permissions:\n      contents: read$')
+            self.assertIn('persist-credentials: false',text)
+            self.assertNotIn('pull_request',text)
+
+    def test_new_or_broader_write_not_baselined(self):
+        for filename in ['release.yml','wiki-sync.yml']:
+            path='.github/workflows/'+filename
+            text=(ROOT/path).read_text()
+            mutations=[
+                text.replace('permissions:\n  contents: read','permissions:\n  contents: write',1),
+                text.replace('  summary:\n    permissions:\n      contents: read',
+                             '  summary:\n    permissions:\n      contents: write',1),
+                text+'\n  unexpected:\n    permissions:\n      issues: write\n',
+            ]
+            for changed in mutations:
+                with self.subTest(filename=filename,changed=changed):
+                    self.assertTrue(g.evaluate(g.scan_text(path,changed),self.baseline)[0])
