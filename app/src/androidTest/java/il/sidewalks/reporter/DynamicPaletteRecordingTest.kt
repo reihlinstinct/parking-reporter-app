@@ -8,6 +8,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import il.sidewalks.reporter.ui.*
 import il.sidewalks.reporter.ui.theme.*
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.io.File
@@ -16,6 +17,9 @@ import java.io.File
 class DynamicPaletteRecordingTest {
     @get:Rule val compose = createAndroidComposeRule<androidx.activity.ComponentActivity>()
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
+    @Before fun language() {
+        il.sidewalks.reporter.i18n.UiPrefsLanguageStore.of(context).set(il.sidewalks.reporter.i18n.AppCatalog.defaultCode(context))
+    }
     private fun capture(name: String) {
         compose.waitForIdle(); Thread.sleep(1500)
         val bitmap = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
