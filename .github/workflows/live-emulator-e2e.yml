@@ -207,14 +207,25 @@ jobs:
           mkdir -p /tmp/live-e2e
           sh gradlew --no-daemon testDebugUnitTest --tests 'il.sidewalks.reporter.core.LiveCategoryResolutionTest'
           grep -q '^LIVE_CATEGORY label=.' /tmp/live-e2e/category.txt
-      - name: Decrypt the staged trial photo
+      - name: Stage the approved trial photo (private immutable input or legacy encrypted fixture)
         env:
           TRIAL_DATA_KEY: ${{ secrets.TRIAL_DATA_KEY }}
+          PRIVATE_LOOKUP_READ_TOKEN: ${{ secrets.PRIVATE_LOOKUP_READ_TOKEN }}
+          TRIAL_PRIVATE_PHOTO_REF: ${{ secrets.TRIAL_PRIVATE_PHOTO_REF }}
+          TRIAL_PRIVATE_PHOTO_PATH: ${{ secrets.TRIAL_PRIVATE_PHOTO_PATH }}
+          APPROVED_PHOTO_SHA256_INPUT: ${{ inputs.approved_photo_sha256 }}
         run: |
+          set -euo pipefail
           umask 077
           mkdir -p /tmp/live-e2e
-          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
-            -in trial/trial-photo.jpg.enc -out /tmp/live-e2e/photo.jpg -pass env:TRIAL_DATA_KEY
+          if [ -n "$TRIAL_PRIVATE_PHOTO_REF$TRIAL_PRIVATE_PHOTO_PATH" ]; then
+            # Both fields required; malformed or unavailable private input fails
+            # closed, never falls back to a different report's fixture.
+            python3 scripts/fetch-live-photo.py
+          else
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
+              -in trial/trial-photo.jpg.enc -out /tmp/live-e2e/photo.jpg -pass env:TRIAL_DATA_KEY
+          fi
           test -s /tmp/live-e2e/photo.jpg
       - name: Bind the staged photo to the approved photo digest
         env:
