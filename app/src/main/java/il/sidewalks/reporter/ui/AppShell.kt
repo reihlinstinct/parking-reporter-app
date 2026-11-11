@@ -414,7 +414,12 @@ fun AppShell(
                         } catch (_: Exception) { profileStore.clear() }
                         throw failure
                     }
-                    profile = null; cleared(); status = strings.t("shell.status.settings_saved")
+                    // Issue #295: keep the freshly stored profile as the screen's
+                    // baseline (fields themselves stay cleared) so the
+                    // required-fields gate still sees complete effective values
+                    // when the user edits again right after a save. A read
+                    // failure here must not fail the save that just succeeded.
+                    profile = try { readSettings() } catch (_: Exception) { null }; cleared(); status = strings.t("shell.status.settings_saved")
                 }
                 catch (_: Exception) { status = strings.t("shell.status.settings_save_failed"); failed() }
             }
