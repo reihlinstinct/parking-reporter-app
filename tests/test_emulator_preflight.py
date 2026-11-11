@@ -1,6 +1,7 @@
 import importlib.util
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('preflight', Path(__file__).resolve().parents[1] / 'scripts/emulator_preflight.py')
 m = importlib.util.module_from_spec(spec)
@@ -16,6 +17,23 @@ class EmulatorPreflightTest(unittest.TestCase):
         self.assertEqual('active process ANR/crash', m.unhealthy('1', window, 'crashing=true'))
         self.assertEqual('system error dialog has focus', m.unhealthy('1', 'mCurrentFocus=Window{Application Not Responding}', ''))
         self.assertEqual('no focused window', m.unhealthy('1', 'mCurrentFocus=null', ''))
+
+    def test_probe_requests_global_focus_not_windows_only(self):
+        # API36 `dumpsys window windows` has Window details but no mCurrentFocus.
+        # Full `dumpsys window` includes global state. Never infer health from
+        # the presence of an arbitrary Window or waive the focus requirement.
+        def fake_adb(*args):
+            if args == ('shell', 'getprop', 'sys.boot_completed'):
+                return '1'
+            if args == ('shell', 'dumpsys', 'window'):
+                return 'mCurrentFocus=Window{123 u0 com.android.launcher3/Main}'
+            if args == ('shell', 'dumpsys', 'activity', 'processes'):
+                return 'notResponding=false crashing=false'
+            self.fail('unexpected adb command: ' + repr(args))
+        with patch.object(m, 'adb', side_effect=fake_adb):
+            self.assertIsNone(m.probe())
+        self.assertEqual('no focused window', m.unhealthy(
+            '1', 'WINDOW MANAGER WINDOWS\n Window #0 Window{123 u0 Main}', ''))
 
     def run_gate(self, states):
         iterator = iter(states)

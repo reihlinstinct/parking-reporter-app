@@ -29,8 +29,10 @@ def unhealthy(boot, windows, processes):
 
 
 def probe():
+    # API36 windows-only output omits global mCurrentFocus. Request the full
+    # WindowManager dump so the same gate sees global focus on API30 and API36.
     return unhealthy(adb('shell', 'getprop', 'sys.boot_completed'),
-                     adb('shell', 'dumpsys', 'window', 'windows'),
+                     adb('shell', 'dumpsys', 'window'),
                      adb('shell', 'dumpsys', 'activity', 'processes'))
 
 
@@ -91,7 +93,7 @@ def main():
     (directory / 'preflight.rc').write_text(str(code) + '\n')
     if code:
         # System diagnostics only, before any synthetic app flow or private input.
-        for name, command in [('preflight-window.txt', ('shell', 'dumpsys', 'window', 'windows')),
+        for name, command in [('preflight-window.txt', ('shell', 'dumpsys', 'window')),
                               ('preflight-processes.txt', ('shell', 'dumpsys', 'activity', 'processes'))]:
             try:
                 (directory / name).write_text(adb(*command))
