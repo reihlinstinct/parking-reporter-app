@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.36.2] - 2026-11-11
+
+### Other changes
+
+- ci: bounded emulator health gate and periodic 200% checks (#314) (#316) (f0cf7a8)
+
 ## [0.36.1] - 2026-11-11
 
 ### Fixes
