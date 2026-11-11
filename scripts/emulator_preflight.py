@@ -89,7 +89,10 @@ def main():
     args = parser.parse_args()
     directory = Path(args.report_dir)
     directory.mkdir(parents=True, exist_ok=True)
-    code = gate()
+    def recorded_recovery():
+        (directory / 'preflight-recovered.txt').write_text('One bounded emulator reboot requested before app tests.\n')
+        recover()
+    code = gate(reboot=recorded_recovery)
     (directory / 'preflight.rc').write_text(str(code) + '\n')
     if code:
         # System diagnostics only, before any synthetic app flow or private input.
