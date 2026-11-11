@@ -21,9 +21,14 @@ class SubmissionCoordinator(
     private val clientFactory: (ReporterSettings) -> MunicipalClient,
     private val streets: StreetDirectory,
     private val storeFor: (stableId: String) -> SubmissionStateStore,
-    private val activeTopicCodes: (() -> Set<String>)? = null,
-    private val afterSuccessfulSubmission: ((MunicipalClient, String) -> Unit)? = null,
+    private val activeTopicCodes: (() -> Set<String>)?,
+    private val afterSuccessfulSubmission: ((MunicipalClient, String) -> Unit)?,
 ) {
+    /** Preserve the legacy JVM workflow's three-argument/trailing-lambda API. */
+    constructor(clientFactory: (ReporterSettings) -> MunicipalClient,
+                streets: StreetDirectory, storeFor: (String) -> SubmissionStateStore) :
+        this(clientFactory, streets, storeFor, null, null)
+
     /** Snapshot of the exact reviewed outgoing bytes, bound to their source original. */
     class OutgoingPhoto(jpeg: ByteArray, val originalHash: String) {
         private val bytes = jpeg.copyOf()
