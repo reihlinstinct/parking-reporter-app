@@ -24,7 +24,7 @@ class EntryIntentsTest {
         assertNull(EntryIntents.parse("android.intent.action.VIEW", "il.sidewalks.reporter://report/new?x=1", null, null))
         assertNull(EntryIntents.parse("android.intent.action.VIEW", "IL.SIDEWALKS.REPORTER://report/new", null, null))
         assertNull(EntryIntents.parse("android.intent.action.VIEW", "il.sidewalks.reporter://Report/new", null, null))
-        assertNull(EntryIntents.parse("android.intent.action.VIEW", "https://io.github.reihlinstinct.reporter/report/new", null, null))
+        assertNull(EntryIntents.parse("android.intent.action.VIEW", "https://il.sidewalks.reporter/report/new", null, null))
     }
 
     @Test

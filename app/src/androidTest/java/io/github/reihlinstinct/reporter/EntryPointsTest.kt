@@ -63,7 +63,7 @@ class EntryPointsTest {
         cleanLedgerAndOriginals()
         try {
             // TestShareProvider (test APK, exported) generates and serves the JPEG.
-            val uri = Uri.parse("content://io.github.reihlinstinct.reporter.testshare/shared-entry-synthetic.jpg")
+            val uri = Uri.parse("content://il.sidewalks.reporter.testshare/shared-entry-synthetic.jpg")
             val signal = mutableStateOf(EntrySignal(1, EntryIntents.Request.SharedPhoto(uri.toString())))
             compose.setContent {
                 MaterialTheme {
@@ -100,7 +100,7 @@ class EntryPointsTest {
             firstName = "בדיקה", lastName = "סינתטי", phone = "0501234567", idNumber = "000000018", email = "synthetic@example.com",
             municipalSubscriptionKey = "synthetic-key", municipalUsername = "synthetic-user", municipalPassword = "synthetic-password")
         val signal = mutableStateOf(EntrySignal(1, EntryIntents.Request.SharedPhoto(
-            "content://io.github.reihlinstinct.reporter.testshare/topic-bootstrap.jpg")))
+            "content://il.sidewalks.reporter.testshare/topic-bootstrap.jpg")))
         try {
             compose.setContent { io.github.reihlinstinct.reporter.ui.theme.AppTheme {
                 AppShell(authenticate = { _, _, action -> authentications++; action() }, hasDeviceCredential = { true },
@@ -135,7 +135,7 @@ class EntryPointsTest {
         var authentications = 0
         var reads = 0
         val signal = mutableStateOf(EntrySignal(1, EntryIntents.Request.SharedPhoto(
-            "content://io.github.reihlinstinct.reporter.testshare/topic-no-lock.jpg")))
+            "content://il.sidewalks.reporter.testshare/topic-no-lock.jpg")))
         try {
             compose.setContent {
                 io.github.reihlinstinct.reporter.ui.theme.AppTheme {

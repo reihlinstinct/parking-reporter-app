@@ -4,7 +4,7 @@ import android.content.Intent
 
 /**
  * Entry points into the report flow (issue #149 phase 1): a deep link
- * (io.github.reihlinstinct.reporter://report/new), a share-sheet target (ACTION_SEND with
+ * (il.sidewalks.reporter://report/new), a share-sheet target (ACTION_SEND with
  * an image) and the Quick Settings tile. Parsing is pure Kotlin over primitives
  * so it runs in JVM unit tests; MainActivity unwraps the Intent and AppShell
  * executes the request.

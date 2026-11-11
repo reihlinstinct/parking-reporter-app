@@ -44,3 +44,24 @@ class SourceNamespaceTest(unittest.TestCase):
         self.assertEqual('54340c9bf76fd96e24f7fd16eee41624', schema['database']['identityHash'])
         shell = (ROOT / f'app/src/main/java/{NEW}/ui/AppShell.kt').read_text()
         self.assertIn('ReportDatabase::class.java, "report-ledger.db"', shell)
+
+    def test_external_uri_runner_and_run_as_literals_do_not_follow_source_names(self):
+        import re
+        manifest = ET.parse(ROOT / 'app/src/androidTest/AndroidManifest.xml')
+        authorities = {p.get(A + 'authorities') for p in manifest.findall('./application/provider')}
+        self.assertEqual({'il.sidewalks.reporter.testshare', 'il.sidewalks.reporter.liveshare'}, authorities)
+        for source in (ROOT / f'app/src/androidTest/java/{NEW}').rglob('*'):
+            if source.suffix in ('.kt', '.java'):
+                for authority in re.findall(r'content://([^/" ]+)', source.read_text()):
+                    if 'reporter' in authority:
+                        self.assertIn(authority, authorities, str(source))
+        for folder in ('.github/workflows', 'scripts'):
+            for file in (ROOT / folder).glob('*'):
+                if file.suffix not in ('.yml', '.yaml', '.sh'):
+                    continue
+                text = file.read_text()
+                self.assertNotIn('run-as io.github.reihlinstinct.reporter', text, str(file))
+                self.assertNotIn('io.github.reihlinstinct.reporter.test/androidx.test.runner', text, str(file))
+        safety = (ROOT / f'app/src/test/java/{NEW}/PrivateOcrSafetyTest.kt').read_text()
+        self.assertIn('adb shell run-as il.sidewalks.reporter mkdir', safety)
+        self.assertNotIn('run-as io.github.reihlinstinct.reporter', safety)

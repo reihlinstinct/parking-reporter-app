@@ -132,7 +132,7 @@ class LiveEmulatorSubmissionTest {
 
         // Claim the staged photo only if no report already owns it: a live
         // run never re-files a photo that already produced a case.
-        val sharedUri = Uri.parse("content://io.github.reihlinstinct.reporter.liveshare/live-photo.jpg")
+        val sharedUri = Uri.parse("content://il.sidewalks.reporter.liveshare/live-photo.jpg")
         val bytes = requireNotNull(context.contentResolver.openInputStream(sharedUri)) {
             "staged photo missing"
         }.use { it.readBytes() }

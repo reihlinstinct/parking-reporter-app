@@ -56,7 +56,7 @@ class FullFlowE2eTest {
         InstrumentationRegistry.getInstrumentation().targetContext.let { io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(it).set(io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(it)) }
     }
 
-    private val sharedUri = Uri.parse("content://io.github.reihlinstinct.reporter.testshare/with-metadata.jpg")
+    private val sharedUri = Uri.parse("content://il.sidewalks.reporter.testshare/with-metadata.jpg")
     private var ownedPhotoHash: String? = null
 
     /** Never take ownership of a pre-existing row, even one with the test photo. */

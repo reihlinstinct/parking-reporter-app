@@ -69,7 +69,7 @@ class PrivateOcrSafetyTest {
         assertTrue(isolation.contains("network isolation check failed - refusing OCR"))
         assertTrue(script.contains("OCR_BENCH_INPUT_SHA256"))
         assertTrue(script.contains("trap finish_private_benchmark EXIT"))
-        assertTrue(script.indexOf("ocr_network_isolation") < script.indexOf("adb shell run-as io.github.reihlinstinct.reporter mkdir"))
+        assertTrue(script.indexOf("ocr_network_isolation") < script.indexOf("adb shell run-as il.sidewalks.reporter mkdir"))
         assertTrue(script.contains("openssl enc -aes-256-cbc"))
         assertFalse(script.contains("screenrecord"))
         assertFalse(script.contains("screencap"))
