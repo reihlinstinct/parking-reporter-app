@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-11-11
+
+### Features
+
+- feat: #88 pure restart-state planner, no storage activation (#285) (6b782ef)
+
 ## [0.28.0] - 2026-11-11
 
 ### Features
