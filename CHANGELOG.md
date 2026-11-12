@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.43.6] - 2026-11-12
+
+### Fixes
+
+- fix(ui): reviewed light/dark near-expiry warning tokens with pinned contrast (#367) (#387) (8f0c5ac)
+
 ## [0.43.5] - 2026-11-12
 
 ### Fixes
