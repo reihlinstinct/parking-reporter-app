@@ -19,8 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.text
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -43,13 +44,17 @@ internal object IsraeliPlateStyle {
     fun isRegular(plate: String): Boolean = plate.matches(Regex("[0-9]{7,8}"))
 }
 
-/** [description] is the existing localized "Plate: N" text, spoken instead of the drawn glyphs. */
+/**
+ * [description] is the existing localized "Plate: N" string. It is the node text (what the
+ * old plain Text exposed, so screen readers and tests see the same string); the drawn
+ * glyphs below are hidden from semantics.
+ */
 @Composable
 internal fun IsraeliPlate(plate: String, description: String, modifier: Modifier = Modifier) {
     // Digits and the left IL band never mirror in RTL layouts.
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Surface(
-            modifier = modifier.semantics { contentDescription = description },
+            modifier = modifier.semantics { text = AnnotatedString(description) },
             shape = RoundedCornerShape(6.dp),
             color = IsraeliPlateStyle.Yellow,
             border = BorderStroke(2.dp, IsraeliPlateStyle.Ink),
