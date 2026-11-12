@@ -21,13 +21,14 @@ import org.junit.Assert.assertEquals
 import java.io.File
 
 /** Synthetic render/callback coverage, never platform consent or a voice-assistant demo. */
-class AssistantEntrySettingsTest {
+class AssistantEntrySettingsVideoTest {
     @get:Rule val compose = createComposeRule()
     private fun capture(name: String) {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         File(context.filesDir, name).outputStream().use {
             compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG,100,it)
         }
+        Thread.sleep(5000)
     }
     @Test fun defaultOffToggleRevocationFailureAndUnsupportedHiddenInHebrew() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
