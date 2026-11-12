@@ -55,6 +55,19 @@ class EncryptedPackageTest {
         assertThrows(IllegalArgumentException::class.java) { EncryptedPackage.reviewedReport(draft().edit(plate = ""), reporter, photo) }
         assertThrows(IllegalArgumentException::class.java) { EncryptedPackage.reviewedReport(draft(), reporter, ByteArray(1_100_001)) }
     }
+    @Test fun outgoingTimeAndDigestBindTheSameSingleIntent() {
+        val clock = java.time.Clock.fixed(java.time.Instant.parse("2026-11-12T05:48:00Z"), java.time.ZoneOffset.UTC)
+        val noExif = draft().copy(evidence = draft().evidence.copy(capturedAtIso = null), confirmedTime = null)
+        val sent = ReportTime.forSend(noExif, clock)
+        val r = EncryptedPackage.reviewedReport(sent, reporter, photo, clock)
+        assertEquals(sent.confirmedTime, r.getString("time"))
+        assertEquals(sent.digest(), r.getString("review_digest"))
+        val approval = EncryptedPackage.approvalDigest(r)
+        r.put("time", "2026-11-12T07:49:00+02:00")
+        assertNotEquals(approval, EncryptedPackage.approvalDigest(r))
+        val wall = draft().copy(evidence = draft().evidence.copy(capturedAtIso = "2026-01-01T12:00:00"))
+        assertEquals("2026-01-01T12:00:00", EncryptedPackage.reviewedReport(wall, reporter, photo, clock).getString("time"))
+    }
     @Test fun canonicalOrderDoesNotDependOnInsertionOrder() {
         assertEquals(EncryptedPackage.canonical(JSONObject().put("b", "שלום").put("a", 1)),
             EncryptedPackage.canonical(JSONObject().put("a", 1).put("b", "שלום")))

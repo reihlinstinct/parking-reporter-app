@@ -28,15 +28,17 @@ object EncryptedPackage {
             else -> error("Unsupported canonical value")
         }
     }
-    fun reviewedReport(draft: ReviewDraft, reporter: ReporterSettings, jpeg: ByteArray): JSONObject {
+    fun reviewedReport(draft: ReviewDraft, reporter: ReporterSettings, jpeg: ByteArray, clock: java.time.Clock = java.time.Clock.systemUTC()): JSONObject {
         require(draft.isReady()) { "Review required" }
         require(jpeg.size in 4..1_100_000 && jpeg[0] == 0xff.toByte() && jpeg[1] == 0xd8.toByte() &&
             jpeg[jpeg.lastIndex - 1] == 0xff.toByte() && jpeg.last() == 0xd9.toByte()) { "Bounded JPEG required" }
         require(listOf(reporter.firstName, reporter.lastName, reporter.phone, reporter.idNumber, reporter.email).all { it.isNotBlank() && it.length <= 256 })
+        val outgoingDraft = io.github.reihlinstinct.reporter.core.ReportTime.forSend(draft, clock)
+        require(io.github.reihlinstinct.reporter.core.ReportTime.validPackageTime(requireNotNull(outgoingDraft.confirmedTime)))
         return JSONObject().put("schema", 1).put("id", draft.evidence.stableId)
             .put("original_sha256", draft.evidence.originalSha256).put("outgoing_sha256", sha256(jpeg))
-            .put("review_digest", draft.digest()).put("plate", draft.plate).put("address", draft.address)
-            .put("subject", draft.subject).put("exact_text", draft.exactHebrewText).put("time", io.github.reihlinstinct.reporter.core.ReportTime.forSend(draft).confirmedTime)
+            .put("review_digest", outgoingDraft.digest()).put("plate", draft.plate).put("address", draft.address)
+            .put("subject", draft.subject).put("exact_text", draft.exactHebrewText).put("time", outgoingDraft.confirmedTime)
             .put("latitude", draft.confirmedLatitude).put("longitude", draft.confirmedLongitude)
             .put("reporter", JSONObject().put("first", reporter.firstName).put("last", reporter.lastName)
                 .put("phone", reporter.phone).put("id", reporter.idNumber).put("email", reporter.email))

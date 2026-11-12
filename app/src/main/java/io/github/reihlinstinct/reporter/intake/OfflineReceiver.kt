@@ -28,6 +28,7 @@ object OfflineReceiver {
         listOf("id", "address", "subject", "exact_text", "time").forEach { field ->
             require(report.get(field) is String && report.getString(field).length in 1..4000)
         }
+        require(io.github.reihlinstinct.reporter.core.ReportTime.validPackageTime(report.getString("time")))
         require(report.get("plate") is String && report.getString("plate").length <= 8)
         val reporter = report.getJSONObject("reporter")
         exact(reporter, setOf("first", "last", "phone", "id", "email"))
