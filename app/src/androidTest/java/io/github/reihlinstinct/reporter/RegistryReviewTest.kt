@@ -115,12 +115,28 @@ class RegistryReviewTest {
         val lookup: RegistryLookup = { _, _ -> RegistrySnapshot(DisabilityLookupResult.NotFound,
             VehicleLookupResult.Found((snapshot(DisabilityTagType.TRIANGLE).vehicle as VehicleLookupResult.Found).record.copy(
                 licenceValidUntil = java.time.LocalDate.of(2026, 11, 13).plusDays(remaining))), checked) }
-        compose.setContent { AppTheme { RegistryStatus("1234567", remember(remaining) { { p, emit -> lookup(p, emit) } }) } }
+        compose.setContent { AppTheme { Surface(Modifier.fillMaxSize()) { RegistryStatus("1234567", remember(remaining) { { p, emit -> lookup(p, emit) } }) } } }
         compose.onNodeWithText("רישיון הרכב יפוג בעוד", substring = true).assertExists()
         screenshot("registry-orange-13-days.png")
         compose.runOnIdle { remaining = 14L }; compose.waitForIdle()
         compose.onNodeWithText("רישיון הרכב יפוג בעוד", substring = true).assertDoesNotExist()
         compose.onNodeWithText("רישיון הרכב בתוקף לפי המאגר").assertExists()
+        compose.runOnIdle { remaining = 0L }; compose.waitForIdle()
+        compose.onNodeWithText("רישיון הרכב יפוג בעוד 0 ימים").assertExists()
+        compose.onNodeWithText("רישיון הרכב פג תוקף לפי המאגר").assertDoesNotExist()
+        screenshot("registry-orange-today-0-days.png")
+        compose.runOnIdle { remaining = -1L }; compose.waitForIdle()
+        compose.onNodeWithText("רישיון הרכב פג תוקף לפי המאגר").assertExists()
+        compose.onNodeWithText("רישיון הרכב יפוג בעוד", substring = true).assertDoesNotExist()
+    }
+
+    @Test fun orangeNearExpiryIsReadableOnDarkSurface() {
+        val lookup: RegistryLookup = { _, _ -> RegistrySnapshot(DisabilityLookupResult.NotFound,
+            VehicleLookupResult.Found((snapshot(DisabilityTagType.TRIANGLE).vehicle as VehicleLookupResult.Found).record.copy(
+                licenceValidUntil = LocalDate.of(2026, 11, 26))), Instant.parse("2026-11-12T22:30:00Z")) }
+        compose.setContent { AppTheme(darkTheme = true) { Surface(Modifier.fillMaxSize()) { RegistryStatus("1234567", lookup) } } }
+        compose.onNodeWithText("רישיון הרכב יפוג בעוד 13 ימים").assertExists()
+        screenshot("registry-orange-13-days-dark.png")
     }
 
     @Test fun noVehicleRecordAndUnknownLicenceStayDistinctFromExpired() {
