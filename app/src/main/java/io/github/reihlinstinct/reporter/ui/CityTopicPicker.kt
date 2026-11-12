@@ -52,7 +52,7 @@ fun CityTopicPicker(topics: List<MunicipalSubject>, selected: String?, recent: L
                             verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(namesByCode.getValue(topic.code), color = MaterialTheme.colorScheme.primary,
                                 style = MaterialTheme.typography.labelLarge.copy(platformStyle = PlatformTextStyle(includeFontPadding = true)))
-                            Text(pathsByCode.getValue(topic.code), Modifier.padding(horizontal = 4.dp).testTag("picker-path-${topic.code}"),
+                            Text(pathsByCode.getValue(topic.code), Modifier.fillMaxWidth().wrapContentHeight(unbounded = true).padding(horizontal = 4.dp).testTag("picker-path-${topic.code}"),
                                 style = MaterialTheme.typography.bodySmall.copy(platformStyle = PlatformTextStyle(includeFontPadding = true)))
                         }
 

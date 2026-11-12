@@ -132,9 +132,9 @@ class CityTopicPickerTest {
             File(context.filesDir, name).outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
             bitmap.recycle()
         }
+        capture("picker315-real-paths-top.png")
         assertPickerGeometry()
         assertTextInkFits("picker-path-5164")
-        capture("picker315-real-paths-top.png")
         compose.onNodeWithTag("topic-results").performTouchInput { swipeUp() }
         capture("picker315-real-paths-bottom.png")
         compose.onNodeWithText("סגור").assertIsDisplayed()
