@@ -5,12 +5,18 @@ on:
   schedule:
     - cron: '30 4 * * 0'
   workflow_dispatch:
-  # Include appearance/back tests in the two visual profiles (#303).
-  # Exercise changes to this workflow before merge; ordinary app PRs do not
-  # run it. The weekly schedule remains the normal display-check cadence.
+  # Risk-based UI/workflow changes get both profiles; ordinary non-UI PRs
+  # leave the compact stress check to the weekly/manual cadence.
   pull_request:
     paths:
-      - '.github/workflows/display-weekly.yml'
+      - '.github/workflows/**'
+      - 'scripts/emulator_preflight.py'
+      - 'app/src/main/java/**/ui/**'
+      - 'app/src/main/java/**/capture/**'
+      - 'app/src/main/res/**'
+      - 'app/src/main/assets/**'
+      - 'app/src/main/java/**/i18n/**'
+      - 'app/src/androidTest/**'
 
 permissions:
   contents: read
@@ -27,9 +33,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(github.event_name == 'pull_request' && '[{"label":"foldable-normal","profile":"7.6in Foldable","font_scale":"1.0","size":"","density":""}]' || '[{"label":"compact-200pct","profile":"pixel_2","font_scale":"2.0","size":"720x1280","density":"320"},{"label":"foldable-normal","profile":"7.6in Foldable","font_scale":"1.0","size":"","density":""}]') }}
-    # 200% is a periodic accessibility stress check, not a PR/demo default.
-    # Workflow PR self-tests keep the normal foldable profile only.
+        include:
+          - {label: compact-200pct, profile: pixel_2, font_scale: '2.0', size: '720x1280', density: '320'}
+          - {label: foldable-normal, profile: '7.6in Foldable', font_scale: '1.0', size: '', density: ''}
+    # Normal font is the demo. Compact200% is a targeted regression profile.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -74,7 +81,7 @@ jobs:
             adb pull /sdcard/display-test.mp4 app/build/reports/display/display-test.mp4 || true
             adb logcat -d -v threadtime > app/build/reports/display/logcat.txt || true
             python3 scripts/test_summary.py --title 'Display screenshots (${{ matrix.label }}, API36)' --instrumentation app/build/reports/display/instrumentation.txt --check; echo $? > app/build/reports/display/summary.rc
-            for f in picker315-real-paths-top.png picker315-real-paths-bottom.png picker312-all-paths.png category-picker-open.png category-picker-chosen.png design-home-synthetic.png design-home-camera-scrolled.png design-home-gallery-scrolled.png m1-review-no-lockscreen-synthetic.png settings-save-missing-fields.png design303-municipal-settings.png design303-dynamic-settings.png design303-back-home.png; do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/display/screenshots/$f" || true; done
+            for f in picker312-all-paths.png category-picker-open.png category-picker-chosen.png design-home-synthetic.png design-home-camera-scrolled.png design-home-gallery-scrolled.png m1-review-no-lockscreen-synthetic.png settings-save-missing-fields.png design303-municipal-settings.png design303-dynamic-settings.png design303-back-home.png; do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/display/screenshots/$f" || true; done
             test -s app/build/reports/display/screenshots/picker312-all-paths.png
             test -s app/build/reports/display/screenshots/category-picker-open.png
             test -s app/build/reports/display/screenshots/category-picker-chosen.png
