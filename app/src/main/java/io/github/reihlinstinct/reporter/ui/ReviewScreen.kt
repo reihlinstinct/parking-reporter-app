@@ -95,6 +95,8 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // Issue #358: an automatic OCR plate prefill is not a user edit. It only moves the clean baseline for the
     // plate, and only while the user has not touched the plate (recognize() guards that with plateEdits).
     var ocrPrefilledPlate by remember(initial.evidence.stableId) { mutableStateOf<String?>(restored?.ocrPrefilledPlate) }
+    // Issue #186: coordinates that came from the phone survive a rotation together with the rest of the state.
+    var gpsFilled by remember(initial.evidence.stableId) { mutableStateOf(restored?.gpsFilled ?: false) }
     // The screen's draft always has the topic plate policy applied, so the clean baseline must too, or a screen
     // with a topic snapshot would count as edited before the user touched anything.
     val savedDraft = policy(ReportTime.forSave(initial))
@@ -107,7 +109,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // (save, discard, back, process death) leaves nothing held.
     val holdOnRotation by rememberUpdatedState {
         ReviewRotationState.Held(initial, draft, latitude, longitude, manualStreet, manualHouse,
-            savedManualStreet, savedManualHouse, ocrPrefilledPlate)
+            savedManualStreet, savedManualHouse, ocrPrefilledPlate, gpsFilled)
     }
     val rotationActivity = context.findActivity()
     DisposableEffect(initial.evidence.stableId) {
@@ -165,12 +167,11 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // Issue #186: optional, user-triggered one-shot location read. The permission is asked only at the tap.
     var gpsBusy by remember { mutableStateOf(false) }
     var gpsStatus by remember { mutableStateOf<String?>(null) }
-    var gpsFilled by remember(initial.evidence.stableId) { mutableStateOf(false) }
     fun applyDeviceFix(fix: io.github.reihlinstinct.reporter.evidence.DeviceFix) {
         latitude = fix.latitude.toString(); longitude = fix.longitude.toString()
         gpsFilled = true; editing = true; suggestions = emptyList(); geocodeStatus = null
         draft = draft.copy(confirmedLatitude = fix.latitude, confirmedLongitude = fix.longitude,
-            unresolved = draft.unresolved - ReviewWarning.MISSING_GPS.code - ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code)
+            unresolved = draft.unresolved - ReviewWarning.MISSING_GPS.code + ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code)
         gpsStatus = "review.location.gps_done"
     }
     fun readDeviceFix() {

@@ -42,7 +42,9 @@ object CurrentLocation {
         val manager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return null
         val providers = providerOrder(manager.getProviders(true))
         for (provider in providers) {
-            val location = withTimeoutOrNull(timeoutMs / providers.size) { single(manager, provider, context) }
+            // A cold GPS fix needs longer than a network fix, so the first provider (GPS) gets two thirds.
+            val budget = if (providers.size > 1) (if (provider == providers.first()) timeoutMs * 2 / 3 else timeoutMs / 3) else timeoutMs
+            val location = withTimeoutOrNull(budget) { single(manager, provider, context) }
             val fix = location?.let { validFix(it.latitude, it.longitude) }
             if (fix != null) return fix
         }
