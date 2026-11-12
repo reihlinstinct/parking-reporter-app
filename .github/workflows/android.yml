@@ -62,7 +62,13 @@ jobs:
           java-version: '17'
           cache: gradle
       - run: sh scripts/prepare_wrapper.sh
-      - run: sh gradlew --no-daemon lintDebug testDebugUnitTest assembleDebug
+      - name: Build debug and verify release code generation
+        run: |
+          sh gradlew --no-daemon lintDebug testDebugUnitTest assembleDebug compileReleaseKotlin
+      - name: Retain generated assistant diagnostics
+        if: always()
+        run: |
+          find app/build/generated/ksp -type f -name '*ReportAppFunction*' -print || true
       - name: Unit test coverage (JaCoCo)
         if: always()
         continue-on-error: true
