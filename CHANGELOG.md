@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.46.2] - 2026-11-12
+
+### Other changes
+
+- docs+test: verified plate-class sources, special-looking plates stay unstyled and unqueried (#354, not closing) (#396) (fdf766d)
+
 ## [0.46.1] - 2026-11-12
 
 ### Other changes
