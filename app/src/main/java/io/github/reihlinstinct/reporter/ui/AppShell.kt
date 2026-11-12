@@ -77,7 +77,7 @@ fun AppShell(
     // Test-only in-memory lookup. Production always uses the normal loader,
     // including its file pin; a stub test never overwrites installed data.
     streetDirectoryLoader: (() -> StreetDirectory)? = null,
-    registryLookup: (suspend (String) -> RegistrySnapshot)? = null,
+    registryLookup: RegistryLookup? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()

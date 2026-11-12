@@ -16,32 +16,53 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
-class RegistrySnapshot(val tag: DisabilityLookupResult, val vehicle: VehicleLookupResult, val checkedAt: Instant) {
+typealias RegistryLookup = suspend (String, (RegistrySnapshot) -> Unit) -> RegistrySnapshot
+
+class RegistrySnapshot(val tag: DisabilityLookupResult?, val vehicle: VehicleLookupResult?, val checkedAt: Instant) {
     override fun toString() = "RegistrySnapshot(redacted)"
+}
+
+/** Independent completion prevents a slow licence endpoint from hiding a completed tag. */
+suspend fun readRegistrySnapshot(
+    plate: String,
+    tagLookup: suspend (String) -> DisabilityLookupResult,
+    vehicleLookup: suspend (String) -> VehicleLookupResult,
+    publish: (RegistrySnapshot) -> Unit,
+): RegistrySnapshot = coroutineScope {
+    var tag: DisabilityLookupResult? = null
+    var vehicle: VehicleLookupResult? = null
+    suspend fun emit() {
+        currentCoroutineContext().ensureActive()
+        publish(RegistrySnapshot(tag, vehicle, Instant.now()))
+    }
+    // Child coroutines resume on the caller's context; writes/publish are serialized there.
+    val tagJob = launch { tag = tagLookup(plate); emit() }
+    val vehicleJob = launch { vehicle = vehicleLookup(plate); emit() }
+    joinAll(tagJob, vehicleJob)
+    RegistrySnapshot(tag, vehicle, Instant.now())
 }
 
 /** Only the production shell opts into network reads; isolated previews/tests have no network. */
 @Composable
-fun rememberRegistryLookup(): suspend (String) -> RegistrySnapshot {
+fun rememberRegistryLookup(): RegistryLookup {
     val tag = remember { DisabilityRegistryClient(cacheTtlMillis = 0) }
     val vehicle = remember { VehicleRegistryClient(VehicleRegistryConfig(VehicleRegistryConfig.KNOWN_VEHICLE_RESOURCE_ID,
-        cacheTtlMillis = 0), DisabilityRegistryClient.boundedClient()) }
+        cacheTtlMillis = 0), VehicleRegistryClient.safeClient().newBuilder()
+        .callTimeout(6, java.util.concurrent.TimeUnit.SECONDS).build()) }
     val cache = remember { TtlLruCache<PlateNumber, RegistrySnapshot>(128, 300_000) { System.nanoTime() / 1_000_000 } }
-    return remember(tag, vehicle) { { plate ->
+    return remember(tag, vehicle) { { plate, publish ->
         val key = requireNotNull(PlateNumber.parse(plate))
-        cache.get(key) ?: coroutineScope {
-            val tagResult = async(Dispatchers.IO) { tag.lookup(plate) }
-            val vehicleResult = async(Dispatchers.IO) { vehicle.lookup(plate) }
-            RegistrySnapshot(tagResult.await(), vehicleResult.await(), Instant.now()).also {
-                if (it.tag !is DisabilityLookupResult.Error && it.vehicle !is VehicleLookupResult.Error) cache.put(key, it)
+        cache.get(key) ?: readRegistrySnapshot(plate,
+            { withContext(Dispatchers.IO) { tag.lookup(it) } },
+            { withContext(Dispatchers.IO) { vehicle.lookup(it) } }, publish).also {
+                if (it.tag != null && it.vehicle != null && it.tag !is DisabilityLookupResult.Error && it.vehicle !is VehicleLookupResult.Error) cache.put(key, it)
             }
-        }
     } }
 }
 
 /** Independent read-only information. No draft, text, save or submit callback exists here. */
 @Composable
-fun RegistryStatus(plate: String, lookup: (suspend (String) -> RegistrySnapshot)? = null) {
+fun RegistryStatus(plate: String, lookup: RegistryLookup? = null) {
     if (PlateNumber.parse(plate) == null) return
     val s = LocalStrings.current
     // Keyed state is cleared synchronously on an edit, before any effect can return.
@@ -50,10 +71,21 @@ fun RegistryStatus(plate: String, lookup: (suspend (String) -> RegistrySnapshot)
     LaunchedEffect(plate, lookup) {
         try {
             if (lookup == null) unavailable = true
-            else result = withTimeout(2200) { lookup(plate) }
-        } catch (e: TimeoutCancellationException) { unavailable = true }
+            else result = withTimeout(6500) { lookup(plate) { partial ->
+                result = partial
+            } }
+        } catch (e: TimeoutCancellationException) {
+            // Keep a completed half. Missing half gets a neutral unavailable result.
+            result = result?.let { RegistrySnapshot(it.tag ?: DisabilityLookupResult.Error(LookupErrorKind.NETWORK),
+                it.vehicle ?: VehicleLookupResult.Error(LookupErrorKind.NETWORK), it.checkedAt) }
+            unavailable = result == null
+        }
         catch (e: CancellationException) { throw e }
-        catch (_: Exception) { unavailable = true }
+        catch (_: Exception) {
+            result = result?.let { RegistrySnapshot(it.tag ?: DisabilityLookupResult.Error(LookupErrorKind.NETWORK),
+                it.vehicle ?: VehicleLookupResult.Error(LookupErrorKind.NETWORK), it.checkedAt) }
+            unavailable = result == null
+        }
     }
     Column(Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }) {
         val current = result
@@ -70,6 +102,7 @@ fun RegistryStatus(plate: String, lookup: (suspend (String) -> RegistrySnapshot)
                         else -> null
                     }
                     val tagKey = when {
+                        tag == null -> "registry.loading"
                         type == DisabilityTagType.TRIANGLE -> "registry.tag.triangle_icon"
                         type == DisabilityTagType.WHEELCHAIR -> "registry.tag.wheelchair_icon"
                         type == DisabilityTagType.UNKNOWN -> "registry.tag.unknown"
@@ -82,6 +115,7 @@ fun RegistryStatus(plate: String, lookup: (suspend (String) -> RegistrySnapshot)
                 val vehicle = current.vehicle
                 val status = (vehicle as? VehicleLookupResult.Found)?.record?.licenceStatus(LocalDate.now(ZoneId.of("Asia/Jerusalem")))
                 Text(s.t(when {
+                    vehicle == null -> "registry.loading"
                     status == LicenceStatus.EXPIRED -> "registry.licence.expired"
                     status == LicenceStatus.VALID -> "registry.licence.valid"
                     status == LicenceStatus.UNKNOWN -> "registry.licence.unknown"
