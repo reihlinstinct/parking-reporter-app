@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-11-12
+
+### Features
+
+- feat(home): side-by-side camera and gallery photo actions (#321) (9fc35bf)
+
 ## [0.39.2] - 2026-11-12
 
 ### Fixes
