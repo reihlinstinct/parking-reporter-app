@@ -1,6 +1,9 @@
 package io.github.reihlinstinct.reporter
 
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.performTextReplacement
@@ -29,6 +32,18 @@ class ReviewAddressTest {
     private fun draft() = ReviewDraft(
         Evidence("address-fixture", "a".repeat(64), "2026-01-01T12:00:00+02:00", 31.77, 35.21),
         "1234567", "", "sidewalk_parking", "תיאור בדיקה בלבד", setOf("address_needs_confirmation"))
+
+    // Issue #256: the Done key on the last single-line field clears focus and hides the keyboard.
+    @Test fun imeDoneOnHouseNumberClearsFocus() {
+        val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null),
+            address = "", confirmedLatitude = null, confirmedLongitude = null, unresolved = setOf("missing_gps", "address_needs_confirmation"))
+        compose.setContent { AppTheme { ReviewScreen(initial, null, {}, {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
+        compose.onNodeWithText("מספר בית").performScrollTo().performClick()
+        compose.waitUntil(10_000) { runCatching { compose.onNodeWithText("מספר בית").assertIsFocused() }.isSuccess }
+        compose.onNodeWithText("מספר בית").performImeAction()
+        compose.waitForIdle()
+        compose.onNodeWithText("מספר בית").assertIsNotFocused()
+    }
 
     @Test fun noGpsAddressRequiresExplicitConfirmationAndPreservesOriginal() {
         val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null),

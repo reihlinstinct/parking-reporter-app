@@ -3,7 +3,11 @@ package io.github.reihlinstinct.reporter.ui
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -160,10 +164,14 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             confirmButton = { TextButton(onClick = { askAddressConsent = false; scope.launch { findAddress() } }) { Text(s.t("review.location.lookup_yes")) } },
             dismissButton = { TextButton(onClick = { askAddressConsent = false }) { Text(s.t("review.location.lookup_later")) } })
     }
+    // Issue #256: the IME must never stay open over the send control.
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val dismissKeyboard = { focusManager.clearFocus(); keyboard?.hide() }
     Column(Modifier.fillMaxSize().systemBarsPadding().imePadding().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(s.t("review.title"), style = MaterialTheme.typography.titleLarge)
-            TextButton(onClick = { editing = !editing }) { Text(s.t(if (editing) "review.edit.done" else "review.edit.start")) }
+            TextButton(onClick = { if (editing) dismissKeyboard(); editing = !editing }) { Text(s.t(if (editing) "review.edit.done" else "review.edit.start")) }
         }
         image?.let { Image(it, s.t("review.image_description"), modifier = Modifier.fillMaxWidth().height(220.dp)) }
         val selectedCode = io.github.reihlinstinct.reporter.core.TopicIdentity.code(draft.subject)
@@ -233,7 +241,8 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate) }) { Text(reviewPlateSuggestionText(s, plate)) } }
         if (draft.needsPlate()) OutlinedTextField(draft.plate, { plateEdits++; draft = draft.edit(plate = PlateEntry.digits(it)) }, singleLine = true,
             isError = draft.plate.isNotBlank() && !draft.plate.matches(Regex("[0-9]{7,8}")),
-            visualTransformation = PlateEntry, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, autoCorrectEnabled = false),
+            visualTransformation = PlateEntry, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, autoCorrectEnabled = false, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }),
             textStyle = MaterialTheme.typography.titleLarge.copy(textDirection = TextDirection.Ltr),
             label = { Text(s.t("review.edit.plate_field")) }, modifier = Modifier.width(216.dp))
         RegistryStatus(draft.plate, registryLookup)
@@ -273,7 +282,8 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         if (latitude.toDoubleOrNull() == null || longitude.toDoubleOrNull() == null) {
             Text(s.t("review.location.missing_plain"))
             OutlinedTextField(manualStreet, { manualStreet = it; manualResult = null; manualGeneration++ }, label = { Text(s.t("review.location.street")) }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(manualHouse, { manualHouse = it; manualResult = null; manualGeneration++ }, label = { Text(s.t("review.location.house")) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(manualHouse, { manualHouse = it; manualResult = null; manualGeneration++ }, label = { Text(s.t("review.location.house")) }, modifier = Modifier.fillMaxWidth(),
+                singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }))
             Text(s.t("review.location.offline_note"), style = MaterialTheme.typography.bodySmall)
             Button(enabled = !manualBusy && manualAddressLookup != null && manualStreet.isNotBlank() && manualHouse.isNotBlank(), onClick = {
                 val generation = manualGeneration
@@ -330,6 +340,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             // N4: when the lock state disables send, TalkBack announces why.
             val sendModifier = if (noDeviceCredential) Modifier.fillMaxWidth().semantics { stateDescription = s.t("review.submit.no_device_lock") } else Modifier.fillMaxWidth()
             Button(enabled = selectedTopic != null && topicsAvailable && plateInDescription && foldedDraft().isReady() && !submitting && missingCredentialKeys.isEmpty() && !noDeviceCredential, onClick = {
+                dismissKeyboard()
                 confirmPendingEvidence()
                 // Runs 42853563754 / 42880867432: an ENABLED send button's
                 // semantics click no-opped silently. First proof point:
