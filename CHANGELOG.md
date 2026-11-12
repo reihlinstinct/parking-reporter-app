@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.38.1] - 2026-11-12
+
+### Fixes
+
+- fix(review): remove time controls and derive local report time (#343) (e70e595)
+
 ## [0.38.0] - 2026-11-12
 
 ### Features
