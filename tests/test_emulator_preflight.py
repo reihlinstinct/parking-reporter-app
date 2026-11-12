@@ -71,3 +71,41 @@ class EmulatorPreflightTest(unittest.TestCase):
         def fail():
             raise RuntimeError('offline')
         self.assertEqual(1, m.gate(lambda: 'ANR', fail, lambda _: None))
+
+
+class PreflightSummaryTest(unittest.TestCase):
+    def test_recovery_attempt_is_visible_for_both_final_results(self):
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+        for code, outcome in [(0, 'PASS'), (1, 'FAIL')]:
+            with self.subTest(code=code), TemporaryDirectory() as temp:
+                directory = Path(temp)
+                (directory / 'preflight-recovered.txt').write_text('attempted')
+                text = m.summary_markdown(directory, code)
+                self.assertIn('One bounded emulator reboot was requested', text)
+                self.assertIn('not a clean first boot', text)
+                self.assertIn('**' + outcome + '**', text)
+                self.assertIn('not an app-test result', text)
+
+    def test_no_recovery_is_reported_without_hiding_failure(self):
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+        with TemporaryDirectory() as temp:
+            for code, outcome in [(0, 'PASS'), (1, 'FAIL')]:
+                text = m.summary_markdown(Path(temp), code)
+                self.assertIn('No bounded recovery reboot was requested.', text)
+                self.assertIn('**' + outcome + '**', text)
+
+    def test_main_writes_failure_and_recovery_to_job_summary(self):
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            target = directory / 'job.md'
+            def failed_gate(reboot):
+                # Match the durable meaning of a failed recovery attempt.
+                (directory / 'preflight-recovered.txt').write_text('requested')
+                return 1
+            with patch('sys.argv', ['preflight', '--report-dir', temp]), patch.object(m, 'gate', side_effect=failed_gate), patch.object(m, 'adb', return_value='diagnostics'), patch.dict('os.environ', {'GITHUB_STEP_SUMMARY': str(target)}):
+                self.assertEqual(1, m.main())
+            self.assertIn('**FAIL**', target.read_text())
+            self.assertIn('not a clean first boot', target.read_text())
+            self.assertEqual('1\n', (directory / 'preflight.rc').read_text())

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Bounded emulator health gate. Never dismiss dialogs or retry app tests."""
+import os
 import argparse
 from pathlib import Path
 import re
@@ -83,6 +84,18 @@ def gate(check=probe, reboot=recover, pause=time.sleep):
     return 1
 
 
+def summary_markdown(directory, code):
+    """Recovery marker means an attempt, not a successful or clean boot."""
+    attempted = (directory / 'preflight-recovered.txt').exists()
+    status = 'PASS' if code == 0 else 'FAIL'
+    recovery = ('One bounded emulator reboot was requested before app tests; this was not a clean first boot.'
+                if attempted else 'No bounded recovery reboot was requested.')
+    return ('## Emulator preflight\n\n'
+            + recovery + '\n\n'
+            + f'Final preflight result: **{status}** (exit {code}). '
+            + 'This is a device readiness check, not an app-test result. See the separate test counts and results.\n\n')
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--report-dir', required=True)
@@ -94,6 +107,10 @@ def main():
         recover()
     code = gate(reboot=recorded_recovery)
     (directory / 'preflight.rc').write_text(str(code) + '\n')
+    target = os.environ.get('GITHUB_STEP_SUMMARY')
+    if target:
+        with open(target, 'a', encoding='utf-8') as summary:
+            summary.write(summary_markdown(directory, code))
     if code:
         # System diagnostics only, before any synthetic app flow or private input.
         for name, command in [('preflight-window.txt', ('shell', 'dumpsys', 'window')),
