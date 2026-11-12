@@ -41,6 +41,16 @@ class PlateEntryTest {
         val noPlate = d.copy(subject = ReportCategory.entries.first { !it.needsPlate }.code)
         assertEquals(noPlate, PlateEntry.prefill(noPlate, listOf("1234567"), ""))
     }
+    @Test fun redWhitePlateSurvivesReviewAndIsRequiredBeforeSave() {
+        val redWhite = draft().copy(subject = "municipal:1144")
+        assertFalse(redWhite.isReady())
+        val entered = redWhite.edit(plate = "12345678")
+        assertEquals("12345678", entered.plate)
+        assertTrue(entered.isReady())
+        assertEquals("12345678", entered.edit(text = "reviewed red-white report").plate)
+        assertEquals("1234567", PlateEntry.prefill(redWhite, listOf("1234567"), "").plate)
+        assertEquals("", entered.edit(subject = "municipal:5164").plate)
+    }
     @Test fun oneOcrCandidatePrefillsDigitsButNeverOverwritesTyping() {
         val d = draft()
         val prefilled = PlateEntry.prefill(d, listOf("1234567"), "")

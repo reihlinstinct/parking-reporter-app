@@ -8,7 +8,9 @@ object TopicIdentity {
         ?: subject.removePrefix("municipal:").takeIf {
             subject.startsWith("municipal:") && it.isNotEmpty() && it.all { c -> c in '0'..'9' }
         }
-    fun needsPlate(subject: String): Boolean = code(subject) == "1145"
+    // Both captured vehicle-enforcement topics need the reviewed plate.
+    // Other city topics remain plate-less; never infer this from labels.
+    fun needsPlate(subject: String): Boolean = code(subject) in setOf("1144", "1145")
     fun isKnownShape(subject: String): Boolean = code(subject) != null
 }
 

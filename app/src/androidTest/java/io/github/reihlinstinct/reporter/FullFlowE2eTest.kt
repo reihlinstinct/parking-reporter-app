@@ -284,6 +284,9 @@ class FullFlowE2eTest {
                 val db = Room.databaseBuilder(context, ReportDatabase::class.java, "report-ledger.db").build()
                 try {
                     val row = requireNotNull(runBlocking { db.reports().findPhoto(requireNotNull(ownedPhotoHash)) })
+                    val reviewed = io.github.reihlinstinct.reporter.ledger.DraftCodec.decode(row.draftJson)
+                    assertEquals("12345678", reviewed.plate)
+                    assertEquals("municipal:$expectedCode", reviewed.subject)
                     val original = File(context.noBackupFilesDir, row.originalRelativePath)
                     assertArrayEquals(originalBytes, original.readBytes())
                     val preview = io.github.reihlinstinct.reporter.evidence.OutgoingEvidence.prepare(original)
