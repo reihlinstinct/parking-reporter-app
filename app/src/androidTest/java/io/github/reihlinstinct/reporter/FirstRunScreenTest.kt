@@ -80,6 +80,8 @@ class FirstRunScreenTest {
         compose.onNodeWithText("מתחילים").performClick()
         compose.onNodeWithText("הגדרות בסיסיות").assertExists()
         compose.onNodeWithText("ברוכים הבאים לדיווח ל-106 עיריית ירושלים").assertDoesNotExist()
+        compose.onNodeWithText("כניסה מעוזר חכם").assertDoesNotExist()
+        compose.onNodeWithText("אפשר לעוזר לפתוח דיווח חדש").assertDoesNotExist()
         compose.onNodeWithText("מפתח מנוי לעירייה").assertDoesNotExist()
         compose.onNodeWithText("Google ML Kit", substring = true).assertDoesNotExist()
         File(context.filesDir, "first-run-basic-setup-synthetic.png").outputStream().use {

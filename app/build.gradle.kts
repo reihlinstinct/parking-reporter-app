@@ -46,8 +46,14 @@ kotlin {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
-ksp { arg("room.schemaLocation", "$projectDir/schemas") }
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+    // API36 stock indexers without dynamic schemas need the generated v1 asset too.
+    arg("appfunctions:generateV1Xml", "true")
+}
 dependencies {
+    implementation("androidx.appfunctions:appfunctions:1.0.0-rc01")
+    ksp("androidx.appfunctions:appfunctions-compiler:1.0.0-rc01")
     implementation("com.google.mlkit:text-recognition:16.0.1")
     implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
     implementation("com.google.crypto.tink:tink-android:1.24.0")

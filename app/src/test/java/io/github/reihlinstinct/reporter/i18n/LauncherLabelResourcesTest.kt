@@ -21,9 +21,9 @@ class LauncherLabelResourcesTest {
     private val stringEntry = Regex("""<string\s+name="([a-z_]+)"\s*>([^<]*)</string>""")
 
     private fun stringsIn(dir: File): Map<String, String> {
-        val file = File(dir, "strings.xml")
-        if (!file.isFile) return emptyMap()
-        return stringEntry.findAll(file.readText(Charsets.UTF_8)).associate { it.groupValues[1] to it.groupValues[2].trim() }
+        return dir.listFiles().orEmpty().filter { it.extension == "xml" }.flatMap { file ->
+            stringEntry.findAll(file.readText(Charsets.UTF_8)).map { it.groupValues[1] to it.groupValues[2].trim() }.toList()
+        }.toMap()
     }
 
     private fun languageDirs(): Map<String, File> =
@@ -43,13 +43,14 @@ class LauncherLabelResourcesTest {
     }
 
     @Test
-    fun everyLabelFileCarriesTheTileLabelAndNothingElse() {
+    fun everySystemLabelResourceHasTileAndAssistantDescriptionOnly() {
         val base = stringsIn(File(res, "values"))
         assertTrue("res/values (the default language) has tile_new_report", base["tile_new_report"].orEmpty().isNotBlank())
         for ((code, dir) in languageDirs()) {
             val strings = stringsIn(dir)
-            assertEquals("values-$code holds only the tile label", setOf("tile_new_report"), strings.keys)
+            assertEquals("values-$code holds only approved system labels", setOf("tile_new_report", "appfunctions_entry_description"), strings.keys)
             assertTrue("values-$code tile label is not blank", strings.getValue("tile_new_report").isNotBlank())
+            assertTrue("values-$code assistant description is not blank", strings.getValue("appfunctions_entry_description").isNotBlank())
         }
     }
 
