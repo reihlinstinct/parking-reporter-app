@@ -156,6 +156,39 @@ class RegistryReviewTest {
         screenshot("registry-unknown-licence.png")
     }
 
+    @Test fun cacheIsImmediateLabelledFallbackButAlwaysRequestsAndReplacesWithLive() {
+        val gate = CompletableDeferred<Unit>()
+        var calls = 0
+        val checked = Instant.now().minusSeconds(3600)
+        val saved = RegistryFallbackCache.Cached(DisabilityLookupResult.Found(DisabilityTagType.TRIANGLE),
+            VehicleLookupResult.Found((snapshot(DisabilityTagType.TRIANGLE).vehicle as VehicleLookupResult.Found).record.copy(
+                licenceValidUntil = LocalDate.now(java.time.ZoneId.of("Asia/Jerusalem")).plusDays(30))), checked, checked)
+        val lookup: RegistryLookup = { plate, emit -> cachedRegistryLookup(plate, saved,
+            { _, _ -> calls++; gate.await(); snapshot(DisabilityTagType.WHEELCHAIR) }, {}, emit) }
+        compose.setContent { AppTheme { Surface(Modifier.fillMaxSize()) { RegistryStatus("1234567", lookup) } } }
+        compose.onNodeWithText("מידע שמור מלפני", substring = true).assertExists()
+        compose.onNodeWithText("תג חניה לנכה, סמל משולש").assertExists()
+        compose.runOnIdle { assertEquals(1, calls) }
+        screenshot("registry-cache-immediate-labelled.png")
+        gate.complete(Unit); compose.waitForIdle()
+        compose.onNodeWithText("תג חניה לנכה בכיסא גלגלים").assertExists()
+        compose.onNodeWithText("מידע שמור מלפני", substring = true).assertDoesNotExist()
+        screenshot("registry-cache-replaced-live.png")
+    }
+
+    @Test fun liveFailureKeepsLabelledFallbackWithoutWritingErrors() {
+        var writes = 0; var calls = 0
+        val saved = RegistryFallbackCache.Cached(DisabilityLookupResult.Found(DisabilityTagType.TRIANGLE),
+            VehicleLookupResult.NotFound, Instant.now().minusSeconds(120), Instant.now().minusSeconds(120))
+        val lookup: RegistryLookup = { plate, emit -> cachedRegistryLookup(plate, saved,
+            { _, _ -> calls++; throw java.io.IOException("synthetic offline") }, { writes++ }, emit) }
+        compose.setContent { AppTheme { Surface(Modifier.fillMaxSize()) { RegistryStatus("1234567", lookup) } } }
+        compose.onNodeWithText("מידע שמור מלפני", substring = true).assertExists()
+        compose.onNodeWithText("תג חניה לנכה, סמל משולש").assertExists()
+        compose.runOnIdle { assertEquals(1, calls); assertEquals(0, writes) }
+        screenshot("registry-cache-offline-fallback.png")
+    }
+
     /** Recorded public registry data from2026-11-12, NOT a live network test. No owner fields. */
     @Test fun recordedInactiveNissanShowsRedExpiredWithoutTag() {
         val lookup: RegistryLookup = { _, _ -> RegistrySnapshot(DisabilityLookupResult.NotFound,
