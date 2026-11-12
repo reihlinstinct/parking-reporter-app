@@ -620,7 +620,6 @@ fun AppShell(
         else -> Column(Modifier.fillMaxSize().systemBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(strings.t("shell.home.title"), style = MaterialTheme.typography.headlineMedium)
             Text(strings.t("shell.home.subtitle"), style = MaterialTheme.typography.titleLarge)
-            Text(strings.t("shell.home.on_device_note"))
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(onClick = { requestCamera { page = "camera" } },
                     modifier = Modifier.weight(1f).fillMaxHeight().heightIn(min = 56.dp)) {
@@ -636,6 +635,8 @@ fun AppShell(
                     Text(strings.t("shell.home.upload_photo"), modifier = Modifier.weight(1f))
                 }
             }
+            // Keep the two primary actions discoverable before long explanatory copy at 200%.
+            Text(strings.t("shell.home.on_device_note"))
             Text(strings.t("shell.home.test_build_note"), style = MaterialTheme.typography.bodySmall)
             Text(strings.t("shell.home.drafts_title"), style = MaterialTheme.typography.titleMedium)
             if (records.isEmpty() && draft == null) Text(strings.t("shell.home.no_drafts"), style = MaterialTheme.typography.bodySmall)

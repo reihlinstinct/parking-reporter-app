@@ -317,6 +317,15 @@ class M1ShellTest {
         assertTrue("Photo actions do not overlap", camera.right <= gallery.left || gallery.right <= camera.left)
         compose.onNodeWithText("העלאה מהגלריה אינה דורשת הרשאות", substring = true).assertDoesNotExist()
         compose.onNodeWithText("ביטול הרשאת מצלמה או אימות", substring = true).assertDoesNotExist()
+        // #371: first paint, no scroll. Check the whole clickable button, not just text.
+        val navigationTop = compose.onNodeWithText("בית").fetchSemanticsNode().boundsInRoot.top
+        for (label in listOf("צלם תמונה", "העלה תמונה")) {
+            val fullButton = compose.onNode(hasText(label) and hasClickAction()).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+            val viewport = compose.onRoot().fetchSemanticsNode().boundsInRoot
+            assertTrue("$label full first-paint button must remain above navigation: $fullButton vs $navigationTop",
+                fullButton.top >= viewport.top && fullButton.bottom <= navigationTop &&
+                    fullButton.left >= viewport.left && fullButton.right <= viewport.right)
+        }
         screenshot("design-home-synthetic.png")
         // Issues #304/#306: at 200% text on a compact viewport the actions
         // may begin below the fold. Prove the existing scroll container can
