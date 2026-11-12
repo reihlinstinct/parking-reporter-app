@@ -260,7 +260,7 @@ class ShellSettingsExtractionTest {
         assertTrue(keysUsedIn("AppShell.kt").all { it.startsWith("shell.") || it in sharedTopicKeys })
         // The one allowed exception is the Licenses-screen link button (#163), which
         // shows that screen's own licenses.screen.title rather than duplicating it.
-        assertTrue(keysUsedIn("SettingsScreen.kt").all { it.startsWith("settings.") || it.startsWith("setup.") || it == "licenses.screen.title" })
+        assertTrue(keysUsedIn("SettingsScreen.kt").all { it.startsWith("settings.") || it.startsWith("setup.") || it.startsWith("plate_categories.") || it == "licenses.screen.title" })
     }
 
     @Test

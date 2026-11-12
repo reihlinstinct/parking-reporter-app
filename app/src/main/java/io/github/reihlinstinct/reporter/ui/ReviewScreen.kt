@@ -49,7 +49,8 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var geocodeStatus by remember { mutableStateOf<String?>(null) }
     fun policy(value: ReviewDraft) = topicSnapshot?.let { io.github.reihlinstinct.reporter.core.PlatePolicy.apply(value, it.topics, plateEnables) } ?: value
     var draft by remember(initial.evidence.stableId) { mutableStateOf(policy(ReportTime.forSave(initial))) }
-    LaunchedEffect(initial, topicSnapshot, plateEnables) { draft = policy(ReportTime.forSave(if (initial.evidence.stableId == draft.evidence.stableId) draft else initial)) }
+    LaunchedEffect(initial) { draft = policy(ReportTime.forSave(initial)) }
+    LaunchedEffect(topicSnapshot, plateEnables) { draft = policy(draft) }
     var latitude by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedLatitude?.toString().orEmpty()) }
     var longitude by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedLongitude?.toString().orEmpty()) }
     var editing by remember(initial.evidence.stableId) { mutableStateOf(false) }

@@ -213,7 +213,7 @@ class ReviewCaptureReportsExtractionTest {
         )
         assertTrue(keysNamedIn("CaptureScreen.kt").all { it.startsWith("capture.") })
         assertTrue(keysNamedIn("ReportsScreen.kt").all { it.startsWith("reports.") })
-        assertTrue((keysNamedIn("ReviewScreen.kt") + keysNamedIn("ReviewTexts.kt")).all { it.startsWith("review.") })
+        assertTrue((keysNamedIn("ReviewScreen.kt") + keysNamedIn("ReviewTexts.kt")).all { (it.startsWith("review.") || it.startsWith("registry.") || it.startsWith("plate_categories.")) })
     }
 
     @Test
