@@ -3,6 +3,7 @@ package io.github.reihlinstinct.reporter
 import io.github.reihlinstinct.reporter.ui.theme.AppTheme
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -56,6 +57,8 @@ class LanguagePickerTest {
 
         compose.onNodeWithText("${Bidi.LRI}English${Bidi.PDI}").performScrollTo().performClick()
         // Live: the shell and the screen switch with no restart, and typed text stays.
+        // The live relabel lands on a later frame on a loaded emulator; wait for it instead of asserting at once.
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("Settings").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Settings").assertExists()
         compose.onNodeWithText("Privacy settings").performScrollTo().assertExists()
         compose.onNodeWithText("בדיקה").performScrollTo().assertExists()
@@ -69,6 +72,7 @@ class LanguagePickerTest {
         }
 
         compose.onNodeWithText("${Bidi.RLI}العربية${Bidi.PDI}").performScrollTo().performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("الإعدادات").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("الإعدادات").assertExists()
         compose.onNodeWithText("System default").assertDoesNotExist()
         compose.onNodeWithText("افتراضي النظام").performScrollTo().performClick()

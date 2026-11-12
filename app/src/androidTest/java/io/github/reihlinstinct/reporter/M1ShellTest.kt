@@ -365,6 +365,9 @@ class M1ShellTest {
         // Issue #295 (owner 2026-11-11): one field is not enough - the button
         // stays greyed, and the reason next to it names the missing fields.
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().assertIsNotEnabled()
+        // The reason text follows the keyboard/scroll settling; wait for it, then scroll and assert.
+        compose.waitUntil(10_000) { compose.onAllNodes(hasText("חסרים או לא תקינים", substring = true)).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitForIdle()
         compose.onNode(hasText("חסרים או לא תקינים", substring = true)).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("שם משפחה").performTextInput("מדווח")
         compose.onNodeWithText("מספר זהות").performScrollTo().performTextReplacement("000000018")
