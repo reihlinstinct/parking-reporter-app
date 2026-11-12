@@ -18,7 +18,7 @@ In Review, after tapping edit, the user can choose the plate type: regular (defa
 - The type is never inferred from the digits or from OCR. OCR suggestions always select regular.
 - Regular: unchanged (7 or 8 digits, registry lookup).
 - Police, CD, CC: the typed digits only (police also allows hyphens between digits, no letters; the app adds the mem or the "CD"/"CC" marker). Ready means at least one digit, no digit-count rule, because no official count is verified. No registry lookup.
-- The report text must contain the exact string with its marker (for example "11-22-33 \u05DE" synthetic). `PlatePolicy.descriptionContainsPlate` checks it. A 7-digit police plate is never accepted as a regular plate: the class is part of the digest and the ledger record.
+- The report text must contain the exact string with its marker (for example "11-22-33 מ" synthetic). `PlatePolicy.descriptionContainsPlate` checks it. A 7-digit police plate is never accepted as a regular plate: the class is part of the digest and the ledger record.
 - Display: police is drawn red with white characters (spec 119/2016, above). CD and CC are drawn neutral grey because no colour is verified. Changing the type clears the plate field.
 - Nothing structured is sent for a non-regular plate: the city submission carries the report text only, and `EncryptedPackage.reviewedReport` (demo path, not live) refuses a non-regular plate.
 
