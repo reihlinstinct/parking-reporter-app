@@ -31,14 +31,31 @@ class TagIconThemeTest {
             val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
             bitmap.eraseColor(background)
             context.getDrawable(resource)!!.mutate().apply { setBounds(0, 0, size, size); draw(Canvas(bitmap)) }
-            // The lower centre crosses the white exterior and the dark inner contour on both shapes.
-            val pixels = (size / 2 until size).map { bitmap.getPixel(size / 2, it) }
+            // At centre-x the bottom outer edge is y61 (triangle) or y62 (tile).
+            // The inset transform moves the colored bottom to56.36/57.2. Sample
+            // the real exterior band, away from all interior dots/wheel strokes.
             fun luminance(c: Int): Double {
                 fun channel(v: Int): Double { val s = v / 255.0; return if (s <= .04045) s / 12.92 else Math.pow((s + .055) / 1.055, 2.4) }
                 return .2126 * channel(Color.red(c)) + .7152 * channel(Color.green(c)) + .0722 * channel(Color.blue(c))
             }
-            assertTrue("light contour must remain visible on dark", pixels.count { luminance(it) > .8 } >= (size / 24).coerceAtLeast(1))
-            assertTrue("dark inner contour must remain visible on light", pixels.any { luminance(it) < .2 })
+            fun contrast(a: Int, b: Int): Double {
+                val la = luminance(a); val lb = luminance(b)
+                return (maxOf(la, lb) + .05) / (minOf(la, lb) + .05)
+            }
+            val triangle = resource == R.drawable.ic_disability_tag_triangle
+            val outerBottom = if (triangle) 61.0 else 62.0
+            val innerBottom = 5.12 + .84 * outerBottom
+            val ringY = (((innerBottom + outerBottom) / 2) * size / 64).toInt().coerceIn(0, size - 1)
+            val innerY = ((innerBottom - 2.0) * size / 64).toInt().coerceIn(0, size - 1)
+            val ring = bitmap.getPixel(size / 2, ringY)
+            val inner = bitmap.getPixel(size / 2, innerY)
+            if (luminance(background) < .2) {
+                assertTrue("actual exterior band must contrast3:1 with dark surface", contrast(ring, background) >= 3.0)
+                assertTrue("exterior band remains light, not an interior glyph", luminance(ring) > .8)
+            } else {
+                assertTrue("actual colored inner boundary must contrast3:1 with light surface", contrast(inner, background) >= 3.0)
+                assertTrue("inner boundary remains dark, not blank background", luminance(inner) < .2)
+            }
             val file = File(context.filesDir, "tag-boundary-$resource-$dp-${if (background == Color.BLACK) "dark" else background.toUInt().toString(16)}.png")
             file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         }
