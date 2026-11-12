@@ -20,3 +20,7 @@ Use synthetic inputs. No real plates, photos, reporter details, credentials or t
 Does this affect approval, duplicate blocking, uncertain state, privacy or retries?
 
 ## Acceptance criteria and regression tests
+
+One checkbox per criterion. The fixing PR copies each one and ticks it with proof.
+
+- [ ]
