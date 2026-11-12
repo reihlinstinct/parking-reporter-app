@@ -51,4 +51,10 @@ class RegistryProgressTest {
         assertFalse("tag resolved, including NotFound", tagPending(RegistrySnapshot(DisabilityLookupResult.NotFound, vehicleDone, now)))
         assertFalse(tagPending(RegistrySnapshot(DisabilityLookupResult.Found(DisabilityTagType.WHEELCHAIR), vehicleDone, now)))
     }
+
+    @Test fun limiterStateHasItsOwnKeyAndOtherErrorsStayUnavailable() {
+        assertEquals("registry.rate_limited", registryErrorKey(LookupErrorKind.RATE_LIMITED))
+        assertEquals("registry.unavailable", registryErrorKey(LookupErrorKind.NETWORK))
+        assertEquals("registry.unavailable", registryErrorKey(null))
+    }
 }

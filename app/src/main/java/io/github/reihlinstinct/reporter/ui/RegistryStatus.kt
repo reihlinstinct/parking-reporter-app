@@ -28,6 +28,10 @@ fun licenceDaysRemaining(until: LocalDate?, checkedAt: Instant): Long? = until?.
 /** Vehicle half resolved while the tag request is still pending (issue #365). Purely informational. */
 fun tagPending(snapshot: RegistrySnapshot): Boolean = snapshot.tag == null && snapshot.vehicle != null
 
+/** Catalog key for a failed half: the 1-second limiter is not network failure and not absence (issue #369). */
+fun registryErrorKey(kind: LookupErrorKind?): String =
+    if (kind == LookupErrorKind.RATE_LIMITED) "registry.rate_limited" else "registry.unavailable"
+
 class RegistrySnapshot(val tag: DisabilityLookupResult?, val vehicle: VehicleLookupResult?, val checkedAt: Instant, val cachedAt: Instant? = null, val cachedUntil: Instant? = null) {
     override fun toString() = "RegistrySnapshot(redacted)"
 }
@@ -141,12 +145,12 @@ private fun RegistryStatusContent(plate: String, lookup: RegistryLookup?) {
                         type == DisabilityTagType.WHEELCHAIR -> "registry.tag.wheelchair_icon"
                         type == DisabilityTagType.UNKNOWN -> "registry.tag.unknown"
                         tag is DisabilityLookupResult.NotFound -> "registry.tag.not_found"
-                        else -> "registry.unavailable"
+                        else -> registryErrorKey((tag as? DisabilityLookupResult.Error)?.kind)
                     }
                     if (icon != null) Image(painterResource(icon), null, Modifier.size(32.dp))
                     Text(s.t(tagKey))
                 }
-                if (tag is DisabilityLookupResult.Error) Text(s.t("registry.unavailable"))
+                if (tag is DisabilityLookupResult.Error) Text(s.t(registryErrorKey(tag.kind)))
                 val vehicle = current.vehicle
                 val days = licenceDaysRemaining((vehicle as? VehicleLookupResult.Found)?.record?.licenceValidUntil, current.checkedAt)
                 val status = when { days == null -> if (vehicle is VehicleLookupResult.Found) LicenceStatus.UNKNOWN else null; days < 0 -> LicenceStatus.EXPIRED; else -> LicenceStatus.VALID }
@@ -158,7 +162,7 @@ private fun RegistryStatusContent(plate: String, lookup: RegistryLookup?) {
                     status == LicenceStatus.VALID -> "registry.licence.valid"
                     status == LicenceStatus.UNKNOWN -> "registry.licence.unknown"
                     vehicle is VehicleLookupResult.NotFound -> "registry.licence.not_found"
-                    else -> "registry.unavailable"
+                    else -> registryErrorKey((vehicle as? VehicleLookupResult.Error)?.kind)
                 }, mapOf("days" to (days ?: 0L).toString()))
                 if (status == LicenceStatus.EXPIRED) {
                     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
