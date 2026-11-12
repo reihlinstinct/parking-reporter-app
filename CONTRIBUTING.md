@@ -21,7 +21,7 @@
 ## Versioning
 
 - Semantic Versioning, derived from conventional commit subjects: `fix` bumps PATCH, `feat` bumps MINOR, a breaking change (`BREAKING CHANGE` or `!:`) bumps MAJOR.
-- Releases are automated and lightweight: `.github/workflows/release.yml` runs `scripts/release.py` only when the merged PR has the `release` label, once a day if a feat/fix/breaking commit landed since the last release, or on demand (workflow_dispatch). It bumps `versionName`/`versionCode`, adds the CHANGELOG.md entry, tags `v<version>` and creates the GitHub release with notes in Hebrew and English (commit subjects stay in English). Merges without the label do not release by themselves.
+- Releases are automated and lightweight: `.github/workflows/release.yml` runs `scripts/release.py` only when the merged PR has the `release` label, once a day if a feat/fix/perf/revert/breaking commit landed since the last release, or on demand (workflow_dispatch). It bumps `versionName`/`versionCode`, adds the CHANGELOG.md entry, tags `v<version>` and creates the GitHub release with notes in Hebrew and English (commit subjects stay in English). Merges without the label do not release by themselves.
 - Every bug fix ships with a regression test.
 - The version is visible in the app (Settings screen).
 - No distribution outside this repository (APK, stores, municipality) without explicit owner approval.
