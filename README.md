@@ -8,11 +8,11 @@ Hebrew user guide: the [wiki](https://github.com/reihlinstinct/parking-reporter-
 
 ## Current capabilities
 
-CameraX original-byte capture, SHA-256, EXIF metadata, manual corrections, optional geocoder suggestions, encrypted reporter settings, local Room ledger and digest-bound manual review. The captured municipal 106 subject catalog ships as a checksummed offline asset with local-category mapping ([taxonomy parity](docs/MUNICIPAL_TAXONOMY.md)). No live report submission, bundled municipal secrets or cloud photo recognition. The offline encrypted-package demo uses generated synthetic data and an in-memory sink, never the network.
+CameraX original-byte capture, SHA-256, EXIF metadata, manual corrections, optional geocoder suggestions, encrypted reporter settings, local Room ledger and digest-bound manual review. The captured municipal 106 subject catalog ships as a checksummed offline asset with local-category mapping ([taxonomy parity](docs/MUNICIPAL_TAXONOMY.md)). Public tag/vehicle-registry status is shown independently of Save/Send. Production submission code exists behind explicit approval and staging safeguards; regular CI files no live case. No municipal secrets or cloud photo recognition are bundled. The offline encrypted-package demo uses generated synthetic data and an in-memory sink, never the network.
 
 ## Build and tests
 
-Java 17 and Android SDK 35. The checked-in wrapper properties select Gradle
+Java 17 and Android SDK 37 (compile/target SDK; minSdk 26). The checked-in wrapper properties select Gradle
 8.13 and verify its distribution checksum. The preparation script separately
 bootstraps a checksum-verified wrapper JAR from Gradle 8.11.1; that does not
 select the Gradle runtime version. Accept Android SDK terms before installing
@@ -45,11 +45,11 @@ See [design](docs/DESIGN.md), [preview status](M1_STATUS.md), [taxonomy parity](
 
 ## Safety
 
-Never commit real plates, evidence, profiles, keys or tokens. Fixtures are explicitly synthetic. Local review is not a submission or permission to post. Edits invalidate review. Original hash and stable ID guard against duplicates. Uncertain writes must not be retried automatically. Photos remain local for recognition. No municipal credentials or endpoints belong in public code or APKs.
+Never commit private evidence, reporter profiles, keys or tokens. Prefer synthetic fixtures. The owner-selected public plate 1912929 is a documented recorded registry fixture without owner fields; it is not a live-check claim. Local review is not a submission or permission to post. Edits invalidate review. Original hash and stable ID guard against duplicates. Uncertain writes must not be retried automatically. Photos remain local for recognition. No municipal credentials belong in public code or APKs. The pinned municipal endpoint is public configuration, not authorization to file.
 
 ## Offline recognition preview
 
-Explicit local Tesseract OCR offers plate candidates, with manual fallback and required review. Optional bundled Google ML Kit recognition sends API usage/performance metrics to Google; photos and plate results stay on-device. See [OCR limits, model provenance and licensing](docs/OFFLINE_OCR.md). This does not complete field validation or enable live reporting.
+Explicit local Tesseract OCR offers plate candidates, with manual fallback and required review. Optional bundled Google ML Kit recognition sends API usage/performance metrics to Google; photos and plate results stay on-device. See [OCR limits, model provenance and licensing](docs/OFFLINE_OCR.md). This does not complete field validation or grant permission for live reporting.
 
 ### Emulator health and display cadence
 
@@ -59,7 +59,8 @@ stops the job and preserves preflight diagnostics. App tests are never retried o
 weakened by this gate. A healthy preflight is not proof that the device cannot
 fail later in a test run.
 
-The display workflow's PR self-test uses normal-font foldable coverage. Compact
-200% font scaling remains in weekly and manual runs as an accessibility stress
-check, not the default recording/demo format. Ordinary app PRs do not trigger
-this display workflow unless its workflow file changes.
+The display workflow runs normal-font foldable and compact 200% profiles for
+risky UI, resources, strings, instrumentation and workflow changes. Guard tests
+pin the current path filter; it is not blanket coverage of every possible UI
+change. Weekly/manual runs also exist. Normal font is the demo default;
+compact 200% is an accessibility stress check. See the workflow for exact globs.
