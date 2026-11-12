@@ -1,4 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -29,7 +29,7 @@
             </intent-filter>
         </service>
         <!-- Disabled on older Android releases before the API36 base service exists. -->
-        <service android:name="io.github.reihlinstinct.reporter.assistant.ReportAppFunctionService"
+        <service android:name="io.github.reihlinstinct.reporter.assistant.ReportAppFunctionService" tools:targetApi="36"
             android:enabled="@bool/appfunctions_supported" android:exported="true"
             android:permission="android.permission.BIND_APP_FUNCTION_SERVICE">
             <property android:name="android.app.appfunctions.schema" android:value="app_functions_schema.xsd" />
