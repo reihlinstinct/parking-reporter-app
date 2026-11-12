@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.40.3] - 2026-11-12
+
+### Fixes
+
+- fix(picker): readable duplicate paths and unclipped Hebrew search (#326) (c059fc9)
+
 ## [0.40.2] - 2026-11-12
 
 ### Fixes

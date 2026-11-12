@@ -19,14 +19,14 @@ class CityTopicPickerTest {
         var chosen: MunicipalSubject? = null
         compose.setContent { AppTheme { CityTopicPicker(syntheticCityTopics().topics, null, emptyList(),
             mapOf("1280" to listOf("התקנת עמודים")), {}, { chosen = it }) } }
-        compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextInput("התקנת עמודים")
+        compose.onNodeWithTag("picker-search-input").performTextInput("התקנת עמודים")
         compose.waitUntil(5_000) { compose.onNodeWithText("\u20661\u2069 תוצאות").isDisplayed() }
         compose.onNodeWithText("\u20661\u2069 תוצאות").assertIsDisplayed()
             .assert(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.LiveRegion,
                 androidx.compose.ui.semantics.LiveRegionMode.Polite))
         compose.onNodeWithText("עמוד מחסום ברזל נוטה ליפול / נפל", useUnmergedTree = true).assertIsDisplayed().performClick()
         compose.runOnIdle { assertEquals("1280", chosen?.code) }
-        compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextReplacement("17841")
+        compose.onNodeWithTag("picker-search-input").performTextReplacement("17841")
         compose.onNodeWithText("תמרור תנועה נפל / דהוי / שבור / נוטה ליפול", useUnmergedTree = true).assertIsDisplayed()
     }
     @Test fun searchableMunicipalCatalogRecordingUsesMockRefreshNotLiveCity() {
@@ -44,11 +44,11 @@ class CityTopicPickerTest {
         }
         Thread.sleep(1200)
         capture("city-topic-search-open.png")
-        compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextInput("התקנת עמודים")
+        compose.onNodeWithTag("picker-search-input").performTextInput("התקנת עמודים")
         compose.onNodeWithText("עמוד מחסום ברזל נוטה ליפול / נפל", useUnmergedTree = true).assertIsDisplayed()
         Thread.sleep(1800)
         capture("city-topic-search-alias.png")
-        compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextReplacement("17841")
+        compose.onNodeWithTag("picker-search-input").performTextReplacement("17841")
         Thread.sleep(1800)
         capture("city-topic-search-code.png")
         compose.onNodeWithText("תמרור תנועה נפל / דהוי / שבור / נוטה ליפול", useUnmergedTree = true).performClick()
@@ -61,11 +61,11 @@ class CityTopicPickerTest {
             MunicipalSubject("5164", "גרפיטי", listOf("ניקיון", "גרפיטי")))
         var chosen: MunicipalSubject? = null
         compose.setContent { AppTheme { CityTopicPicker(rows, null, emptyList(), emptyMap(), {}, { chosen = it }) } }
-        val label = "בעלי חיים / אחר; חניה אסורה / אחר; ניקיון / גרפיטי"
-        val query = compose.onNodeWithText("חפש נושא, תיאור או מספר")
+        val label = "בעלי חיים › אחר\nחניה אסורה › אחר\nניקיון › גרפיטי"
+        val query = compose.onNodeWithTag("picker-search-input")
         query.performTextInput("5164")
         compose.onNodeWithText(label, useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithContentDescription("אחר / גרפיטי. " + label).assertIsDisplayed()
+        compose.onNodeWithContentDescription("אחר · גרפיטי. " + label).assertIsDisplayed()
         compose.onNodeWithText("\u20661\u2069 תוצאות").assertIsDisplayed()
         compose.waitForIdle()
         val bitmap = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
@@ -105,6 +105,64 @@ class CityTopicPickerTest {
         compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}, topicSnapshot = snapshot) } }
         compose.onNodeWithText("מועד הבדיקה האחרון אינו ידוע").assertDoesNotExist()
         compose.onNodeWithText("90 ימים", substring = true).assertIsDisplayed()
+    }
+
+    @Test fun realDuplicate5164PathsRemainReadableAndOneSelectableIdentity() {
+        io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set(io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(context))
+        val testContext = InstrumentationRegistry.getInstrumentation().context
+        val json = org.json.JSONObject(testContext.assets.open("city-subjects-public-20261111.json").bufferedReader().use { it.readText() })
+        val array = json.getJSONArray("subject_rows")
+        val rows = (0 until array.length()).map { i ->
+            val row = array.getJSONObject(i); val path = row.getJSONArray("path")
+            MunicipalSubject(row.getString("code"), row.getString("name"), (0 until path.length()).map { path.getString(it) })
+        }
+        assertTrue(rows.size > 3)
+        var choices = 0
+        compose.setContent { AppTheme { CityTopicPicker(rows, null, emptyList(), emptyMap(), {}, {
+            assertEquals("5164", it.code); choices++
+        }) } }
+        compose.onNodeWithTag("picker-search-input").performTextInput("5164")
+        compose.onNodeWithText("\u20661\u2069 תוצאות").assertIsDisplayed()
+        val paths = rows.map { it.path.joinToString(" › ") }.distinct().joinToString("\n")
+        val names = rows.map { it.name }.distinct().joinToString(" · ")
+        compose.onNodeWithContentDescription(names + ". " + paths).assertExists().assertHasClickAction()
+        fun capture(name: String) {
+            compose.waitForIdle()
+            val bitmap = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+            File(context.filesDir, name).outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            bitmap.recycle()
+        }
+        capture("picker315-real-paths-top.png")
+        assertPickerGeometry()
+        assertTextInkFits("picker-path-5164")
+        compose.onNodeWithTag("topic-results").performTouchInput { swipeUp() }
+        capture("picker315-real-paths-bottom.png")
+        compose.onNodeWithText("סגור").assertIsDisplayed()
+        compose.onNodeWithContentDescription(names + ". " + paths).performClick()
+        compose.runOnIdle { assertEquals(1, choices) }
+    }
+
+    private fun assertPickerGeometry() {
+        val title = compose.onNodeWithTag("picker-title").fetchSemanticsNode().boundsInRoot
+        val label = compose.onNodeWithTag("picker-search-label").fetchSemanticsNode().boundsInRoot
+        val input = compose.onNodeWithTag("picker-search-input").fetchSemanticsNode().boundsInRoot
+        assertTrue("Search label must not cross title", label.top >= title.bottom)
+        assertTrue("Search input must start below external label", input.top >= label.bottom)
+        assertTextInkFits("picker-search-label")
+    }
+    private fun assertTextInkFits(tag: String) {
+        val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+        compose.onNodeWithTag(tag, useUnmergedTree = true).performSemanticsAction(
+            androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        assertTrue("Text layout must be inspected", layouts.isNotEmpty())
+        for (layout in layouts) {
+            assertFalse("Text overflows its layout: $tag", layout.hasVisualOverflow)
+            for (i in layout.layoutInput.text.indices) {
+                if (layout.layoutInput.text[i].isWhitespace()) continue
+                val glyph = layout.getBoundingBox(i)
+                assertTrue("RTL glyph crosses horizontal edge: $tag/$i $glyph", glyph.left >= -0.5f && glyph.right <= layout.size.width + 0.5f)
+            }
+        }
     }
 
     @Test fun noCityCredentialsDisablesTopicFieldWithExplanation() {
