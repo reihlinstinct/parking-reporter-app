@@ -6,7 +6,7 @@ Official context checked November12,2026:
 - https://me.health.gov.il/older-adult/services-rights/benefits-and-eligibilities/disabled-parking-placard/ lists regular and wheelchair tag types, including Ministry of Defence variants.
 - https://www.btl.gov.il/benefits/Disability/otherbenefits/Pages/%D7%AA%D7%92%20%D7%97%D7%A0%D7%99%D7%94%20%D7%9C%D7%A8%D7%9B%D7%91%20%D7%A0%D7%9B%D7%94.aspx describes wheelchair-tag eligibility.
 
-These pages do not establish a reusable image licence or the registry's numeric type-to-icon mapping. No claim of public-domain government art is made. Numeric mapping remains unimplemented until verified from the registry's official schema. A tag icon is not a determination that parking is lawful.
+These pages do not establish a reusable image licence or the registry's numeric type-to-icon mapping. No claim of public-domain government art is made. The owner explicitly confirmed type1=triangle and type2=wheelchair. `DisabilityTagType.fromRegistry` centralizes that mapping; all other/missing values return UNKNOWN. UI integration remains separate. A tag icon is not a determination that parking is lawful.
 
 ## Files and use
 
@@ -25,4 +25,4 @@ Official source URLs:
 - https://data.gov.il/api/3/action/resource_show?id=c8b9f9c8-4612-4068-934f-d4acd2e3c06e
 - https://data.gov.il/api/3/action/package_show?id=11369651-1c70-4d8f-8090-ee49354a7c52
 
-The registry schema lists only vehicle number, tag-issue date and numeric type. Neither resource nor package metadata defines which numeric type maps to which symbol. That binding stays unresolved and no production mapper is added here. No plate-level data was needed for the type check. Dataset metadata says CC BY; that data licence does not prove the photographs/symbol artwork is reusable. These assets are independent simple geometric redraws under the repository MIT licence.
+The registry schema lists only vehicle number, tag-issue date and numeric type. Neither resource nor package metadata defines which numeric type maps to which symbol. The owner supplied the final mapping: type1=triangle, type2=wheelchair. This mapping is owner-confirmed, not attributed to an official dictionary; it is centralized in one small map and unknown values stay neutral. No UI/network integration is added here. No plate-level data was needed for the type check. Dataset metadata says CC BY; that data licence does not prove the photographs/symbol artwork is reusable. These assets are independent simple geometric redraws under the repository MIT licence.
