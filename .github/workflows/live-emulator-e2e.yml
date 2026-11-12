@@ -115,15 +115,15 @@ jobs:
           # Also verify the emulator/build-tools/platform-tools packages while
           # egress is still direct (a runner-image change must never push
           # those downloads through the owner tunnel either).
-          "$sdkmanager_bin" 'platforms;android-30' 'system-images;android-30;default;x86_64' 'emulator' 'platform-tools' 'build-tools;37.0.0' > /tmp/image-predownload.log 2>&1 || {
+          "$sdkmanager_bin" 'platforms;android-36' 'system-images;android-36;default;x86_64' 'emulator' 'platform-tools' 'build-tools;37.0.0' > /tmp/image-predownload.log 2>&1 || {
             tail -5 /tmp/image-predownload.log
             exit 1
           }
           # Fail now (before the tunnel) if the image did not land where the
           # emulator action looks - otherwise it downloads through the tunnel.
-          test -d "$sdkroot/system-images/android-30/default/x86_64" || {
+          test -d "$sdkroot/system-images/android-36/default/x86_64" || {
             echo 'FAIL-FAST: system image not where the emulator action expects it'
-            ls "$sdkroot/system-images/android-30" || true
+            ls "$sdkroot/system-images/android-36" || true
             exit 1
           }
           echo "TIMING image-predownload $(( $(date +%s) - start ))s (direct egress)"
@@ -286,7 +286,7 @@ jobs:
       - name: Run the live submission in the emulator (screen recorded)
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
-          api-level: 30
+          api-level: 36
           arch: x86_64
           target: default
           profile: pixel_2
