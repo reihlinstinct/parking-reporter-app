@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-11-12
+
+### Features
+
+- feat(registry): bounded public disability tag adapter (#351) (8c0af2c)
+
 ## [0.38.3] - 2026-11-12
 
 ### Fixes
