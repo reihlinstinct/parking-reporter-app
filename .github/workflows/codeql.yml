@@ -1,6 +1,7 @@
 name: CodeQL
 # Issue #395: Default setup's autobuild ran only :app:clean, so java-kotlin analysis saw no code.
 # Advanced setup with an explicit compile. Weekly and manual only, to save Actions minutes.
+# The job runs only on main (the if: below skips a dispatch from any other branch).
 # Default setup must be off before the first run (uploads are rejected while it is on).
 # Evidence to close #395: the analyze log for java-kotlin shows a non-zero count of extracted Kotlin files.
 on:
@@ -13,6 +14,7 @@ permissions: read-all
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
