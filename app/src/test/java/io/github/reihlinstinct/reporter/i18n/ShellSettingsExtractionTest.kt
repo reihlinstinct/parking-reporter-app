@@ -42,7 +42,6 @@ class ShellSettingsExtractionTest {
         "shell.home.on_device_note" to "הניתוח נעשה במכשיר. תוכל לבדוק ולתקן לפני שליחה.",
         "shell.home.take_photo" to "צלם תמונה",
         "shell.home.upload_photo" to "העלה תמונה",
-        "shell.home.upload_note" to "העלאה מהגלריה אינה דורשת הרשאות; זמן ומיקום נקראים מהתמונה אם קיימים.",
         "shell.home.test_build_note" to "גרסת בדיקה מקומית. אין שליחה.",
         "shell.home.drafts_title" to "טיוטות",
         "shell.home.no_drafts" to "אין טיוטות שמורות",
@@ -51,7 +50,6 @@ class ShellSettingsExtractionTest {
         "shell.home.login_unavailable" to "התחברות לשירות הדיווח עדיין אינה זמינה. פרטי גישה עירוניים אינם חלק מהאפליקציה.",
         // The four review questions AppShell adds to a new draft moved to review.warning.*
         // in PR-2b (stored as codes, translated when shown): ReviewCaptureReportsExtractionTest.
-        "shell.home.permission_note" to "ביטול הרשאת מצלמה או אימות משאיר את המסך ללא פעולה. אין שמירת פרטים גלויים כחלופה.",
         "shell.import_location.title" to "נמצא מיקום בתמונה",
         "shell.import_location.message" to "להשתמש במיקום מהתמונה לדיווח? ניתן גם בלי, ולסמן את המיקום ידנית.",
         "shell.import_location.use" to "השתמש במיקום",

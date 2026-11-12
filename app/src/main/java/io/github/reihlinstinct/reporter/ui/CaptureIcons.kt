@@ -20,3 +20,15 @@ val PhotoCameraIcon: ImageVector = ImageVector.Builder(
     ),
     fill = SolidColor(Color.Black),
 ).build()
+
+/** Material folder glyph; the adjacent localized label names the action. */
+val PhotoFolderIcon: ImageVector = ImageVector.Builder(
+    name = "PhotoFolder",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f,
+).addPath(
+    pathData = addPathNodes("M10,4H4c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V8c0,-1.1 -0.9,-2 -2,-2h-8L10,4z"),
+    fill = SolidColor(Color.Black),
+).build()
