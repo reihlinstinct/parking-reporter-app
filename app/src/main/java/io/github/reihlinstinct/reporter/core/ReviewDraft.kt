@@ -27,9 +27,11 @@ data class ReviewDraft(
     val confirmedTime: String? = evidence.capturedAtIso,
     val confirmedLatitude: Double? = evidence.latitude,
     val confirmedLongitude: Double? = evidence.longitude,
+    val plateRequired: Boolean? = null,
 ) {
+    fun needsPlate(): Boolean = plateRequired ?: TopicIdentity.needsPlate(subject)
     fun isReady(): Boolean = (unresolved - ReportTime.retiredWarnings).isEmpty() &&
-        TopicIdentity.isKnownShape(subject) && (if (TopicIdentity.needsPlate(subject)) plate.matches(Regex("[0-9]{7,8}")) else plate.isEmpty()) && address.isNotBlank() &&
+        TopicIdentity.isKnownShape(subject) && (if (needsPlate()) plate.matches(Regex("[0-9]{7,8}")) else plate.isEmpty()) && address.isNotBlank() &&
         exactHebrewText.isNotBlank() &&
         confirmedLatitude?.let { it.isFinite() && it in -90.0..90.0 } == true &&
         confirmedLongitude?.let { it.isFinite() && it in -180.0..180.0 } == true
@@ -37,7 +39,7 @@ data class ReviewDraft(
         // Local review digest only. M4 replaces this with proven helper parity.
         val fields = listOf(evidence.stableId, evidence.originalSha256, evidence.capturedAtIso.orEmpty(),
             evidence.latitude.toString(), evidence.longitude.toString(), plate, address, subject,
-            exactHebrewText, confirmedTime.orEmpty(), confirmedLatitude.toString(), confirmedLongitude.toString()) + unresolved.sorted()
+            exactHebrewText, confirmedTime.orEmpty(), confirmedLatitude.toString(), confirmedLongitude.toString()) + unresolved.sorted() + (plateRequired?.let { listOf("plateRequired=$it") } ?: emptyList())
         val canonical = fields.joinToString("") { "${it.toByteArray(Charsets.UTF_8).size}:$it" }
         return MessageDigest.getInstance("SHA-256").digest(canonical.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
@@ -46,8 +48,9 @@ data class ReviewDraft(
         copy(confirmedTime = time, confirmedLatitude = latitude, confirmedLongitude = longitude,
             unresolved = emptySet())
     fun edit(plate: String = this.plate, address: String = this.address,
-             subject: String = this.subject, text: String = this.exactHebrewText): ReviewDraft =
-        copy(plate = if (!TopicIdentity.needsPlate(subject)) "" else plate, address = address, subject = subject, exactHebrewText = if (subject != this.subject && text == this.exactHebrewText) "" else text,
+             subject: String = this.subject, text: String = this.exactHebrewText,
+             plateRequirement: Boolean? = if (subject == this.subject) plateRequired else null): ReviewDraft =
+        copy(plateRequired = plateRequirement, plate = if (!(plateRequirement ?: TopicIdentity.needsPlate(subject))) "" else plate, address = address, subject = subject, exactHebrewText = if (subject != this.subject && text == this.exactHebrewText) "" else text,
             confirmedLatitude = if (address != this.address && (evidence.latitude == null || evidence.longitude == null)) null else confirmedLatitude,
             confirmedLongitude = if (address != this.address && (evidence.latitude == null || evidence.longitude == null)) null else confirmedLongitude,
             unresolved = if (address != this.address && (evidence.latitude == null || evidence.longitude == null)) unresolved + "location_needs_confirmation" else unresolved)

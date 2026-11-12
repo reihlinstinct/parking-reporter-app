@@ -36,7 +36,7 @@ object OfflineReceiver {
         require(report.get("latitude") is Number && report.get("longitude") is Number)
         val draft = ReviewDraft(Evidence(report.getString("id"), report.getString("original_sha256"), null, null, null),
             report.getString("plate"), report.getString("address"), report.getString("subject"), report.getString("exact_text"), emptySet(),
-            confirmedTime = report.getString("time"), confirmedLatitude = report.getDouble("latitude"), confirmedLongitude = report.getDouble("longitude"))
+            plateRequired = report.getString("plate").isNotEmpty(), confirmedTime = report.getString("time"), confirmedLatitude = report.getDouble("latitude"), confirmedLongitude = report.getDouble("longitude"))
         require(draft.isReady())
     }
     private fun key(value: String) = require(value.matches(Regex("[a-zA-Z0-9_-]{1,80}")))

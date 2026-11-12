@@ -90,7 +90,7 @@ class SubmissionCoordinator(
         originalJpeg: File,
         outgoingPhoto: OutgoingPhoto?,
     ): Outcome {
-        if (!draft.isReady()) return Outcome.Blocked(Reason.NOT_READY, "draft not ready")
+        if (!draft.isReady() || (draft.plateRequired != null && !io.github.reihlinstinct.reporter.core.PlatePolicy.descriptionContainsPlate(draft))) return Outcome.Blocked(Reason.NOT_READY, "draft not ready")
         // Tab review (#266): never send a photo whose bytes do not match the
         // draft's evidence hash - a mis-paired draft and original would file
         // the wrong photo. Refuse before any state write or network call.

@@ -35,7 +35,8 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     topicSnapshot: io.github.reihlinstinct.reporter.core.CityTopicCache.Snapshot? = null,
     topicsAvailable: Boolean = false, topicsLoading: Boolean = false,
     openTopics: (() -> Unit)? = null, topicSelected: ((String) -> Unit)? = null,
-    recentTopics: List<String> = emptyList(), topicAliases: Map<String, List<String>> = emptyMap()) {
+    recentTopics: List<String> = emptyList(), topicAliases: Map<String, List<String>> = emptyMap(),
+    plateEnables: Set<String> = emptySet(), registryLookup: (suspend (String) -> RegistrySnapshot)? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var plates by remember(initial.evidence.stableId) { mutableStateOf<List<String>>(emptyList()) }
@@ -47,8 +48,9 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var suggestions by remember { mutableStateOf<List<io.github.reihlinstinct.reporter.evidence.AddressSuggestion>>(emptyList()) }
     var geocoding by remember { mutableStateOf(false) }
     var geocodeStatus by remember { mutableStateOf<String?>(null) }
-    var draft by remember(initial.evidence.stableId) { mutableStateOf(ReportTime.forSave(initial)) }
-    LaunchedEffect(initial) { draft = ReportTime.forSave(initial) }
+    fun policy(value: ReviewDraft) = topicSnapshot?.let { io.github.reihlinstinct.reporter.core.PlatePolicy.apply(value, it.topics, plateEnables) } ?: value
+    var draft by remember(initial.evidence.stableId) { mutableStateOf(policy(ReportTime.forSave(initial))) }
+    LaunchedEffect(initial, topicSnapshot, plateEnables) { draft = policy(ReportTime.forSave(if (initial.evidence.stableId == draft.evidence.stableId) draft else initial)) }
     var latitude by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedLatitude?.toString().orEmpty()) }
     var longitude by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedLongitude?.toString().orEmpty()) }
     var editing by remember(initial.evidence.stableId) { mutableStateOf(false) }
@@ -132,13 +134,13 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
                 catch (_: Exception) { emptyList() }
             }
-            if (!io.github.reihlinstinct.reporter.core.TopicIdentity.needsPlate(draft.subject)) plates = emptyList()
+            if (!draft.needsPlate()) plates = emptyList()
             if (plateEdits == editsBefore) draft = PlateEntry.prefill(draft, plates, plateBefore)
             ocrStatus = if (plates.isEmpty()) "review.ocr.no_plate" else "review.ocr.suggestions_found"
         } finally { recognizing = false }
     }
     LaunchedEffect(initial.evidence.stableId, image) {
-        if (image != null && draft.plate.isEmpty() && io.github.reihlinstinct.reporter.core.TopicIdentity.needsPlate(draft.subject)) recognize()
+        if (image != null && draft.plate.isEmpty() && draft.needsPlate()) recognize()
     }
     ProvideStringsIfMissing {
     val s = LocalStrings.current
@@ -192,14 +194,15 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         if (categoryMenu && topicSnapshot != null && canBrowseTopics) CityTopicPicker(
             topicSnapshot.topics, selectedCode, recentTopics, topicAliases,
             dismiss = { categoryMenu = false }, choose = { topic ->
-                draft = draft.edit(subject = "municipal:" + topic.code)
-                if (!io.github.reihlinstinct.reporter.core.TopicIdentity.needsPlate(draft.subject)) plates = emptyList()
+                draft = policy(draft.edit(subject = "municipal:" + topic.code))
+                if (!draft.needsPlate()) plates = emptyList()
                 topicSelected?.invoke(topic.code); categoryMenu = false
             })
         Text(s.t("review.category_note"), style = MaterialTheme.typography.bodySmall)
         if (!editing) {
-            if (io.github.reihlinstinct.reporter.core.TopicIdentity.needsPlate(draft.subject)) {
+            if (draft.needsPlate()) {
                 Text(reviewPlateText(s, draft.plate), style = MaterialTheme.typography.titleMedium)
+                RegistryStatus(draft.plate, registryLookup)
                 if (recognizing) { LinearProgressIndicator(Modifier.fillMaxWidth()); Text(s.t("review.ocr.analyzing")) }
                 Text(ocrStatus?.let { s.t(it) }.orEmpty(), style = MaterialTheme.typography.bodySmall)
                 plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate) }) { Text(reviewPlateSuggestionText(s, plate)) } }
@@ -221,16 +224,17 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         if (editing) {
 
         Text(s.t("review.edit.privacy_note"))
-        if (io.github.reihlinstinct.reporter.core.TopicIdentity.needsPlate(draft.subject)) {
+        if (draft.needsPlate()) {
         Row { Checkbox(checked = useGoogle, enabled = !recognizing, onCheckedChange = { useGoogle = it; plates = emptyList(); ocrStatus = null }); Text(s.t("review.edit.use_mlkit")) }
         Button(enabled = image != null && !recognizing, onClick = { scope.launch { recognize() } }, modifier = Modifier.fillMaxWidth()) { Text(s.t(if (recognizing) "review.edit.recognizing" else "review.edit.suggest_plate")) }
         Text(ocrStatus?.let { s.t(it) }.orEmpty())
         plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate) }) { Text(reviewPlateSuggestionText(s, plate)) } }
-        if (io.github.reihlinstinct.reporter.core.TopicIdentity.needsPlate(draft.subject)) OutlinedTextField(draft.plate, { plateEdits++; draft = draft.edit(plate = PlateEntry.digits(it)) }, singleLine = true,
+        if (draft.needsPlate()) OutlinedTextField(draft.plate, { plateEdits++; draft = draft.edit(plate = PlateEntry.digits(it)) }, singleLine = true,
             isError = draft.plate.isNotBlank() && !draft.plate.matches(Regex("[0-9]{7,8}")),
             visualTransformation = PlateEntry, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, autoCorrectEnabled = false),
             textStyle = MaterialTheme.typography.titleLarge.copy(textDirection = TextDirection.Ltr),
             label = { Text(s.t("review.edit.plate_field")) }, modifier = Modifier.width(216.dp))
+        RegistryStatus(draft.plate, registryLookup)
         }
         OutlinedTextField(draft.address, {
             // Editing the field labeled "רחוב ומספר בית שאישרת" IS the explicit
@@ -310,11 +314,20 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             // Blocking note and a greyed send - no bypass, no silent no-op.
             Text(s.t("review.submit.no_device_lock"), style = MaterialTheme.typography.bodySmall)
         }
+        val plateInDescription = io.github.reihlinstinct.reporter.core.PlatePolicy.descriptionContainsPlate(draft)
+        if (draft.needsPlate() && !plateInDescription) {
+            Text(s.t("registry.plate_text_required"), Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
+            TextButton(enabled = draft.plate.matches(Regex("[0-9]{7,8}")), onClick = {
+                // User explicitly inserts it here, before seeing/confirming the outgoing text.
+                draft = draft.edit(text = s.t("registry.plate_text", mapOf("plate" to draft.plate)) + "\n" + draft.exactHebrewText)
+            }) { Text(s.t("registry.insert_plate")) }
+        }
+        if (!draft.needsPlate()) Text(s.t("plate_categories.enable_hint"), style = MaterialTheme.typography.bodySmall)
         if (onSubmit != null) {
             // Send the draft this screen actually shows, not some other copy.
             // N4: when the lock state disables send, TalkBack announces why.
             val sendModifier = if (noDeviceCredential) Modifier.fillMaxWidth().semantics { stateDescription = s.t("review.submit.no_device_lock") } else Modifier.fillMaxWidth()
-            Button(enabled = selectedTopic != null && topicsAvailable && foldedDraft().isReady() && !submitting && missingCredentialKeys.isEmpty() && !noDeviceCredential, onClick = {
+            Button(enabled = selectedTopic != null && topicsAvailable && plateInDescription && foldedDraft().isReady() && !submitting && missingCredentialKeys.isEmpty() && !noDeviceCredential, onClick = {
                 confirmPendingEvidence()
                 // Runs 42853563754 / 42880867432: an ENABLED send button's
                 // semantics click no-opped silently. First proof point:
