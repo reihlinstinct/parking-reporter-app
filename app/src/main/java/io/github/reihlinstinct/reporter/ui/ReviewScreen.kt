@@ -162,6 +162,30 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var askAddressConsent by rememberSaveable(initial.evidence.stableId) {
         mutableStateOf(initial.address.isBlank() && initial.confirmedLatitude != null && initial.confirmedLongitude != null)
     }
+    // Issue #186: optional, user-triggered one-shot location read. The permission is asked only at the tap.
+    var gpsBusy by remember { mutableStateOf(false) }
+    var gpsStatus by remember { mutableStateOf<String?>(null) }
+    var gpsFilled by remember(initial.evidence.stableId) { mutableStateOf(false) }
+    fun applyDeviceFix(fix: io.github.reihlinstinct.reporter.evidence.DeviceFix) {
+        latitude = fix.latitude.toString(); longitude = fix.longitude.toString()
+        gpsFilled = true; editing = true; suggestions = emptyList(); geocodeStatus = null
+        draft = draft.copy(confirmedLatitude = fix.latitude, confirmedLongitude = fix.longitude,
+            unresolved = draft.unresolved - ReviewWarning.MISSING_GPS.code - ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code)
+        gpsStatus = "review.location.gps_done"
+    }
+    fun readDeviceFix() {
+        gpsBusy = true; gpsStatus = null
+        scope.launch {
+            val fix = try { io.github.reihlinstinct.reporter.evidence.CurrentLocation.read(context) }
+            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { null }
+            gpsBusy = false
+            if (fix != null) applyDeviceFix(fix) else gpsStatus = "review.location.gps_failed"
+        }
+    }
+    val locationPermission = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) readDeviceFix() else gpsStatus = "review.location.gps_denied"
+    }
     suspend fun recognize() {
         recognizing = true
         val plateBefore = draft.plate
@@ -257,7 +281,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate, plateClass = PlateClass.REGULAR) }) { Text(reviewPlateSuggestionText(s, plate)) } }
             }
             Text(reviewAddressText(s, draft.address))
-            if (draft.address.isBlank() && draft.evidence.latitude != null && draft.evidence.longitude != null) {
+            if (draft.address.isBlank() && (draft.evidence.latitude != null && draft.evidence.longitude != null || gpsFilled)) {
                 Text(s.t("review.edit.geocode_note"), style = MaterialTheme.typography.bodySmall)
                 if (geocoding) Text(s.t("review.geocode.loading"))
                 Text(geocodeStatus?.let { s.t(it) }.orEmpty())
@@ -310,13 +334,13 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             draft = edited.copy(unresolved = edited.unresolved -
                 ReviewWarning.ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code +
                 if (it != addressBaseline) emptySet() else pendingAddressWarnings)
-            if (draft.evidence.latitude == null || draft.evidence.longitude == null) {
+            if (!gpsFilled && (draft.evidence.latitude == null || draft.evidence.longitude == null)) {
                 latitude = ""; longitude = ""; manualResult = null; manualGeneration++
                 draft = draft.copy(confirmedLatitude = null, confirmedLongitude = null,
                     unresolved = draft.unresolved + ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code)
             }
         }, label = { Text(s.t("review.edit.address_field")) }, modifier = Modifier.fillMaxWidth())
-        if (draft.evidence.latitude != null && draft.evidence.longitude != null) {
+        if (draft.evidence.latitude != null && draft.evidence.longitude != null || gpsFilled) {
         Text(s.t("review.edit.geocode_note"))
         Button(enabled = !geocoding && latitude.toDoubleOrNull() != null && longitude.toDoubleOrNull() != null, onClick = {
             scope.launch { findAddress() }
@@ -333,8 +357,14 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         Text(reviewAddressText(s, draft.address))
         if (draft.unresolved.isNotEmpty()) Text(unresolvedText(s, draft.unresolved))
         }
+        gpsStatus?.let { Text(s.t(it), style = MaterialTheme.typography.bodySmall) }
         if (latitude.toDoubleOrNull() == null || longitude.toDoubleOrNull() == null) {
             Text(s.t("review.location.missing_plain"))
+            Button(enabled = !gpsBusy, onClick = {
+                if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED) readDeviceFix()
+                else locationPermission.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            }, modifier = Modifier.fillMaxWidth().testTag("review.gps.button")) { Text(s.t("review.location.gps_button")) }
+            if (gpsBusy) Text(s.t("review.location.gps_loading"))
             OutlinedTextField(manualStreet, { manualStreet = it; manualResult = null; manualGeneration++ }, label = { Text(s.t("review.location.street")) }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(manualHouse, { manualHouse = it; manualResult = null; manualGeneration++ }, label = { Text(s.t("review.location.house")) }, modifier = Modifier.fillMaxWidth(),
                 singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }))
