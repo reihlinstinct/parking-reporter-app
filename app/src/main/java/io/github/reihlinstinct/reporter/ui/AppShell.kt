@@ -560,15 +560,21 @@ fun AppShell(
             fun openCityTopics() {
                 if (topicSnapshot != null || topicsLoading || !hasDeviceCredential()) return
                 authenticate(strings.t("topics.connect_title"), strings.t("topics.connection_needed")) {
-                    scope.launch {
+                    // Main-confined on purpose: only the network/cache read leaves the main
+                    // thread. Composition-state writes (topicsLoading, topicSnapshot) must be
+                    // scheduled from the main looper; a worker-thread write can race a frame
+                    // apply and tear the slot table (issue #380). In production the
+                    // composition scope is already main, so this changes nothing there.
+                    scope.launch(Dispatchers.Main) {
                         topicsLoading = true
                         try {
-                            topicSnapshot = withContext(Dispatchers.IO) {
+                            val fetched = withContext(Dispatchers.IO) {
                                 val settings = readSettings() ?: error("Settings unavailable")
                                 topicRepository.initial(settings, municipalClientFactory ?: { stored ->
                                     OkHttpMunicipalClient(stored.municipalSubscriptionKey, stored.municipalUsername, stored.municipalPassword)
                                 })
                             }
+                            topicSnapshot = fetched
                         } catch (_: Exception) { /* visible no-cache state; never overwrite last good cache */ }
                         finally { topicsLoading = false }
                     }
