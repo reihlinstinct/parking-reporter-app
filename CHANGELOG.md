@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.39.1] - 2026-11-12
+
+### Fixes
+
+- fix(a11y): tag boundaries on dark and light surfaces (#350) (9cab9e0)
+
 ## [0.39.0] - 2026-11-12
 
 ### Features
