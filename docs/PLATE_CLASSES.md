@@ -11,6 +11,17 @@ The app does not pass raw strings. Two rules keep a special-looking plate from b
 
 Still true: only REGULAR is implemented. A raw string that is not 7 or 8 ASCII digits is drawn as plain text and rejected by `PlateNumber.parse`. Nothing here infers legal status, licence validity or parking permission from a plate.
 
+## Plate type picker (user-chosen, nothing detected)
+
+In Review, after tapping edit, the user can choose the plate type: regular (default), police, diplomatic (CD) or consular (CC). Labels are the owner-approved Hebrew ones. Rules:
+
+- The type is never inferred from the digits or from OCR. OCR suggestions always select regular.
+- Regular: unchanged (7 or 8 digits, registry lookup).
+- Police, CD, CC: the typed digits only (police also allows hyphens between digits, no letters; the app adds the mem or the "CD"/"CC" marker). Ready means at least one digit, no digit-count rule, because no official count is verified. No registry lookup.
+- The report text must contain the exact string with its marker (for example "11-22-33 \u05DE" synthetic). `PlatePolicy.descriptionContainsPlate` checks it. A 7-digit police plate is never accepted as a regular plate: the class is part of the digest and the ledger record.
+- Display: police is drawn red with white characters (spec 119/2016, above). CD and CC are drawn neutral grey because no colour is verified. Changing the type clears the plate field.
+- Nothing structured is sent for a non-regular plate: the city submission carries the report text only, and `EncryptedPackage.reviewedReport` (demo path, not live) refuses a non-regular plate.
+
 ## Verified from official text (checked 2026-11-12)
 
 - Police: red plate (Police order 15.07.02, 02/09/2021, https://www.police.gov.il/menifa/02.15.07.02_3.pdf). Police vehicles may instead carry civilian yellow plates, some switchable red/yellow, so a police vehicle does not mean a red plate.

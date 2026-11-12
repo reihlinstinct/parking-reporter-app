@@ -73,6 +73,9 @@ internal fun unresolvedText(strings: Strings, unresolved: Set<String>): String {
 internal fun reviewPlateText(strings: Strings, plate: String): String =
     strings.t("review.plate", mapOf("plate" to (plate.takeIf { it.isNotBlank() }?.let { PlateEntry.format(it) } ?: strings.t("review.plate_not_confirmed"))))
 
+internal fun reviewPlateClassText(strings: Strings, draft: io.github.reihlinstinct.reporter.core.ReviewDraft): String =
+    strings.t("review.plate", mapOf("plate" to io.github.reihlinstinct.reporter.core.PlateClasses.text(draft.plate, draft.plateClass)))
+
 internal fun reviewPlateSuggestionText(strings: Strings, plate: String): String =
     strings.t("review.plate_suggestion", mapOf("plate" to PlateEntry.format(plate)))
 

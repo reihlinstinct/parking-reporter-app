@@ -30,6 +30,8 @@ object EncryptedPackage {
     }
     fun reviewedReport(draft: ReviewDraft, reporter: ReporterSettings, jpeg: ByteArray, clock: java.time.Clock = java.time.Clock.systemUTC()): JSONObject {
         require(draft.isReady()) { "Review required" }
+        // Not a live path. A non-regular plate has no verified structured form, so refuse instead of sending digits that look regular.
+        require(draft.plateClass == io.github.reihlinstinct.reporter.core.PlateClass.REGULAR) { "Regular plate required" }
         require(jpeg.size in 4..1_100_000 && jpeg[0] == 0xff.toByte() && jpeg[1] == 0xd8.toByte() &&
             jpeg[jpeg.lastIndex - 1] == 0xff.toByte() && jpeg.last() == 0xd9.toByte()) { "Bounded JPEG required" }
         require(listOf(reporter.firstName, reporter.lastName, reporter.phone, reporter.idNumber, reporter.email).all { it.isNotBlank() && it.length <= 256 })

@@ -884,6 +884,41 @@
       "ru": "Номер автомобиля (только цифры)",
       "am": "የሰሌዳ ቁጥር (አሃዞች ብቻ)"
     },
+    "review.plate_class.title": {
+      "he": "סוג הלוחית",
+      "en": "Plate type",
+      "ar": "نوع اللوحة",
+      "ru": "Тип номера",
+      "am": "የሰሌዳ ዓይነት"
+    },
+    "review.plate_class.regular": {
+      "he": "רגילה",
+      "en": "Regular",
+      "ar": "عادية",
+      "ru": "Обычный",
+      "am": "መደበኛ"
+    },
+    "review.plate_class.police": {
+      "he": "משטרה",
+      "en": "Police",
+      "ar": "شرطة",
+      "ru": "Полиция",
+      "am": "ፖሊስ"
+    },
+    "review.plate_class.cd": {
+      "he": "דיפלומטית (CD)",
+      "en": "Diplomatic (CD)",
+      "ar": "دبلوماسية (CD)",
+      "ru": "Дипломатический (CD)",
+      "am": "ዲፕሎማቲክ (CD)"
+    },
+    "review.plate_class.cc": {
+      "he": "קונסולרית (CC)",
+      "en": "Consular (CC)",
+      "ar": "قنصلية (CC)",
+      "ru": "Консульский (CC)",
+      "am": "የቆንስላ (CC)"
+    },
     "review.edit.address_field": {
       "he": "רחוב ומספר בית שאישרת",
       "en": "Street and house number you confirmed",
