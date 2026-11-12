@@ -195,7 +195,7 @@ class ReviewCaptureReportsExtractionTest {
         val retired = setOf("review.edit.original_time_title", "review.edit.time_field", "review.approval_note", "review.edit.latitude_field", "review.edit.longitude_field", "review.edit.timezone_toggle", "review.edit.timezone_field", "review.edit.timezone_note", "review.location.show_advanced", "review.location.hide_advanced", "review.location.advanced_note", "review.location.missing", "review.location.enter_missing",
             "review.approve_button", "review.approved", "review.not_approved", "review.edit.confirm_button", "review.outgoing_preview",
             "reports.pending.title", "reports.pending.empty", "reports.pending.open", "reports.approved.title", "reports.approved.empty", "reports.approved.open")
-        val screenKeys = catalog.keys.filter { it.startsWith("review.") || it.startsWith("capture.") || it.startsWith("reports.") }.toSet() - retired
+        val screenKeys = catalog.keys.filter { it.startsWith("review.") || it.startsWith("capture.") || it.startsWith("reports.") }.toSet() - retired + used.filter { it.startsWith("registry.") || it.startsWith("plate_categories.") }
         // The expected key set is derived - catalog keys versus keys the screens
         // use - so adding a catalog key and using it needs no test edit. The `all`
         // map is now a golden-wording spot check for keys that predate the
