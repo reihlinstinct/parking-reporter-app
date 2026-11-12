@@ -2,6 +2,9 @@ package io.github.reihlinstinct.reporter
 
 import android.graphics.Bitmap
 import androidx.compose.runtime.*
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -72,7 +75,7 @@ class RegistryReviewTest {
             if (plate == "1234567") { withContext(NonCancellable) { delay(500) }; snapshot(DisabilityTagType.TRIANGLE) }
             else snapshot(DisabilityTagType.WHEELCHAIR)
         }
-        compose.setContent { AppTheme(darkTheme = true) { ReviewScreen(initial, null, {}, {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true, registryLookup = lookup) } }
+        compose.setContent { AppTheme(darkTheme = true) { Surface(Modifier.fillMaxSize()) { ReviewScreen(initial, null, {}, {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true, registryLookup = lookup) } } }
         compose.runOnIdle { initial = draft("7654321") }
         compose.mainClock.advanceTimeBy(1000)
         compose.waitForIdle()
