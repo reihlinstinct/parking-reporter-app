@@ -101,11 +101,18 @@ fun AppShell(
     val strings = remember(catalog, language.code) { Strings(catalog, language.code) }
     var setupStarted by rememberSaveable { mutableStateOf(false) }
     var setupError by remember { mutableStateOf("") }
-    var page by remember { mutableStateOf("home") }
+    // #358 part 2: after a rotation the open report comes back from the process-memory holder (never from a Bundle).
+    val rotated = remember { ReviewRotationState.takeShell() }
+    var page by remember { mutableStateOf(if (rotated != null) "review" else "home") }
     var profile by remember { mutableStateOf<ReporterSettings?>(null) }
-    var draft by remember { mutableStateOf<ReviewDraft?>(null) }
-    var original by remember { mutableStateOf<File?>(null) }
-    var revision by remember { mutableLongStateOf(0) }
+    var draft by remember { mutableStateOf<ReviewDraft?>(rotated?.draft) }
+    var original by remember { mutableStateOf<File?>(rotated?.original) }
+    var revision by remember { mutableLongStateOf(rotated?.revision ?: 0L) }
+    val shellActivity = context.findActivity()
+    val holdShell by rememberUpdatedState { if (page == "review") draft?.let { ReviewRotationState.holdShell(ReviewRotationState.Shell(it, original, revision)) } }
+    DisposableEffect(Unit) { onDispose { if (shellActivity?.isChangingConfigurations == true) holdShell() } }
+    // Any page other than Review ends the hold, so a rotation never leaves personal fields parked.
+    LaunchedEffect(page) { if (page != "review") ReviewRotationState.clear() }
     var records by remember { mutableStateOf<List<ReportRecord>>(emptyList()) }
     var saving by remember { mutableStateOf(false) }
     suspend fun reload() { records = withContext(Dispatchers.IO) { database.reports().all() } }
