@@ -65,6 +65,31 @@ class CityTopicSearchTest {
         } finally { dir.deleteRecursively() }
     }
 
+    @Test fun withCheckTimeRecomputesTheDateKnownFlag() {
+        val now = Instant.parse("2026-11-11T00:00:00Z")
+        val topics = listOf(MunicipalSubject("1", "topic1", listOf("root", "topic1")))
+        val unknown = CityTopicCache.Snapshot(topics, Instant.EPOCH, "fp")
+        assertFalse(unknown.checkDateKnown)
+        // The plain data class copy keeps the stale flag. That is why withCheckTime exists.
+        assertFalse(unknown.copy(checkedAt = now.minusSeconds(91L * 86400)).checkDateKnown)
+        val old = unknown.withCheckTime(now.minusSeconds(91L * 86400))
+        assertTrue(old.checkDateKnown)
+        assertTrue(old.stale(now))
+        assertTrue(old.refreshDue(now))
+        assertNotNull(old.knownCheckDate())
+        val fresh = unknown.withCheckTime(now)
+        assertTrue(fresh.checkDateKnown)
+        assertFalse(fresh.stale(now))
+        assertFalse(fresh.refreshDue(now))
+        val backToUnknown = fresh.withCheckTime(Instant.EPOCH)
+        assertFalse(backToUnknown.checkDateKnown)
+        assertNull(backToUnknown.knownCheckDate())
+        assertTrue(backToUnknown.refreshDue(now))
+        assertFalse(backToUnknown.stale(now))
+        assertEquals(topics, backToUnknown.topics)
+        assertEquals("fp", backToUnknown.fingerprint)
+    }
+
     @Test fun flattenKeepsPathsAndRejectsMalformedNodes() {
         val tree = JSONArray("""[{"categoryName":"גדרות","children":[{"categoryName":"עמוד נפל","subjectCode":"1280"}]}]""")
         assertEquals(listOf("גדרות", "עמוד נפל"), CityTopicCache.flatten(tree).single().path)

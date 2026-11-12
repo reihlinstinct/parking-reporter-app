@@ -11,6 +11,11 @@ class CityTopicCache(private val file: File, private val now: () -> Instant = In
         /** Unknown timestamps stay refresh-due without claiming a measurable age. */
         fun knownCheckDate(): java.time.LocalDate? = checkedAt.takeIf { checkDateKnown }
             ?.atZone(java.time.ZoneId.of("Asia/Jerusalem"))?.toLocalDate()
+        /**
+         * Use this, not `copy(checkedAt = ...)`, to change the check time: a data class copy keeps the old
+         * [checkDateKnown] flag, so an unknown date moved to a real time would stay "unknown" (and the reverse).
+         */
+        fun withCheckTime(at: Instant, known: Boolean = at != Instant.EPOCH) = Snapshot(topics, at, fingerprint, known)
         fun stale(now: Instant): Boolean = checkDateKnown && checkedAt.plusSeconds(90L * 86400).isBefore(now)
         fun refreshDue(now: Instant): Boolean = !checkDateKnown || checkedAt.plusSeconds(7L * 86400).isBefore(now)
     }
