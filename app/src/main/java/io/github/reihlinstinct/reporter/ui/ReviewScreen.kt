@@ -28,9 +28,6 @@ import io.github.reihlinstinct.reporter.core.ReviewDraft
 import io.github.reihlinstinct.reporter.i18n.LocalStrings
 import io.github.reihlinstinct.reporter.i18n.ProvideStringsIfMissing
 
-/** Same 24-hour format sample in every language. */
-private const val LOCAL_TIME_EXAMPLE = "\u206601/01/2026 12:00\u2069"
-
 @Composable
 fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft) -> Unit, onBack: () -> Unit, onSubmit: ((ReviewDraft) -> Unit)? = null, submitting: Boolean = false, submissionNote: String = "", missingCredentialKeys: List<String> = emptyList(), noDeviceCredential: Boolean = false, addressLookup: (suspend (Double, Double) -> List<io.github.reihlinstinct.reporter.evidence.AddressSuggestion>)? = null, plateRecognizer: (suspend () -> List<String>)? = null, manualAddressLookup: (suspend (String, String) -> io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress)? = null,
     topicSnapshot: io.github.reihlinstinct.reporter.core.CityTopicCache.Snapshot? = null,
@@ -250,7 +247,6 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         }
         }
         OutlinedTextField(draft.exactHebrewText, { draft = draft.edit(text = it) }, label = { Text(s.t("review.edit.text_field")) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
-        Text(LOCAL_TIME_EXAMPLE, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(time, { time = it; draft = draft.copy(unresolved = setOf(ReviewWarning.TIME_NEEDS_CONFIRMATION.code)) }, textStyle = TextStyle(textDirection = TextDirection.Ltr), isError = ReviewTime.toJerusalemIso(time, draft.confirmedTime) == null, label = { Text(s.t("review.edit.time_field")) }, modifier = Modifier.fillMaxWidth())
         Text(reviewAddressText(s, draft.address))
         if (draft.unresolved.isNotEmpty()) Text(unresolvedText(s, draft.unresolved))
