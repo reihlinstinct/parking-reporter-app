@@ -82,7 +82,10 @@
         "*.py",
         "*.enc"
       ],
-      "comment": "Temporary M0 engine trial assets; removed after the trial concludes."
+      "comment": "Temporary M0 engine trial assets; removed after the trial concludes.",
+      "allow_paths": [
+        "trial/live-input.sha256"
+      ]
     }
   }
 }
