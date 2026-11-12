@@ -63,3 +63,9 @@ flowchart LR
 ## Tests
 
 `app/src/test/java/io/github/reihlinstinct/reporter/registry/VehicleRegistryClientTest.kt` runs against MockWebServer with recorded synthetic responses in `app/src/test/resources/registry/` (fake plates such as 1234567). No test touches the network.
+
+## Disability-tag read-only adapter (#332)
+
+`DisabilityRegistryClient` queries the separate public CKAN resource `c8b9f9c8-4612-4068-934f-d4acd2e3c06e`, fields `MISPAR RECHEV` and `SUG TAV`, using an exact numeric plate filter and bounded response. Official schema: https://data.gov.il/api/3/action/resource_show?id=c8b9f9c8-4612-4068-934f-d4acd2e3c06e . The numeric type interpretation is owner-confirmed (1 triangle,2 wheelchair), not an official published dictionary. Unknown/missing/fractional/string codes remain neutral unknown; failed requests are never negative checks. No expiry/IDF semantics are inferred.
+
+Adapter is blocking and must run off-main-thread. No retries/redirects/logging; 1.8-second whole-call timeout, per-client in-memory five-minute128-entry TTL cache and deny-rather-than-wait rate limiter. UI orchestration and stale-edit guards are a separate change. No sender/coordinator invokes this adapter or waits on it. No live report or plate lookup occurs in unit tests.
