@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.40.2] - 2026-11-12
+
+### Fixes
+
+- fix(review): protect unsaved edits on explicit and system back (#323) (062bf3e)
+
 ## [0.40.1] - 2026-11-12
 
 ### Fixes
