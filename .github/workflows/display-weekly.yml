@@ -11,6 +11,10 @@ on:
     paths:
       - '.github/workflows/**'
       - 'scripts/emulator_preflight.py'
+      # Compose can live outside ui/ (assistant settings, activities, etc.).
+      - 'app/src/main/java/**'
+      - 'app/src/main/AndroidManifest.xml'
+      - 'app/build.gradle.kts'
       - 'app/src/main/java/**/ui/**'
       - 'app/src/main/java/**/capture/**'
       - 'app/src/main/res/**'
