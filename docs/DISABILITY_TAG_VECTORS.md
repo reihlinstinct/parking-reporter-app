@@ -26,3 +26,7 @@ Official source URLs:
 - https://data.gov.il/api/3/action/package_show?id=11369651-1c70-4d8f-8090-ee49354a7c52
 
 The registry schema lists only vehicle number, tag-issue date and numeric type. Neither resource nor package metadata defines which numeric type maps to which symbol. The owner supplied the final mapping: type1=triangle, type2=wheelchair. This mapping is owner-confirmed, not attributed to an official dictionary; it is centralized in one small map and unknown values stay neutral. No UI/network integration is added here. No plate-level data was needed for the type check. Dataset metadata says CC BY; that data licence does not prove the photographs/symbol artwork is reusable. These assets are independent simple geometric redraws under the repository MIT licence.
+
+## Light and dark boundaries (#347)
+
+Each vector has an untinted white exterior silhouette around an inset (84%) colored symbol. On a light surface the dark colored/outlined inner contour remains visible; on a dark surface the white exterior defines the boundary. Internal white/blue contrast alone is not a theme-accessibility claim. Android instrumentation renders both drawables at24/32dp on white/black, checks real raster contour pixels and captures a Material3 light/dark grid. SVG/Vector group transforms are covered by parity tests. Text remains required in the consuming UI; unknown types do not use these symbols.
