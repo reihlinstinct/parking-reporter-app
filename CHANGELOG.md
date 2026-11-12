@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-11-12
+
+### Features
+
+- feat(assets): original accessible disability-tag vectors (#342) (13cc40c)
+
 ## [0.37.0] - 2026-11-12
 
 ### Features
