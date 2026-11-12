@@ -59,7 +59,7 @@ class LiveReadOnlyRegistryTest {
             val tag = snapshot.tag
             val vehicle = snapshot.vehicle
             val row = JSONObject().put("plate", current).put("checked_at", snapshot.checkedAt.toString())
-                .put("tag", when(tag) { is DisabilityLookupResult.Found -> tag.type.name; is DisabilityLookupResult.NotFound -> "NOT_FOUND"; is DisabilityLookupResult.Error -> "ERROR_${tag.kind}" })
+                .put("tag", when(tag) { is DisabilityLookupResult.Found -> tag.type.name; is DisabilityLookupResult.NotFound -> "NOT_FOUND"; is DisabilityLookupResult.Error -> "ERROR_${tag.kind}"; null -> "PENDING" })
             if (vehicle is VehicleLookupResult.Found) {
                 row.put("licence_until", vehicle.record.licenceValidUntil?.toString() ?: "UNKNOWN")
                 row.put("licence_status", vehicle.record.licenceStatus(LocalDate.now(ZoneId.of("Asia/Jerusalem")))).put("model", vehicle.record.commercialName)
