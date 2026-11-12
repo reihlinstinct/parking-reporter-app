@@ -20,7 +20,7 @@ class AssistantEntryStore(context: Context) {
 }
 
 object AssistantEntry {
-    const val FUNCTION_ID = "io.github.reihlinstinct.reporter.assistant.BaseReportAppFunctionService#startNewReport"
+    val FUNCTION_ID: String get() = BaseReportAppFunctionServiceIds.START_NEW_REPORT_ID
     fun supported(sdk: Int = Build.VERSION.SDK_INT): Boolean = sdk >= 36
 
     /** The assistant can only offer entry to the normal visible capture flow. */

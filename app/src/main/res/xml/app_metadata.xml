@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AppFunctionAppMetadata xmlns:appfn="http://schemas.android.com/apk/androidx.appfunctions"
+    appfn:description="Offers an immutable action to open a new visible parking report capture flow. Requires local opt-in. Never submits reports or returns saved reports, photos, credentials or identity data."
+    appfn:displayDescription="@string/appfunctions_entry_description" />

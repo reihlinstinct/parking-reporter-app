@@ -92,6 +92,8 @@ class AssistantEntryTest {
         assertEquals(Build.VERSION.SDK_INT >= 36, service.enabled)
         val xml = context.assets.open("report_app_functions.xml").bufferedReader().use { it.readText() }
         assertTrue(xml.contains("startNewReport"))
+        assertTrue("Use generated function identity, not a guessed name", xml.contains(AssistantEntry.FUNCTION_ID))
+        assertNotNull(context.packageManager.getProperty("android.app.appfunctions.app_metadata", context.packageName))
         assertTrue(xml.contains("false"))
         assertFalse(xml.contains("submitReport"))
         assertFalse(xml.contains("password"))
