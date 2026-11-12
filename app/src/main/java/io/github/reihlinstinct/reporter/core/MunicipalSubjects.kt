@@ -80,7 +80,8 @@ data class MunicipalSubjects(
          * Canonical fingerprint identical to parking-report-helper
          * subjects.catalog_fingerprint: each row encoded as
          * json.dumps([code, name, path], ensure_ascii=False), rows sorted,
-         * joined with "\n", sha256 hex.
+         * joined with "\n", sha256 hex. That holds only for rows without a plate flag; see
+         * "Intentional app/helper differences" in docs/MUNICIPAL_TAXONOMY.md.
          */
         fun canonicalFingerprint(subjects: List<MunicipalSubject>): String {
             val items = subjects.map { canonicalRow(it.code, it.name, it.path) + (it.plateRequired?.let { flag -> "|plateRequired=$flag" } ?: "") }.sorted()
