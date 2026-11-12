@@ -167,4 +167,15 @@ class RegistryReviewTest {
         screenshot("registry-recorded-inactive-1912929-expired.png")
     }
 
+    @Test fun tagErrorIsUnavailableNotSilentNegative() {
+        val lookup: RegistryLookup = { _, _ -> RegistrySnapshot(DisabilityLookupResult.Error(LookupErrorKind.NETWORK),
+            VehicleLookupResult.Found((snapshot(DisabilityTagType.TRIANGLE).vehicle as VehicleLookupResult.Found).record.copy(
+                licenceValidUntil = LocalDate.of(2030,1,1))), Instant.parse("2026-11-12T09:00:00Z")) }
+        compose.setContent { AppTheme { Surface(Modifier.fillMaxSize()) { RegistryStatus("1234567", lookup) } } }
+        compose.onNodeWithText("המאגר לא זמין").assertExists()
+        compose.onNodeWithText("לא נמצא רישום תג במאגר").assertDoesNotExist()
+        compose.onNodeWithText("רישיון הרכב בתוקף לפי המאגר").assertExists()
+        screenshot("registry-tag-unavailable-valid-licence.png")
+    }
+
 }

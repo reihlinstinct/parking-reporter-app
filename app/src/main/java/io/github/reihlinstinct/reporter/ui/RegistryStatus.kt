@@ -127,6 +127,7 @@ private fun RegistryStatusContent(plate: String, lookup: RegistryLookup?) {
                     if (icon != null) Image(painterResource(icon), null, Modifier.size(32.dp))
                     Text(s.t(tagKey))
                 }
+                if (tag is DisabilityLookupResult.Error) Text(s.t("registry.unavailable"))
                 val vehicle = current.vehicle
                 val days = licenceDaysRemaining((vehicle as? VehicleLookupResult.Found)?.record?.licenceValidUntil, current.checkedAt)
                 val status = when { days == null -> if (vehicle is VehicleLookupResult.Found) LicenceStatus.UNKNOWN else null; days < 0 -> LicenceStatus.EXPIRED; else -> LicenceStatus.VALID }
