@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.48.3] - 2026-11-12
+
+### Fixes
+
+- fix(plate): manual field rejects letters, OCR skips runs next to mem/… (#410) (fdf2aee)
+
 ## [0.48.2] - 2026-11-12
 
 ### Fixes
