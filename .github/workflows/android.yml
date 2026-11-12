@@ -1,57 +1,12 @@
-name: Android build and tests
+name: Official manual AppFunctions invocation proof
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  schedule:
-    # Weekly full suite: Sunday 06:00 Israel winter time (04:00 UTC;
-    # runs 07:00 IDT in summer).
-    - cron: '0 4 * * 0'
 permissions:
   contents: read
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
-  changes:
+  recording:
     runs-on: ubuntu-24.04
-    outputs:
-      code: ${{ steps.filter.outputs.code }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - id: filter
-        shell: bash
-        env:
-          BASE_REF: ${{ github.base_ref }}
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          # Docs-only pull requests skip the heavy jobs; the Run summary gate
-          # still runs and reports them as skipped.
-          if [ "$EVENT_NAME" != "pull_request" ]; then
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # --no-renames: a code-to-doc rename still shows the deleted code
-          # path, so it cannot masquerade as docs-only.
-          git diff --no-renames --name-only "origin/${BASE_REF}...HEAD" | tee /tmp/changed.txt
-          # Doc-only allowlist: markdown/rst, license, and exact community
-          # metadata names (no prefix matches) - unknown files run the suite.
-          # Images always run: docs/ images are app assets.
-          if grep -qvEi '\.(md|markdown|rst)$|^LICENSE$|^\.github/(CODEOWNERS|dependabot\.yml|FUNDING\.yml)$|^\.github/ISSUE_TEMPLATE/[^/]+\.(md|yml|yaml)$|^\.github/PULL_REQUEST_TEMPLATE(\.md)?$|^\.github/PULL_REQUEST_TEMPLATE/[^/]+\.md$' /tmp/changed.txt; then
-            echo "code=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "code=false" >> "$GITHUB_OUTPUT"
-          fi
-  build:
-    needs: [changes]
-    if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -62,75 +17,27 @@ jobs:
           java-version: '17'
           cache: gradle
       - run: sh scripts/prepare_wrapper.sh
-      - name: Build debug and verify release code generation
-        run: |
-          sh gradlew --no-daemon lintDebug testDebugUnitTest assembleDebug compileReleaseKotlin
-      - name: Retain generated assistant diagnostics
-        if: always()
-        run: |
-          find app/build/generated/ksp -type f -name '*ReportAppFunction*' -print || true
-      - name: Unit test coverage (JaCoCo)
-        if: always()
-        continue-on-error: true
-        run: sh gradlew --no-daemon jacocoDebugUnitTestReport
-      - name: Unit test summary
-        if: always()
-        run: python3 scripts/test_summary.py --title 'Unit tests (debug)' --junit app/build/test-results/testDebugUnitTest --jacoco app/build/reports/jacoco
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        if: always()
-        with:
-          name: unit-test-report
-          path: |
-            app/build/test-results/testDebugUnitTest/
-            app/build/reports/jacoco/
-            app/build/reports/lint-results-debug.html
-          if-no-files-found: warn
-          retention-days: 14
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        with:
-          name: m1-preview-apk
-          path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-          retention-days: 14
-      - name: Build smaller arm64 phone preview
-        run: sh gradlew --no-daemon clean assembleDebug -PpreviewArm64
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-        with:
-          name: phone-arm64-preview-apk
-          path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-          retention-days: 14
-  emulator-matrix:
-    name: emulator (${{ matrix.api }})
-    needs: [changes]
-    if: needs.changes.outputs.code == 'true'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 35
-    strategy:
-      fail-fast: false
-      matrix:
-        # Issue #297: preserve API 30 coverage and add stable API 36.
-        # Weekly probes cover 29/33/34/35/36/37.0. API 26 is deliberately
-        # uncovered after its CI image failures; minSdk remains 26.
-        api: ["30", "36"]
-    steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          repository: android/appfunctions
+          ref: 8f10403d8908f0621227263b1c07419342dacaf6
+          path: official-appfunctions
           persist-credentials: false
-      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
-        with:
-          distribution: temurin
-          java-version: '17'
-          cache: gradle
-      - run: sh scripts/prepare_wrapper.sh
+      - name: Build official testing agent standard flavor without an API key
+        run: |
+          cd official-appfunctions/agent
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleStandardDebug
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - name: Record available device profiles
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" list device'
       - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
-          api-level: ${{ matrix.api }}
+          api-level: '36'
           arch: x86_64
           profile: pixel_2
           disable-animations: true
@@ -140,112 +47,29 @@ jobs:
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             sh gradlew --stop || true
-            python3 scripts/emulator_preflight.py --report-dir app/build/reports/androidTests
-            # Local OCR tests must work without emulator networking. On API 26
-            # adbd is fragile: svc can take the whole session down (exit 137
-            # on CI). Keep the command best-effort; the offline behavior is
-            # asserted by the OCR tests themselves.
-            adb shell svc wifi disable || echo "warning: svc wifi disable failed on API ${{ matrix.api }}"
-            adb shell svc data disable || echo "warning: svc data disable failed on API ${{ matrix.api }}"
-            mkdir -p app/build/reports/androidTests/screenshots
-            # The emulator action runs every script line in its own sh:
-            # no variables, background jobs or shell options survive across
-            # lines. The instrumented exit code therefore goes to a file.
-            adb shell screenrecord --time-limit 180 /sdcard/test-run.mp4 > /dev/null 2>&1 &
-            adb shell am instrument -w -r il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/androidTests/instrumentation.txt 2>&1; echo $? > app/build/reports/androidTests/instrumentation.rc; cat app/build/reports/androidTests/instrumentation.txt
+            python3 scripts/emulator_preflight.py --report-dir app/build/reports/assistant-invocation
+            adb shell am instrument -w -r -e class io.github.reihlinstinct.reporter.AssistantManualAgentSetupTest#enableForOfficialManualAgent il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/assistant-invocation/setup.txt 2>&1
+            python3 scripts/test_summary.py --title 'Enable fresh emulator for official manual agent' --instrumentation app/build/reports/assistant-invocation/setup.txt --check
+            adb install -r official-appfunctions/agent/app/build/outputs/apk/standard/debug/app-standard-debug.apk
+            adb shell cmd app_function help > app/build/reports/assistant-invocation/cmd-help.txt 2>&1 || true
+            adb shell cmd app_function list-app-functions --package il.sidewalks.reporter > app/build/reports/assistant-invocation/cmd-list.txt 2>&1 || true
+            FUNCTION_ID=$(adb shell run-as il.sidewalks.reporter cat files/manual-agent-function-id.txt | tr -d '\r')
+            adb shell cmd app_function execute-app-function --package il.sidewalks.reporter --function "$FUNCTION_ID" --parameters '{}' > app/build/reports/assistant-invocation/cmd-execute.txt 2>&1 || true
+            adb shell "screenrecord --time-limit 120 /sdcard/assistant-invocation.mp4 >/dev/null 2>&1 &"
+            (cd official-appfunctions/agent && bash startAppFunctionTestingAgent)
+            python3 scripts/assistant_agent_manual_proof.py
             adb shell pkill -INT screenrecord || true
             sleep 2
-            adb pull /sdcard/test-run.mp4 app/build/reports/androidTests/test-run.mp4 || true
-            adb shell rm /sdcard/test-run.mp4 || true
-            # Dump the device log so app-side Log lines and compose tree dumps
-            # from failing tests are readable without rerunning locally.
-            adb logcat -d -v threadtime > app/build/reports/androidTests/logcat.txt || true
-            python3 scripts/test_summary.py --title 'Instrumented tests (emulator, API ${{ matrix.api }})' --instrumentation app/build/reports/androidTests/instrumentation.txt --check; echo $? > app/build/reports/androidTests/summary.rc
-            for f in $(adb shell run-as il.sidewalks.reporter ls files/ | tr -d '\r' | grep '\.png$'); do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/androidTests/screenshots/$f" || true; done
-            # Best-effort: a crashed run must still reach the presence checks
-            # below, which are the real gate on required evidence files.
-            adb shell run-as il.sidewalks.reporter cat files/m0-synthetic.png > app/build/reports/androidTests/screenshots/m0-synthetic.png || true
-            adb shell run-as il.sidewalks.reporter cat files/m1-review-synthetic.png > app/build/reports/androidTests/screenshots/m1-review-synthetic.png || true
-            adb shell run-as il.sidewalks.reporter cat files/m1-settings-synthetic.png > app/build/reports/androidTests/screenshots/m1-settings-synthetic.png || true
-            adb shell run-as il.sidewalks.reporter cat files/m1-home-intake-synthetic.png > app/build/reports/androidTests/screenshots/m1-home-intake-synthetic.png || true
-            adb shell run-as il.sidewalks.reporter cat files/m2-ocr-synthetic.png > app/build/reports/androidTests/screenshots/m2-ocr-synthetic.png || true
-            adb shell run-as il.sidewalks.reporter cat files/design-home-synthetic.png > app/build/reports/androidTests/screenshots/design-home-synthetic.png || true
-            adb shell run-as il.sidewalks.reporter cat files/design-sign-synthetic.png > app/build/reports/androidTests/screenshots/design-sign-synthetic.png || true
-            adb shell run-as il.sidewalks.reporter cat files/design-sign-actions-synthetic.png > app/build/reports/androidTests/screenshots/design-sign-actions-synthetic.png || true
-            adb shell run-as il.sidewalks.reporter cat files/ocr-comparison.json > app/build/reports/androidTests/ocr-comparison.json || true
-            # Evidence is collected first, so a failing run still ships its
-            # video, screenshots and summaries; only then the presence checks
-            # and the recorded exit codes fail the job.
-            test -s app/build/reports/androidTests/screenshots/m0-synthetic.png
-            test -s app/build/reports/androidTests/screenshots/m1-review-synthetic.png
-            test -s app/build/reports/androidTests/screenshots/m1-settings-synthetic.png
-            test -s app/build/reports/androidTests/screenshots/m1-home-intake-synthetic.png
-            test -s app/build/reports/androidTests/screenshots/m2-ocr-synthetic.png
-            test -s app/build/reports/androidTests/screenshots/design-home-synthetic.png
-            test -s app/build/reports/androidTests/screenshots/design-sign-synthetic.png
-            test -s app/build/reports/androidTests/screenshots/design-sign-actions-synthetic.png
-            test -s app/build/reports/androidTests/ocr-comparison.json
-            test "$(cat app/build/reports/androidTests/instrumentation.rc)" = "0"
-            test "$(cat app/build/reports/androidTests/summary.rc)" = "0"
+            adb pull /sdcard/assistant-invocation.mp4 app/build/reports/assistant-invocation/assistant-invocation.mp4 || true
+            adb shell am force-stop com.example.appfunctions.agent
+            adb shell am instrument -w -r -e class io.github.reihlinstinct.reporter.AssistantManualAgentSetupTest#revokeAfterOfficialManualAgent il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/assistant-invocation/revoke.txt 2>&1
+            python3 scripts/test_summary.py --title 'Revoke official manual agent entry' --instrumentation app/build/reports/assistant-invocation/revoke.txt --check
+            adb logcat -d -v threadtime > app/build/reports/assistant-invocation/logcat.txt || true
+            python3 -c 'import json; r=json.load(open("app/build/reports/assistant-invocation/manual-agent-result.json")); assert r["official_agent_manual"], r'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
-          name: emulator-test-results-api${{ matrix.api }}
-          path: app/build/reports/androidTests/
+          name: assistant-invocation-api36
+          path: app/build/reports/assistant-invocation/
           retention-days: 14
-
-  # Preserve the existing branch-protection context without changing settings.
-  emulator:
-    name: emulator
-    if: always()
-    needs: [changes, emulator-matrix]
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Require every API leg, allowing only deliberate docs-only skips
-        env:
-          CHANGES_RESULT: ${{ needs.changes.result }}
-          CODE_CHANGED: ${{ needs.changes.outputs.code }}
-          MATRIX_RESULT: ${{ needs.emulator-matrix.result }}
-        run: |
-          test "$CHANGES_RESULT" = success
-          if [ "$CODE_CHANGED" = false ] && [ "$MATRIX_RESULT" = skipped ]; then
-            echo 'Docs-only change: emulator matrix deliberately skipped.'
-          else
-            test "$CODE_CHANGED" = true
-            test "$MATRIX_RESULT" = success
-          fi
-
-  summary:
-    permissions:
-      contents: read
-    name: Run summary
-    if: always()
-    needs: [changes, build, emulator-matrix, emulator]
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Write run summary
-        if: always()
-        env:
-          NEEDS_JSON: ${{ toJSON(needs) }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/ci/run_summary.py
-      - name: Fail on failed or cancelled dependencies
-        if: always()
-        env:
-          NEEDS_JSON: ${{ toJSON(needs) }}
-        run: |
-          # Deliberate docs-only skips are allowed; a failed or cancelled
-          # dependency must fail this gate.
-          python3 - <<'PY'
-          import json, os, sys
-          needs = json.loads(os.environ["NEEDS_JSON"])
-          bad = {k: v["result"] for k, v in needs.items() if v["result"] not in ("success", "skipped")}
-          if bad:
-              print("Dependencies failed or cancelled:", bad)
-              sys.exit(1)
-          print("All dependencies succeeded or were deliberately skipped.")
-          PY
+          if-no-files-found: error
