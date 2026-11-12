@@ -15,4 +15,13 @@ class PlateCandidatesTest {
     @Test fun boundedCandidateCountAndInput() {
         assertEquals(10, PlateCandidates.fromText((1..100).joinToString(" ") { (1000000 + it).toString() }).size)
     }
+    @Test fun runNextToHebrewClassLetterIsNotARegularPlate() {
+        val mem = "\u05DE"; val tsadi = "\u05E6"
+        assertTrue(PlateCandidates.fromText("1234567$mem").isEmpty())
+        assertTrue(PlateCandidates.fromText("$mem" + "12345678").isEmpty())
+        assertTrue(PlateCandidates.fromText("12345678 $tsadi").isEmpty())
+        assertTrue(PlateCandidates.fromText("$tsadi-1234567").isEmpty())
+        assertTrue(PlateCandidates.fromText("12-345-67 $mem").isEmpty())
+        assertEquals(listOf("1234567"), PlateCandidates.fromText("1234567 \u05E8\u05DB\u05D1"))
+    }
 }

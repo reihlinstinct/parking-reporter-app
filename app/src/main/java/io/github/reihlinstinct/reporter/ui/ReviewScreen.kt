@@ -239,7 +239,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         Button(enabled = image != null && !recognizing, onClick = { scope.launch { recognize() } }, modifier = Modifier.fillMaxWidth()) { Text(s.t(if (recognizing) "review.edit.recognizing" else "review.edit.suggest_plate")) }
         Text(ocrStatus?.let { s.t(it) }.orEmpty())
         plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate) }) { Text(reviewPlateSuggestionText(s, plate)) } }
-        if (draft.needsPlate()) OutlinedTextField(draft.plate, { plateEdits++; draft = draft.edit(plate = PlateEntry.digits(it)) }, singleLine = true,
+        if (draft.needsPlate()) OutlinedTextField(draft.plate, { plateEdits++; draft = draft.edit(plate = PlateEntry.accept(draft.plate, it)) }, singleLine = true,
             isError = draft.plate.isNotBlank() && !draft.plate.matches(Regex("[0-9]{7,8}")),
             visualTransformation = PlateEntry, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, autoCorrectEnabled = false, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }),
