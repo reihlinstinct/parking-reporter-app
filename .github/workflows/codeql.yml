@@ -1,0 +1,55 @@
+name: CodeQL
+# Issue #395: Default setup's autobuild ran only :app:clean, so java-kotlin analysis saw no code.
+# Advanced setup with an explicit compile. Weekly and manual only, to save Actions minutes.
+# The job runs only on main (the if: below skips a dispatch from any other branch).
+# Default setup must be off before the first run (uploads are rejected while it is on).
+# Evidence to close #395: the analyze log for java-kotlin shows a non-zero count of extracted Kotlin files.
+on:
+  schedule:
+    - cron: "17 3 * * 0"
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: java-kotlin
+            build-mode: manual
+          - language: python
+            build-mode: none
+          - language: actions
+            build-mode: none
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+        if: matrix.language == 'java-kotlin'
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Prepare Gradle wrapper
+        if: matrix.language == 'java-kotlin'
+        run: sh scripts/prepare_wrapper.sh
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+      - name: Compile for CodeQL
+        if: matrix.language == 'java-kotlin'
+        run: sh gradlew --no-daemon :app:compileDebugKotlin :app:compileDebugJavaWithJavac
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: "/language:${{ matrix.language }}"

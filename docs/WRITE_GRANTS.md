@@ -58,6 +58,7 @@ job timeout; this document does not change those settings.
 |---|---|---|---|---|
 | release.yml | job-write | release | contents: write | #71, retained; unused while RELEASE_PAT is set |
 | wiki-sync.yml | job-write | sync | contents: write | #71, same repository wiki publication |
+| codeql.yml | job-write | analyze | security-events: write | #395, CodeQL result upload; schedule and manual dispatch only; Default setup is turned off first, then one dispatch, and it is turned back on if that run fails |
 
 Each reason names this document. The existing guard compares exact path, rule,
 job and evidence: a new write, a top-level write, or a summary write is not
