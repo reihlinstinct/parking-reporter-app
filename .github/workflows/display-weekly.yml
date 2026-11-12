@@ -81,7 +81,9 @@ jobs:
             adb pull /sdcard/display-test.mp4 app/build/reports/display/display-test.mp4 || true
             adb logcat -d -v threadtime > app/build/reports/display/logcat.txt || true
             python3 scripts/test_summary.py --title 'Display screenshots (${{ matrix.label }}, API36)' --instrumentation app/build/reports/display/instrumentation.txt --check; echo $? > app/build/reports/display/summary.rc
-            for f in picker312-all-paths.png category-picker-open.png category-picker-chosen.png design-home-synthetic.png design-home-camera-scrolled.png design-home-gallery-scrolled.png m1-review-no-lockscreen-synthetic.png settings-save-missing-fields.png design303-municipal-settings.png design303-dynamic-settings.png design303-back-home.png; do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/display/screenshots/$f" || true; done
+            for f in picker315-real-paths-top.png picker315-real-paths-bottom.png picker312-all-paths.png category-picker-open.png category-picker-chosen.png design-home-synthetic.png design-home-camera-scrolled.png design-home-gallery-scrolled.png m1-review-no-lockscreen-synthetic.png settings-save-missing-fields.png design303-municipal-settings.png design303-dynamic-settings.png design303-back-home.png; do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/display/screenshots/$f" || true; done
+            test -s app/build/reports/display/screenshots/picker315-real-paths-top.png
+            test -s app/build/reports/display/screenshots/picker315-real-paths-bottom.png
             test -s app/build/reports/display/screenshots/picker312-all-paths.png
             test -s app/build/reports/display/screenshots/category-picker-open.png
             test -s app/build/reports/display/screenshots/category-picker-chosen.png
