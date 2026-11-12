@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.48.5] - 2026-11-12
+
+### Fixes
+
+- fix(catalog): withCheckTime recomputes the date-known flag, copy keeps the old one (#357) (#413) (8a867c6)
+
 ## [0.48.4] - 2026-11-12
 
 ### Other changes
