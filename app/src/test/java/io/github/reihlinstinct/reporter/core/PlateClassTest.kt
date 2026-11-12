@@ -25,6 +25,8 @@ class PlateClassTest {
         assertTrue(PlateClasses.ready("123", PlateClass.CONSULAR_CC))
         assertFalse(PlateClasses.ready("", PlateClass.POLICE))
         assertFalse(PlateClasses.ready("-12", PlateClass.POLICE))
+        assertFalse(PlateClasses.ready("12-", PlateClass.POLICE))
+        assertFalse(PlateClasses.ready("12--34", PlateClass.POLICE))
         assertFalse(PlateClasses.ready("12-34", PlateClass.DIPLOMATIC_CD))
         assertFalse(PlateClasses.ready("12x", PlateClass.CONSULAR_CC))
     }
@@ -80,5 +82,16 @@ class PlateClassTest {
     @Test fun ocrPrefillNeverOverridesANonRegularClass() {
         val police = draft("", PlateClass.POLICE)
         assertEquals(police, PlateEntry.prefill(police, listOf("1234567"), ""))
+    }
+    @Test fun policeMarkerInsideAWordDoesNotCount() {
+        val word = draft("123456", PlateClass.POLICE, "x 123456 $mem\u05E7\u05D5\u05DD y")
+        assertFalse(PlatePolicy.descriptionContainsPlate(word))
+        assertTrue(PlatePolicy.descriptionContainsPlate(word.copy(exactHebrewText = "x 123456 $mem, y")))
+    }
+    @Test fun changingTheTypeRemovesTheOldPlateLineOnly() {
+        val text = "plate: 11-22-33 $mem\nother line"
+        assertEquals("other line", PlateClasses.withoutPlateLines(text, "11-22-33", PlateClass.POLICE))
+        assertEquals(text, PlateClasses.withoutPlateLines(text, "", PlateClass.POLICE))
+        assertEquals(text, PlateClasses.withoutPlateLines(text, "11-22-33", PlateClass.DIPLOMATIC_CD))
     }
 }

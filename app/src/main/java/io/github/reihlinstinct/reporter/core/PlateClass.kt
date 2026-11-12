@@ -18,7 +18,7 @@ enum class PlateClass(val code: String) {
 
 object PlateClasses {
     private val regular = Regex("[0-9]{7,8}")
-    private val special = Regex("[0-9][0-9-]{0,11}")
+    private val special = Regex("(?=.{1,12}$)[0-9]+(-[0-9]+)*")
     private const val MEM = "\u05DE"
 
     /** Regular keeps the 7 or 8 digit rule. Other classes need the typed digits (hyphen allowed for police) and nothing else. */
@@ -34,5 +34,15 @@ object PlateClasses {
         PlateClass.POLICE -> "$plate $MEM"
         PlateClass.DIPLOMATIC_CD -> "CD $plate"
         PlateClass.CONSULAR_CC -> "CC $plate"
+    }
+
+    /**
+     * Removes the report-text lines that contain the old plate string. Used when the user changes the plate type, so the
+     * text never keeps a plate line of the previous type next to the new one.
+     */
+    fun withoutPlateLines(text: String, plate: String, plateClass: PlateClass): String {
+        if (plate.isBlank()) return text
+        val shown = text(plate, plateClass)
+        return text.lines().filterNot { it.contains(shown) }.joinToString("\n").trimStart('\n')
     }
 }

@@ -266,7 +266,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 listOf(PlateClass.REGULAR to s.t("review.plate_class.regular"), PlateClass.POLICE to s.t("review.plate_class.police"),
                     PlateClass.DIPLOMATIC_CD to s.t("review.plate_class.cd"), PlateClass.CONSULAR_CC to s.t("review.plate_class.cc")).forEach { (plateClass, label) ->
                     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(selected = draft.plateClass == plateClass, role = Role.RadioButton,
-                        onClick = { if (draft.plateClass != plateClass) { plateEdits++; draft = draft.edit(plate = "", plateClass = plateClass) } }),
+                        onClick = { if (draft.plateClass != plateClass) { plateEdits++; draft = draft.edit(plate = "", plateClass = plateClass, text = PlateClasses.withoutPlateLines(draft.exactHebrewText, draft.plate, draft.plateClass)) } }),
                         verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(selected = draft.plateClass == plateClass, onClick = null)
                         Text(label, Modifier.padding(start = 8.dp))
