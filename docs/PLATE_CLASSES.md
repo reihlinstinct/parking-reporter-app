@@ -7,7 +7,7 @@ Status: only REGULAR is implemented. A raw string that is not 7 or 8 ASCII digit
 The app does not pass raw strings. Two rules keep a special-looking plate from becoming a regular one:
 
 - Manual field (`PlateEntry.accept`): digits (any Unicode decimal digit, stored as ASCII), hyphens, spaces and bidi marks are accepted. Any letter or other symbol rejects the whole edit and keeps the previous value. Typing or pasting "CD 11 222 33" no longer stores `1122233`.
-- OCR (`PlateCandidates.fromText`): a 7 or 8 digit run next to a Hebrew mem or tsadi (final forms included), directly or across one space or hyphen, is not offered. Latin letters or digits next to a run were already rejected.
+- OCR (`PlateCandidates.fromText`): a 7 or 8 digit run next to a standalone Hebrew mem or tsadi (final forms included) is not offered. The letter may touch the run or be separated by one space or hyphen, but not a line break, and it must not be part of a longer Hebrew word ("נכים 1234567" and "1234567 מסוג" still offer the number). Latin letters or digits next to a run were already rejected.
 
 Still true: only REGULAR is implemented. A raw string that is not 7 or 8 ASCII digits is drawn as plain text and rejected by `PlateNumber.parse`. Nothing here infers legal status, licence validity or parking permission from a plate.
 
