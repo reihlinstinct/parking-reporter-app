@@ -71,8 +71,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var confirmExit by remember(initial.evidence.stableId) { mutableStateOf(false) }
     val savedManualStreet = remember(initial) { manualStreet }
     val savedManualHouse = remember(initial) { manualHouse }
-    val hasUnsavedEdits = draft != initial ||
-        time != ReviewTime.display(initial.confirmedTime) ||
+    val hasUnsavedEdits = draft != ReportTime.forSave(initial) ||
         latitude != initial.confirmedLatitude?.toString().orEmpty() ||
         longitude != initial.confirmedLongitude?.toString().orEmpty() ||
         manualStreet != savedManualStreet || manualHouse != savedManualHouse

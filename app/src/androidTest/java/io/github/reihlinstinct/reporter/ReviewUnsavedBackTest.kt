@@ -61,6 +61,14 @@ class ReviewUnsavedBackTest {
         compose.onNodeWithText("7654321", substring = true).assertExists()
     }
 
+    @Test fun cleanExifTimestampNormalizationDoesNotInventUnsavedTimeEdits() {
+        var exits = 0
+        compose.setContent { AppTheme { ReviewScreen(draft().copy(confirmedTime = "2026-02-02T12:00:00+02:00"), null, {}, { exits++ }) } }
+        compose.onNodeWithText("חזור").performScrollTo().performClick()
+        compose.onNodeWithText("יש שינויים שלא נשמרו").assertDoesNotExist()
+        compose.runOnIdle { assertEquals(1, exits) }
+    }
+
     private fun capture(name: String) {
         compose.waitForIdle()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
