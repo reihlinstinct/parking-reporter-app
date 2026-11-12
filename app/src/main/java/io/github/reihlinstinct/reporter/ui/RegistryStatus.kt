@@ -26,7 +26,7 @@ fun licenceDaysRemaining(until: LocalDate?, checkedAt: Instant): Long? = until?.
     java.time.temporal.ChronoUnit.DAYS.between(checkedAt.atZone(ZoneId.of("Asia/Jerusalem")).toLocalDate(), it)
 }
 
-class RegistrySnapshot(val tag: DisabilityLookupResult?, val vehicle: VehicleLookupResult?, val checkedAt: Instant) {
+class RegistrySnapshot(val tag: DisabilityLookupResult?, val vehicle: VehicleLookupResult?, val checkedAt: Instant, val cachedAt: Instant? = null, val cachedUntil: Instant? = null) {
     override fun toString() = "RegistrySnapshot(redacted)"
 }
 
@@ -57,15 +57,20 @@ fun rememberRegistryLookup(): RegistryLookup {
     val vehicle = remember { VehicleRegistryClient(VehicleRegistryConfig(VehicleRegistryConfig.KNOWN_VEHICLE_RESOURCE_ID,
         cacheTtlMillis = 0), VehicleRegistryClient.safeClient().newBuilder()
         .callTimeout(6, java.util.concurrent.TimeUnit.SECONDS).build()) }
-    val cache = remember { TtlLruCache<PlateNumber, RegistrySnapshot>(128, 300_000) { System.nanoTime() / 1_000_000 } }
-    return remember(tag, vehicle) { { plate, publish ->
+    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val cache = remember(context) { RegistryFallbackCache(java.io.File(context.noBackupFilesDir, "registry-fallback")) }
+    return remember(tag, vehicle, cache) { { plate, publish ->
         val key = requireNotNull(PlateNumber.parse(plate))
-        cache.get(key) ?: readRegistrySnapshot(plate,
-            { withContext(Dispatchers.IO) { tag.lookup(it) } },
-            { withContext(Dispatchers.IO) { vehicle.lookup(it) } }, publish).also {
-                if (it.tag != null && it.vehicle != null && it.tag !is DisabilityLookupResult.Error && it.vehicle !is VehicleLookupResult.Error) cache.put(key, it)
-            }
+        val saved = withContext(Dispatchers.IO) { cache.get(key) }
+        cachedRegistryLookup(plate, saved,
+            { p, emit -> readRegistrySnapshot(p,
+                { withContext(Dispatchers.IO) { tag.lookup(it) } },
+                { withContext(Dispatchers.IO) { vehicle.lookup(it) } }, emit) },
+            { fresh -> withContext(Dispatchers.IO) {
+                try { cache.put(key, fresh.tag, fresh.vehicle, fresh.checkedAt) } catch (_: Exception) { /* Cache cannot gate live data. */ }
+            } }, publish)
     } }
+
 }
 
 /** Independent read-only information. No draft, text, save or submit callback exists here. */
@@ -92,14 +97,21 @@ private fun RegistryStatusContent(plate: String, lookup: RegistryLookup?) {
         } catch (e: TimeoutCancellationException) {
             // Keep a completed half. Missing half gets a neutral unavailable result.
             result = result?.let { RegistrySnapshot(it.tag ?: DisabilityLookupResult.Error(LookupErrorKind.NETWORK),
-                it.vehicle ?: VehicleLookupResult.Error(LookupErrorKind.NETWORK), it.checkedAt) }
+                it.vehicle ?: VehicleLookupResult.Error(LookupErrorKind.NETWORK), it.checkedAt, it.cachedAt, it.cachedUntil) }
             unavailable = result == null
         }
         catch (e: CancellationException) { throw e }
         catch (_: Exception) {
             result = result?.let { RegistrySnapshot(it.tag ?: DisabilityLookupResult.Error(LookupErrorKind.NETWORK),
-                it.vehicle ?: VehicleLookupResult.Error(LookupErrorKind.NETWORK), it.checkedAt) }
+                it.vehicle ?: VehicleLookupResult.Error(LookupErrorKind.NETWORK), it.checkedAt, it.cachedAt, it.cachedUntil) }
             unavailable = result == null
+        }
+    }
+    val fallbackDeadline = result?.cachedUntil
+    LaunchedEffect(fallbackDeadline) {
+        if (fallbackDeadline != null) {
+            delay(java.time.Duration.between(Instant.now(), fallbackDeadline).toMillis().coerceAtLeast(0))
+            if (result?.cachedUntil == fallbackDeadline) { result = null; unavailable = true }
         }
     }
     Column(Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }) {
@@ -108,6 +120,10 @@ private fun RegistryStatusContent(plate: String, lookup: RegistryLookup?) {
             unavailable -> Text(s.t("registry.unavailable"))
             current == null -> Text(s.t("registry.loading"))
             else -> {
+                if (current.cachedAt != null) {
+                    val age = java.time.Duration.between(current.cachedAt, Instant.now()).toMinutes().coerceAtLeast(0)
+                    Text(s.t("registry.cached", mapOf("minutes" to age.toString())), style = MaterialTheme.typography.bodySmall)
+                }
                 val tag = current.tag
                 val type = (tag as? DisabilityLookupResult.Found)?.type
                 if (tag is DisabilityLookupResult.Found) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -155,9 +171,34 @@ private fun RegistryStatusContent(plate: String, lookup: RegistryLookup?) {
                         Text(licenceText, color = orange, style = MaterialTheme.typography.titleMedium)
                     }
                 } else Text(licenceText)
-                Text(s.t("registry.source", mapOf("time" to current.checkedAt.atZone(ZoneId.of("Asia/Jerusalem")).toLocalTime().withNano(0).toString())), style = MaterialTheme.typography.bodySmall)
+                Text(s.t("registry.source", mapOf("time" to (current.cachedAt ?: current.checkedAt).atZone(ZoneId.of("Asia/Jerusalem")).toLocalTime().withNano(0).toString())), style = MaterialTheme.typography.bodySmall)
             }
         }
         Text(s.t("registry.informational"), style = MaterialTheme.typography.bodySmall)
     }
+}
+
+/** Cache is only an immediate/failure fallback: never short-circuit the live request. */
+suspend fun cachedRegistryLookup(
+    plate: String,
+    saved: RegistryFallbackCache.Cached?,
+    live: RegistryLookup,
+    save: suspend (RegistrySnapshot) -> Unit,
+    publish: (RegistrySnapshot) -> Unit,
+): RegistrySnapshot {
+    fun merged(fresh: RegistrySnapshot): RegistrySnapshot {
+        val usable = saved != null && Instant.now().isBefore(saved.expiresAt)
+        val useTag = usable && (fresh.tag == null || fresh.tag is DisabilityLookupResult.Error)
+        val useVehicle = usable && (fresh.vehicle == null || fresh.vehicle is VehicleLookupResult.Error)
+        return RegistrySnapshot(if (useTag) saved!!.tag else fresh.tag,
+            if (useVehicle) saved!!.vehicle else fresh.vehicle, fresh.checkedAt,
+            if (useTag || useVehicle) saved!!.checkedAt else null,
+            if (useTag || useVehicle) saved!!.expiresAt else null)
+    }
+    if (saved != null && Instant.now().isBefore(saved.expiresAt))
+        publish(RegistrySnapshot(saved.tag, saved.vehicle, Instant.now(), saved.checkedAt, saved.expiresAt))
+    // Throws cancellation through to the plate-keyed UI effect; its partial result stays visible.
+    val fresh = live(plate) { publish(merged(it)) }
+    save(fresh)
+    return merged(fresh)
 }
