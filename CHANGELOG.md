@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-11-12
+
+### Features
+
+- feat(ui): regular Israeli plate styling, first slice of #354 (#384) (2e118ed)
+
 ## [0.44.0] - 2026-11-12
 
 ### Features
