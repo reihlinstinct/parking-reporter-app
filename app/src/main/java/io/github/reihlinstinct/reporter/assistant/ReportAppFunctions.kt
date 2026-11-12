@@ -20,7 +20,7 @@ class AssistantEntryStore(context: Context) {
 }
 
 object AssistantEntry {
-    val FUNCTION_ID: String get() = BaseReportAppFunctionServiceIds.START_NEW_REPORT_ID
+    val FUNCTION_ID: String get() = ReportAppFunctionService.FUNCTION_ID_START_NEW_REPORT
     fun supported(sdk: Int = Build.VERSION.SDK_INT): Boolean = sdk >= 36
 
     /** The assistant can only offer entry to the normal visible capture flow. */
