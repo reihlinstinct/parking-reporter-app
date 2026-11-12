@@ -123,4 +123,18 @@ class RegistryReviewTest {
         compose.onNodeWithText("רישיון הרכב בתוקף לפי המאגר").assertExists()
     }
 
+    @Test fun noVehicleRecordAndUnknownLicenceStayDistinctFromExpired() {
+        var vehicle by mutableStateOf<VehicleLookupResult>(VehicleLookupResult.NotFound)
+        compose.setContent { AppTheme { RegistryStatus("1234567", remember(vehicle) { { _, _ ->
+            RegistrySnapshot(DisabilityLookupResult.NotFound, vehicle, Instant.now())
+        } }) } }
+        compose.onNodeWithText("רישיון הרכב פג תוקף לפי המאגר").assertDoesNotExist()
+        compose.onNodeWithText("רישיון הרכב יפוג בעוד", substring = true).assertDoesNotExist()
+        screenshot("registry-no-vehicle-record.png")
+        compose.runOnIdle { vehicle = VehicleLookupResult.Found((snapshot(DisabilityTagType.TRIANGLE).vehicle as VehicleLookupResult.Found).record.copy(licenceValidUntil = null)) }
+        compose.waitForIdle()
+        compose.onNodeWithText("רישיון הרכב פג תוקף לפי המאגר").assertDoesNotExist()
+        screenshot("registry-unknown-licence.png")
+    }
+
 }
