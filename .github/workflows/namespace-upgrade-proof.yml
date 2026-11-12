@@ -22,12 +22,16 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: gradle
+      - name: Create one ephemeral synthetic debug signing identity
+        run: |
+          keytool -genkeypair -keystore "$RUNNER_TEMP/namespace-upgrade-debug.jks" -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 2 -dname "CN=Synthetic namespace upgrade CI" -noprompt
+          echo "UPGRADE_KEYSTORE=$RUNNER_TEMP/namespace-upgrade-debug.jks" >> "$GITHUB_ENV"
       - name: Build pinned old source with synthetic local seed test
         run: |
           cp app/src/androidTest/assets/namespace-upgrade/NamespaceUpgradeSeedTest.kt.txt upgrade-baseline/app/src/androidTest/java/il/sidewalks/reporter/NamespaceUpgradeSeedTest.kt
           cd upgrade-baseline
           sh scripts/prepare_wrapper.sh
-          sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+          sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest -Pandroid.injected.signing.store.file="$UPGRADE_KEYSTORE" -Pandroid.injected.signing.store.password=android -Pandroid.injected.signing.key.alias=androiddebugkey -Pandroid.injected.signing.key.password=android
       - run: sh scripts/prepare_wrapper.sh
       - name: Enable KVM
         run: |
@@ -42,10 +46,16 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
-            sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+            sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest -Pandroid.injected.signing.store.file="$UPGRADE_KEYSTORE" -Pandroid.injected.signing.store.password=android -Pandroid.injected.signing.key.alias=androiddebugkey -Pandroid.injected.signing.key.password=android
             sh gradlew --stop || true
             mkdir -p app/build/reports/namespace-upgrade
             python3 scripts/emulator_preflight.py --report-dir app/build/reports/namespace-upgrade
+            "$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)" verify --print-certs upgrade-baseline/app/build/outputs/apk/debug/app-debug.apk > app/build/reports/namespace-upgrade/old-certificate.txt
+            "$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)" verify --print-certs app/build/outputs/apk/debug/app-debug.apk > app/build/reports/namespace-upgrade/new-certificate.txt
+            grep 'Signer #1 certificate SHA-256 digest:' app/build/reports/namespace-upgrade/old-certificate.txt > app/build/reports/namespace-upgrade/old-digest.txt
+            grep 'Signer #1 certificate SHA-256 digest:' app/build/reports/namespace-upgrade/new-certificate.txt > app/build/reports/namespace-upgrade/new-digest.txt
+            test -s app/build/reports/namespace-upgrade/old-digest.txt
+            cmp app/build/reports/namespace-upgrade/old-digest.txt app/build/reports/namespace-upgrade/new-digest.txt
             adb install -r upgrade-baseline/app/build/outputs/apk/debug/app-debug.apk
             adb install -r upgrade-baseline/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             adb shell am instrument -w -r -e class il.sidewalks.reporter.NamespaceUpgradeSeedTest il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/namespace-upgrade/seed.txt
