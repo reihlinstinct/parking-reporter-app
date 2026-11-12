@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.38.2] - 2026-11-12
+
+### Other changes
+
+- ci(live): next approved filing uses API36 emulator (#346) (6c14c31)
+
 ## [0.38.1] - 2026-11-12
 
 ### Fixes
