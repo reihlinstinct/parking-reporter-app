@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.48.2] - 2026-11-12
+
+### Fixes
+
+- fix(review): automatic OCR plate prefill is not an unsaved edit (refs #358, part 1) (#407) (b6825a1)
+
 ## [0.48.1] - 2026-11-12
 
 ### Other changes
