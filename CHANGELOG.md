@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.43.4] - 2026-11-12
+
+### Other changes
+
+- test: pin helper fingerprint parity and document plate-flag difference (#368) (#383) (70f845c)
+
 ## [0.43.3] - 2026-11-12
 
 ### Fixes
