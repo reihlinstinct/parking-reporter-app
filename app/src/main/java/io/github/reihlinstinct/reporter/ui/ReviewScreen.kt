@@ -183,8 +183,10 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             if (fix != null) applyDeviceFix(fix) else gpsStatus = "review.location.gps_failed"
         }
     }
-    val locationPermission = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) readDeviceFix() else gpsStatus = "review.location.gps_denied"
+    // Android lint requires FINE to be requested together with COARSE; the user may grant only approximate
+    // location, which still allows the network provider.
+    val locationPermission = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) { granted ->
+        if (granted.values.any { it }) readDeviceFix() else gpsStatus = "review.location.gps_denied"
     }
     suspend fun recognize() {
         recognizing = true
@@ -361,8 +363,11 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         if (latitude.toDoubleOrNull() == null || longitude.toDoubleOrNull() == null) {
             Text(s.t("review.location.missing_plain"))
             Button(enabled = !gpsBusy, onClick = {
-                if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED) readDeviceFix()
-                else locationPermission.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                val granted = listOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION).any {
+                    androidx.core.content.ContextCompat.checkSelfPermission(context, it) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                }
+                if (granted) readDeviceFix()
+                else locationPermission.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION))
             }, modifier = Modifier.fillMaxWidth().testTag("use_current_location")) { Text(s.t("review.location.gps_button")) }
             if (gpsBusy) Text(s.t("review.location.gps_loading"))
             OutlinedTextField(manualStreet, { manualStreet = it; manualResult = null; manualGeneration++ }, label = { Text(s.t("review.location.street")) }, modifier = Modifier.fillMaxWidth())
