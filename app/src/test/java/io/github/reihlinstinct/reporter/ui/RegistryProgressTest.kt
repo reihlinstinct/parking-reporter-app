@@ -43,4 +43,12 @@ class RegistryProgressTest {
         assertNull(licenceDaysRemaining(null, checked))
     }
 
+    @Test fun tagPendingOnlyWhileVehicleResolvedAndTagMissing() {
+        val now = java.time.Instant.now()
+        val vehicleDone = VehicleLookupResult.Error(LookupErrorKind.NETWORK)
+        assertTrue(tagPending(RegistrySnapshot(null, vehicleDone, now)))
+        assertFalse("nothing resolved yet shows the generic loading line", tagPending(RegistrySnapshot(null, null, now)))
+        assertFalse("tag resolved, including NotFound", tagPending(RegistrySnapshot(DisabilityLookupResult.NotFound, vehicleDone, now)))
+        assertFalse(tagPending(RegistrySnapshot(DisabilityLookupResult.Found(DisabilityTagType.WHEELCHAIR), vehicleDone, now)))
+    }
 }
