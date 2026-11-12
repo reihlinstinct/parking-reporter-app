@@ -56,7 +56,12 @@ class AssistantEntrySettingsTest {
         toggle.performClick().assertIsOff()
         capture("assistant-settings-revoked.png")
         compose.runOnIdle { assertEquals(listOf(true,false), changes); failed = true }
-        compose.onNodeWithText("לא ניתן לעדכן את החיבור לעוזר כרגע. אפשר לנסות שוב.").assertIsDisplayed()
+        val failure = compose.onNodeWithText("לא ניתן לעדכן את החיבור לעוזר כרגע. אפשר לנסות שוב.").performScrollTo().assertIsDisplayed()
+        val bounds = failure.fetchSemanticsNode().boundsInRoot
+        val viewport = compose.onRoot().fetchSemanticsNode().boundsInRoot
+        org.junit.Assert.assertTrue("Complete failure message must fit after normal scroll: $bounds vs $viewport",
+            bounds.top >= viewport.top && bounds.bottom <= viewport.bottom &&
+                bounds.left >= viewport.left && bounds.right <= viewport.right)
         capture("assistant-settings-failure.png")
         compose.runOnIdle { supported = false; failed = false }
         toggle.assertDoesNotExist()
