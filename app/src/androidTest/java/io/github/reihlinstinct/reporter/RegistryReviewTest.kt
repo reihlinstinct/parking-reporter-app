@@ -130,10 +130,13 @@ class RegistryReviewTest {
         } }) } }
         compose.onNodeWithText("רישיון הרכב פג תוקף לפי המאגר").assertDoesNotExist()
         compose.onNodeWithText("רישיון הרכב יפוג בעוד", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("לא נמצא רישום רכב במאגר").assertExists()
         screenshot("registry-no-vehicle-record.png")
         compose.runOnIdle { vehicle = VehicleLookupResult.Found((snapshot(DisabilityTagType.TRIANGLE).vehicle as VehicleLookupResult.Found).record.copy(licenceValidUntil = null)) }
         compose.waitForIdle()
         compose.onNodeWithText("רישיון הרכב פג תוקף לפי המאגר").assertDoesNotExist()
+        compose.onNodeWithText("תוקף רישיון הרכב לא ידוע").assertExists()
+        compose.onNodeWithText("לא נמצא רישום רכב במאגר").assertDoesNotExist()
         screenshot("registry-unknown-licence.png")
     }
 
