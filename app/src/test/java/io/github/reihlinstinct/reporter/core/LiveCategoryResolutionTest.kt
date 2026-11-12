@@ -19,20 +19,41 @@ class LiveCategoryResolutionTest {
         // a category for the approved text.
         val code = System.getenv("TRIAL_SUBJECT")?.takeIf { it.isNotBlank() }
             ?: throw IllegalStateException("missing env TRIAL_SUBJECT")
-        val category = ReportCategory.from(code)
-            ?: throw AssertionError("unsupported trial subject")
-        val stringsFile = listOf(
-            File("src/main/assets/i18n/strings.json"),
-            File("app/src/main/assets/i18n/strings.json"),
-        ).first { it.isFile }
-        val json = stringsFile.readText(Charsets.UTF_8)
-        // The catalog's default language (Hebrew): the label the picker shows by default.
-        val source = io.github.reihlinstinct.reporter.i18n.StringCatalog.parse(json).defaultLanguage!!.code
-        val label = Regex(
-            """"${Regex.escape(category.labelKey)}"\s*:\s*\{[^}]*"${Regex.escape(source)}"\s*:\s*"((?:[^"\\]|\\.)*)"""")
-            .find(json)?.groupValues?.get(1)
-            ?: throw AssertionError("label missing for the staged subject")
+        val label = resolveSelector(code)
         File(out).writeText("LIVE_CATEGORY label=$label\n")
         println("LIVE_CATEGORY label=$label")
     }
+    /** Numeric city codes are selectors, not an enum fallback or a free label.
+     * The real UI must still find this exact code in its fresh city catalog. */
+    private fun resolveSelector(code: String): String {
+        val numeric = ReportCategory.from(code)?.municipalSubjectCode ?: code
+        val file = listOf(
+            File("src/main/assets/" + MunicipalSubjects.ASSET_PATH),
+            File("app/src/main/assets/" + MunicipalSubjects.ASSET_PATH),
+        ).first { it.isFile }
+        val catalog = file.inputStream().use { MunicipalSubjects.load(it) }
+        if (!Regex("[0-9]+").matches(numeric) || !catalog.hasCode(numeric))
+            throw AssertionError("unsupported trial subject")
+        return numeric
+    }
+
+    @Test fun redWhite1144SelectsItselfNeverSidewalk1145() {
+        org.junit.Assert.assertEquals("1144", resolveSelector("1144"))
+        org.junit.Assert.assertNotEquals("1145", resolveSelector("1144"))
+    }
+
+    @Test fun legacyAliasesKeepTheirOwnMunicipalCode() {
+        ReportCategory.entries.forEach {
+            org.junit.Assert.assertEquals(it.municipalSubjectCode, resolveSelector(it.code))
+        }
+    }
+
+    @Test fun unknownCodesAndFreeLabelsFailClosed() {
+        for (value in listOf("999999999", "", "1144 OR 1145", "חניה אסורה")) {
+            val failure = runCatching { resolveSelector(value) }.exceptionOrNull()
+            org.junit.Assert.assertTrue("must refuse unknown selector", failure is AssertionError)
+            org.junit.Assert.assertEquals("unsupported trial subject", failure?.message)
+        }
+    }
+
 }

@@ -51,8 +51,10 @@ on a schedule.
    the `TRIAL_*` secrets (photo in `trial/trial-photo.jpg.enc`, address,
    coordinates, capture time, plate, approved text) with the reporter and
    municipal credentials (`REPORTER_*`, `J106_*`). The category is resolved
-   from the same `TRIAL_SUBJECT` code the engine trial uses (default
-   `sidewalk_parking`), through the app's own catalog
+   from mandatory `TRIAL_SUBJECT`: a captured municipal numeric code (for
+   example `1144` for red-white curb parking), or an existing legacy alias.
+   The resolver emits the exact numeric code, never substitutes `1145`, and
+   the real picker must find it in the current city catalog
    (`LiveCategoryResolutionTest`) - never a free-text input, so the UI run
    cannot disagree with the staged subject. Dispatch only for a case the
    owner approved for filing.
