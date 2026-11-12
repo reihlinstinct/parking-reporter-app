@@ -54,6 +54,8 @@ data class VehicleRecord(
     val colour: String?,
     /** `shnat_yitzur`: year of manufacture. */
     val yearOfManufacture: Int?,
+    /** True when the record came from the inactive-vehicle resource (issue #366). Not persisted by the fallback cache. */
+    val inactive: Boolean = false,
 ) {
     fun licenceStatus(today: LocalDate): LicenceStatus = when {
         licenceValidUntil == null -> LicenceStatus.UNKNOWN
@@ -171,10 +173,10 @@ class VehicleRegistryClient(
         } catch (_: IOException) {
             return VehicleLookupResult.Error(LookupErrorKind.NETWORK)
         }
-        return try { parse(body, plate) } catch (_: org.json.JSONException) { VehicleLookupResult.Error(LookupErrorKind.MALFORMED_RESPONSE) } catch (_: RuntimeException) { VehicleLookupResult.Error(LookupErrorKind.MALFORMED_RESPONSE) }
+        return try { parse(body, plate, resourceId == INACTIVE_VEHICLE_RESOURCE_ID) } catch (_: org.json.JSONException) { VehicleLookupResult.Error(LookupErrorKind.MALFORMED_RESPONSE) } catch (_: RuntimeException) { VehicleLookupResult.Error(LookupErrorKind.MALFORMED_RESPONSE) }
     }
 
-    private fun parse(body: String, plate: PlateNumber): VehicleLookupResult {
+    private fun parse(body: String, plate: PlateNumber, inactive: Boolean): VehicleLookupResult {
         val json = JSONObject(body)
         if (json.opt("success") != true) return VehicleLookupResult.Error(LookupErrorKind.API_FAILURE)
         val records: JSONArray = json.getJSONObject("result").getJSONArray("records")
@@ -192,6 +194,7 @@ class VehicleRegistryClient(
                 commercialName = text(record, "kinuy_mishari"),
                 colour = text(record, "tzeva_rechev"),
                 yearOfManufacture = (record.opt("shnat_yitzur") as? Number)?.toInt(),
+                inactive = inactive,
             ),
         )
     }

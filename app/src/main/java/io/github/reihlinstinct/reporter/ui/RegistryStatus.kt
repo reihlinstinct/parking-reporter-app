@@ -173,6 +173,8 @@ private fun RegistryStatusContent(plate: String, lookup: RegistryLookup?) {
                         Text(licenceText, color = orange, style = MaterialTheme.typography.titleMedium)
                     }
                 } else Text(licenceText)
+                // Record state, not a date claim: the inactive resource only has the licence date (issue #366).
+                if ((vehicle as? VehicleLookupResult.Found)?.record?.inactive == true) Text(s.t("registry.licence.inactive_record"))
                 Text(s.t("registry.source", mapOf("time" to (current.cachedAt ?: current.checkedAt).atZone(ZoneId.of("Asia/Jerusalem")).toLocalTime().withNano(0).toString())), style = MaterialTheme.typography.bodySmall)
             }
         }
