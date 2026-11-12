@@ -7,6 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
@@ -19,26 +20,35 @@ import kotlinx.coroutines.launch
 @Composable
 fun AssistantEntrySettings() {
     val context = LocalContext.current
-    val strings = LocalStrings.current
     val store = remember(context) { AssistantEntryStore(context) }
     var enabled by remember { mutableStateOf(store.enabled()) }
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val supported = AssistantEntry.supported()
+    AssistantEntrySettingsContent(supported, enabled, busy, failed) { wanted ->
+        busy = true
+        scope.launch {
+            val success = AssistantEntry.setEnabled(context, wanted)
+            enabled = store.enabled()
+            failed = !success
+            busy = false
+        }
+    }
+}
+
+/** Stateless rendering seam: visual tests never touch platform enablement or saved consent. */
+@Composable
+internal fun AssistantEntrySettingsContent(
+    supported: Boolean, enabled: Boolean, busy: Boolean, failed: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+) {
+    val strings = LocalStrings.current
     HorizontalDivider()
     Text(strings.t("settings.assistant.title"), style = MaterialTheme.typography.titleMedium)
-    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("assistant-entry-toggle").toggleable(
         value = enabled, enabled = supported && !busy, role = Role.Switch,
-        onValueChange = { wanted ->
-            busy = true
-            scope.launch {
-                val success = AssistantEntry.setEnabled(context, wanted)
-                enabled = store.enabled()
-                failed = !success
-                busy = false
-            }
-        }), verticalAlignment = Alignment.CenterVertically) {
+        onValueChange = onEnabledChange), verticalAlignment = Alignment.CenterVertically) {
         Text(strings.t("settings.assistant.enable"), Modifier.weight(1f))
         Switch(checked = enabled, onCheckedChange = null, enabled = supported && !busy)
     }
