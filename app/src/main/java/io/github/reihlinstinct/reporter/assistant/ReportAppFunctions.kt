@@ -20,7 +20,9 @@ class AssistantEntryStore(context: Context) {
 }
 
 object AssistantEntry {
+    @get:RequiresApi(36)
     val FUNCTION_ID: String get() = ReportAppFunctionService.FUNCTION_ID_START_NEW_REPORT
+    @androidx.annotation.ChecksSdkIntAtLeast(api = 36, parameter = 0)
     fun supported(sdk: Int = Build.VERSION.SDK_INT): Boolean = sdk >= 36
 
     /** The assistant can only offer entry to the normal visible capture flow. */
