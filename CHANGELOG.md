@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.46.0] - 2026-11-12
+
+### Features
+
+- feat(ui): neutral pending tag state while the vehicle half is resolved (#365) (#392) (aca1e23)
+
 ## [0.45.0] - 2026-11-12
 
 ### Features
