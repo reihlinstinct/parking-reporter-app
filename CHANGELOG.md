@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-11-12
+
+### Features
+
+- feat(ci): use digest-pinned encrypted live input bundle (#337) (b21fefb)
+
 ## [0.36.6] - 2026-11-12
 
 ### Fixes
