@@ -49,7 +49,7 @@ object EntryIntents {
      * link and scheme matches are exact and case-sensitive.
      */
     fun parse(action: String?, dataString: String?, mimeType: String?, streamUriString: String?): Request? = when {
-        (action == ACTION_TILE_NEW_REPORT || action == Intent.ACTION_VIEW) && knownCategory(dataString) != null ->
+        action == ACTION_TILE_NEW_REPORT && knownCategory(dataString) != null ->
             Request.NewReportInCategory(knownCategory(dataString)!!)
         action == ACTION_TILE_NEW_REPORT -> Request.NewReport
         action == Intent.ACTION_VIEW && dataString != null && NEW_REPORT_LINK.matches(dataString) ->

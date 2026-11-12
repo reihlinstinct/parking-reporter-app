@@ -23,6 +23,19 @@ class AssistantSurfaceTest(unittest.TestCase):
         for forbidden in ['putExtra(', 'MunicipalClient', 'SettingsProfileStore', 'ReportDatabase', 'ServerSocket']:
             self.assertNotIn(forbidden, source)
 
+    def test_category_hint_is_one_shot_and_consent_gated(self):
+        shell = (ROOT / 'app/src/main/java/io/github/reihlinstinct/reporter/ui/AppShell.kt').read_text()
+        # Cleared on every page except the camera, read only by a camera capture, never by startReview itself.
+        self.assertIn('LaunchedEffect(page) { if (page != "camera") pendingCategory = null }', shell)
+        self.assertIn('val hint = pendingCategory; pendingCategory = null; startReview(file, categoryHint = hint)', shell)
+        self.assertNotIn('pendingCategory?.let', shell)
+        self.assertIn('Button(onClick = { pendingCategory = null; requestCamera', shell)
+        # The consent switch gates the hint for every sender, including a hand-built intent.
+        self.assertIn('AssistantEntryStore(context).enabled()) request.categoryCode else null', shell)
+        entry = (ROOT / 'app/src/main/java/io/github/reihlinstinct/reporter/EntryIntents.kt').read_text()
+        self.assertIn('action == ACTION_TILE_NEW_REPORT && knownCategory(dataString) != null', entry)
+        self.assertNotIn('ACTION_TILE_NEW_REPORT || action == Intent.ACTION_VIEW', entry)
+
     def test_system_protected_service_and_old_android_disabled(self):
         manifest = ET.parse(ROOT / 'app/src/main/AndroidManifest.xml')
         service = next(s for s in manifest.findall('./application/service')

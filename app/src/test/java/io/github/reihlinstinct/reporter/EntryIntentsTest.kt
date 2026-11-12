@@ -91,7 +91,8 @@ class EntryIntentsTest {
             val link = EntryIntents.categoryLink(category.code)
             val expected = EntryIntents.Request.NewReportInCategory(category.code)
             assertEquals(expected, EntryIntents.parse(EntryIntents.ACTION_TILE_NEW_REPORT, link, null, null))
-            assertEquals(expected, EntryIntents.parse("android.intent.action.VIEW", link, null, null))
+            // A browsable VIEW link never carries the hint (it is not behind the consent switch).
+            assertNull(EntryIntents.parse("android.intent.action.VIEW", link, null, null))
         }
     }
 
