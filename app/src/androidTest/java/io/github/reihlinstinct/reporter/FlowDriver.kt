@@ -194,7 +194,7 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         compose.waitUntil(15_000) {
             compose.onAllNodesWithText("חפש נושא, תיאור או מספר").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextReplacement(code)
+        compose.onNodeWithTag("picker-search-input").performTextReplacement(code)
         val topic = io.github.reihlinstinct.reporter.municipal.CityTopicRepository(
             InstrumentationRegistry.getInstrumentation().targetContext).topics().first { it.code == code }
         compose.waitUntil(5_000) {
