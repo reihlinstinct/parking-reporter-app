@@ -37,7 +37,7 @@ object PlateEntry : VisualTransformation {
     fun prefill(draft: ReviewDraft, candidates: List<String>, before: String): ReviewDraft {
         val valid = candidates.filter { it.matches(Regex("[0-9]{7,8}")) }.distinct()
         return if (before.isBlank() && draft.plate == before && valid.size == 1 &&
-            io.github.reihlinstinct.reporter.core.TopicIdentity.needsPlate(draft.subject))
+            draft.needsPlate())
             draft.edit(plate = valid.single()) else draft
     }
 }

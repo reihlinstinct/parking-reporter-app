@@ -10,7 +10,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class OfflineReceiverTest {
-    private class Fixture(time: String? = "2026-01-01T12:00:00Z", packageTime: String? = null) {
+    private class Fixture(time: String? = "2026-01-01T12:00:00Z", packageTime: String? = null, packagePlate: String? = null, packageSubject: String? = null) {
         init { HybridConfig.register(); SignatureConfig.register() }
         val receiver = KeysetHandle.generateNew(HybridKeyTemplates.ECIES_P256_HKDF_HMAC_SHA256_AES128_GCM)
         val device = KeysetHandle.generateNew(SignatureKeyTemplates.ECDSA_P256)
@@ -19,7 +19,11 @@ class OfflineReceiverTest {
             ReviewDraft(Evidence("synthetic-id", "a".repeat(64), time, 31.0, 35.0),
                 "1234567", "רחוב בדיקה 1", "sidewalk_parking", "בדיקה", emptySet()),
             ReporterSettings("synthetic", "reporter", "0000000", "000000000", "synthetic@example.invalid"), jpeg)
-        init { if (packageTime != null) report.put("time", packageTime) }
+        init {
+            if (packageTime != null) report.put("time", packageTime)
+            if (packagePlate != null) report.put("plate", packagePlate)
+            if (packageSubject != null) report.put("subject", packageSubject)
+        }
         val upload = EncryptedPackage.seal(report, jpeg, EncryptedPackage.approvalDigest(report), "test-receiver", "test-device",
             receiver.publicKeysetHandle.getPrimitive(HybridEncrypt::class.java), device.getPrimitive(PublicKeySign::class.java))
         fun open(parts: List<String> = (0 until upload.count).map { upload.chunk(it, 7) }, issue: Long = 7,
@@ -41,6 +45,21 @@ class OfflineReceiverTest {
             assertThrows(IllegalArgumentException::class.java) { Fixture(packageTime = bad).open() }
         }
     }
+    @Test fun signedPackageCannotChooseItsOwnPlateRequirementByPresence() {
+        for (subject in listOf("sidewalk_parking", "municipal:1144", "municipal:1145")) {
+            assertThrows(IllegalArgumentException::class.java) {
+                Fixture(packagePlate = "", packageSubject = subject).open()
+            }
+            assertEquals("1234567", Fixture(packageSubject = subject).open().report.getString("plate"))
+        }
+        for (subject in listOf("municipal:5164", "municipal:1143")) {
+            assertThrows(IllegalArgumentException::class.java) {
+                Fixture(packageSubject = subject).open()
+            }
+            assertEquals("", Fixture(packagePlate = "", packageSubject = subject).open().report.getString("plate"))
+        }
+    }
+
     @Test fun wrongIssueKeysAndCompletionRejected() {
         val f = Fixture()
         assertThrows(IllegalArgumentException::class.java) { f.open(issue = 8) }

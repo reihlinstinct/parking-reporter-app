@@ -37,7 +37,7 @@ class M1ShellTest {
         InstrumentationRegistry.getInstrumentation().targetContext.let { io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(it).set(io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(it)) }
     }
     private fun draft() = ReviewDraft(Evidence("synthetic", "a".repeat(64), "2026-01-01T12:00:00Z", 31.0, 35.0),
-        "1234567", "רחוב בדיקה 1", "sidewalk_parking", "רכב חונה על המדרכה", emptySet())
+        "1234567", "רחוב בדיקה 1", "sidewalk_parking", "רכב 1234567 חונה על המדרכה", emptySet())
     private fun screenshot(name: String) {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         File(context.filesDir, name).outputStream().use {
@@ -84,14 +84,21 @@ class M1ShellTest {
     }
     @Test fun reviewSaveThenEditKeepsLatestSavedCopy() {
         var saved: ReviewDraft? = null
-        compose.setContent { AppTheme { ReviewScreen(draft(), null, { saved = it }, onBack = {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
+        var saves = 0
+        compose.setContent { AppTheme { ReviewScreen(draft(), null, { saves++; saved = it }, onBack = {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         screenshot("m1-review-synthetic.png")
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
-        compose.runOnIdle { assertTrue(saved?.isReady() == true) }
+        compose.runOnIdle { assertEquals("first save callback", 1, saves); assertTrue(saved?.isReady() == true) }
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
         compose.onNodeWithText("מספר לוחית (ספרות בלבד)").performScrollTo().performTextReplacement("7654321")
+        compose.onNodeWithText("מספר לוחית (ספרות בלבד)").assertTextContains("7654321")
+        // Complete the normal IME close before scrolling/tapping the physical save target.
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.waitForIdle()
+        screenshot("review-resave-edited-before-save.png")
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
-        compose.runOnIdle { assertEquals("7654321", saved?.plate); assertTrue(saved?.isReady() == true) }
+        compose.runOnIdle { assertEquals("second save callback", 2, saves); assertEquals("7654321", saved?.plate); assertTrue(saved?.isReady() == true) }
+        screenshot("review-resave-after-save.png")
     }
     @Test fun offlinePlateCandidateRequiresSelectionAndSave() {
         val bitmap = Bitmap.createBitmap(1200, 260, Bitmap.Config.ARGB_8888)

@@ -34,6 +34,10 @@ object OfflineReceiver {
         exact(reporter, setOf("first", "last", "phone", "id", "email"))
         reporter.keys().asSequence().forEach { field -> require(reporter.get(field) is String && reporter.getString(field).isNotBlank() && reporter.getString(field).length <= 256) }
         require(report.get("latitude") is Number && report.get("longitude") is Number)
+        // Package data never selects its own plate policy. This offline reference
+        // receiver has no trusted fresh catalog/override store, so use the stable
+        // TopicIdentity baseline. A dynamic sender override needs a separate,
+        // receiver-owned policy channel, not an inferred plate-presence flag.
         val draft = ReviewDraft(Evidence(report.getString("id"), report.getString("original_sha256"), null, null, null),
             report.getString("plate"), report.getString("address"), report.getString("subject"), report.getString("exact_text"), emptySet(),
             confirmedTime = report.getString("time"), confirmedLatitude = report.getDouble("latitude"), confirmedLongitude = report.getDouble("longitude"))

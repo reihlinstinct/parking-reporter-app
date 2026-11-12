@@ -195,7 +195,7 @@ class ReviewCaptureReportsExtractionTest {
         val retired = setOf("review.edit.original_time_title", "review.edit.time_field", "review.approval_note", "review.edit.latitude_field", "review.edit.longitude_field", "review.edit.timezone_toggle", "review.edit.timezone_field", "review.edit.timezone_note", "review.location.show_advanced", "review.location.hide_advanced", "review.location.advanced_note", "review.location.missing", "review.location.enter_missing",
             "review.approve_button", "review.approved", "review.not_approved", "review.edit.confirm_button", "review.outgoing_preview",
             "reports.pending.title", "reports.pending.empty", "reports.pending.open", "reports.approved.title", "reports.approved.empty", "reports.approved.open")
-        val screenKeys = catalog.keys.filter { it.startsWith("review.") || it.startsWith("capture.") || it.startsWith("reports.") }.toSet() - retired
+        val screenKeys = catalog.keys.filter { it.startsWith("review.") || it.startsWith("capture.") || it.startsWith("reports.") }.toSet() - retired + used.filter { it.startsWith("registry.") || it.startsWith("plate_categories.") }
         // The expected key set is derived - catalog keys versus keys the screens
         // use - so adding a catalog key and using it needs no test edit. The `all`
         // map is now a golden-wording spot check for keys that predate the
@@ -213,7 +213,7 @@ class ReviewCaptureReportsExtractionTest {
         )
         assertTrue(keysNamedIn("CaptureScreen.kt").all { it.startsWith("capture.") })
         assertTrue(keysNamedIn("ReportsScreen.kt").all { it.startsWith("reports.") })
-        assertTrue((keysNamedIn("ReviewScreen.kt") + keysNamedIn("ReviewTexts.kt")).all { it.startsWith("review.") })
+        assertTrue((keysNamedIn("ReviewScreen.kt") + keysNamedIn("ReviewTexts.kt")).all { (it.startsWith("review.") || it.startsWith("registry.") || it.startsWith("plate_categories.")) })
     }
 
     @Test
@@ -340,7 +340,7 @@ class ReviewCaptureReportsExtractionTest {
         assertEquals(1, screen.split("fun confirmPendingEvidence()").size - 1)
         assertTrue("save folds the confirmation", screen.contains("onClick = { confirmPendingEvidence(); onSave(draft) }"))
         assertTrue("send folds the confirmation", screen.contains("onClick = {\n                confirmPendingEvidence()"))
-        assertTrue("send enables on the folded draft's readiness", screen.contains("enabled = selectedTopic != null && topicsAvailable && foldedDraft().isReady() && !submitting && missingCredentialKeys.isEmpty() && !noDeviceCredential"))
+        assertTrue("send enables on the folded draft's readiness", screen.contains("enabled = selectedTopic != null && topicsAvailable && plateInDescription && foldedDraft().isReady() && !submitting && missingCredentialKeys.isEmpty() && !noDeviceCredential"))
     }
 
     /** Source tripwire: each two-way text keeps its branches (a swap shows the wrong state). */
