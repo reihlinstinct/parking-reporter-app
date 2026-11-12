@@ -92,8 +92,14 @@ class AssistantEntryTest {
         assertEquals(Build.VERSION.SDK_INT >= 36, service.enabled)
         val xml = context.assets.open("report_app_functions.xml").bufferedReader().use { it.readText() }
         assertTrue(xml.contains("startNewReport"))
-        assertTrue("Use generated function identity, not a guessed name", xml.contains(AssistantEntry.FUNCTION_ID))
-        assertNotNull(context.packageManager.getProperty("android.app.appfunctions.app_metadata", context.packageName))
+        if (Build.VERSION.SDK_INT >= 36) {
+            assertTrue("Use generated function identity, not a guessed name", xml.contains(AssistantEntry.FUNCTION_ID))
+        }
+        if (Build.VERSION.SDK_INT >= 31) {
+            assertNotNull(context.packageManager.getProperty("android.app.appfunctions.app_metadata", context.packageName))
+        }
+        val legacy = context.assets.open("report_app_functions-v1.xml").bufferedReader().use { it.readText() }
+        assertTrue("API36 legacy index asset must contain our function", legacy.contains("startNewReport"))
         assertTrue(xml.contains("false"))
         assertFalse(xml.contains("submitReport"))
         assertFalse(xml.contains("password"))

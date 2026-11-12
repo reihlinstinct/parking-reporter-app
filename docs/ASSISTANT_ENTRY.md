@@ -27,3 +27,15 @@ On an API36 device, inspect `adb shell cmd app_function help` before attempting 
 - Connected Apps requirements: https://developer.android.com/ai/appfunctions/create-manage-connected-apps
 
 The runtime and compiler are pinned to `1.0.0-rc01`. The service and function XML are compiler-generated, not hand-authored.
+
+## API36 index compatibility
+
+The stock API36 AppSearch indexer asks for service property
+`android.app.appfunctions` when dynamic schemas are unavailable, not the v2
+property alone. Enable the pinnedrc01 compiler's `appfunctions:generateV1Xml`
+option and point that property to `report_app_functions-v1.xml`. Keep v2/schema
+properties for newer indexers. Never hand-author a function identifier or schema.
+Evidence: API36 logcat `AppSearchAppsUtil ... Failed to get property`, followed by
+function-does-not-exist, and official platform AppsUtil.java lines355-380:
+https://android.googlesource.com/platform/packages/modules/AppSearch/+/refs/heads/android16-release/service/java/com/android/server/appsearch/appsindexer/AppsUtil.java
+The required real manager invocation/revocation test remains enabled, not skipped.
