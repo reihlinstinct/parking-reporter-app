@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.47.2] - 2026-11-12
+
+### Fixes
+
+- fix(registry): persist the inactive flag in the fallback cache, fail closed on entries without it (#404) (#405) (4666596)
+
 ## [0.47.1] - 2026-11-12
 
 ### Other changes
