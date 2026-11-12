@@ -25,6 +25,8 @@ jobs:
           persist-credentials: false
       - name: Build official testing agent standard flavor without an API key
         run: |
+          # Upstream screenshot-test plugin is unavailable; runtime agent is unchanged.
+          python3 scripts/prepare_official_manual_agent.py
           cd official-appfunctions/agent
           chmod +x gradlew
           ./gradlew --no-daemon assembleStandardDebug
