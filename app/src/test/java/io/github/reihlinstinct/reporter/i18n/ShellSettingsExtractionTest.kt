@@ -151,7 +151,11 @@ class ShellSettingsExtractionTest {
 
     @Test
     fun everyKeyTheTwoScreensUseExistsAndEveryScreenKeyIsUsed() {
-        val used = keysUsedIn("AppShell.kt") + keysUsedIn("SettingsScreen.kt")
+        // AssistantEntrySettings is rendered by full Settings, so its real consumer
+        // source participates in the same catalog-use gate (no unused-key exemption).
+        val assistantSource = I18nTestFiles.moduleFile("src/main/java/io/github/reihlinstinct/reporter/assistant/AssistantEntrySettings.kt").readText()
+        val assistantKeys = Regex(""""(settings\.assistant\.[a-z_]+)"""").findAll(assistantSource).map { it.groupValues[1] }.toSet()
+        val used = keysUsedIn("AppShell.kt") + keysUsedIn("SettingsScreen.kt") + assistantKeys
         val screenKeys = catalog.keys.filter { it.startsWith("shell.") || it.startsWith("settings.") }.toSet()
         for (key in used) assertTrue("$key is used but missing from strings.json", catalog.rawEntry(key) != null)
         // SettingsScreen also links to the Licenses screen using that screen's own
