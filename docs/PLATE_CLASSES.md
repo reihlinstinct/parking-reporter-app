@@ -8,7 +8,7 @@ The app does not pass raw strings. The manual plate field keeps decimal digits o
 
 ## Verified from official text (checked 2026-11-12)
 
-- Regular civilian plate: yellow reflective, black digits, blue left side with the flag and "IL" (Traffic Regulations 1961, Third Addendum, item 1, via the Nevo/OTOdealer text of the regulations). This is what the first slice draws, for 7 or 8 ASCII digits.
+- Regular civilian plate: yellow reflective, black digits, blue left side with the flag and "IL" (Traffic Regulations 1961, Third Addendum, item 1. UNVERIFIED against an official text: only a secondary copy, https://otodealer.co.il/legislation/traffic-regulations/takanot-hateavura-1961/tosefet-3, was read. Confirm on Nevo or the official Reshumot before relying on it). This is what the first slice draws, for 7 or 8 ASCII digits.
 - Police: red plate (Police order 15.07.02, 02/09/2021, https://www.police.gov.il/menifa/02.15.07.02_3.pdf). Police vehicles may instead carry civilian yellow plates, some switchable red/yellow, so a police vehicle does not mean a red plate.
 - Police red plate spec 119/2016 (https://mr.gov.il/ilgstorefront/en/p/attachment/005056BF4DAB1EDA95C1078E4D2C811B/%D7%9E%D7%A1%D7%9E%D7%9B%D7%99%20%D7%94%D7%9C%D7%99%D7%9A): white digits, hyphen and the letter "מ". It says there is no Israeli standard for non-yellow plates and does not give the number of digits.
 
@@ -19,7 +19,7 @@ The app does not pass raw strings. The manual plate field keeps decimal digits o
 - Military (black, letter "צ") plate format. No official IDF or transport source found.
 - Colors for any of these. Secondary sites and forum posts are not accepted as sources.
 
-Owner-supplied examples (red "21-12-20 מ", white "CD 23 044 22", black "174142 צ") are examples only and are pinned in IsraeliPlateStyleTest as never styled and never queried.
+Owner-supplied examples (red "21-12-20 מ", white "CD 23 044 22", black "174142 צ") are examples only. IsraeliPlateStyleTest pins the raw strings only (not styled as regular, rejected by PlateNumber.parse). It does not cover the manual field or OCR, which strip to digits first (see Known gap). The test strings are the owner's samples plus a few variants written by hand for coverage; none is claimed to be a real plate.
 
 ## Rule
 
