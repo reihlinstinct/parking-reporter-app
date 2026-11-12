@@ -1,6 +1,7 @@
 import importlib.util
 from pathlib import Path
 import unittest
+import tempfile
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('preflight', Path(__file__).resolve().parents[1] / 'scripts/emulator_preflight.py')
@@ -52,6 +53,19 @@ class EmulatorPreflightTest(unittest.TestCase):
 
     def test_persistent_failure_never_retries_tests(self):
         self.assertEqual((1, 1), self.run_gate(['ANR', 'ANR']))
+
+    def test_recovery_marker_is_retained_only_when_recovery_requested(self):
+        for should_recover in (False, True):
+            with tempfile.TemporaryDirectory() as directory:
+                def fake_gate(**kwargs):
+                    if should_recover:
+                        kwargs['reboot']()
+                    return 0
+                with patch.object(m.sys, 'argv', ['preflight', '--report-dir', directory]), \
+                     patch.object(m, 'gate', side_effect=fake_gate), patch.object(m, 'recover'):
+                    self.assertEqual(0, m.main())
+                self.assertEqual(should_recover, (Path(directory) / 'preflight-recovered.txt').exists())
+                self.assertEqual('0\n', (Path(directory) / 'preflight.rc').read_text())
 
     def test_recovery_failure_fails_closed(self):
         def fail():

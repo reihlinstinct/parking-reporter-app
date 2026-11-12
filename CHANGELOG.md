@@ -6,6 +6,24 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-11-12
+
+### Features
+
+- feat(registry): private expiry-bounded cache as always-live lookup fallback (#361) (4f31692)
+
+## [0.41.2] - 2026-11-12
+
+### Other changes
+
+- docs: refresh current preview status and README claims (#374) (fcafe15)
+
+## [0.41.1] - 2026-11-12
+
+### Other changes
+
+- ci(display): targeted compact200% coverage for risky UI changes (#324) (0ff3ed2)
+
 ## [0.41.0] - 2026-11-12
 
 ### Features
