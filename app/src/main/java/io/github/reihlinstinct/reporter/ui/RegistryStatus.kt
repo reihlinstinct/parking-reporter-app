@@ -71,6 +71,13 @@ fun rememberRegistryLookup(): RegistryLookup {
 /** Independent read-only information. No draft, text, save or submit callback exists here. */
 @Composable
 fun RegistryStatus(plate: String, lookup: RegistryLookup? = null) {
+    io.github.reihlinstinct.reporter.i18n.ProvideStringsIfMissing {
+        RegistryStatusContent(plate, lookup)
+    }
+}
+
+@Composable
+private fun RegistryStatusContent(plate: String, lookup: RegistryLookup?) {
     if (PlateNumber.parse(plate) == null) return
     val s = LocalStrings.current
     // Keyed state is cleared synchronously on an edit, before any effect can return.
