@@ -143,6 +143,32 @@ class ReviewAddressTest {
         compose.runOnIdle { assertEquals("1234567", saved?.plate) }
     }
 
+    // Issue #358: the automatic prefill alone must not trigger the unsaved-edits dialog.
+    @Test fun ocrPrefillAloneIsNotAnUnsavedEdit() {
+        val initial = draft().copy(address = "רחוב בדיקה 12", plate = "")
+        var exits = 0
+        val bitmap = android.graphics.Bitmap.createBitmap(20, 20, android.graphics.Bitmap.Config.ARGB_8888)
+        compose.setContent { AppTheme { ReviewScreen(initial, bitmap.asImageBitmap(), {}, { exits++ }, plateRecognizer = { listOf("1234567") }, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("לוחית: \u206612-345-67\u2069").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("חזור").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(1, exits) }
+        compose.onNodeWithText("יש שינויים שלא נשמרו").assertDoesNotExist()
+    }
+
+    // Issue #358: a real edit after the prefill still asks.
+    @Test fun editAfterOcrPrefillStillAsksBeforeLeaving() {
+        val initial = draft().copy(address = "רחוב בדיקה 12", plate = "")
+        var exits = 0
+        val bitmap = android.graphics.Bitmap.createBitmap(20, 20, android.graphics.Bitmap.Config.ARGB_8888)
+        compose.setContent { AppTheme { ReviewScreen(initial, bitmap.asImageBitmap(), {}, { exits++ }, plateRecognizer = { listOf("1234567") }, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("לוחית: \u206612-345-67\u2069").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("ערוך").performScrollTo().performClick()
+        compose.onNodeWithText("רחוב ומספר בית שאישרת").performScrollTo().performTextReplacement("רחוב בדיקה 14")
+        compose.onNodeWithText("חזור").performScrollTo().performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("יש שינויים שלא נשמרו").fetchSemanticsNodes().isNotEmpty() }
+        compose.runOnIdle { assertEquals(0, exits) }
+    }
+
     @Test fun gpsSuggestsStreetHouseButNeverChangesEvidence() {
         val initial = draft()
         var saved: ReviewDraft? = null
