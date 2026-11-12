@@ -23,7 +23,7 @@ class RegistryReviewTest {
     @get:Rule val compose = createComposeRule()
     @Before fun language() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set("he")
+        io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set(io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(InstrumentationRegistry.getInstrumentation().targetContext))
     }
     private fun draft(plate: String = "1234567") = ReviewDraft(Evidence("registry-synthetic", "a".repeat(64), null, 31.0, 35.0),
         plate, "רחוב בדיקה 12", "municipal:1145", "רכב $plate חונה על המדרכה", emptySet())
