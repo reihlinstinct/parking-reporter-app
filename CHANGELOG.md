@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.47.1] - 2026-11-12
+
+### Other changes
+
+- docs+test: name #399 in Known gap, move the unverified regular-plate source out of Verified, use synthetic plate strings (#354) (#402) (dcd6f7e)
+
 ## [0.47.0] - 2026-11-12
 
 ### Features
