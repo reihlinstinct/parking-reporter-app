@@ -371,7 +371,7 @@ class ReviewCaptureReportsExtractionTest {
         assertTrue("ReviewScreen must store codes: $stores", stores.all { Regex("""ReviewWarning\.[A-Z_]+\.code""").matches(it) })
         val shell = source("AppShell.kt")
         assertEquals(1, Regex("""val missing = initialReviewWarnings\(evidence\)\n""").findAll(shell).count())
-        assertEquals("AppShell hands the codes to the draft unchanged", 2, Regex("""ReviewDraft\(evidence, "", "", "", "", missing\)""").findAll(shell).count())
+        assertEquals("AppShell hands the codes to the draft unchanged; the only subject is the one-shot assistant category hint (#190)", 2, Regex("""ReviewDraft\(evidence, "", "", startSubject, "", missing\)""").findAll(shell).count())
         assertFalse("AppShell never stores a translated warning", shell.contains("shell.review.") || shell.contains("review.warning.") || Regex("""\bReviewWarning\b""").containsMatchIn(shell))
         assertEquals("both unresolved lines go through unresolvedText()", 2, Regex("""unresolvedText\(s, draft\.unresolved\)""").findAll(screen).count())
         assertFalse("ReviewScreen shows unresolved through unresolvedText()", screen.contains("unresolved.joinToString"))

@@ -24,9 +24,22 @@ object EntryIntents {
         /** Open the capture flow to start a new report. */
         data object NewReport : Request
 
+        /**
+         * Open the same visible capture flow with one known category preselected on the
+         * review draft (issue #190 first slice). The category is a hint only: nothing is
+         * created, filed or sent until the person captures, reviews and confirms.
+         */
+        data class NewReportInCategory(val categoryCode: String) : Request
+
         /** Start a new report pre-filled with a shared photo (URI string). */
         data class SharedPhoto(val uriString: String) : Request
     }
+
+    /** Link shape for [Request.NewReportInCategory]; only the four known category codes pass. */
+    private val NEW_REPORT_CATEGORY_LINK = Regex("^il\\.sidewalks\\.reporter://report/new\\?category=([a-z_]+)$")
+    private fun knownCategory(link: String?): String? = link?.let { NEW_REPORT_CATEGORY_LINK.matchEntire(it) }
+        ?.let { io.github.reihlinstinct.reporter.core.ReportCategory.from(it.groupValues[1]) }?.code
+    fun categoryLink(code: String): String = "il.sidewalks.reporter://report/new?category=$code"
 
     private val NEW_REPORT_LINK = Regex("^il\\.sidewalks\\.reporter://report(/new)?/?$")
 
@@ -36,6 +49,8 @@ object EntryIntents {
      * link and scheme matches are exact and case-sensitive.
      */
     fun parse(action: String?, dataString: String?, mimeType: String?, streamUriString: String?): Request? = when {
+        action == ACTION_TILE_NEW_REPORT && knownCategory(dataString) != null ->
+            Request.NewReportInCategory(knownCategory(dataString)!!)
         action == ACTION_TILE_NEW_REPORT -> Request.NewReport
         action == Intent.ACTION_VIEW && dataString != null && NEW_REPORT_LINK.matches(dataString) ->
             Request.NewReport

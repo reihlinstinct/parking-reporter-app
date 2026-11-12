@@ -84,4 +84,38 @@ class EntryIntentsTest {
         assertNull(EntryIntents.parse("android.intent.action.MAIN", null, null, null))
         assertNull(EntryIntents.parse(null, null, null, null))
     }
+
+    @Test
+    fun categoryLinkPreselectsOnlyKnownCategories() {
+        for (category in io.github.reihlinstinct.reporter.core.ReportCategory.entries) {
+            val link = EntryIntents.categoryLink(category.code)
+            val expected = EntryIntents.Request.NewReportInCategory(category.code)
+            assertEquals(expected, EntryIntents.parse(EntryIntents.ACTION_TILE_NEW_REPORT, link, null, null))
+            // A browsable VIEW link never carries the hint (it is not behind the consent switch).
+            assertNull(EntryIntents.parse("android.intent.action.VIEW", link, null, null))
+        }
+    }
+
+    @Test
+    fun unknownOrMalformedCategoryIsRejectedNotGuessed() {
+        listOf("nope", "SIDEWALK_PARKING", "sidewalk_parking&x=1", "1145", "").forEach {
+            val link = "il.sidewalks.reporter://report/new?category=$it"
+            // The tile action ignores unrelated data and opens the plain flow; it never preselects.
+            assertEquals("category '$it'", EntryIntents.Request.NewReport,
+                EntryIntents.parse(EntryIntents.ACTION_TILE_NEW_REPORT, link, null, null))
+            assertNull("category '$it'", EntryIntents.parse("android.intent.action.VIEW", link, null, null))
+        }
+        assertNull(EntryIntents.parse("android.intent.action.VIEW",
+            "https://il.sidewalks.reporter/report/new?category=broken_sign", null, null))
+    }
+
+    @Test
+    fun categoryLinkNeverTakesPlateOrFreeText() {
+        for (extra in listOf("plate=1234567", "text=hello")) {
+            val link = "il.sidewalks.reporter://report/new?category=broken_sign&$extra"
+            assertEquals(EntryIntents.Request.NewReport,
+                EntryIntents.parse(EntryIntents.ACTION_TILE_NEW_REPORT, link, null, null))
+            assertNull(EntryIntents.parse("android.intent.action.VIEW", link, null, null))
+        }
+    }
 }

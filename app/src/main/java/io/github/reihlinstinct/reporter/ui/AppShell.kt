@@ -322,7 +322,15 @@ fun AppShell(
             catch (_: Exception) { status = strings.t("shell.status.settings_read_failed") }
         }
     }
-    fun startReview(file: File, usePhotoLocation: Boolean = true) {
+    var pendingCategory by remember { mutableStateOf<String?>(null) }
+    // The hint lives only for one camera session: it is cleared on any page other than the
+    // camera (system Back, bottom nav, another entry) and is read only by a camera capture.
+    LaunchedEffect(page) { if (page != "camera") pendingCategory = null }
+    fun startReview(file: File, usePhotoLocation: Boolean = true, categoryHint: String? = null) {
+        // One-shot starting choice from the assistant entry; the person can change it in review.
+        val startSubject = categoryHint?.let { code ->
+            io.github.reihlinstinct.reporter.core.ReportCategory.from(code)?.let { "municipal:" + it.municipalSubjectCode }
+        }.orEmpty()
         scope.launch {
             try {
                 var evidence = withContext(Dispatchers.IO) { EvidenceReader().read(file) }
@@ -335,7 +343,7 @@ fun AppShell(
                     withContext(Dispatchers.IO) {
                         database.reports().reserve(ReportRecord(evidence.stableId, evidence.originalSha256,
                             "originals/${file.name}", 0,
-                            io.github.reihlinstinct.reporter.ledger.DraftCodec.encode(ReviewDraft(evidence, "", "", "", "", missing)), null))
+                            io.github.reihlinstinct.reporter.ledger.DraftCodec.encode(ReviewDraft(evidence, "", "", startSubject, "", missing)), null))
                     }
                 } catch (e: Exception) {
                     // The reserve failed (for example a duplicate original), so
@@ -345,7 +353,7 @@ fun AppShell(
                     throw e
                 }
                 original = file; revision = 0
-                draft = ReviewDraft(evidence, "", "", "", "", missing)
+                draft = ReviewDraft(evidence, "", "", startSubject, "", missing)
                 reload(); page = "review"
             } catch (e: Exception) {
                 Log.w("AppShell", "review start failed", e)
@@ -401,8 +409,14 @@ fun AppShell(
         when (val request = entry.value?.request) {
             // An entry arriving over the settings screen drops the decrypted
             // profile from memory before any navigation.
-            is EntryIntents.Request.SharedPhoto -> { profile = null; importShared(Uri.parse(request.uriString)) }
-            EntryIntents.Request.NewReport -> { profile = null; requestCamera { page = "camera" } }
+            is EntryIntents.Request.SharedPhoto -> { profile = null; pendingCategory = null; importShared(Uri.parse(request.uriString)) }
+            EntryIntents.Request.NewReport -> { profile = null; pendingCategory = null; requestCamera { page = "camera" } }
+            is EntryIntents.Request.NewReportInCategory -> {
+                profile = null
+                // Consent switch gates the hint for every sender; off means the plain capture flow.
+                pendingCategory = if (io.github.reihlinstinct.reporter.assistant.AssistantEntryStore(context).enabled()) request.categoryCode else null
+                requestCamera { page = "camera" }
+            }
             null -> {}
         }
     }
@@ -520,7 +534,7 @@ fun AppShell(
     ) { innerPadding ->
     Box(Modifier.padding(innerPadding)) {
     when (page) {
-        "camera" -> CaptureScreen(onCaptured = { file -> startReview(file) }, onCancel = { page = "home" })
+        "camera" -> CaptureScreen(onCaptured = { file -> val hint = pendingCategory; pendingCategory = null; startReview(file, categoryHint = hint) }, onCancel = { pendingCategory = null; page = "home" })
         "reports" -> ReportsScreen(records, open = { openRecord(it) })
         "review" -> draft?.let { value ->
             val preview by produceState<Pair<io.github.reihlinstinct.reporter.evidence.OutgoingImage, androidx.compose.ui.graphics.ImageBitmap>?>(null, original) {
@@ -627,7 +641,7 @@ fun AppShell(
             Text(strings.t("shell.home.title"), style = MaterialTheme.typography.headlineMedium)
             Text(strings.t("shell.home.subtitle"), style = MaterialTheme.typography.titleLarge)
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { requestCamera { page = "camera" } },
+                Button(onClick = { pendingCategory = null; requestCamera { page = "camera" } },
                     modifier = Modifier.weight(1f).fillMaxHeight().heightIn(min = 56.dp)) {
                     Icon(PhotoCameraIcon, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
