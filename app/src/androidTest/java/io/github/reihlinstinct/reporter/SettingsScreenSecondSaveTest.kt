@@ -4,6 +4,7 @@ import io.github.reihlinstinct.reporter.ui.theme.AppTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
@@ -32,11 +33,15 @@ class SettingsScreenSecondSaveTest {
     fun secondSaveAfterPersonalEditKeepsCredentials() {
         val profile = mutableStateOf<ReporterSettings?>(stored)
         var saved: ReporterSettings? = null
-        compose.setContent { AppTheme { SettingsScreen(profile.value, { s, touched, done -> saved = mergeReporterSettings(s, stored, touched); profile.value = saved; done() }, {}) } }
+        var saves = 0
+        compose.setContent { AppTheme { SettingsScreen(profile.value, { s, touched, done -> saves++; saved = mergeReporterSettings(s, stored, touched); profile.value = saved; done() }, {}) } }
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("first save callback", 1, saves) }
         compose.onNodeWithText("טלפון").performScrollTo().performTextReplacement("0500000001")
+        compose.onNodeWithText("טלפון").assertTextContains("0500000001")
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().performClick()
         compose.runOnIdle {
+            assertEquals("second save callback", 2, saves)
             assertEquals("+972500000001", saved?.phone)
             // The user never touched the credential fields: they stay stored.
             assertEquals("synthetic-api-pass", saved?.municipalPassword)
