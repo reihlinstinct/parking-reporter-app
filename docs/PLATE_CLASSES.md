@@ -1,6 +1,10 @@
 # Plate classes (issue #354)
 
-Status: only REGULAR is implemented. Everything else is unclassified: drawn as plain text, and never sent to the vehicle or disability registry. Nothing here infers legal status, licence validity or parking permission from a plate.
+Status: only REGULAR is implemented. A raw string that is not 7 or 8 ASCII digits is drawn as plain text and rejected by `PlateNumber.parse`. Nothing here infers legal status, licence validity or parking permission from a plate.
+
+## Known gap (not fixed here)
+
+The app does not pass raw strings. The manual plate field keeps decimal digits only (`PlateEntry.digits`), so typing or pasting a special-looking plate such as "CD 23 044 22" stores `2304422`. That is 7 digits, so it is drawn as a regular plate and both registries are queried. Special plates whose digits happen to be 6 after stripping (the owner's police and military examples) are not affected. On the OCR path, `PlateCandidates.fromText` rejects Latin letters next to a digit run but not Hebrew letters, so a 7 or 8 digit run followed by "מ" or "צ" could become a candidate. This breaks the #354 rule "never strip letters then reinterpret a special plate as a regular numeric one". It needs its own change, tracked in a separate issue.
 
 ## Verified from official text (checked 2026-11-12)
 
