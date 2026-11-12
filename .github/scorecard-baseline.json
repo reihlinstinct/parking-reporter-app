@@ -56,6 +56,14 @@
       "evidence": "issues: write",
       "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/297",
       "reason": "Owner-approved 2026-11-11 (#297): the weekly API-matrix failure reporter opens one deduped issue; job-scoped, top level stays contents: read, no PAT, runs only on schedule/dispatch from main."
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "rule": "job-write",
+      "scope": "analyze",
+      "evidence": "security-events: write",
+      "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/395",
+      "reason": "CodeQL advanced setup (#395) needs security-events: write to upload results. Job-scoped, top level stays read-all, runs only on schedule and workflow_dispatch from main, no PAT. Replaces Default setup, which is turned off only after this workflow's first run succeeds."
     }
   ]
 }
