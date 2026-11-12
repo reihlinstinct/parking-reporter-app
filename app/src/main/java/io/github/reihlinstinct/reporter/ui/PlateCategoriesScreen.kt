@@ -68,7 +68,7 @@ fun PlateCategoriesScreen(online: Boolean, initialEnables: Set<String>, refresh:
                     // Bootstrap defaults apply without a preference. Enabling is additive; disabling an
                     // override restores metadata/default behavior rather than turning off requirements.
                     Row {
-                        Checkbox(checked = topic.code in enables, enabled = !forced, onCheckedChange = { checked ->
+                        Checkbox(checked = forced || topic.code in enables, enabled = !forced, onCheckedChange = { checked ->
                             enable(topic.code, checked)
                             enables = if (checked) enables + topic.code else enables - topic.code
                         })
