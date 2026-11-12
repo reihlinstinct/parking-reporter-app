@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.36.6] - 2026-11-12
+
+### Fixes
+
+- fix(ci): require successful final upgrade proof runner footer (#335) (bff7102)
+
 ## [0.36.5] - 2026-11-12
 
 ### Other changes
