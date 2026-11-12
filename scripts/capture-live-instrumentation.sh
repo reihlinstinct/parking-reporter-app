@@ -47,7 +47,7 @@ stop_capture() {
 }
 trap stop_capture EXIT
 trap 'exit 130' INT TERM
-adb shell am instrument -w -r -e class il.sidewalks.reporter.live.LiveEmulatorSubmissionTest il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > "$work/instrumentation.txt" 2>&1
+adb shell am instrument -w -r -e class io.github.reihlinstinct.reporter.live.LiveEmulatorSubmissionTest il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > "$work/instrumentation.txt" 2>&1
 printf '%s\n' "$?" > "$work/instrumentation.rc"
 # Android 11+ historical exit reasons distinguish Java/native crashes, LMK,
 # ANR and requested exits where supported. A failed dump is private evidence.

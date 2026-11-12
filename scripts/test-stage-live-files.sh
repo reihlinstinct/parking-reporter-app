@@ -38,10 +38,10 @@ printf 'fake photo bytes\n' > "$tmp/photo.jpg"
 printf '{"plate":"00000000"}\n' > "$tmp/params.json"
 
 printf '{"version":1,"streets":[],"addresses":[]}\n' > "$tmp/addresses.json"
-mkdir -p "$tmp/repo/scripts" "$tmp/repo/app/src/main/java/il/sidewalks/reporter/municipal"
+mkdir -p "$tmp/repo/scripts" "$tmp/repo/app/src/main/java/io/github/reihlinstinct/reporter/municipal"
 cp scripts/stage-live-files.sh "$tmp/repo/scripts/"
 pin=$(sha256sum "$tmp/addresses.json" | cut -d' ' -f1)
-printf '        "%s"\n' "$pin" > "$tmp/repo/app/src/main/java/il/sidewalks/reporter/municipal/AddressLookupPin.kt"
+printf '        "%s"\n' "$pin" > "$tmp/repo/app/src/main/java/io/github/reihlinstinct/reporter/municipal/AddressLookupPin.kt"
 cd "$tmp/repo"
 sh "$tmp/repo/scripts/stage-live-files.sh" "$tmp/photo.jpg" "$tmp/params.json" "$tmp/addresses.json" | grep -q 'preflight: staged photo and params verified on device'
 test -s "$tmp/device/il.sidewalks.reporter.test/files/live-photo.jpg"
@@ -63,9 +63,9 @@ test ! -s "$MOCK_CALL_LOG"
 printf '{"version":1,"streets":[],"addresses":[]}\n' > "$tmp/addresses.json"
 for bad_pin in malformed missing; do
   if [ "$bad_pin" = malformed ]; then
-    printf 'not-a-pin\n' > app/src/main/java/il/sidewalks/reporter/municipal/AddressLookupPin.kt
+    printf 'not-a-pin\n' > app/src/main/java/io/github/reihlinstinct/reporter/municipal/AddressLookupPin.kt
   else
-    rm app/src/main/java/il/sidewalks/reporter/municipal/AddressLookupPin.kt
+    rm app/src/main/java/io/github/reihlinstinct/reporter/municipal/AddressLookupPin.kt
   fi
   if sh "$tmp/repo/scripts/stage-live-files.sh" "$tmp/photo.jpg" "$tmp/params.json" "$tmp/addresses.json" >/dev/null 2>&1; then
     echo 'invalid pin was accepted' >&2; exit 1

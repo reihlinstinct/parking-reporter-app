@@ -51,7 +51,7 @@ class VpnSubmitTest(unittest.TestCase):
         self.assertIn('environment: m0-trial-submit', submit)
         self.assertNotIn('continue-on-error', submit)
         self.assertNotIn('up-bounded', submit)
-        self.assertEqual(submit.count("--tests 'il.sidewalks.reporter.municipal.EngineLiveTrialTest'"), 1)
+        self.assertEqual(submit.count("--tests 'io.github.reihlinstinct.reporter.municipal.EngineLiveTrialTest'"), 1)
         self.assertLess(submit.index('trial_submit_preflight.sh'), submit.index('trial/l2tp.py up'))
         self.assertLess(submit.index('trial/l2tp.py up'), submit.index('Decrypt trial photo'))
         self.assertLess(submit.index('trial/l2tp.py up'), submit.index('Engine trial (single attempt'))

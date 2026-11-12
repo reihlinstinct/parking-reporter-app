@@ -1,6 +1,6 @@
 # Vehicle registry lookup (data.gov.il)
 
-Issue #102. `app/src/main/java/il/sidewalks/reporter/registry/VehicleRegistryClient.kt` is a small read-only client that checks whether a plate exists in the official vehicle registry and reads its licence date. It is not wired into the UI yet.
+Issue #102. `app/src/main/java/io/github/reihlinstinct/reporter/registry/VehicleRegistryClient.kt` is a small read-only client that checks whether a plate exists in the official vehicle registry and reads its licence date. It is not wired into the UI yet.
 
 ## Dataset
 
@@ -62,4 +62,4 @@ flowchart LR
 
 ## Tests
 
-`app/src/test/java/il/sidewalks/reporter/registry/VehicleRegistryClientTest.kt` runs against MockWebServer with recorded synthetic responses in `app/src/test/resources/registry/` (fake plates such as 1234567). No test touches the network.
+`app/src/test/java/io/github/reihlinstinct/reporter/registry/VehicleRegistryClientTest.kt` runs against MockWebServer with recorded synthetic responses in `app/src/test/resources/registry/` (fake plates such as 1234567). No test touches the network.

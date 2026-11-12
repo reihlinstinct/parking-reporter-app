@@ -4,14 +4,14 @@
              name must be fully qualified and the provider exported for the app
              under test to open its stream cross-package. Test-only bytes. -->
         <provider
-            android:name="il.sidewalks.reporter.TestShareProvider"
+            android:name="io.github.reihlinstinct.reporter.TestShareProvider"
             android:authorities="il.sidewalks.reporter.testshare"
             android:exported="true" />
         <!-- Live E2E only: serves the owner photo the manual live workflow
              stages into the test package's files dir. Refuses every open when
              nothing is staged, so regular CI exposes nothing here. -->
         <provider
-            android:name="il.sidewalks.reporter.live.LiveShareProvider"
+            android:name="io.github.reihlinstinct.reporter.live.LiveShareProvider"
             android:authorities="il.sidewalks.reporter.liveshare"
             android:exported="true" />
     </application>

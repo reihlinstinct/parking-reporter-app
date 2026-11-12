@@ -1,0 +1,37 @@
+package io.github.reihlinstinct.reporter
+
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.test.platform.app.InstrumentationRegistry
+import io.github.reihlinstinct.reporter.ui.SettingsScreen
+import io.github.reihlinstinct.reporter.ui.theme.AppTheme
+import io.github.reihlinstinct.reporter.i18n.AppCatalog
+import io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore
+import io.github.reihlinstinct.reporter.security.ReporterSettings
+import java.io.File
+import org.junit.Assert.*
+import org.junit.Rule
+import org.junit.Test
+
+class PassportLocalProfileTest {
+    @get:Rule val compose = createComposeRule()
+    @Test fun passportSavesLocalProfileWithoutAnIdAndNoInventedIdentity() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        UiPrefsLanguageStore.of(context).set(requireNotNull(AppCatalog.get(InstrumentationRegistry.getInstrumentation().targetContext).defaultLanguage).code)
+        var saved: ReporterSettings? = null
+        compose.setContent { AppTheme { SettingsScreen(null, save = { value, _, clear -> saved = value; clear() }, back = {}, basicSetup = true) } }
+        compose.onNodeWithText("אין לי תעודת זהות").performScrollTo()
+        compose.onNode(isToggleable()).performClick()
+        compose.onNodeWithText("מספר דרכון").performScrollTo().performTextInput("SYNTHETIC-PASSPORT")
+        // Issue #295: the save button requires every reporter field filled and valid.
+        compose.onNodeWithText("שם פרטי").performTextInput("בדיקה")
+        compose.onNodeWithText("שם משפחה").performTextInput("מדווח")
+        compose.onNodeWithText("טלפון").performScrollTo().performTextReplacement("050-123-4567")
+        compose.onNodeWithText("אימייל").performScrollTo().performTextReplacement("synthetic@example.com")
+        compose.onNodeWithText("במצב דרכון נשלח בממשק", substring = true).assertDoesNotExist()
+        File(context.filesDir, "passport-local-profile-synthetic.png").outputStream().use { compose.onNode(isRoot() and hasAnyDescendant(hasText("טלפון"))).captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        compose.onNodeWithText("שמור והמשך").performScrollTo().performClick()
+        compose.runOnIdle { assertTrue(saved!!.passportMode); assertEquals("SYNTHETIC-PASSPORT", saved?.passportNumber); assertEquals("", saved?.idNumber) }
+    }
+}

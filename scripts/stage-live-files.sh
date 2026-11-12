@@ -13,7 +13,7 @@ params=$2
 lookup=$3
 # Same whole-file pin as production AddressLookupPin. Never inject a test
 # directory or bypass production verification in a real submission.
-pin=$(sed -n 's/^        "\([0-9a-f]\{64\}\)"$/\1/p' app/src/main/java/il/sidewalks/reporter/municipal/AddressLookupPin.kt)
+pin=$(sed -n 's/^        "\([0-9a-f]\{64\}\)"$/\1/p' app/src/main/java/io/github/reihlinstinct/reporter/municipal/AddressLookupPin.kt)
 test -n "$pin" && test "$(sha256sum "$lookup" | cut -d' ' -f1)" = "$pin" || {
   echo 'FAIL-FAST: private address directory absent or mismatched' >&2; exit 1;
 }
