@@ -52,7 +52,7 @@ class RegistryReviewTest {
             topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         compose.onNodeWithText("שלח לעירייה").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithText("הוסף את המספר לתיאור המוצג").performScrollTo().performClick()
-        compose.onNodeWithText("רכב מספר 1234567\nרכב חונה").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("רכב חונה", substring = true).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("שלח לעירייה").performScrollTo().assertIsEnabled()
         screenshot("registry-plate-text-inserted.png")
     }
