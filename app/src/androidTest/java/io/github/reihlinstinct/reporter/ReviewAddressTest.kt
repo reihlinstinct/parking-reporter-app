@@ -124,7 +124,7 @@ class ReviewAddressTest {
         var saved: ReviewDraft? = null
         compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
-        compose.onNodeWithText("מספר לוחית (ספרות בלבד)").performScrollTo().performTextReplacement("ab123-45-678")
+        compose.onNodeWithText("מספר לוחית (ספרות בלבד)").performScrollTo().performTextReplacement("123-45-678")
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         File(context.filesDir, "review-formatted-plate-synthetic.png").outputStream().use {
             compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)

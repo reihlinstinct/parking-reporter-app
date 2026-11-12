@@ -14,6 +14,15 @@ object PlateEntry : VisualTransformation {
             if (digit in 0..9) append(('0'.code + digit).toChar())
         } }
     }
+    /**
+     * Manual entry for a regular plate. Digits, hyphens, spaces and bidi marks are accepted. Any
+     * letter or other symbol rejects the whole edit and keeps [previous], so a pasted special
+     * plate ("CD 11 222 33", "11-22-33 \u05DE") is never stripped to digits and kept as a regular one.
+     */
+    fun accept(previous: String, input: String): String =
+        if (input.all { it.isWhitespace() || it == '-' || it == '\u200E' || it == '\u200F' ||
+                Character.getType(it) == Character.DECIMAL_DIGIT_NUMBER.toInt() }) digits(input)
+        else previous
     private fun breaks(length: Int) = if (length > 7) listOf(3, 5) else listOf(2, 5)
     fun format(value: String): String = buildString {
         value.forEachIndexed { index, digit ->

@@ -15,4 +15,24 @@ class PlateCandidatesTest {
     @Test fun boundedCandidateCountAndInput() {
         assertEquals(10, PlateCandidates.fromText((1..100).joinToString(" ") { (1000000 + it).toString() }).size)
     }
+    @Test fun runNextToHebrewClassLetterIsNotARegularPlate() {
+        val mem = "\u05DE"; val tsadi = "\u05E6"
+        assertTrue(PlateCandidates.fromText("1234567$mem").isEmpty())
+        assertTrue(PlateCandidates.fromText("$mem" + "12345678").isEmpty())
+        assertTrue(PlateCandidates.fromText("12345678 $tsadi").isEmpty())
+        assertTrue(PlateCandidates.fromText("$tsadi-1234567").isEmpty())
+        assertTrue(PlateCandidates.fromText("12-345-67 $mem").isEmpty())
+        assertTrue(PlateCandidates.fromText("$mem 12-345-67").isEmpty())
+        assertEquals(listOf("1234567"), PlateCandidates.fromText("1234567 \u05E8\u05DB\u05D1"))
+    }
+    @Test fun hebrewWordsAroundARunAreNotPlateClassLetters() {
+        val nekhim = "\u05E0\u05DB\u05D9\u05DD"; val im = "\u05E2\u05DD"
+        val sug = "\u05DE\u05E1\u05D5\u05D2"; val tsahov = "\u05E6\u05D4\u05D5\u05D1"
+        assertEquals(listOf("1234567"), PlateCandidates.fromText("$nekhim 1234567"))
+        assertEquals(listOf("1234567"), PlateCandidates.fromText("$im 1234567"))
+        assertEquals(listOf("1234567"), PlateCandidates.fromText("1234567 $sug"))
+        assertEquals(listOf("1234567"), PlateCandidates.fromText("1234567 $tsahov"))
+        assertEquals(listOf("1234567"), PlateCandidates.fromText("1234567\n\u05DE"))
+        assertEquals(listOf("1234567"), PlateCandidates.fromText("\u05DE\n1234567"))
+    }
 }

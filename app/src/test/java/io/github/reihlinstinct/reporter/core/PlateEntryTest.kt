@@ -14,6 +14,15 @@ class PlateEntryTest {
         assertEquals("123-45-678", PlateEntry.format("12345678"))
         assertEquals("12-3", PlateEntry.format("123"))
     }
+    @Test fun manualFieldRejectsLettersInsteadOfStrippingThem() {
+        assertEquals("1234567", PlateEntry.accept("", "12-345-67"))
+        assertEquals("1234567", PlateEntry.accept("", " 12 345 67 "))
+        assertEquals("12345678", PlateEntry.accept("1234567", "\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8"))
+        assertEquals("", PlateEntry.accept("", "CD 11 222 33"))
+        assertEquals("1234", PlateEntry.accept("1234", "11-22-33 \u05DE"))
+        assertEquals("1234", PlateEntry.accept("1234", "12345x"))
+        assertEquals("", PlateEntry.accept("1234", ""))
+    }
     @Test fun cursorMappingsRoundTripAtEveryLength() {
         for (length in 0..8) {
             val text = "12345678".take(length)

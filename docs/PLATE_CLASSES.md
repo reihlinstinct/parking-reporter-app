@@ -2,9 +2,14 @@
 
 Status: only REGULAR is implemented. A raw string that is not 7 or 8 ASCII digits is drawn as plain text and rejected by `PlateNumber.parse`. Nothing here infers legal status, licence validity or parking permission from a plate.
 
-## Known gap (not fixed here)
+## Plate entry and OCR (#399)
 
-The app does not pass raw strings. The manual plate field keeps decimal digits only (`PlateEntry.digits`), so typing or pasting a special-looking plate such as "CD 11 222 33" stores `1122233`. That is 7 digits, so it is drawn as a regular plate and both registries are queried. Special plates whose digits happen to be 6 after stripping (police and military style examples) are not affected. On the OCR path, `PlateCandidates.fromText` rejects Latin letters next to a digit run but not Hebrew letters, so a 7 or 8 digit run followed by "מ" or "צ" could become a candidate. This breaks the #354 rule "never strip letters then reinterpret a special plate as a regular numeric one". It needs its own change and the owner's decision, tracked in #399.
+The app does not pass raw strings. Two rules keep a special-looking plate from becoming a regular one:
+
+- Manual field (`PlateEntry.accept`): digits (any Unicode decimal digit, stored as ASCII), hyphens, spaces and bidi marks are accepted. Any letter or other symbol rejects the whole edit and keeps the previous value. Typing or pasting "CD 11 222 33" no longer stores `1122233`.
+- OCR (`PlateCandidates.fromText`): a 7 or 8 digit run next to a standalone Hebrew mem or tsadi (final forms included) is not offered. The letter may touch the run or be separated by one space or hyphen, but not a line break, and it must not be part of a longer Hebrew word ("נכים 1234567" and "1234567 מסוג" still offer the number). Latin letters or digits next to a run were already rejected.
+
+Still true: only REGULAR is implemented. A raw string that is not 7 or 8 ASCII digits is drawn as plain text and rejected by `PlateNumber.parse`. Nothing here infers legal status, licence validity or parking permission from a plate.
 
 ## Verified from official text (checked 2026-11-12)
 
@@ -19,7 +24,7 @@ The app does not pass raw strings. The manual plate field keeps decimal digits o
 - Military (black, letter "צ") plate format. No official IDF or transport source found.
 - Colors for any of these. Secondary sites and forum posts are not accepted as sources.
 
-Synthetic examples (red "11-22-33 מ", white "CD 11 222 33", black "123456 צ") are invented for tests and are not claimed to be real plates. IsraeliPlateStyleTest pins the raw strings only (not styled as regular, rejected by PlateNumber.parse). It does not cover the manual field or OCR, which strip to digits first (see Known gap).
+Synthetic examples (red "11-22-33 מ", white "CD 11 222 33", black "123456 צ") are invented for tests and are not claimed to be real plates. IsraeliPlateStyleTest pins the raw strings only (not styled as regular, rejected by PlateNumber.parse). PlateEntryTest and PlateCandidatesTest cover the manual field and OCR rules above.
 
 ## Rule
 
