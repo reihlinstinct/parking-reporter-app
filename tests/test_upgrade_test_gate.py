@@ -13,7 +13,7 @@ spec.loader.exec_module(m)
 
 class UpgradeTestGateTest(unittest.TestCase):
     def log(self, code=0, suite='expected.Suite', name='expectedTest'):
-        return f'INSTRUMENTATION_STATUS: class={suite}\nINSTRUMENTATION_STATUS: test={name}\nINSTRUMENTATION_STATUS_CODE: 1\nINSTRUMENTATION_STATUS_CODE: {code}\n'
+        return f'INSTRUMENTATION_STATUS: class={suite}\nINSTRUMENTATION_STATUS: test={name}\nINSTRUMENTATION_STATUS_CODE: 1\nINSTRUMENTATION_STATUS_CODE: {code}\nOK (1 test)\nINSTRUMENTATION_CODE: -1\n'
 
     def test_only_one_expected_pass_is_accepted(self):
         with tempfile.TemporaryDirectory() as d:
@@ -21,7 +21,9 @@ class UpgradeTestGateTest(unittest.TestCase):
             path.write_text(self.log())
             self.assertIn('1 passed, 0 skipped, 0 failed', m.check(path, 'expected.Suite', 'expectedTest'))
             for raw in ['', self.log(-4), self.log(-3), self.log(-1), self.log(-2), self.log() * 2,
-                        self.log(name='wrong'), self.log(suite='wrong.Suite')]:
+                        self.log(name='wrong'), self.log(suite='wrong.Suite'),
+                        self.log().split('OK (1 test)')[0], self.log().replace('INSTRUMENTATION_CODE: -1', 'INSTRUMENTATION_CODE: 0'),
+                        self.log() + 'INSTRUMENTATION_FAILED: Process crashed\n']:
                 with self.subTest(raw=raw), self.assertRaises(ValueError):
                     path.write_text(raw)
                     m.check(path, 'expected.Suite', 'expectedTest')
