@@ -99,6 +99,7 @@ class AssistantEntryTest {
 
     @Test fun generatedServiceIsSystemProtectedAndMetadataStartsDisabled() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
+        assertEquals("AppFunctions must not raise installed minSdk", 26, context.applicationInfo.minSdkVersion)
         val services = context.packageManager.getPackageInfo(context.packageName,
             PackageManager.GET_SERVICES or PackageManager.MATCH_DISABLED_COMPONENTS).services.orEmpty()
         val service = services.single { it.name.endsWith(".assistant.ReportAppFunctionService") }

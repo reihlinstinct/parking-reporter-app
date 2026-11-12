@@ -51,3 +51,7 @@ same binder. It does not invoke the service directly or simulate execution.
 This does not prove Gemini/other Jetpack callers discover custom functions on
 stock API36. Do not advertise that until tested on a dynamic-schema indexer.
 Pinned rc01 sources: https://dl.google.com/dl/android/maven2/androidx/appfunctions/appfunctions/1.0.0-rc01/appfunctions-1.0.0-rc01-sources.jar
+
+
+## Older Android compatibility
+Owner requirement (2026-11-12): adding the experimental feature must not block publishing or installing the app on older Android. minSdk remains26. The AppFunctions service is disabled by resource default and enabled only by values-v36; no required uses-library or uses-feature was introduced. The Settings wrapper returns before loading saved state on unsupported API levels; the component is absent, not a disabled upsell. Instrumentation checks the installed merged application minSdk26 and disabled service on API30, and the API30 suite installs/launches the same APK. Basic first-run setup asserts the assistant title and toggle are absent. Latest exact-head API30 results must pass before merge.
