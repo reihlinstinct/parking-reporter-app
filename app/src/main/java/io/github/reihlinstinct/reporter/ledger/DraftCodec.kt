@@ -12,6 +12,7 @@ object DraftCodec {
         put("originalTime", d.evidence.capturedAtIso); put("originalLat", d.evidence.latitude); put("originalLon", d.evidence.longitude)
         put("plateRequired", d.plateRequired); put("time", d.confirmedTime); put("lat", d.confirmedLatitude); put("lon", d.confirmedLongitude)
         put("plate", d.plate); put("address", d.address); put("subject", d.subject); put("text", d.exactHebrewText)
+        if (d.plateClass != io.github.reihlinstinct.reporter.core.PlateClass.REGULAR) put("plateClass", d.plateClass.code)
         put("unresolved", JSONArray(d.unresolved.sorted()))
     }.toString()
     fun decode(value: String): ReviewDraft {
@@ -22,6 +23,7 @@ object DraftCodec {
         return ReviewDraft(Evidence(j.getString("id"), j.getString("hash"), text("originalTime"), number("originalLat"), number("originalLon")),
             j.getString("plate"), j.getString("address"), j.getString("subject"), j.getString("text"),
             (0 until questions.length()).map { questions.getString(it) }.toSet(),
-            confirmedTime = text("time"), confirmedLatitude = number("lat"), confirmedLongitude = number("lon"), plateRequired = if (j.has("plateRequired") && !j.isNull("plateRequired")) j.getBoolean("plateRequired") else null)
+            confirmedTime = text("time"), confirmedLatitude = number("lat"), confirmedLongitude = number("lon"), plateRequired = if (j.has("plateRequired") && !j.isNull("plateRequired")) j.getBoolean("plateRequired") else null,
+            plateClass = io.github.reihlinstinct.reporter.core.PlateClass.fromCode(text("plateClass")))
     }
 }

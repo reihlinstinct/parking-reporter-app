@@ -14,7 +14,16 @@ object PlatePolicy {
         val required = required(TopicIdentity.code(draft.subject), topics, enables)
         return draft.edit(plateRequirement = required)
     }
+    private fun plateIn(draft: ReviewDraft): Boolean {
+        val shown = PlateClasses.text(draft.plate, draft.plateClass)
+        return if (draft.plateClass == PlateClass.REGULAR) Regex("(?<![0-9])" + shown + "(?![0-9])").containsMatchIn(draft.exactHebrewText)
+        else {
+            // The police marker is a Hebrew letter, so it must not be the first letter of a longer word.
+            val after = if (draft.plateClass == PlateClass.POLICE) "(?![0-9\\u05D0-\\u05EA])" else "(?![0-9])"
+            Regex("(?<![0-9A-Za-z])" + Regex.escape(shown) + after).containsMatchIn(draft.exactHebrewText)
+        }
+    }
     /** Review-visible check. No transport silently appends a plate. */
     fun descriptionContainsPlate(draft: ReviewDraft): Boolean = !draft.needsPlate() ||
-        draft.plate.matches(Regex("[0-9]{7,8}")) && Regex("(?<![0-9])" + draft.plate + "(?![0-9])").containsMatchIn(draft.exactHebrewText)
+        PlateClasses.ready(draft.plate, draft.plateClass) && plateIn(draft)
 }

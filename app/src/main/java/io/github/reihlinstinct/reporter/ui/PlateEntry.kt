@@ -4,6 +4,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import io.github.reihlinstinct.reporter.core.PlateClass
 import io.github.reihlinstinct.reporter.core.ReviewDraft
 
 /** Formatting is display-only. Draft, digest, OCR and transport keep ASCII digits. */
@@ -22,6 +23,15 @@ object PlateEntry : VisualTransformation {
     fun accept(previous: String, input: String): String =
         if (input.all { it.isWhitespace() || it == '-' || it == '\u200E' || it == '\u200F' ||
                 Character.getType(it) == Character.DECIMAL_DIGIT_NUMBER.toInt() }) digits(input)
+        else previous
+    /**
+     * Manual entry per class. Police also allows hyphens between the digits (the mem is added by the app, never typed).
+     * Regular, CD and CC use [accept]: digits only, letters reject the edit.
+     */
+    fun acceptFor(plateClass: PlateClass, previous: String, input: String): String =
+        if (plateClass != PlateClass.POLICE) accept(previous, input)
+        else if (input.all { it == '-' || it.isWhitespace() || Character.getType(it) == Character.DECIMAL_DIGIT_NUMBER.toInt() })
+            buildString { input.forEach { if (it == '-') append('-') else if (!it.isWhitespace()) append(digits(it.toString())) } }.take(12)
         else previous
     private fun breaks(length: Int) = if (length > 7) listOf(3, 5) else listOf(2, 5)
     fun format(value: String): String = buildString {
@@ -45,7 +55,7 @@ object PlateEntry : VisualTransformation {
     /** Only one unambiguous valid candidate, never overwrite typing during async OCR. */
     fun prefill(draft: ReviewDraft, candidates: List<String>, before: String): ReviewDraft {
         val valid = candidates.filter { it.matches(Regex("[0-9]{7,8}")) }.distinct()
-        return if (before.isBlank() && draft.plate == before && valid.size == 1 &&
+        return if (draft.plateClass == PlateClass.REGULAR && before.isBlank() && draft.plate == before && valid.size == 1 &&
             draft.needsPlate())
             draft.edit(plate = valid.single()) else draft
     }

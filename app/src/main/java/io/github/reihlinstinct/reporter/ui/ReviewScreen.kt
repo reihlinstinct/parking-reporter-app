@@ -15,11 +15,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.Role
+import io.github.reihlinstinct.reporter.core.PlateClass
+import io.github.reihlinstinct.reporter.core.PlateClasses
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
@@ -56,6 +63,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var draft by remember(initial.evidence.stableId) { mutableStateOf(policy(ReportTime.forSave(initial))) }
     LaunchedEffect(initial) { draft = policy(ReportTime.forSave(initial)) }
     LaunchedEffect(topicSnapshot, plateEnables) { draft = policy(draft) }
+    val registryPlate = if (draft.plateClass == PlateClass.REGULAR) draft.plate else ""
     var latitude by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedLatitude?.toString().orEmpty()) }
     var longitude by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedLongitude?.toString().orEmpty()) }
     var editing by remember(initial.evidence.stableId) { mutableStateOf(false) }
@@ -221,12 +229,13 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         Text(s.t("review.category_note"), style = MaterialTheme.typography.bodySmall)
         if (!editing) {
             if (draft.needsPlate()) {
-                if (IsraeliPlateStyle.isRegular(draft.plate)) IsraeliPlate(draft.plate, reviewPlateText(s, draft.plate), Modifier.testTag("review-plate"))
+                if (draft.plateClass != PlateClass.REGULAR && draft.plate.isNotBlank()) SpecialPlate(PlateClasses.text(draft.plate, draft.plateClass), draft.plateClass, reviewPlateClassText(s, draft), Modifier.testTag("review-plate"))
+                else if (IsraeliPlateStyle.isRegular(draft.plate)) IsraeliPlate(draft.plate, reviewPlateText(s, draft.plate), Modifier.testTag("review-plate"))
                 else Text(reviewPlateText(s, draft.plate), style = MaterialTheme.typography.titleMedium)
-                RegistryStatus(draft.plate, registryLookup)
+                RegistryStatus(registryPlate, registryLookup)
                 if (recognizing) { LinearProgressIndicator(Modifier.fillMaxWidth()); Text(s.t("review.ocr.analyzing")) }
                 Text(ocrStatus?.let { s.t(it) }.orEmpty(), style = MaterialTheme.typography.bodySmall)
-                plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate) }) { Text(reviewPlateSuggestionText(s, plate)) } }
+                plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate, plateClass = PlateClass.REGULAR) }) { Text(reviewPlateSuggestionText(s, plate)) } }
             }
             Text(reviewAddressText(s, draft.address))
             if (draft.address.isBlank() && draft.evidence.latitude != null && draft.evidence.longitude != null) {
@@ -249,14 +258,29 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         Row { Checkbox(checked = useGoogle, enabled = !recognizing, onCheckedChange = { useGoogle = it; plates = emptyList(); ocrStatus = null }); Text(s.t("review.edit.use_mlkit")) }
         Button(enabled = image != null && !recognizing, onClick = { scope.launch { recognize() } }, modifier = Modifier.fillMaxWidth()) { Text(s.t(if (recognizing) "review.edit.recognizing" else "review.edit.suggest_plate")) }
         Text(ocrStatus?.let { s.t(it) }.orEmpty())
-        plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate) }) { Text(reviewPlateSuggestionText(s, plate)) } }
-        if (draft.needsPlate()) OutlinedTextField(draft.plate, { plateEdits++; draft = draft.edit(plate = PlateEntry.accept(draft.plate, it)) }, singleLine = true,
-            isError = draft.plate.isNotBlank() && !draft.plate.matches(Regex("[0-9]{7,8}")),
-            visualTransformation = PlateEntry, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, autoCorrectEnabled = false, imeAction = ImeAction.Done),
+        plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate, plateClass = PlateClass.REGULAR) }) { Text(reviewPlateSuggestionText(s, plate)) } }
+        // Plate type picker: only here (after tapping edit), nothing is detected. Changing the type clears the plate.
+        if (draft.needsPlate()) {
+            Text(s.t("review.plate_class.title"), style = MaterialTheme.typography.labelLarge)
+            Column(Modifier.selectableGroup()) {
+                listOf(PlateClass.REGULAR to s.t("review.plate_class.regular"), PlateClass.POLICE to s.t("review.plate_class.police"),
+                    PlateClass.DIPLOMATIC_CD to s.t("review.plate_class.cd"), PlateClass.CONSULAR_CC to s.t("review.plate_class.cc")).forEach { (plateClass, label) ->
+                    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(selected = draft.plateClass == plateClass, role = Role.RadioButton,
+                        onClick = { if (draft.plateClass != plateClass) { plateEdits++; draft = draft.edit(plate = "", plateClass = plateClass, text = PlateClasses.withoutPlateLines(draft.exactHebrewText, draft.plate, draft.plateClass)) } }),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = draft.plateClass == plateClass, onClick = null)
+                        Text(label, Modifier.padding(start = 8.dp))
+                    }
+                }
+            }
+        }
+        if (draft.needsPlate()) OutlinedTextField(draft.plate, { plateEdits++; draft = draft.edit(plate = PlateEntry.acceptFor(draft.plateClass, draft.plate, it)) }, singleLine = true,
+            isError = draft.plate.isNotBlank() && !PlateClasses.ready(draft.plate, draft.plateClass),
+            visualTransformation = if (draft.plateClass == PlateClass.REGULAR) PlateEntry else VisualTransformation.None, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, autoCorrectEnabled = false, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }),
             textStyle = MaterialTheme.typography.titleLarge.copy(textDirection = TextDirection.Ltr),
             label = { Text(s.t("review.edit.plate_field")) }, modifier = Modifier.width(216.dp))
-        RegistryStatus(draft.plate, registryLookup)
+        RegistryStatus(registryPlate, registryLookup)
         }
         OutlinedTextField(draft.address, {
             // Editing the field labeled "רחוב ומספר בית שאישרת" IS the explicit
@@ -340,9 +364,9 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         val plateInDescription = io.github.reihlinstinct.reporter.core.PlatePolicy.descriptionContainsPlate(draft)
         if (draft.needsPlate() && !plateInDescription) {
             Text(s.t("registry.plate_text_required"), Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
-            TextButton(enabled = draft.plate.matches(Regex("[0-9]{7,8}")), onClick = {
+            TextButton(enabled = PlateClasses.ready(draft.plate, draft.plateClass), onClick = {
                 // User explicitly inserts it here, before seeing/confirming the outgoing text.
-                draft = draft.edit(text = s.t("registry.plate_text", mapOf("plate" to draft.plate)) + "\n" + draft.exactHebrewText)
+                draft = draft.edit(text = s.t("registry.plate_text", mapOf("plate" to PlateClasses.text(draft.plate, draft.plateClass))) + "\n" + draft.exactHebrewText)
             }) { Text(s.t("registry.insert_plate")) }
         }
         if (!draft.needsPlate()) Text(s.t("plate_categories.enable_hint"), style = MaterialTheme.typography.bodySmall)
