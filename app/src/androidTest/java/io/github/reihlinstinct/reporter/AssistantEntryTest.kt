@@ -10,6 +10,8 @@ import androidx.appfunctions.ExecuteAppFunctionRequest
 import androidx.appfunctions.ExecuteAppFunctionResponse
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 import org.junit.Assume.assumeTrue
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.reihlinstinct.reporter.assistant.AssistantEntry
@@ -65,17 +67,30 @@ class AssistantEntryTest {
             }
             assertTrue("AppFunction must become indexed within 30 seconds", indexed)
             val request = ExecuteAppFunctionRequest(context.packageName, AssistantEntry.FUNCTION_ID, AppFunctionData.EMPTY)
-            val response = manager!!.executeAppFunction(request)
-            assertTrue("System invocation must succeed: $response", response is ExecuteAppFunctionResponse.Success)
-            val action = (response as ExecuteAppFunctionResponse.Success).returnValue.getParcelable(
-                ExecuteAppFunctionResponse.Success.PROPERTY_RETURN_VALUE, PendingIntent::class.java)
+            // Stock API36 legacy index has no custom-function metadata for Jetpack's caller
+            // reader. Invoke the REAL platform binder, not a service method or a mock.
+            val platform = context.getSystemService(android.app.appfunctions.AppFunctionManager::class.java)
+            suspend fun invoke(): Result<android.app.appfunctions.ExecuteAppFunctionResponse> = suspendCancellableCoroutine { cont ->
+                val signal = android.os.CancellationSignal()
+                cont.invokeOnCancellation { signal.cancel() }
+                platform.executeAppFunction(request.toPlatformExecuteAppFunctionRequest(), Runnable::run, signal,
+                    object : android.os.OutcomeReceiver<android.app.appfunctions.ExecuteAppFunctionResponse, android.app.appfunctions.AppFunctionException> {
+                        override fun onResult(value: android.app.appfunctions.ExecuteAppFunctionResponse) { cont.resume(Result.success(value)) }
+                        override fun onError(error: android.app.appfunctions.AppFunctionException) { cont.resume(Result.failure(error)) }
+                    })
+            }
+            val response = invoke()
+            assertTrue("Actual platform system invocation must succeed: $response", response.isSuccess)
+            // rc01 AppFunctionData parcelable encoding is property/<return-key> in extras.
+            val action = response.getOrThrow().extras.getParcelable(
+                "property/" + ExecuteAppFunctionResponse.Success.PROPERTY_RETURN_VALUE, PendingIntent::class.java)
             assertNotNull("System must return an action, never submit", action)
             assertTrue(action!!.isImmutable)
             assertEquals(context.packageName, action.creatorPackage)
             // Do not send the action: this proof never captures a photo or files a report.
             assertTrue(AssistantEntry.setEnabled(context, false))
-            val disabled = manager.executeAppFunction(request)
-            assertTrue("System must reject after revocation", disabled is ExecuteAppFunctionResponse.Error)
+            val disabled = invoke()
+            assertTrue("Actual system must reject after revocation", disabled.isFailure)
         } finally {
             store.save(false)
             AssistantEntry.setEnabled(context, false)

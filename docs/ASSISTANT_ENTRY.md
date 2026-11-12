@@ -39,3 +39,15 @@ Evidence: API36 logcat `AppSearchAppsUtil ... Failed to get property`, followed 
 function-does-not-exist, and official platform AppsUtil.java lines355-380:
 https://android.googlesource.com/platform/packages/modules/AppSearch/+/refs/heads/android16-release/service/java/com/android/server/appsearch/appsindexer/AppsUtil.java
 The required real manager invocation/revocation test remains enabled, not skipped.
+
+### Stock API36 discovery limit
+
+The rc01 Jetpack caller metadata reader returns null for custom, schemaless
+functions on a legacy AppSearch index (AppSearchAppFunctionReader's
+getAppFunctionComponentsMetadata), even when system indexing and enable succeed.
+The integration gate therefore invokes the real Android platform manager binder
+on API36, checks the immutable action's creator, then verifies revocation on the
+same binder. It does not invoke the service directly or simulate execution.
+This does not prove Gemini/other Jetpack callers discover custom functions on
+stock API36. Do not advertise that until tested on a dynamic-schema indexer.
+Pinned rc01 sources: https://dl.google.com/dl/android/maven2/androidx/appfunctions/appfunctions/1.0.0-rc01/appfunctions-1.0.0-rc01-sources.jar
