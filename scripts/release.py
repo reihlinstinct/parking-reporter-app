@@ -56,6 +56,11 @@ def main() -> int:
     texts = [subject for _, subject in subjects]
     breaking = any(re.match(r"^[A-Za-z]+(\([^)]*\))?!:", s) or "BREAKING CHANGE" in s for s in texts)
     feat = any(re.match(r"^feat(\([^)]*\))?:", s) for s in texts)
+    fix = any(re.match(r"^fix(\([^)]*\))?:", s) for s in texts)
+    if os.environ.get("RELEASE_REQUIRE_FEAT_OR_FIX") and not (breaking or feat or fix):
+        print(f"Daily run: no feat/fix/breaking commit since {tag}; skipping.")
+        emit("released", "false")
+        return 0
     kind = "major" if breaking else "minor" if feat else "patch"
     version = tag.lstrip("v")
     major, minor, patch = (int(part) for part in version.split("."))
