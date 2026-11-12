@@ -50,6 +50,10 @@
     "docs": {
       "allow": [
         "*.md"
+      ],
+      "allow_paths": [
+        "docs/assets/disability_tag_triangle.svg",
+        "docs/assets/disability_tag_wheelchair.svg"
       ]
     },
     "gradle": {

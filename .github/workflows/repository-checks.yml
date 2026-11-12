@@ -64,6 +64,8 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_namespace_upgrade_workflow.py' -v
       - name: Encrypted live input bundle regression tests
         run: python3 -m unittest discover -s tests -p 'test_live_bundle.py' -v
+      - name: Disability tag vector parity and contrast tests
+        run: python3 -m unittest discover -s tests -p 'test_disability_tag_vectors.py' -v
       - name: Emulator health gate regression tests
         run: python3 -m unittest discover -s tests -p test_emulator_preflight.py
       - name: Offline submit preflight and VPN regression tests
