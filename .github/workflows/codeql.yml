@@ -1,6 +1,8 @@
 name: CodeQL
 # Issue #395: Default setup's autobuild ran only :app:clean, so java-kotlin analysis saw no code.
 # Advanced setup with an explicit compile. Weekly and manual only, to save Actions minutes.
+# Default setup must be off before the first run (uploads are rejected while it is on).
+# Evidence to close #395: the analyze log for java-kotlin shows a non-zero count of extracted Kotlin files.
 on:
   schedule:
     - cron: "17 3 * * 0"

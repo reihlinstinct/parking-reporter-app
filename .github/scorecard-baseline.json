@@ -63,7 +63,7 @@
       "scope": "analyze",
       "evidence": "security-events: write",
       "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/395",
-      "reason": "CodeQL advanced setup (#395) needs security-events: write to upload results. Job-scoped, top level stays read-all, runs only on schedule and workflow_dispatch from main, no PAT. Replaces Default setup, which is turned off only after this workflow's first run succeeds."
+      "reason": "CodeQL advanced setup (#395) needs security-events: write to upload results. Job-scoped, top level stays read-all, runs only on schedule and workflow_dispatch from main, no PAT. Replaces Default setup. Order: Default setup is turned off first (owner-approved), because code scanning rejects advanced-workflow uploads while Default setup is on; this workflow is then dispatched once, and Default setup is turned back on if that run fails."
     }
   ]
 }
