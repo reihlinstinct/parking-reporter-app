@@ -207,7 +207,6 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         }
         compose.onNodeWithText("רחוב ומספר בית שאישרת").performScrollTo().performTextReplacement(fields.address)
         compose.onNodeWithText("הטקסט המדויק לבדיקה").performScrollTo().performTextReplacement(fields.text)
-        compose.onNodeWithText("זמן הצילום (24 שעות)").performScrollTo().performTextReplacement(io.github.reihlinstinct.reporter.ui.ReviewTime.display(fields.capturedAtIso))
         // Location comes from the original photo EXIF, never hidden UI injection.
         // The synthetic provider supplies known synthetic EXIF; live uses real EXIF.
     }

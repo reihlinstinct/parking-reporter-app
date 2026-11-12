@@ -20,7 +20,7 @@ class ReviewDraftTest {
     }
     @Test fun evidenceCorrectionsRequireValidValues() {
         val d = draft()
-        assertFalse(d.confirmEvidence("2026-01-01T12:00:00", 31.0, 35.0).isReady())
+        assertTrue(d.confirmEvidence("2026-01-01T12:00:00", 31.0, 35.0).isReady())
         assertFalse(d.confirmEvidence("2026-01-01T12:00:00Z", 91.0, 35.0).isReady())
         assertTrue(d.confirmEvidence("2026-01-01T12:00:00Z", 31.0, 35.0).isReady())
     }

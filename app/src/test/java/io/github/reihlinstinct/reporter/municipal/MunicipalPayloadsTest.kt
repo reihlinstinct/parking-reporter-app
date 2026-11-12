@@ -171,6 +171,9 @@ class MunicipalPayloadsTest {
         assertEquals(1, report["Language"])
         assertEquals("ApplicationCaseNumber_VAL", report["ApplicationCaseNumber"])
         assertTrue(report.keys.first() == "CaseDescription")
+        assertEquals(setOf("CaseDescription", "CaseSubjectCode", "CaseStreetCode", "CaseStreetName",
+            "CaseHouseNumber", "CaseAddressText", "CoordinateX", "CoordinateY", "Language",
+            "ApplicationCaseNumber"), report.keys) // City contract has no capture-time field.
     }
 
     @Test

@@ -36,7 +36,7 @@ object EncryptedPackage {
         return JSONObject().put("schema", 1).put("id", draft.evidence.stableId)
             .put("original_sha256", draft.evidence.originalSha256).put("outgoing_sha256", sha256(jpeg))
             .put("review_digest", draft.digest()).put("plate", draft.plate).put("address", draft.address)
-            .put("subject", draft.subject).put("exact_text", draft.exactHebrewText).put("time", draft.confirmedTime)
+            .put("subject", draft.subject).put("exact_text", draft.exactHebrewText).put("time", io.github.reihlinstinct.reporter.core.ReportTime.forSend(draft).confirmedTime)
             .put("latitude", draft.confirmedLatitude).put("longitude", draft.confirmedLongitude)
             .put("reporter", JSONObject().put("first", reporter.firstName).put("last", reporter.lastName)
                 .put("phone", reporter.phone).put("id", reporter.idNumber).put("email", reporter.email))

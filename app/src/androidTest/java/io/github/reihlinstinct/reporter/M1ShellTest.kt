@@ -174,7 +174,7 @@ class M1ShellTest {
         compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         compose.onNodeWithText("חנייה אסורה - חנייה על מדרכה").assertExists()
         compose.onNodeWithText("sidewalk_parking").assertDoesNotExist()
-        compose.onNodeWithText("זמן: \u206601/01/2026 14:00\u2069").assertExists()
+        compose.onNodeWithText("זמן: \u206601/01/2026 14:00\u2069").assertDoesNotExist()
     }
     @Test fun offlineEncryptedDemoAndDurableDuplicateCheckpoint() {
         assertTrue(io.github.reihlinstinct.reporter.intake.SyntheticIntakeDemo.run().contains("הבדיקה הסינתטית הצליחה"))

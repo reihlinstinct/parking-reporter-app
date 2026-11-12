@@ -28,9 +28,9 @@ data class ReviewDraft(
     val confirmedLatitude: Double? = evidence.latitude,
     val confirmedLongitude: Double? = evidence.longitude,
 ) {
-    fun isReady(): Boolean = unresolved.isEmpty() &&
+    fun isReady(): Boolean = (unresolved - ReportTime.retiredWarnings).isEmpty() &&
         TopicIdentity.isKnownShape(subject) && (if (TopicIdentity.needsPlate(subject)) plate.matches(Regex("[0-9]{7,8}")) else plate.isEmpty()) && address.isNotBlank() &&
-        exactHebrewText.isNotBlank() && validTime(confirmedTime) &&
+        exactHebrewText.isNotBlank() &&
         confirmedLatitude?.let { it.isFinite() && it in -90.0..90.0 } == true &&
         confirmedLongitude?.let { it.isFinite() && it in -180.0..180.0 } == true
     fun digest(): String {
@@ -42,9 +42,6 @@ data class ReviewDraft(
         return MessageDigest.getInstance("SHA-256").digest(canonical.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
     }
-    private fun validTime(value: String?): Boolean = try {
-        java.time.OffsetDateTime.parse(value); true
-    } catch (_: Exception) { false }
     fun confirmEvidence(time: String, latitude: Double?, longitude: Double?): ReviewDraft =
         copy(confirmedTime = time, confirmedLatitude = latitude, confirmedLongitude = longitude,
             unresolved = emptySet())

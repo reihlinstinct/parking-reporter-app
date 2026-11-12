@@ -42,7 +42,6 @@ enum class ReviewWarning(val code: String, val key: String) {
 /** The questions AppShell attaches to a new draft, as codes (same rules and order as before PR-2b). */
 internal fun initialReviewWarnings(evidence: Evidence): Set<String> = buildSet {
     if (evidence.latitude == null) add(ReviewWarning.MISSING_GPS.code)
-    if (evidence.capturedAtIso == null) add(ReviewWarning.MISSING_TIME.code) else add(ReviewWarning.TIMEZONE_NEEDS_CONFIRMATION.code)
     add(ReviewWarning.ADDRESS_NEEDS_CONFIRMATION.code)
 }
 

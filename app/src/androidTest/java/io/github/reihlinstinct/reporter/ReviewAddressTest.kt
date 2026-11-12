@@ -63,16 +63,16 @@ class ReviewAddressTest {
         }
     }
 
-    @Test fun localTimeFieldKeepsOriginalSecondsAndRemovesRedundantNotes() {
-        val initial = draft().copy(address = "רחוב בדיקה 12", confirmedTime = "2026-01-01T12:00:47+02:00")
+    @Test fun timeControlsAreAbsentAndOriginalMetadataIsKept() {
+        val initial = draft().copy(address = "רחוב בדיקה 12", evidence = draft().evidence.copy(capturedAtIso = "2026-01-01T12:00:47+02:00"), confirmedTime = "2026-01-01T12:00:47+02:00")
         var saved: ReviewDraft? = null
         compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {}, addressLookup = { _, _ -> emptyList() }, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
-        compose.onNodeWithText("זמן: \u206601/01/2026 12:00\u2069").assertExists()
+        compose.onNodeWithText("זמן: \u206601/01/2026 12:00\u2069").assertDoesNotExist()
         compose.onNodeWithText("כל שינוי מבטל אישור", substring = true).assertDoesNotExist()
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
         compose.onNodeWithText("הזמן מוצג לפי השעון המקומי בירושלים.", substring = true).assertDoesNotExist()
         compose.onNodeWithText("בדוק את הרחוב ומספר הבית", substring = true).assertDoesNotExist()
-        compose.onNodeWithText("זמן הצילום (24 שעות)").performScrollTo()
+        compose.onNodeWithText("זמן הצילום (24 שעות)").assertDoesNotExist()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         File(context.filesDir, "review-local-time-synthetic.png").outputStream().use {
             compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
@@ -89,9 +89,10 @@ class ReviewAddressTest {
         compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {},
             topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
-        compose.onNodeWithText("זמן הצילום (24 שעות)").performScrollTo().assertExists()
+        compose.onNodeWithText("זמן הצילום (24 שעות)").assertDoesNotExist()
         compose.onNodeWithText("01/01/2026 12:00", substring = true).assertDoesNotExist()
-        compose.onNodeWithText("12/11/2026 05:30").assertExists()
+        compose.onNodeWithText("12/11/2026 05:30").assertDoesNotExist()
+        compose.onNodeWithText("שמור טיוטה").performScrollTo()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         File(context.filesDir, "review-no-stray-time-example.png").outputStream().use {
             compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
