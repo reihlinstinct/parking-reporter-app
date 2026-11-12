@@ -69,3 +69,14 @@ flowchart LR
 `DisabilityRegistryClient` queries the separate public CKAN resource `c8b9f9c8-4612-4068-934f-d4acd2e3c06e`, fields `MISPAR RECHEV` and `SUG TAV`, using an exact numeric plate filter and bounded response. Official schema: https://data.gov.il/api/3/action/resource_show?id=c8b9f9c8-4612-4068-934f-d4acd2e3c06e . The numeric type interpretation is owner-confirmed (1 triangle,2 wheelchair), not an official published dictionary. Unknown/missing/fractional/string codes remain neutral unknown; failed requests are never negative checks. No expiry/IDF semantics are inferred.
 
 Adapter is blocking and must run off-main-thread. No retries/redirects/logging; 1.8-second whole-call timeout, per-client in-memory five-minute128-entry TTL cache and deny-rather-than-wait rate limiter. UI orchestration and stale-edit guards are a separate change. No sender/coordinator invokes this adapter or waits on it. No live report or plate lookup occurs in unit tests.
+
+## Inactive-vehicle fallback
+
+For the official active dataset only, an exact empty result is followed by an
+exact read-only lookup in inactive resource `f6efe89a-fb3d-43a4-bb61-9bf12a9b9099`.
+Active success wins; active errors never trigger fallback or become absence.
+The same restricted fields are requested, not owner/chassis data. UI total
+6.5second deadline still applies across both attempts. No inactive lookup for
+custom resource IDs. Recorded public1912929 fixture (checked2026-11-12) has
+licence2024-05-27 and lasttest2023-11-22; fixture is not live evidence.
+Source: https://data.gov.il/api/3/action/datastore_search?resource_id=f6efe89a-fb3d-43a4-bb61-9bf12a9b9099&filters=%7B%22mispar_rechev%22%3A%221912929%22%7D&limit=2

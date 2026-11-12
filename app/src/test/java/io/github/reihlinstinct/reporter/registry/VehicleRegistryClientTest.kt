@@ -397,4 +397,22 @@ class VehicleRegistryClientTest {
         assertEquals("https://data.gov.il", config.baseUrl)
         assertNull(config.apiKey)
     }
+    @Test fun emptyActiveFallsBackToInactiveRecordedExpiredCarButErrorsDont() {
+        MockWebServer().use { server ->
+            val client = VehicleRegistryClient(VehicleRegistryConfig(
+                VehicleRegistryConfig.KNOWN_VEHICLE_RESOURCE_ID, baseUrl = server.url("/").toString(),
+                minRequestIntervalMillis = 0, cacheTtlMillis = 0))
+            server.enqueue(MockResponse().setBody("""{"success":true,"result":{"records":[]}}"""))
+            server.enqueue(MockResponse().setBody("""{"success":true,"result":{"records":[{"mispar_rechev":1912929,"tokef_dt":"2024-05-27","mivchan_acharon_dt":"2023-11-22","kinuy_mishari":"ALMERA","shnat_yitzur":1998}]}}"""))
+            val record = (client.lookup("1912929") as VehicleLookupResult.Found).record
+            assertEquals(LocalDate.of(2024,5,27), record.licenceValidUntil)
+            assertEquals(LicenceStatus.EXPIRED, record.licenceStatus(LocalDate.of(2026,11,12)))
+            assertEquals(VehicleRegistryConfig.KNOWN_VEHICLE_RESOURCE_ID, server.takeRequest().requestUrl!!.queryParameter("resource_id"))
+            assertEquals(VehicleRegistryClient.INACTIVE_VEHICLE_RESOURCE_ID, server.takeRequest().requestUrl!!.queryParameter("resource_id"))
+            server.enqueue(MockResponse().setResponseCode(503))
+            assertTrue(client.lookup("1912929") is VehicleLookupResult.Error)
+            assertEquals(3, server.requestCount)
+        }
+    }
+
 }

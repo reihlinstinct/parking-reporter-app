@@ -156,4 +156,15 @@ class RegistryReviewTest {
         screenshot("registry-unknown-licence.png")
     }
 
+    /** Recorded public registry data from2026-11-12, NOT a live network test. No owner fields. */
+    @Test fun recordedInactiveNissanShowsRedExpiredWithoutTag() {
+        val lookup: RegistryLookup = { _, _ -> RegistrySnapshot(DisabilityLookupResult.NotFound,
+            VehicleLookupResult.Found(VehicleRecord(PlateNumber.parse("1912929")!!, LocalDate.of(2024,5,27),
+                LocalDate.of(2023,11,22), null, "ALMERA", null, 1998)), Instant.parse("2026-11-12T09:46:00Z")) }
+        compose.setContent { AppTheme { Surface(Modifier.fillMaxSize()) { RegistryStatus("1912929", lookup) } } }
+        compose.onNodeWithText("רישיון הרכב פג תוקף לפי המאגר").assertExists()
+        compose.onNodeWithText("לא נמצא רישום תג במאגר").assertDoesNotExist()
+        screenshot("registry-recorded-inactive-1912929-expired.png")
+    }
+
 }

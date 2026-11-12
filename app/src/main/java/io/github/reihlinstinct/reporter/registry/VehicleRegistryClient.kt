@@ -146,14 +146,17 @@ class VehicleRegistryClient(
         val plate = PlateNumber.parse(rawPlate) ?: return VehicleLookupResult.Error(LookupErrorKind.INVALID_PLATE)
         cache.get(plate)?.let { return it }
         if (!limiter.tryAcquire()) return VehicleLookupResult.Error(LookupErrorKind.RATE_LIMITED)
-        val result = fetch(plate)
+        val active = fetch(plate)
+        // Only a verified empty active result allows inactive lookup. Errors are not absence.
+        val result = if (active is VehicleLookupResult.NotFound && config.resourceId == VehicleRegistryConfig.KNOWN_VEHICLE_RESOURCE_ID)
+            fetch(plate, INACTIVE_VEHICLE_RESOURCE_ID) else active
         if (result is VehicleLookupResult.Found || result is VehicleLookupResult.NotFound) cache.put(plate, result)
         return result
     }
 
-    private fun fetch(plate: PlateNumber): VehicleLookupResult {
+    private fun fetch(plate: PlateNumber, resourceId: String = config.resourceId): VehicleLookupResult {
         val url = searchUrl.newBuilder()
-            .addQueryParameter("resource_id", config.resourceId)
+            .addQueryParameter("resource_id", resourceId)
             .addQueryParameter("filters", JSONObject().put(FIELD_PLATE, plate.digits.toLong()).toString())
             .addQueryParameter("fields", FIELDS.joinToString(","))
             .addQueryParameter("limit", "1")
@@ -214,6 +217,7 @@ class VehicleRegistryClient(
     }
 
     companion object {
+        const val INACTIVE_VEHICLE_RESOURCE_ID = "f6efe89a-fb3d-43a4-bb61-9bf12a9b9099"
         const val SEARCH_PATH = "/api/3/action/datastore_search"
         /** CKAN's API key header. Sent only when [VehicleRegistryConfig.apiKey] is non-null. */
         const val API_KEY_HEADER = "Authorization"
