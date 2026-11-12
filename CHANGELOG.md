@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.48.7] - 2026-11-12
+
+### Other changes
+
+- docs(github): PR template gets an Acceptance criteria section next to the pre-merge checklist; bug template uses checkboxes (#415) (3ec78a1)
+
 ## [0.48.6] - 2026-11-12
 
 ### Other changes
