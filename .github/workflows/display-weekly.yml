@@ -52,10 +52,7 @@ jobs:
             python3 scripts/emulator_preflight.py --report-dir app/build/reports/namespace-upgrade
             "$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)" verify --print-certs upgrade-baseline/app/build/outputs/apk/debug/app-debug.apk > app/build/reports/namespace-upgrade/old-certificate.txt
             "$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)" verify --print-certs app/build/outputs/apk/debug/app-debug.apk > app/build/reports/namespace-upgrade/new-certificate.txt
-            grep 'Signer #1 certificate SHA-256 digest:' app/build/reports/namespace-upgrade/old-certificate.txt > app/build/reports/namespace-upgrade/old-digest.txt
-            grep 'Signer #1 certificate SHA-256 digest:' app/build/reports/namespace-upgrade/new-certificate.txt > app/build/reports/namespace-upgrade/new-digest.txt
-            test -s app/build/reports/namespace-upgrade/old-digest.txt
-            cmp app/build/reports/namespace-upgrade/old-digest.txt app/build/reports/namespace-upgrade/new-digest.txt
+            python3 scripts/check_upgrade_certificates.py app/build/reports/namespace-upgrade/old-certificate.txt app/build/reports/namespace-upgrade/new-certificate.txt > app/build/reports/namespace-upgrade/matching-certificate-sha256.txt
             adb install -r upgrade-baseline/app/build/outputs/apk/debug/app-debug.apk
             adb install -r upgrade-baseline/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             adb shell am instrument -w -r -e class il.sidewalks.reporter.NamespaceUpgradeSeedTest il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/namespace-upgrade/seed.txt
