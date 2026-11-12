@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.48.4] - 2026-11-12
+
+### Other changes
+
+- test+docs: compare the plate-flag fingerprint against parsed rows, point the KDoc at the app/helper differences (#385) (#412) (de4fec9)
+
 ## [0.48.3] - 2026-11-12
 
 ### Fixes
