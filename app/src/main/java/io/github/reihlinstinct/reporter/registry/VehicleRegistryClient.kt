@@ -168,7 +168,7 @@ class VehicleRegistryClient(
         } catch (_: IOException) {
             return VehicleLookupResult.Error(LookupErrorKind.NETWORK)
         }
-        return try { parse(body, plate) } catch (_: RuntimeException) { VehicleLookupResult.Error(LookupErrorKind.MALFORMED_RESPONSE) }
+        return try { parse(body, plate) } catch (_: org.json.JSONException) { VehicleLookupResult.Error(LookupErrorKind.MALFORMED_RESPONSE) } catch (_: RuntimeException) { VehicleLookupResult.Error(LookupErrorKind.MALFORMED_RESPONSE) }
     }
 
     private fun parse(body: String, plate: PlateNumber): VehicleLookupResult {
