@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.36.3] - 2026-11-12
+
+### Other changes
+
+- refactor(android): use project-owned source namespace, keep installed identity (#319) (58fee92)
+
 ## [0.36.2] - 2026-11-11
 
 ### Other changes
