@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.43.2] - 2026-11-12
+
+### Fixes
+
+- fix(home): show capture actions before long explanatory copy (#377) (ebe8904)
+
 ## [0.43.1] - 2026-11-12
 
 ### Fixes
