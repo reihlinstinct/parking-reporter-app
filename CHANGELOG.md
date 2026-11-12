@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.38.3] - 2026-11-12
+
+### Fixes
+
+- fix(intake): validate and bind one outgoing report time (#349) (c902dff)
+
 ## [0.38.2] - 2026-11-12
 
 ### Other changes
