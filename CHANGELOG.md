@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-11-12
+
+### Features
+
+- feat(assistant): typed startNewReportInCategory AppFunction, default off (#190 first slice) (#389) (bc3c71c)
+
 ## [0.43.6] - 2026-11-12
 
 ### Fixes
