@@ -28,6 +28,21 @@ class ReportTimeTest {
         assertEquals(original.evidence, sent.evidence)
         assertNull(sent.evidence.capturedAtIso)
     }
+    @Test fun sendAndExportReuseOneIntentTimeWithoutReadingClockAgain() {
+        val first = ReportTime.forSend(ReportTime.forSave(draft(null)), clock)
+        val noRead = object : Clock() {
+            override fun getZone() = ZoneOffset.UTC
+            override fun withZone(zone: java.time.ZoneId) = this
+            override fun instant(): Instant = error("second clock read")
+        }
+        assertEquals(first, ReportTime.forSend(first, noRead))
+    }
+    @Test fun packageTimestampGrammarIsExplicit() {
+        listOf("2026-11-12T05:30:41", "2026-11-12T05:30:41Z", "2026-11-12T05:30:41+02:00")
+            .forEach { assertTrue(ReportTime.validPackageTime(it)) }
+        listOf("", "tomorrow", "2026-02-30T10:00:00", "2026-11-12", "12/11/2026 05:30", "2026-11-12T25:00:00")
+            .forEach { assertFalse(ReportTime.validPackageTime(it)) }
+    }
     @Test fun addressAndLocationRequirementsStillApply() {
         assertFalse(ReportTime.forSave(draft(null)).copy(unresolved = setOf("address_needs_confirmation")).isReady())
         assertFalse(ReportTime.forSave(draft(null)).copy(confirmedLatitude = null).isReady())

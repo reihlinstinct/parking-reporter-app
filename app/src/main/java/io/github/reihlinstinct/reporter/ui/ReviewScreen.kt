@@ -300,7 +300,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 // semantics click no-opped silently. First proof point:
                 // does the click reach this lambda at all?
                 Log.i("SUBMIT_FLOW", "send onClick reached: ready=${draft.isReady()} submitting=$submitting")
-                onSubmit(ReportTime.forSend(draft))
+                onSubmit(ReportTime.forSend(ReportTime.forSave(draft)))
             }, modifier = sendModifier) { Text(s.t(if (submitting) "review.submit.sending" else "review.submit.button")) }
             if (submissionNote.isNotEmpty()) Text(submissionNote, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("submission-note"))
         } else {

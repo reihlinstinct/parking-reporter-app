@@ -10,15 +10,16 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class OfflineReceiverTest {
-    private class Fixture {
+    private class Fixture(time: String? = "2026-01-01T12:00:00Z", packageTime: String? = null) {
         init { HybridConfig.register(); SignatureConfig.register() }
         val receiver = KeysetHandle.generateNew(HybridKeyTemplates.ECIES_P256_HKDF_HMAC_SHA256_AES128_GCM)
         val device = KeysetHandle.generateNew(SignatureKeyTemplates.ECDSA_P256)
         val jpeg = byteArrayOf(-1, -40) + ByteArray(68_000) { 4 } + byteArrayOf(-1, -39)
         val report = EncryptedPackage.reviewedReport(
-            ReviewDraft(Evidence("synthetic-id", "a".repeat(64), "2026-01-01T12:00:00Z", 31.0, 35.0),
+            ReviewDraft(Evidence("synthetic-id", "a".repeat(64), time, 31.0, 35.0),
                 "1234567", "רחוב בדיקה 1", "sidewalk_parking", "בדיקה", emptySet()),
             ReporterSettings("synthetic", "reporter", "0000000", "000000000", "synthetic@example.invalid"), jpeg)
+        init { if (packageTime != null) report.put("time", packageTime) }
         val upload = EncryptedPackage.seal(report, jpeg, EncryptedPackage.approvalDigest(report), "test-receiver", "test-device",
             receiver.publicKeysetHandle.getPrimitive(HybridEncrypt::class.java), device.getPrimitive(PublicKeySign::class.java))
         fun open(parts: List<String> = (0 until upload.count).map { upload.chunk(it, 7) }, issue: Long = 7,
@@ -32,6 +33,13 @@ class OfflineReceiverTest {
         assertArrayEquals(f.jpeg, r.jpeg)
         assertEquals("synthetic-id", r.report.getString("id"))
         assertEquals("Received(redacted)", r.toString())
+    }
+    @Test fun offsetFreeAndMissingExifRoundtripAndMalformedSignedTimeRefused() {
+        assertEquals("2026-01-01T12:00:00", Fixture("2026-01-01T12:00:00").open().report.getString("time"))
+        assertTrue(ReportTime.validPackageTime(Fixture(null).open().report.getString("time")))
+        for (bad in listOf("tomorrow", "2026-02-30T12:00:00", "2026-01-01", "2026-01-01T25:00:00")) {
+            assertThrows(IllegalArgumentException::class.java) { Fixture(packageTime = bad).open() }
+        }
     }
     @Test fun wrongIssueKeysAndCompletionRejected() {
         val f = Fixture()
