@@ -151,7 +151,7 @@ jobs:
             cat "$HOME/.android/avd/test.ini" | tee app/build/reports/androidTests/environment/avd-target.txt
             grep -Fx 'target=android-37.0' "$HOME/.android/avd/test.ini"
             cat "$HOME/.android/avd/test.avd/config.ini" > app/build/reports/androidTests/environment/avd-config.txt
-            "$ANDROID_HOME/emulator/emulator" -version > app/build/reports/androidTests/environment/emulator-version.txt 2>&1
+            adb shell getprop ro.build.fingerprint > app/build/reports/androidTests/environment/guest-fingerprint.txt
             sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
