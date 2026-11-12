@@ -39,6 +39,9 @@ class SettingsScreenSecondSaveTest {
         compose.runOnIdle { assertEquals("first save callback", 1, saves) }
         compose.onNodeWithText("טלפון").performScrollTo().performTextReplacement("0500000001")
         compose.onNodeWithText("טלפון").assertTextContains("0500000001")
+        // Finish the IME transition before locating/tapping the scrolled save button.
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.waitForIdle()
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().performClick()
         compose.runOnIdle {
             assertEquals("second save callback", 2, saves)

@@ -26,6 +26,8 @@ class ReviewUnsavedBackTest {
         compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, { exits++ }) } }
         compose.onNodeWithText("ערוך").performClick()
         compose.onNodeWithText("מספר לוחית (ספרות בלבד)").performScrollTo().performTextReplacement("7654321")
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.waitForIdle()
         compose.onNodeWithText("חזור").performScrollTo().performClick()
         capture("review-unsaved-before-visible-assert.png")
         compose.onNodeWithText("יש שינויים שלא נשמרו").assertIsDisplayed()
@@ -33,7 +35,11 @@ class ReviewUnsavedBackTest {
         capture("review-unsaved-confirm-synthetic.png")
         compose.onNodeWithText("המשך לערוך").performClick()
         compose.onNodeWithText("7654321").performScrollTo().assertExists()
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.waitForIdle()
         compose.onNodeWithText("חזור").performScrollTo().performClick()
+        capture("review-unsaved-second-back-before-discard.png")
+        compose.onNodeWithText("יש שינויים שלא נשמרו").assertIsDisplayed()
         compose.onNodeWithText("בטל שינויים וחזור").performClick()
         compose.runOnIdle { assertEquals(1, exits); assertEquals(initial, saved) }
     }
@@ -56,6 +62,8 @@ class ReviewUnsavedBackTest {
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
         compose.waitForIdle()
         compose.runOnIdle { assertEquals("7654321", saved.plate) }
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.waitForIdle()
         compose.onNodeWithText("חזור").performScrollTo().performClick()
         compose.onNodeWithText("יש שינויים שלא נשמרו").assertDoesNotExist()
         compose.onNodeWithText("reopen-synthetic").performClick()
@@ -67,6 +75,8 @@ class ReviewUnsavedBackTest {
     @Test fun cleanExifTimestampNormalizationDoesNotInventUnsavedTimeEdits() {
         var exits = 0
         compose.setContent { AppTheme { ReviewScreen(draft().copy(confirmedTime = "2026-02-02T12:00:00+02:00"), null, {}, { exits++ }) } }
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.waitForIdle()
         compose.onNodeWithText("חזור").performScrollTo().performClick()
         compose.onNodeWithText("יש שינויים שלא נשמרו").assertDoesNotExist()
         compose.runOnIdle { assertEquals(1, exits) }
