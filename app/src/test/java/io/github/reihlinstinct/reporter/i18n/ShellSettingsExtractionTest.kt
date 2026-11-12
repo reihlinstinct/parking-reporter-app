@@ -161,7 +161,7 @@ class ShellSettingsExtractionTest {
         // SettingsScreen also links to the Licenses screen using that screen's own
         // title key (#163); it is not one of the two screens' shell./settings. keys.
         // Topic unlock reuses the same catalog texts as the picker (#301).
-        val ownUsed = used - "licenses.screen.title" - setOf("topics.connect_title", "topics.connection_needed") - setOf("setup.title", "setup.description", "setup.save_continue", "setup.later")
+        val ownUsed = used.filterNot { it.startsWith("plate_categories.") }.toSet() - "licenses.screen.title" - setOf("topics.connect_title", "topics.connection_needed") - setOf("setup.title", "setup.description", "setup.save_continue", "setup.later")
         // The expected key set is derived - catalog keys versus keys the two screens
         // use - so adding a catalog key and using it needs no test edit. Both
         // directions are checked with the mismatch named, sorted, one per line (the
@@ -262,7 +262,7 @@ class ShellSettingsExtractionTest {
         assertTrue(keysUsedIn("AppShell.kt").all { it.startsWith("shell.") || it in sharedTopicKeys })
         // The one allowed exception is the Licenses-screen link button (#163), which
         // shows that screen's own licenses.screen.title rather than duplicating it.
-        assertTrue(keysUsedIn("SettingsScreen.kt").all { it.startsWith("settings.") || it.startsWith("setup.") || it == "licenses.screen.title" })
+        assertTrue(keysUsedIn("SettingsScreen.kt").all { it.startsWith("settings.") || it.startsWith("setup.") || it.startsWith("plate_categories.") || it == "licenses.screen.title" })
     }
 
     @Test

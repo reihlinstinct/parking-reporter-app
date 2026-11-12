@@ -12,7 +12,7 @@ import java.security.MessageDigest
  * same canonical fingerprint (sha256 over the newline-joined, sorted
  * json.dumps([code, name, path], ensure_ascii=False) rows).
  */
-data class MunicipalSubject(val code: String, val name: String, val path: List<String>)
+data class MunicipalSubject(val code: String, val name: String, val path: List<String>, val plateRequired: Boolean? = null)
 
 data class MunicipalSubjects(
     val capturedAt: String,
@@ -69,8 +69,12 @@ data class MunicipalSubjects(
             for (i in 0 until pathArray.length()) {
                 path.add(pathArray.getString(i))
             }
-            return MunicipalSubject(code, name, path)
+            return MunicipalSubject(code, name, path, plateFlag(obj))
         }
+
+        /** Optional canonical metadata field. Refuse coercion of strings/numbers. */
+        fun plateFlag(obj: JSONObject): Boolean? = if (!obj.has("plateRequired") || obj.isNull("plateRequired")) null
+            else (obj.get("plateRequired") as? Boolean ?: throw IllegalArgumentException("Invalid plate flag"))
 
         /**
          * Canonical fingerprint identical to parking-report-helper
@@ -79,7 +83,7 @@ data class MunicipalSubjects(
          * joined with "\n", sha256 hex.
          */
         fun canonicalFingerprint(subjects: List<MunicipalSubject>): String {
-            val items = subjects.map { canonicalRow(it.code, it.name, it.path) }.sorted()
+            val items = subjects.map { canonicalRow(it.code, it.name, it.path) + (it.plateRequired?.let { flag -> "|plateRequired=$flag" } ?: "") }.sorted()
             val digest = MessageDigest.getInstance("SHA-256")
             return digest.digest(items.joinToString("\n").toByteArray(Charsets.UTF_8))
                 .joinToString("") { "%02x".format(it) }

@@ -19,7 +19,7 @@ class CityTopicCache(private val file: File, private val now: () -> Instant = In
         val array = root.getJSONArray("subjects")
         val topics = (0 until array.length()).map { i ->
             val row = array.getJSONObject(i); val path = row.getJSONArray("path")
-            MunicipalSubject(row.getString("code"), row.getString("name"), (0 until path.length()).map { path.getString(it) })
+            MunicipalSubject(row.getString("code"), row.getString("name"), (0 until path.length()).map { path.getString(it) }, MunicipalSubjects.plateFlag(row))
         }
         validate(topics)
         val fingerprint = MunicipalSubjects.canonicalFingerprint(topics)
@@ -37,7 +37,7 @@ class CityTopicCache(private val file: File, private val now: () -> Instant = In
         val checkedAt = now(); val fingerprint = MunicipalSubjects.canonicalFingerprint(topics)
         val rows = if (previous?.fingerprint == fingerprint) previous.topics else topics
         val array = JSONArray()
-        rows.forEach { array.put(JSONObject().put("code", it.code).put("name", it.name).put("path", JSONArray(it.path))) }
+        rows.forEach { array.put(JSONObject().put("code", it.code).put("name", it.name).put("path", JSONArray(it.path)).apply { it.plateRequired?.let { flag -> put("plateRequired", flag) } }) }
         val root = JSONObject().put("version", 1).put("checked_at", checkedAt.toString()).put("fingerprint", fingerprint).put("subjects", array)
         file.parentFile?.let { check(it.mkdirs() || it.isDirectory) }
         val temporary = File.createTempFile(file.name, ".tmp", file.parentFile)
@@ -47,6 +47,7 @@ class CityTopicCache(private val file: File, private val now: () -> Instant = In
     }
     companion object {
         private fun validate(topics: List<MunicipalSubject>) {
+            require(topics.groupBy { it.code }.values.all { rows -> rows.map { it.plateRequired }.distinct().size == 1 })
             require(topics.isNotEmpty() && topics.size <= 10000)
             require(topics.all { it.code.isNotEmpty() && it.code.all { c -> c in '0'..'9' } && it.name.isNotBlank() && it.name.length <= 2000 && it.path.size in 1..16 && it.path.all { p -> p.isNotBlank() && p.length <= 2000 } })
         }
@@ -59,7 +60,7 @@ class CityTopicCache(private val file: File, private val now: () -> Instant = In
                     require(name.isNotBlank())
                     if (node.has("subjectCode") && !node.isNull("subjectCode")) {
                         // City contract requires a string, never silently coerce numbers.
-                        rows += MunicipalSubject(node.get("subjectCode") as String, name, path + name)
+                        rows += MunicipalSubject(node.get("subjectCode") as String, name, path + name, MunicipalSubjects.plateFlag(node))
                         require(rows.size <= 10000)
                     }
                     if (node.has("children") && !node.isNull("children")) visit(node.getJSONArray("children"), path + name)

@@ -121,7 +121,7 @@ class FullFlowE2eTest {
             launchFlow(settings) { _ -> clientCalls++; error("must not create a client") }
             val driver = FlowDriver(compose)
             driver.driveToSaved(FlowFields(
-                text = "רכב חונה על המדרכה בתרחיש בדיקה סינתטי", plate = "1234567",
+                text = "רכב 1234567 חונה על המדרכה בתרחיש בדיקה סינתטי", plate = "1234567",
                 address = "רחוב בדיקה 1", capturedAtIso = "2026-01-01T12:00:00+02:00",
                 latitude = "31.77", longitude = "35.2137", categoryLabel = "חניה על המדרכה"))
             assertEquals(FlowDriver.SendOutcome.SUBMIT_FAILED, driver.tapSendAndAwaitOnce(5_000))
@@ -165,7 +165,7 @@ class FullFlowE2eTest {
                 }
             }
             val driver = FlowDriver(compose)
-            val text = "רכב חונה על המדרכה בתרחיש בדיקה סינתטי"
+            val text = "רכב 12345678 חונה על המדרכה בתרחיש בדיקה סינתטי"
             driver.driveToSaved(FlowFields(text, "12345678", "רחוב בדיקה 1",
                 "2026-01-01T12:00:00+02:00", "31.77", "35.2137", "חניה על המדרכה"))
             val before = row()
@@ -237,7 +237,7 @@ class FullFlowE2eTest {
                         s.municipalSubscriptionKey, s.municipalUsername, s.municipalPassword)
                 }
                 val driver = FlowDriver(compose)
-                val text = "רכב חונה על המדרכה בתרחיש בדיקה סינתטי"
+                val text = "רכב 12345678 חונה על המדרכה בתרחיש בדיקה סינתטי"
                 driver.driveToSaved(FlowFields(
                     text = text,
                     plate = "12345678",
@@ -380,7 +380,7 @@ class FullFlowE2eTest {
                 try {
                     val driver = FlowDriver(compose)
                     driver.driveToSaved(FlowFields(
-                        text = "רכב חונה על המדרכה בתרחיש בדיקה סינתטי",
+                        text = "רכב 12345678 חונה על המדרכה בתרחיש בדיקה סינתטי",
                         plate = "12345678",
                         address = "רחוב בדיקה 1",
                         capturedAtIso = "2026-01-01T12:00:00+02:00",
@@ -424,7 +424,7 @@ class FullFlowE2eTest {
                         s.municipalSubscriptionKey, s.municipalUsername, s.municipalPassword)
                 }
                 val driver = FlowDriver(compose)
-                val text = "רכב חונה על המדרכה בתרחיש בדיקה סינתטי"
+                val text = "רכב 12345678 חונה על המדרכה בתרחיש בדיקה סינתטי"
                 driver.driveToEdited(FlowFields(
                     text = text,
                     plate = "12345678",
@@ -472,7 +472,7 @@ class FullFlowE2eTest {
                 }
                 val driver = FlowDriver(compose)
                 driver.driveToEdited(FlowFields(
-                    text = "רכב חונה על המדרכה בתרחיש בדיקה סינתטי",
+                    text = "רכב 12345678 חונה על המדרכה בתרחיש בדיקה סינתטי",
                     plate = "12345678",
                     address = "רחוב בדיקה 1",
                     capturedAtIso = "2026-01-01T12:00:00+02:00",

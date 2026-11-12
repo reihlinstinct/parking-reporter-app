@@ -1,0 +1,46 @@
+## Request
+Show government-registry results directly below the relevant plate field: disability parking-tag status with a tag icon, plus whether the vehicle licence is expired. The reviewed plate must appear in the offense description.
+
+## Scope
+Separate from #330 so the approved single-report path stays unchanged. Only topics1144/1145 show plate and registry UI; unrelated city topics stay plate-less. Reuse the existing free public data.gov.il client and read-only access. No paid provider, signup, new credentials or private dataset.
+
+Existing VehicleRegistryClient reads licence dates but is not wired into UI. It does NOT yet implement disability-tag lookup; verify the official public resource/schema before adding that result. Never interpret failed/missing data as no tag or a valid licence. Show unknown/loading/error states, source and check time. A tag result is information, not a conclusion that parking is legal.
+
+Clear previous-plate results immediately on edit; prevent late callbacks from overwriting the current plate. Use bounded requests/cache/rate limiting and no plate logging. Accessible icon/text and live announcements, five UI languages.
+
+Ensure the reviewed plate is in the review-visible offense text before approval. Do not silently append at transport time or modify already approved text. Existing single SUV description already contains its exact plate.
+
+## Acceptance
+Mocked lookup success/not-found/error/expired/boundary-date/stale-edit tests, plate-required description tests, irrelevant-topic absence, and real-emulator screenshots/recording inspected before completion. Standard exact-head review and CI before merge. No real municipal filing in tests.
+
+## Catalog-driven plate requirements and user overrides
+Plate relevance must not be a release-bound hardcoded code list. Read a plate-required flag from validated catalog metadata when supplied, with1144/1145 only as bootstrap defaults for entries lacking that metadata. Bind identity to the stable city code, never the translated name or path. An advanced/secondary Settings control (not first-run or the main settings screen) lets the user additionally enable plate entry for any current catalog topic without a new app version; persist selected code overrides locally. Do not provide an override that disables an explicit required flag.
+
+A new/unknown code with no plate metadata and no user enable stays plate-less, clearly offering the advanced Settings enable path, not guessing from its label. Explicit catalog metadata takes precedence over bootstrap defaults; user enables are additive. A renamed label with the same code retains the override. A removed code retains a dormant override but cannot be selected or submitted from stale data; a replacement code is a new identity and never inherits the old code's setting silently. Never automatically remap codes from similar names. Validate/sanitize catalog flags, preserve last-good data on malformed refresh, and test all precedence, rename/removal/replacement and stale-result paths. #330 remains unchanged for the current approved single report.
+
+Opening the advanced plate-categories setting forces a fresh municipal catalog read every time, regardless of cache age. This screen works online only. Offline, its advanced-settings entry is grayed out with a short network-required reason; do not open a separate offline-message screen. Use only the existing read-only GET catalog path. Replace the cache only after successful validation; on offline/fetch/validation failure preserve the last-good cache internally but do not show or enable its stale list on this screen. If a connection drops or the fetch fails after entry, show a refresh failure and retry; no category edits until a successful fresh response. Do not pretend a successful check occurred. No submission, contact update or other write is part of opening this setting. Cover fresh-cache forced refresh, offline gating, fetch failure, malformed payload, retry and concurrent/late response ordering in tests. This supersedes the earlier suggestion to show a stale cached list on failure.
+
+## Disability-tag type icons
+The tag result must distinguish the two user-specified symbols: a blue square wheelchair-user icon, or a green triangle with three dots. The owner explicitly confirmed type1=triangle and type2=wheelchair. Keep the mapping in one constant/map, easy to change; all other values use a neutral generic unknown-type label. Do not infer further types from plate, model or tag presence alone. Live official resource c8b9f9c8-4612-4068-934f-d4acd2e3c06e exposes exactly two distinct SUG TAV codes,1 and2, with no IDF field. Numeric semantics are owner-confirmed, not attributed to an official dictionary. For missing/unknown type show an explicit unknown type, not either type-specific symbol. Include accessible type text, not color alone, and tests for both owner-confirmed types plus unknown/missing/unrecognized values. The user supplied a reference image of the two tag designs; no personal tag or plate data from that image belongs in app assets. This remains plan-only in #332/#333, separate from the approved single-report path.
+
+Registry lookup is informational and non-blocking. If unreachable or timed out, show a short localized message such as "המאגר לא זמין" and keep report save/send available under their existing independent review/authentication requirements. Use a short bounded asynchronous timeout; never await lookup completion in the send path, queue retries that delay filing, or interpret unavailable as no tag/valid licence. Include slow/unreachable/timeout tests proving submission is neither blocked nor delayed and late results cannot alter the reviewed outgoing description. This does not relax the separate online-only advanced catalog-setting rule.
+
+Asset PR #342 supplies original SVG/XML, localized descriptions and the central type mapper. Official type/schema source: https://data.gov.il/api/3/action/datastore_search?resource_id=c8b9f9c8-4612-4068-934f-d4acd2e3c06e&fields=SUG+TAV&distinct=true&limit=100
+
+## Implementation split
+
+#350 fixes theme boundaries before UI consumption; #351 adds the standalone bounded disability adapter. This branch consumes both and must be rebased after those lanes merge. No live reporting is authorized by this plan.
+
+Canonical optional catalog metadata is `plateRequired` with strict Boolean validation (absent/null means unknown); present string/number flags and conflicting duplicate-code flags reject the refresh. The currently captured city list has no such flag. No inference from labels or undocumented alternative fields is attempted. Existing no-metadata fingerprints remain helper-compatible. Metadata participates in new cache fingerprints and persisted draft policy. Code overrides are additive and removed codes dormant.
+
+The review-visible description is never changed by a registry result or transport. When a required plate is missing from the description, Send is disabled with an explicit Insert button. That button inserts a Hebrew vehicle-number line in the editable, visible description. This is deliberate: municipal text stays Hebrew even when UI language changes. Saving an incomplete draft remains allowed.
+
+Production alone opts into the asynchronous registry reader; isolated previews/instrumented fixtures never contact real registries. Each plate has keyed state; cancellation guards edits and removed topics. Two parallel1.8s bounded clients run off-main; the UI has a2.2s budget. Completed snapshots share a bounded five-minute cache preserving the original check time. No errors are cached as negative results. The registry component cannot mutate the draft and has no send/save callback.
+
+Advanced category entry is hidden in initial setup and lives under the existing secondary/advanced expander. Offline the entry is disabled with a reason. Every entry and retry logs in for authentication then performs only the existing catalog GET, ignoring cache age. Failure provides no cached editable list and leaves last-good cache/checktime unchanged. System Back from this screen returns to Settings. Tests are mocked, and CI screenshots/recording still require inspection before completion.
+
+### Live read-only latency follow-up (#356)
+
+The one API36 read-only diagnostic showed real tag class icons, but licence results were unavailable. A separate read-only request to the same vehicle resource returned valid records with2.3-2.6 second latency. The diagnostic omitted the vehicle error kind, so timeout remains a supported hypothesis rather than an on-device proof. Never describe unavailable as expired or not found.
+
+The tag client keeps its1.8-second network bound. The vehicle client has a6-second total-call bound, and the independent informational UI allows6.5 seconds. Publish each completed endpoint immediately; a slow/failing licence read must not hide a completed tag. Only completed non-error snapshots enter the5-minute cache. Plate changes cancel delivery, including late responses. Send/Save have no dependency on either endpoint and approved text is never modified. Synthetic tests cover pending licence with visible tag, Send enabled, failure retention and cancelled late delivery. Live re-dispatch is not part of ordinary CI and requires fresh permission.

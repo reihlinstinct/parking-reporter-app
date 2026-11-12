@@ -21,6 +21,51 @@ class TopicCatalogSyncTest {
         override fun createCase(token: String, contact: LinkedHashMap<String, Any?>, report: LinkedHashMap<String, Any?>): Map<String, Any?> = error("must not submit")
         override fun attachPhoto(token: String, caseIdInCRM: String, webCaseIdInCRM: String, fileName: String, jpeg: ByteArray) = error("must not attach")
     }
+    @Test fun advancedEntryAlwaysRefreshesAndFailurePreservesLastGoodWithoutWrite() {
+        val dir = Files.createTempDirectory("plate-categories").toFile()
+        try {
+            var now = Instant.parse("2026-11-12T00:00:00Z")
+            val cache = CityTopicCache(java.io.File(dir, "catalog.json")) { now }
+            val fresh = FreshPlateCatalog(cache); val client = Client()
+            fresh.refresh(true) { client }
+            now = now.plusSeconds(1)
+            val checked = fresh.refresh(true) { client }
+            assertEquals(2, client.reads); assertEquals(now, checked.checkedAt)
+            assertThrows(IllegalStateException::class.java) { fresh.refresh(false) { error("offline creates no client") } }
+            now = now.plusSeconds(1); client.fail = true
+            assertThrows(MunicipalApiException::class.java) { fresh.refresh(true) { client } }
+            assertEquals(checked, cache.read())
+            client.fail = false; client.rows = emptyList()
+            assertThrows(IllegalArgumentException::class.java) { fresh.refresh(true) { client } }
+            assertEquals(checked, cache.read())
+            client.rows = listOf(MunicipalSubject("5164", "new", listOf("new")))
+            assertEquals("new", fresh.refresh(true) { client }.topics.single().name)
+            assertEquals(5, client.reads)
+        } finally { dir.deleteRecursively() }
+    }
+    @Test fun supersededConcurrentResponseCannotReplaceNewerCatalog() {
+        val dir = Files.createTempDirectory("plate-order").toFile()
+        try {
+            val cache = CityTopicCache(java.io.File(dir, "catalog.json"))
+            val fresh = FreshPlateCatalog(cache)
+            val entered = java.util.concurrent.CountDownLatch(1)
+            val release = java.util.concurrent.CountDownLatch(1)
+            val old = object : MunicipalClient by Client() {
+                override fun subjectCategories(token: String): List<MunicipalSubject> {
+                    entered.countDown(); check(release.await(5, java.util.concurrent.TimeUnit.SECONDS))
+                    return listOf(MunicipalSubject("5164", "old", listOf("old")))
+                }
+            }
+            var refused = false
+            val thread = Thread { try { fresh.refresh(true) { old } } catch (_: IllegalStateException) { refused = true } }
+            thread.start(); assertTrue(entered.await(5, java.util.concurrent.TimeUnit.SECONDS))
+            val new = Client().apply { rows = listOf(MunicipalSubject("5164", "new", listOf("new"))) }
+            fresh.refresh(true) { new }
+            release.countDown(); thread.join(5000)
+            assertFalse(thread.isAlive); assertTrue(refused)
+            assertEquals("new", cache.read()!!.topics.single().name)
+        } finally { dir.deleteRecursively() }
+    }
     @Test fun bootstrapIsOnceAndOfflineReadNeverCreatesAClient() {
         val dir = Files.createTempDirectory("topic-bootstrap").toFile()
         try {
