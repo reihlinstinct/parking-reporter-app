@@ -2,7 +2,7 @@ name: Read-only registry emulator proof
 on:
   workflow_dispatch:
   push:
-    branches: [ci/registry-readonly-proof]
+    branches: [ci/registry-inactive-readonly]
 permissions:
   contents: read
 concurrency:
