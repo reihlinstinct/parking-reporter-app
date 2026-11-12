@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.47.3] - 2026-11-12
+
+### Fixes
+
+- fix(review): hide the soft keyboard on finish-editing, send and Done (closes #256) (#406) (e11b3d1)
+
 ## [0.47.2] - 2026-11-12
 
 ### Fixes
