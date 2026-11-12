@@ -322,7 +322,13 @@ fun AppShell(
             catch (_: Exception) { status = strings.t("shell.status.settings_read_failed") }
         }
     }
+    var pendingCategory by remember { mutableStateOf<String?>(null) }
     fun startReview(file: File, usePhotoLocation: Boolean = true) {
+        // One-shot starting choice from the assistant entry; the person can change it in review.
+        val startSubject = pendingCategory?.let { code ->
+            io.github.reihlinstinct.reporter.core.ReportCategory.from(code)?.let { "municipal:" + it.municipalSubjectCode }
+        }.orEmpty()
+        pendingCategory = null
         scope.launch {
             try {
                 var evidence = withContext(Dispatchers.IO) { EvidenceReader().read(file) }
@@ -335,7 +341,7 @@ fun AppShell(
                     withContext(Dispatchers.IO) {
                         database.reports().reserve(ReportRecord(evidence.stableId, evidence.originalSha256,
                             "originals/${file.name}", 0,
-                            io.github.reihlinstinct.reporter.ledger.DraftCodec.encode(ReviewDraft(evidence, "", "", "", "", missing)), null))
+                            io.github.reihlinstinct.reporter.ledger.DraftCodec.encode(ReviewDraft(evidence, "", "", startSubject, "", missing)), null))
                     }
                 } catch (e: Exception) {
                     // The reserve failed (for example a duplicate original), so
@@ -345,7 +351,7 @@ fun AppShell(
                     throw e
                 }
                 original = file; revision = 0
-                draft = ReviewDraft(evidence, "", "", "", "", missing)
+                draft = ReviewDraft(evidence, "", "", startSubject, "", missing)
                 reload(); page = "review"
             } catch (e: Exception) {
                 Log.w("AppShell", "review start failed", e)
@@ -401,8 +407,9 @@ fun AppShell(
         when (val request = entry.value?.request) {
             // An entry arriving over the settings screen drops the decrypted
             // profile from memory before any navigation.
-            is EntryIntents.Request.SharedPhoto -> { profile = null; importShared(Uri.parse(request.uriString)) }
-            EntryIntents.Request.NewReport -> { profile = null; requestCamera { page = "camera" } }
+            is EntryIntents.Request.SharedPhoto -> { profile = null; pendingCategory = null; importShared(Uri.parse(request.uriString)) }
+            EntryIntents.Request.NewReport -> { profile = null; pendingCategory = null; requestCamera { page = "camera" } }
+            is EntryIntents.Request.NewReportInCategory -> { profile = null; pendingCategory = request.categoryCode; requestCamera { page = "camera" } }
             null -> {}
         }
     }
@@ -520,7 +527,7 @@ fun AppShell(
     ) { innerPadding ->
     Box(Modifier.padding(innerPadding)) {
     when (page) {
-        "camera" -> CaptureScreen(onCaptured = { file -> startReview(file) }, onCancel = { page = "home" })
+        "camera" -> CaptureScreen(onCaptured = { file -> startReview(file) }, onCancel = { pendingCategory = null; page = "home" })
         "reports" -> ReportsScreen(records, open = { openRecord(it) })
         "review" -> draft?.let { value ->
             val preview by produceState<Pair<io.github.reihlinstinct.reporter.evidence.OutgoingImage, androidx.compose.ui.graphics.ImageBitmap>?>(null, original) {

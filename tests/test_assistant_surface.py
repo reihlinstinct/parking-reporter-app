@@ -10,10 +10,14 @@ SOURCE = ROOT / 'app/src/main/java/io/github/reihlinstinct/reporter/assistant'
 class AssistantSurfaceTest(unittest.TestCase):
     def test_only_narrow_default_disabled_function(self):
         source = (SOURCE / 'ReportAppFunctions.kt').read_text() + (SOURCE / 'BaseReportAppFunctionService.kt').read_text()
-        self.assertEqual(1, source.count('@AppFunctionDeclaration('))
+        self.assertEqual(2, source.count('@AppFunctionDeclaration('))
         self.assertIn('@AppFunctionDeclaration(isEnabled = false, isDescribedByKDoc = true)', source)
         self.assertIn('fun startNewReport(): PendingIntent = AssistantEntry.entryAction(this)', source)
-        self.assertIn('if (!AssistantEntryStore(context).enabled())', source)
+        # Issue #190 first slice: one typed category function, same consent gate, no free text.
+        self.assertIn('fun startNewReportInCategory(categoryCode: String): PendingIntent = AssistantEntry.categoryEntryAction(this, categoryCode)', source)
+        self.assertEqual(2, source.count('if (!AssistantEntryStore(context).enabled())'))
+        self.assertIn('?: throw AppFunctionInvalidArgumentException("Unknown report category")', source)
+        self.assertEqual(2, source.count('isEnabled = false'))
         self.assertIn('getBoolean("enabled", false)', source)
         self.assertIn('PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE', source)
         for forbidden in ['putExtra(', 'MunicipalClient', 'SettingsProfileStore', 'ReportDatabase', 'ServerSocket']:

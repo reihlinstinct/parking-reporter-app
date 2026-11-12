@@ -84,4 +84,32 @@ class EntryIntentsTest {
         assertNull(EntryIntents.parse("android.intent.action.MAIN", null, null, null))
         assertNull(EntryIntents.parse(null, null, null, null))
     }
+
+    @Test
+    fun categoryLinkPreselectsOnlyKnownCategories() {
+        for (category in io.github.reihlinstinct.reporter.core.ReportCategory.entries) {
+            val link = EntryIntents.categoryLink(category.code)
+            val expected = EntryIntents.Request.NewReportInCategory(category.code)
+            assertEquals(expected, EntryIntents.parse(EntryIntents.ACTION_TILE_NEW_REPORT, link, null, null))
+            assertEquals(expected, EntryIntents.parse("android.intent.action.VIEW", link, null, null))
+        }
+    }
+
+    @Test
+    fun unknownOrMalformedCategoryIsRejectedNotGuessed() {
+        listOf("nope", "SIDEWALK_PARKING", "sidewalk_parking&x=1", "1145", "").forEach {
+            assertNull("category '$it'", EntryIntents.parse(EntryIntents.ACTION_TILE_NEW_REPORT,
+                "il.sidewalks.reporter://report/new?category=$it", null, null))
+        }
+        assertNull(EntryIntents.parse("android.intent.action.VIEW",
+            "https://il.sidewalks.reporter/report/new?category=broken_sign", null, null))
+    }
+
+    @Test
+    fun categoryLinkNeverTakesPlateOrFreeText() {
+        assertNull(EntryIntents.parse(EntryIntents.ACTION_TILE_NEW_REPORT,
+            "il.sidewalks.reporter://report/new?category=broken_sign&plate=1234567", null, null))
+        assertNull(EntryIntents.parse(EntryIntents.ACTION_TILE_NEW_REPORT,
+            "il.sidewalks.reporter://report/new?category=broken_sign&text=hello", null, null))
+    }
 }

@@ -1,6 +1,11 @@
 # Assistant entry and AppFunctions
 
-This integration exposes one narrow AppFunction: `startNewReport`. It returns an immutable PendingIntent to the existing camera entry. It does not submit a report, create an invisible draft, read saved reports, or return identity fields, credentials, photos or locations.
+This integration exposes two narrow AppFunctions, both default disabled and behind the same consent switch:
+
+- `startNewReport()` returns an immutable PendingIntent to the existing camera entry.
+- `startNewReportInCategory(categoryCode)` (issue #190 first slice) returns the same kind of PendingIntent, with one of the four known category codes (`sidewalk_parking`, `broken_sign`, `faded_crosswalk`, `bollard_request`) preselected as the review draft's starting category. Any other value is rejected with an invalid-argument error, never guessed. The category travels as an intent data link, not as an extra, and is a hint the person can change in review.
+
+Neither function submits a report, creates an invisible draft (the draft exists only once the person captures or imports a photo in the visible flow), reads saved reports, exports evidence, or returns identity fields, credentials, photos or locations. There is no plate, address or free-text parameter.
 
 ## Consent and compatibility
 
