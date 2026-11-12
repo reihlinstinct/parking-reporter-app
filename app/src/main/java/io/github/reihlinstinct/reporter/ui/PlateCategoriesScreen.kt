@@ -38,6 +38,7 @@ fun rememberNetworkOnline(): Boolean {
 @Composable
 fun PlateCategoriesScreen(online: Boolean, initialEnables: Set<String>, refresh: suspend () -> CityTopicCache.Snapshot,
                           enable: (String, Boolean) -> Unit, back: () -> Unit) {
+    io.github.reihlinstinct.reporter.i18n.ProvideStringsIfMissing {
     val s = LocalStrings.current
     var attempt by remember { mutableIntStateOf(0) }
     var snapshot by remember(attempt, online) { mutableStateOf<CityTopicCache.Snapshot?>(null) }
@@ -81,4 +82,5 @@ fun PlateCategoriesScreen(online: Boolean, initialEnables: Set<String>, refresh:
         }
         TextButton(onClick = back) { Text(s.t("review.back")) }
     }
+}
 }
