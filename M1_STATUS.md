@@ -31,14 +31,15 @@ display-coverage PR #324 (release 0.41.1). For later changes, check
 ## Evidence and limits
 
 PR #333's exact head `2c5edb7` passed API30 and API36 instrumentation
-(`OK (118 tests)` on each), plus normal foldable and compact 200% display
-checks: [recorded CI run](https://github.com/reihlinstinct/parking-reporter-app/actions/runs/43202844871).
+(`OK (118 tests)` on each): [build and emulator run](https://github.com/reihlinstinct/parking-reporter-app/actions/runs/43202844871).
+Normal foldable and compact 200% display checks passed in a separate run at the
+same exact head: [display run](https://github.com/reihlinstinct/parking-reporter-app/actions/runs/43202844935).
 This is evidence for that commit, not a promise that every future main commit
 passes. Counts include guarded/opt-in cases and are not a count of live filings.
 
 Per-PR emulator coverage is API30 and API36. Weekly coverage probes additional
 versions; API29 and API37 remain known-unstable probes, and API26 emulator
-coverage is not claimed. minSdk remains26. A build supporting an API is not
+coverage is not claimed. minSdk remains 26. A build supporting an API is not
 proof of field validation on every physical device.
 
 Inspected synthetic screenshots and recordings cover selected Hebrew layouts,
