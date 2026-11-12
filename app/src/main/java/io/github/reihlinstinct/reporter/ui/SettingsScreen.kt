@@ -95,7 +95,7 @@ fun SettingsScreen(
     var advanced106 by remember { mutableStateOf(false) }
     ProvideStringsIfMissing {
     val s = LocalStrings.current
-    Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxSize().systemBarsPadding().imePadding().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (basicSetup) {
             Text(s.t("setup.title"), style = MaterialTheme.typography.headlineMedium)
             Text(s.t("setup.description"))
