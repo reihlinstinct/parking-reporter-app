@@ -82,6 +82,8 @@ class CityTopicSearchTest {
         assertEquals("5164", TopicIdentity.code("municipal:5164"))
         assertFalse(TopicIdentity.needsPlate("municipal:5164"))
         assertTrue(TopicIdentity.needsPlate("municipal:1145"))
+        assertTrue(TopicIdentity.needsPlate("municipal:1144"))
+        assertFalse(TopicIdentity.needsPlate("municipal:1143"))
         assertNull(TopicIdentity.code("municipal:../bad"))
     }
 }

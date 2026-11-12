@@ -211,7 +211,12 @@ class FullFlowE2eTest {
         } finally { db.close(); cleanOwnedState() }
     }
 
-    @Test fun fullReportFlowStubbedServer() {
+    @Test fun fullReportFlowStubbedServer() = fullReportFlowStubbed("חניה על המדרכה", "1145")
+
+    @Test fun redWhiteNumeric1144FilesOnlyThatCodeToLoopbackStub() =
+        fullReportFlowStubbed("1144", "1144")
+
+    private fun fullReportFlowStubbed(selector: String, expectedCode: String) {
         claimSyntheticPhoto()
         val settings = ReporterSettings(
             firstName = "ישראל", lastName = "ישראלי", phone = "+972501234567",
@@ -240,7 +245,7 @@ class FullFlowE2eTest {
                     capturedAtIso = "2026-01-01T12:00:00+02:00",
                     latitude = "31.77",
                     longitude = "35.2137",
-                    categoryLabel = "חניה על המדרכה"))
+                    categoryLabel = selector))
                 driver.screenshot("e2e-review-synthetic.png")
                 driver.tapSendAndAwaitCaseNumber()
                 driver.screenshot("e2e-submitted-synthetic.png")
@@ -258,7 +263,7 @@ class FullFlowE2eTest {
                 assertEquals(text, createBody.getString("CaseDescription"))
                 assertEquals("900001", createBody.getString("CaseStreetCode"))
                 assertEquals("1", createBody.getString("CaseHouseNumber"))
-                assertEquals("1145", createBody.getString("CaseSubjectCode"))
+                assertEquals(expectedCode, createBody.getString("CaseSubjectCode"))
                 assertEquals("000000018", createBody.getJSONObject("contact").getString("ContactIdNumber"))
                 val attachBody = JSONObject(attach.body.readUtf8())
                 val jpeg = java.util.Base64.getDecoder().decode(attachBody.getString("fileContent"))
@@ -279,6 +284,9 @@ class FullFlowE2eTest {
                 val db = Room.databaseBuilder(context, ReportDatabase::class.java, "report-ledger.db").build()
                 try {
                     val row = requireNotNull(runBlocking { db.reports().findPhoto(requireNotNull(ownedPhotoHash)) })
+                    val reviewed = io.github.reihlinstinct.reporter.ledger.DraftCodec.decode(row.draftJson)
+                    assertEquals("12345678", reviewed.plate)
+                    assertEquals("municipal:$expectedCode", reviewed.subject)
                     val original = File(context.noBackupFilesDir, row.originalRelativePath)
                     assertArrayEquals(originalBytes, original.readBytes())
                     val preview = io.github.reihlinstinct.reporter.evidence.OutgoingEvidence.prepare(original)
