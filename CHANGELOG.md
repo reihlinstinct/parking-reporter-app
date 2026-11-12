@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.43.1] - 2026-11-12
+
+### Fixes
+
+- fix(ci): run display gate for UI outside ui and app configuration (#378) (e1e0c73)
+
 ## [0.43.0] - 2026-11-12
 
 ### Features
