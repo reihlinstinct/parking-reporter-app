@@ -77,8 +77,12 @@ def load_instrumentation(path):
             elif current.get('test'):
                 if code == 0:
                     cases.append(Case(current['class'], current['test'], 0, 'passed', detail=current.get('stream', '')))
-                elif code == -3:
-                    cases.append(Case(current['class'], current['test'], 0, 'skipped', reason=current.get('stream') or 'ignored'))
+                elif code in (-3, -4):
+                    # AndroidJUnitRunner: -3 ignored, -4 assumption not met.
+                    # Neither means an assertion failed (-1/-2). Keep the
+                    # original reason so opt-in coverage is not hidden.
+                    reason = current.get('stack') or current.get('stream') or ('assumption not met' if code == -4 else 'ignored')
+                    cases.append(Case(current['class'], current['test'], 0, 'skipped', reason=reason))
                 else:
                     cases.append(Case(current['class'], current['test'], 0, 'failed', detail=current.get('stack') or current.get('stream') or 'no detail recorded'))
                 current = None
