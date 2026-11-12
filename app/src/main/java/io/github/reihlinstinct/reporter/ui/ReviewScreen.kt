@@ -35,7 +35,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     topicsAvailable: Boolean = false, topicsLoading: Boolean = false,
     openTopics: (() -> Unit)? = null, topicSelected: ((String) -> Unit)? = null,
     recentTopics: List<String> = emptyList(), topicAliases: Map<String, List<String>> = emptyMap(),
-    plateEnables: Set<String> = emptySet(), registryLookup: (suspend (String) -> RegistrySnapshot)? = null) {
+    plateEnables: Set<String> = emptySet(), registryLookup: RegistryLookup? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var plates by remember(initial.evidence.stableId) { mutableStateOf<List<String>>(emptyList()) }

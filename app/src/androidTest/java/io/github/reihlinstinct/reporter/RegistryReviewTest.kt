@@ -39,7 +39,7 @@ class RegistryReviewTest {
     }
     @Test fun slowLookupDoesNotGateSaveOrSendAndDoesNotChangeOutgoingText() {
         var saved: ReviewDraft? = null; var sent: ReviewDraft? = null
-        val lookup: suspend (String) -> RegistrySnapshot = { awaitCancellation() }
+        val lookup: RegistryLookup = { _, _ -> awaitCancellation() }
         compose.setContent { AppTheme { ReviewScreen(draft(), null, { saved = it }, {}, onSubmit = { sent = it },
             topicSnapshot = syntheticCityTopics(), topicsAvailable = true, registryLookup = lookup) } }
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
@@ -61,7 +61,7 @@ class RegistryReviewTest {
     }
     @Test fun knownTypeAndLicenceBelowPlateAndNoRegistryForIrrelevantTopic() {
         var initial by mutableStateOf(draft())
-        val lookup: suspend (String) -> RegistrySnapshot = { snapshot(DisabilityTagType.TRIANGLE) }
+        val lookup: RegistryLookup = { _, _ -> snapshot(DisabilityTagType.TRIANGLE) }
         compose.setContent { AppTheme { ReviewScreen(initial, null, {}, {}, onSubmit = {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true, registryLookup = lookup) } }
         compose.onNodeWithText("רישיון הרכב פג תוקף לפי המאגר").assertExists()
         screenshot("registry-triangle-expired-light.png")
@@ -71,7 +71,7 @@ class RegistryReviewTest {
     }
     @Test fun stalePlateCallbackCannotShowOldType() {
         var initial by mutableStateOf(draft())
-        val lookup: suspend (String) -> RegistrySnapshot = { plate ->
+        val lookup: RegistryLookup = { plate, _ ->
             if (plate == "1234567") { withContext(NonCancellable) { delay(500) }; snapshot(DisabilityTagType.TRIANGLE) }
             else snapshot(DisabilityTagType.WHEELCHAIR)
         }
@@ -84,4 +84,19 @@ class RegistryReviewTest {
         compose.onNodeWithText("תג חניה לנכה, סמל משולש").assertDoesNotExist()
         screenshot("registry-wheelchair-dark-stale-guard.png")
     }
+    @Test fun completedTagVisibleWhileLicenceWaitsAndSendNeverWaits() {
+        val licence = CompletableDeferred<VehicleLookupResult>()
+        val lookup: RegistryLookup = { plate, publish -> readRegistrySnapshot(plate,
+            { DisabilityLookupResult.Found(DisabilityTagType.TRIANGLE) },
+            { licence.await() }, publish) }
+        compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}, onSubmit = {},
+            topicSnapshot = syntheticCityTopics(), topicsAvailable = true, registryLookup = lookup) } }
+        compose.onNodeWithText("תג חניה לנכה, סמל משולש").assertExists()
+        compose.onNodeWithText("שלח לעירייה").performScrollTo().assertIsEnabled()
+        compose.runOnIdle { licence.complete(snapshot(DisabilityTagType.TRIANGLE).vehicle!!) }
+        compose.waitForIdle()
+        compose.onNodeWithText("רישיון הרכב פג תוקף לפי המאגר").assertExists()
+        screenshot("registry-partial-tag-then-licence.png")
+    }
+
 }
