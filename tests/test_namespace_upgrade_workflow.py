@@ -12,7 +12,7 @@ class NamespaceUpgradeWorkflowTest(unittest.TestCase):
             self.assertIn('-Pandroid.injected.signing.store.file="$UPGRADE_KEYSTORE"', build)
             self.assertIn('-Pandroid.injected.signing.key.alias=androiddebugkey', build)
         self.assertIn('keytool -genkeypair', workflow)
-        self.assertIn('cmp app/build/reports/namespace-upgrade/old-digest.txt app/build/reports/namespace-upgrade/new-digest.txt', workflow)
+        self.assertIn('python3 scripts/check_upgrade_certificates.py app/build/reports/namespace-upgrade/old-certificate.txt app/build/reports/namespace-upgrade/new-certificate.txt', workflow)
         self.assertNotIn('adb uninstall', workflow)
         self.assertNotIn('pm clear', workflow)
         self.assertIn('adb install -r app/build/outputs/apk/debug/app-debug.apk', workflow)
