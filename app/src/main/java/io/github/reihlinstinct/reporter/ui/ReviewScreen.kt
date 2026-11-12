@@ -1,5 +1,8 @@
 package io.github.reihlinstinct.reporter.ui
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
@@ -50,6 +53,9 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     plateEnables: Set<String> = emptySet(), registryLookup: RegistryLookup? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    // Issue #358 part 2: state held across a rotation only (process memory, see ReviewRotationState).
+    val restored = remember(initial.evidence.stableId) { ReviewRotationState.take(initial) }
+    fun restoredNow() = restored?.takeIf { it.initial == initial }
     var plates by remember(initial.evidence.stableId) { mutableStateOf<List<String>>(emptyList()) }
     var useGoogle by remember { mutableStateOf(false) }
     var recognizing by remember { mutableStateOf(false) }
@@ -60,15 +66,15 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var geocoding by remember { mutableStateOf(false) }
     var geocodeStatus by remember { mutableStateOf<String?>(null) }
     fun policy(value: ReviewDraft) = topicSnapshot?.let { io.github.reihlinstinct.reporter.core.PlatePolicy.apply(value, it.topics, plateEnables) } ?: value
-    var draft by remember(initial.evidence.stableId) { mutableStateOf(policy(ReportTime.forSave(initial))) }
-    LaunchedEffect(initial) { draft = policy(ReportTime.forSave(initial)) }
+    var draft by remember(initial.evidence.stableId) { mutableStateOf(restored?.draft ?: policy(ReportTime.forSave(initial))) }
+    LaunchedEffect(initial) { if (restoredNow() == null) draft = policy(ReportTime.forSave(initial)) }
     LaunchedEffect(topicSnapshot, plateEnables) { draft = policy(draft) }
     val registryPlate = if (draft.plateClass == PlateClass.REGULAR) draft.plate else ""
-    var latitude by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedLatitude?.toString().orEmpty()) }
-    var longitude by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedLongitude?.toString().orEmpty()) }
+    var latitude by remember(initial.evidence.stableId) { mutableStateOf(restored?.latitude ?: initial.confirmedLatitude?.toString().orEmpty()) }
+    var longitude by remember(initial.evidence.stableId) { mutableStateOf(restored?.longitude ?: initial.confirmedLongitude?.toString().orEmpty()) }
     var editing by remember(initial.evidence.stableId) { mutableStateOf(false) }
-    var manualStreet by remember(initial.evidence.stableId) { mutableStateOf("") }
-    var manualHouse by remember(initial.evidence.stableId) { mutableStateOf("") }
+    var manualStreet by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualStreet.orEmpty()) }
+    var manualHouse by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualHouse.orEmpty()) }
     var manualResult by remember(initial.evidence.stableId) { mutableStateOf<io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress?>(null) }
     var manualBusy by remember { mutableStateOf(false) }
     var manualError by remember { mutableStateOf(false) }
@@ -84,11 +90,11 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var manualGeneration by remember { mutableIntStateOf(0) }
     var categoryMenu by remember { mutableStateOf(false) }
     var confirmExit by remember(initial.evidence.stableId) { mutableStateOf(false) }
-    val savedManualStreet = remember(initial) { manualStreet }
-    val savedManualHouse = remember(initial) { manualHouse }
+    val savedManualStreet = remember(initial) { restoredNow()?.savedManualStreet ?: manualStreet }
+    val savedManualHouse = remember(initial) { restoredNow()?.savedManualHouse ?: manualHouse }
     // Issue #358: an automatic OCR plate prefill is not a user edit. It only moves the clean baseline for the
     // plate, and only while the user has not touched the plate (recognize() guards that with plateEdits).
-    var ocrPrefilledPlate by remember(initial.evidence.stableId) { mutableStateOf<String?>(null) }
+    var ocrPrefilledPlate by remember(initial.evidence.stableId) { mutableStateOf<String?>(restored?.ocrPrefilledPlate) }
     // The screen's draft always has the topic plate policy applied, so the clean baseline must too, or a screen
     // with a topic snapshot would count as edited before the user touched anything.
     val savedDraft = policy(ReportTime.forSave(initial))
@@ -97,6 +103,19 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         latitude != initial.confirmedLatitude?.toString().orEmpty() ||
         longitude != initial.confirmedLongitude?.toString().orEmpty() ||
         manualStreet != savedManualStreet || manualHouse != savedManualHouse
+    // Kept only when the screen leaves composition because of a configuration change. Every other exit
+    // (save, discard, back, process death) leaves nothing held.
+    val holdOnRotation by rememberUpdatedState {
+        ReviewRotationState.Held(initial, draft, latitude, longitude, manualStreet, manualHouse,
+            savedManualStreet, savedManualHouse, ocrPrefilledPlate)
+    }
+    val rotationActivity = context.findActivity()
+    DisposableEffect(initial.evidence.stableId) {
+        onDispose {
+            if (rotationActivity?.isChangingConfigurations == true) ReviewRotationState.hold(holdOnRotation())
+            else ReviewRotationState.clear()
+        }
+    }
     fun requestExit() {
         if (hasUnsavedEdits) confirmExit = true else onBack()
     }
@@ -391,4 +410,10 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         TextButton(onClick = ::requestExit, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.back")) }
     }
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
