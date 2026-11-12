@@ -392,6 +392,17 @@ class VehicleRegistryClientTest {
         assertFalse(configError?.message.orEmpty().contains(plate))
     }
 
+    @Test fun activeRecordIsNotMarkedInactive() {
+        MockWebServer().use { server ->
+            val client = VehicleRegistryClient(VehicleRegistryConfig(
+                VehicleRegistryConfig.KNOWN_VEHICLE_RESOURCE_ID, baseUrl = server.url("/").toString(),
+                minRequestIntervalMillis = 0, cacheTtlMillis = 0))
+            server.enqueue(MockResponse().setBody("""{"success":true,"result":{"records":[{"mispar_rechev":1912929,"tokef_dt":"2027-05-27"}]}}"""))
+            val record = (client.lookup("1912929") as VehicleLookupResult.Found).record
+            assertFalse(record.inactive)
+            assertEquals(1, server.requestCount)
+        }
+    }
     @Test fun knownResourceIdIsAValidConfig() {
         val config = VehicleRegistryConfig(VehicleRegistryConfig.KNOWN_VEHICLE_RESOURCE_ID)
         assertEquals("https://data.gov.il", config.baseUrl)
@@ -407,6 +418,7 @@ class VehicleRegistryClientTest {
             val record = (client.lookup("1912929") as VehicleLookupResult.Found).record
             assertEquals(LocalDate.of(2024,5,27), record.licenceValidUntil)
             assertEquals(LicenceStatus.EXPIRED, record.licenceStatus(LocalDate.of(2026,11,12)))
+            assertTrue(record.inactive)
             assertEquals(VehicleRegistryConfig.KNOWN_VEHICLE_RESOURCE_ID, server.takeRequest().requestUrl!!.queryParameter("resource_id"))
             assertEquals(VehicleRegistryClient.INACTIVE_VEHICLE_RESOURCE_ID, server.takeRequest().requestUrl!!.queryParameter("resource_id"))
             server.enqueue(MockResponse().setResponseCode(503))
