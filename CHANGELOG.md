@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.36.4] - 2026-11-12
+
+### Fixes
+
+- fix(e2e): allow exact numeric municipal topic for live app trial (#330) (c289a08)
+
 ## [0.36.3] - 2026-11-12
 
 ### Other changes
