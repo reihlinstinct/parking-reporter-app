@@ -9,7 +9,7 @@ SOURCE = ROOT / 'app/src/main/java/io/github/reihlinstinct/reporter/assistant'
 
 class AssistantSurfaceTest(unittest.TestCase):
     def test_only_narrow_default_disabled_function(self):
-        source = (SOURCE / 'ReportAppFunctions.kt').read_text()
+        source = (SOURCE / 'ReportAppFunctions.kt').read_text() + (SOURCE / 'BaseReportAppFunctionService.kt').read_text()
         self.assertEqual(1, source.count('@AppFunctionDeclaration('))
         self.assertIn('@AppFunctionDeclaration(isEnabled = false, isDescribedByKDoc = true)', source)
         self.assertIn('fun startNewReport(): PendingIntent = AssistantEntry.entryAction(this)', source)
