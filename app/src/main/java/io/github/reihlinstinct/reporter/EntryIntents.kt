@@ -37,6 +37,8 @@ object EntryIntents {
 
     /** Link shape for [Request.NewReportInCategory]; only the four known category codes pass. */
     private val NEW_REPORT_CATEGORY_LINK = Regex("^il\\.sidewalks\\.reporter://report/new\\?category=([a-z_]+)$")
+    private fun knownCategory(link: String?): String? = link?.let { NEW_REPORT_CATEGORY_LINK.matchEntire(it) }
+        ?.let { io.github.reihlinstinct.reporter.core.ReportCategory.from(it.groupValues[1]) }?.code
     fun categoryLink(code: String): String = "il.sidewalks.reporter://report/new?category=$code"
 
     private val NEW_REPORT_LINK = Regex("^il\\.sidewalks\\.reporter://report(/new)?/?$")
@@ -47,11 +49,8 @@ object EntryIntents {
      * link and scheme matches are exact and case-sensitive.
      */
     fun parse(action: String?, dataString: String?, mimeType: String?, streamUriString: String?): Request? = when {
-        (action == ACTION_TILE_NEW_REPORT || action == Intent.ACTION_VIEW) && dataString != null &&
-            NEW_REPORT_CATEGORY_LINK.matches(dataString) ->
-            io.github.reihlinstinct.reporter.core.ReportCategory
-                .from(NEW_REPORT_CATEGORY_LINK.matchEntire(dataString)!!.groupValues[1])
-                ?.let { Request.NewReportInCategory(it.code) }
+        (action == ACTION_TILE_NEW_REPORT || action == Intent.ACTION_VIEW) && knownCategory(dataString) != null ->
+            Request.NewReportInCategory(knownCategory(dataString)!!)
         action == ACTION_TILE_NEW_REPORT -> Request.NewReport
         action == Intent.ACTION_VIEW && dataString != null && NEW_REPORT_LINK.matches(dataString) ->
             Request.NewReport
