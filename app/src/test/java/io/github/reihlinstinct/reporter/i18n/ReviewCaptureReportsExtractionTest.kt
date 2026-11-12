@@ -192,7 +192,7 @@ class ReviewCaptureReportsExtractionTest {
         // The 2026-11-10 single-confirmation change (owner instruction, phonemsg
         // 01M73E6E2S6AZP46K75QS2S1WY) retired the approval/confirm/preview keys and
         // renamed the reports buckets from pending/approved to drafts/ready.
-        val retired = setOf("review.approval_note", "review.edit.latitude_field", "review.edit.longitude_field", "review.edit.timezone_toggle", "review.edit.timezone_field", "review.edit.timezone_note", "review.location.show_advanced", "review.location.hide_advanced", "review.location.advanced_note", "review.location.missing", "review.location.enter_missing",
+        val retired = setOf("review.edit.original_time_title", "review.edit.time_field", "review.approval_note", "review.edit.latitude_field", "review.edit.longitude_field", "review.edit.timezone_toggle", "review.edit.timezone_field", "review.edit.timezone_note", "review.location.show_advanced", "review.location.hide_advanced", "review.location.advanced_note", "review.location.missing", "review.location.enter_missing",
             "review.approve_button", "review.approved", "review.not_approved", "review.edit.confirm_button", "review.outgoing_preview",
             "reports.pending.title", "reports.pending.empty", "reports.pending.open", "reports.approved.title", "reports.approved.empty", "reports.approved.open")
         val screenKeys = catalog.keys.filter { it.startsWith("review.") || it.startsWith("capture.") || it.startsWith("reports.") }.toSet() - retired
@@ -261,11 +261,11 @@ class ReviewCaptureReportsExtractionTest {
     @Test
     fun newDraftsStoreCodesNotText() {
         val full = Evidence("s1", "a".repeat(64), "2026-01-01T12:00:00+02:00", 31.0, 35.0)
-        assertEquals(setOf("timezone_needs_confirmation", "address_needs_confirmation"), initialReviewWarnings(full))
+        assertEquals(setOf("address_needs_confirmation"), initialReviewWarnings(full))
         val bare = Evidence("s2", "b".repeat(64), null, null, null)
-        assertEquals(listOf("missing_gps", "missing_time", "address_needs_confirmation"), initialReviewWarnings(bare).toList())
+        assertEquals(listOf("missing_gps", "address_needs_confirmation"), initialReviewWarnings(bare).toList())
         val noGps = Evidence("s3", "c".repeat(64), "2026-01-01T12:00:00Z", null, 35.0)
-        assertEquals(listOf("missing_gps", "timezone_needs_confirmation", "address_needs_confirmation"), initialReviewWarnings(noGps).toList())
+        assertEquals(listOf("missing_gps", "address_needs_confirmation"), initialReviewWarnings(noGps).toList())
         val script = Regex("[\u0590-\u05FF\u0600-\u06FF\u0400-\u04FF\u1200-\u139F]")
         for (code in initialReviewWarnings(bare) + initialReviewWarnings(full)) {
             assertFalse("stored value must be a code: $code", script.containsMatchIn(code))
@@ -279,13 +279,13 @@ class ReviewCaptureReportsExtractionTest {
     @Test
     fun codesAreTranslatedWhenShownAndFollowALanguageSwitch() {
         val codes = initialReviewWarnings(Evidence("s2", "b".repeat(64), null, null, null))
-        assertEquals(listOf("GPS חסר", "זמן חסר", "כתובת ומספר בית דורשים אישור"), reviewWarningLabels(he, codes))
-        assertEquals(listOf("GPS missing", "Time missing", "Address and house number need confirmation"), reviewWarningLabels(en, codes))
+        assertEquals(listOf("GPS חסר", "כתובת ומספר בית דורשים אישור"), reviewWarningLabels(he, codes))
+        assertEquals(listOf("GPS missing", "Address and house number need confirmation"), reviewWarningLabels(en, codes))
         assertEquals(
-            "דרוש בירור: $fsi${rli}GPS חסר, זמן חסר, כתובת ומספר בית דורשים אישור$pdi$pdi",
+            "דרוש בירור: $fsi${rli}GPS חסר, כתובת ומספר בית דורשים אישור$pdi$pdi",
             unresolvedText(he, codes),
         )
-        assertEquals("Needs checking: GPS missing, Time missing, Address and house number need confirmation", unresolvedText(en, codes))
+        assertEquals("Needs checking: GPS missing, Address and house number need confirmation", unresolvedText(en, codes))
         for (w in ReviewWarning.entries) {
             for (code in languages) {
                 assertEquals("${w.code}/$code", raw.getJSONObject(w.key).getString(code), reviewWarningLabels(Strings(catalog, code), setOf(w.code)).single())
@@ -309,7 +309,7 @@ class ReviewCaptureReportsExtractionTest {
         // A legacy draft as the ledger holds it: the codec sorts the set.
         val legacy = DraftCodec.decode(DraftCodec.encode(draft(setOf("GPS חסר", "זמן חסר", "כתובת ומספר בית דורשים אישור"))))
         assertEquals(listOf("GPS missing", "Time missing", "Address and house number need confirmation"), reviewWarningLabels(en, legacy.unresolved))
-        assertEquals(reviewWarningLabels(he, initialReviewWarnings(Evidence("s2", "b".repeat(64), null, null, null))), reviewWarningLabels(he, legacy.unresolved))
+        assertEquals(listOf("GPS חסר", "זמן חסר", "כתובת ומספר בית דורשים אישור"), reviewWarningLabels(he, legacy.unresolved))
     }
 
     @Test
@@ -333,10 +333,10 @@ class ReviewCaptureReportsExtractionTest {
             assertFalse("removed control must not render: $key", screen.contains(key))
             assertTrue("removed label stays in the catalog as retired: $key", raw.has(key))
         }
-        assertTrue("time field remains", screen.contains("review.edit.time_field") && raw.has("review.edit.time_field"))
+        assertFalse("time field is retired", screen.contains("review.edit.time_field"))
         // The removed confirm button's fold now runs from save and from send.
-        assertTrue(screen.contains("ReviewTime.toJerusalemIso(time, draft.confirmedTime)"))
-        assertTrue(screen.contains("draft.confirmEvidence(iso,"))
+        assertTrue(screen.contains("ReportTime.forSave(draft)"))
+        assertTrue(screen.contains("onSubmit(ReportTime.forSend(draft))"))
         assertEquals(1, screen.split("fun confirmPendingEvidence()").size - 1)
         assertTrue("save folds the confirmation", screen.contains("onClick = { confirmPendingEvidence(); onSave(draft) }"))
         assertTrue("send folds the confirmation", screen.contains("onClick = {\n                confirmPendingEvidence()"))
@@ -366,7 +366,7 @@ class ReviewCaptureReportsExtractionTest {
     fun screensStoreCodesAndFollowTheActiveLanguage() {
         val screen = source("ReviewScreen.kt")
         val stores = Regex("""unresolved = setOf\(([^)]*)\)""").findAll(screen).map { it.groupValues[1] }.toList()
-        assertEquals(1, stores.size)
+        assertEquals(0, stores.size)
         assertEquals("suggestions add, never erase, existing warnings", 2, Regex("""unresolved = draft\.unresolved \+ ReviewWarning\.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION\.code""").findAll(screen).count())
         assertTrue("ReviewScreen must store codes: $stores", stores.all { Regex("""ReviewWarning\.[A-Z_]+\.code""").matches(it) })
         val shell = source("AppShell.kt")

@@ -19,7 +19,7 @@ class SendGateTest {
 
     @Test fun incompleteShownDraftRefused() {
         assertFalse(SendGate.readyToSend(readyDraft().copy(plate = "")))
-        assertFalse(SendGate.readyToSend(readyDraft().copy(unresolved = setOf("time_needs_confirmation"))))
+        assertFalse(SendGate.readyToSend(readyDraft().copy(unresolved = setOf("address_needs_confirmation"))))
     }
 
     @Test fun missingDraftRefused() {

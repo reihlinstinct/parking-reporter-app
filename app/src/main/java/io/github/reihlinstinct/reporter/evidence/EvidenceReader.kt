@@ -25,7 +25,7 @@ class EvidenceReader {
         val coordinates = exif?.latLong
         val rawTime = exif?.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)
         val time = try { rawTime?.let { LocalDateTime.parse(it, DateTimeFormatter.ofPattern("yyyy:MM:dd HH:mm:ss")).toString() } } catch (_: Exception) { null }
-        // EXIF time has no guaranteed timezone; UI must ask before review.
+        // Keep original EXIF wall time as local evidence metadata. City has no time field.
         return Evidence(stableId, hash, time, coordinates?.get(0), coordinates?.get(1))
     }
 }

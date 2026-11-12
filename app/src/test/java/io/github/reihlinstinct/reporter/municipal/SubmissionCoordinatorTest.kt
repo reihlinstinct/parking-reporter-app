@@ -197,7 +197,7 @@ class SubmissionCoordinatorTest {
     }
 
     @Test fun incompleteDraftBlocked() {
-        val draft = readyDraft().copy(unresolved = setOf("time_needs_confirmation"))
+        val draft = readyDraft().copy(unresolved = setOf("address_needs_confirmation"))
         val outcome = coordinator(RecordingClient()).submitOriginalForWorkflow(draft, settings, jpegFile())
         assertEquals(SubmissionCoordinator.Reason.NOT_READY,
             (outcome as SubmissionCoordinator.Outcome.Blocked).reason)

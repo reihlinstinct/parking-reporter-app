@@ -25,11 +25,9 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.unit.dp
 import io.github.reihlinstinct.reporter.core.ReviewDraft
+import io.github.reihlinstinct.reporter.core.ReportTime
 import io.github.reihlinstinct.reporter.i18n.LocalStrings
 import io.github.reihlinstinct.reporter.i18n.ProvideStringsIfMissing
-
-/** Same 24-hour format sample in every language. */
-private const val LOCAL_TIME_EXAMPLE = "\u206601/01/2026 12:00\u2069"
 
 @Composable
 fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft) -> Unit, onBack: () -> Unit, onSubmit: ((ReviewDraft) -> Unit)? = null, submitting: Boolean = false, submissionNote: String = "", missingCredentialKeys: List<String> = emptyList(), noDeviceCredential: Boolean = false, addressLookup: (suspend (Double, Double) -> List<io.github.reihlinstinct.reporter.evidence.AddressSuggestion>)? = null, plateRecognizer: (suspend () -> List<String>)? = null, manualAddressLookup: (suspend (String, String) -> io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress)? = null,
@@ -48,9 +46,8 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var suggestions by remember { mutableStateOf<List<io.github.reihlinstinct.reporter.evidence.AddressSuggestion>>(emptyList()) }
     var geocoding by remember { mutableStateOf(false) }
     var geocodeStatus by remember { mutableStateOf<String?>(null) }
-    var draft by remember(initial.evidence.stableId) { mutableStateOf(initial) }
-    LaunchedEffect(initial) { draft = initial }
-    var time by remember(initial.evidence.stableId) { mutableStateOf(ReviewTime.display(initial.confirmedTime)) }
+    var draft by remember(initial.evidence.stableId) { mutableStateOf(ReportTime.forSave(initial)) }
+    LaunchedEffect(initial) { draft = ReportTime.forSave(initial) }
     var latitude by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedLatitude?.toString().orEmpty()) }
     var longitude by remember(initial.evidence.stableId) { mutableStateOf(initial.confirmedLongitude?.toString().orEmpty()) }
     var editing by remember(initial.evidence.stableId) { mutableStateOf(false) }
@@ -73,14 +70,13 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // Owner instruction 2026-11-10 (phonemsg 01M73E6E2S6AZP46K75QS2S1WY):
     // the separate "confirm time/location/address" and approval buttons are
     // gone - send is the single confirmation. Saving or sending folds the
-    // checked time and coordinates into the draft exactly like the removed
+    // coordinates into the draft exactly like the removed
     // confirm button did.
     fun foldedDraft(): ReviewDraft {
-        val iso = ReviewTime.toJerusalemIso(time, draft.confirmedTime) ?: return draft
         val lat = latitude.toDoubleOrNull()
         val lon = longitude.toDoubleOrNull()
-        val folded = draft.confirmEvidence(iso, lat, lon)
-        // Tab review (#266): the fold confirms time and location only, never
+        val folded = ReportTime.forSave(draft).copy(confirmedLatitude = lat, confirmedLongitude = lon, unresolved = emptySet())
+        // Tab review (#266): the fold confirms location only, never
         // the address - address warnings need their own explicit act: editing
         // the address field (its label says "שאישרת") or the lookup's אשר כתובת.
         // And without coordinates the location warnings stay too, so the user
@@ -93,9 +89,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         return folded.copy(unresolved = unsettled)
     }
     fun confirmPendingEvidence() {
-        val iso = ReviewTime.toJerusalemIso(time, draft.confirmedTime)
-        draft = if (iso != null) foldedDraft()
-            else draft.copy(unresolved = draft.unresolved + ReviewWarning.TIME_NEEDS_CONFIRMATION.code)
+        draft = foldedDraft()
     }
     suspend fun findAddress() {
         val lat = latitude.toDoubleOrNull() ?: return
@@ -201,13 +195,10 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                     }
                 }
             }
-            Text(reviewTimeText(s, draft.confirmedTime))
             Text(draft.exactHebrewText.ifBlank { s.t("review.text_missing") })
             if (draft.unresolved.isNotEmpty()) Text(unresolvedText(s, draft.unresolved), style = MaterialTheme.typography.bodySmall)
         }
         if (editing) {
-        Text(s.t("review.edit.original_time_title"))
-        Text("\u2066${HebrewPresentation.evidenceTime(s, draft.evidence.capturedAtIso)}\u2069", modifier = Modifier.fillMaxWidth(), style = TextStyle(textDirection = TextDirection.Ltr))
 
         Text(s.t("review.edit.privacy_note"))
         if (io.github.reihlinstinct.reporter.core.TopicIdentity.needsPlate(draft.subject)) {
@@ -250,8 +241,6 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         }
         }
         OutlinedTextField(draft.exactHebrewText, { draft = draft.edit(text = it) }, label = { Text(s.t("review.edit.text_field")) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
-        Text(LOCAL_TIME_EXAMPLE, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(time, { time = it; draft = draft.copy(unresolved = setOf(ReviewWarning.TIME_NEEDS_CONFIRMATION.code)) }, textStyle = TextStyle(textDirection = TextDirection.Ltr), isError = ReviewTime.toJerusalemIso(time, draft.confirmedTime) == null, label = { Text(s.t("review.edit.time_field")) }, modifier = Modifier.fillMaxWidth())
         Text(reviewAddressText(s, draft.address))
         if (draft.unresolved.isNotEmpty()) Text(unresolvedText(s, draft.unresolved))
         }
@@ -311,7 +300,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 // semantics click no-opped silently. First proof point:
                 // does the click reach this lambda at all?
                 Log.i("SUBMIT_FLOW", "send onClick reached: ready=${draft.isReady()} submitting=$submitting")
-                onSubmit(draft)
+                onSubmit(ReportTime.forSend(draft))
             }, modifier = sendModifier) { Text(s.t(if (submitting) "review.submit.sending" else "review.submit.button")) }
             if (submissionNote.isNotEmpty()) Text(submissionNote, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("submission-note"))
         } else {
