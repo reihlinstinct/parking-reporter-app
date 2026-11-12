@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.43.3] - 2026-11-12
+
+### Fixes
+
+- fix(topics): confine catalog bootstrap state writes to the main dispatcher (#382) (2f5ea36)
+
 ## [0.43.2] - 2026-11-12
 
 ### Fixes
