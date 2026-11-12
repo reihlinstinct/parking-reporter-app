@@ -24,7 +24,15 @@ class StubE2eSafetyTest {
         val androidTests = file.parentFile.walkTopDown().filter { it.extension in setOf("kt", "java") }.toList()
         androidTests.forEach { testFile ->
             val text = testFile.readText()
-            assertFalse("Live arguments in ${testFile.name}", text.contains("getArguments("))
+            // The install-upgrade verifier has one local-only opt-in. It never
+            // constructs a municipal client. Do not permit arbitrary live flags.
+            val checkedText = if (testFile.name == "InstalledNamespaceUpgradeTest.kt") {
+                val optIn = "InstrumentationRegistry.getArguments().getString(\"namespaceUpgrade\")"
+                assertTrue("Upgrade test keeps its exact local opt-in", text.contains(optIn))
+                text.replace(optIn, "localUpgradeOptIn")
+            } else text
+            assertFalse("Live arguments in ${testFile.name}", checkedText.contains("getArguments("))
+            assertFalse("Live endpoint flag in ${testFile.name}", text.contains("e2eLive"))
             assertFalse("Production client in ${testFile.name}", Regex("OkHttpMunicipalClient\\s*\\(").containsMatchIn(text))
         }
     }
