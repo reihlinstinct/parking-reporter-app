@@ -41,10 +41,10 @@ class ReviewRotationStateTest {
     @Test fun shellParksTheOpenReportAndClearEndsIt() {
         val a = draft("a")
         ReviewRotationState.holdShell(ReviewRotationState.Shell(a, null, 3L))
-        assertEquals(3L, ReviewRotationState.peekShell()?.revision)
-        assertEquals(a, ReviewRotationState.peekShell()?.draft)
-        ReviewRotationState.clear()
-        assertNull(ReviewRotationState.peekShell())
+        val taken = ReviewRotationState.takeShell()
+        assertEquals(3L, taken?.revision)
+        assertEquals(a, taken?.draft)
+        assertNull("a second recreation must not reopen the same revision", ReviewRotationState.takeShell())
     }
     @Test fun nothingIsHeldPastTheSixtySecondBound() {
         var now = 1_000L
@@ -53,11 +53,18 @@ class ReviewRotationStateTest {
         ReviewRotationState.holdShell(ReviewRotationState.Shell(a, null, 0L))
         ReviewRotationState.hold(held(a, a.copy(plate = "1234567")))
         now += ReviewRotationState.MAX_AGE_MS
-        assertNotNull(ReviewRotationState.peekShell())
         now += 1
-        assertNull(ReviewRotationState.peekShell())
+        assertNull(ReviewRotationState.takeShell())
         ReviewRotationState.hold(held(a, a))
         now += ReviewRotationState.MAX_AGE_MS + 1
         assertNull(ReviewRotationState.take(a))
+    }
+    @Test fun takingTheShellKeepsTheScreenStateForTheReviewScreen() {
+        val a = draft("a")
+        val edited = a.copy(plate = "1234567")
+        ReviewRotationState.holdShell(ReviewRotationState.Shell(a, null, 1L))
+        ReviewRotationState.hold(held(a, edited))
+        assertNotNull(ReviewRotationState.takeShell())
+        assertEquals(edited, ReviewRotationState.take(a)?.draft)
     }
 }

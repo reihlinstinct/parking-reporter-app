@@ -39,10 +39,15 @@ object ReviewRotationState {
 
     @Synchronized fun holdShell(value: Shell) { shell = value; heldAt = clock() }
 
-    /** The open report to reopen after a rotation, or null when nothing fresh is held. Does not empty the holder. */
-    @Synchronized fun peekShell(): Shell? {
+    /**
+     * The open report to reopen after a rotation, or null when nothing fresh is held. It empties the shell, so a later
+     * recreation that was not a rotation can never reopen a stale revision. The held screen state stays for the Review screen to take.
+     */
+    @Synchronized fun takeShell(): Shell? {
         if (shell != null && expired()) clear()
-        return shell
+        val value = shell
+        shell = null
+        return value
     }
 
     /** Returns the held state only for the same report (same stable id and same initial draft), and always empties the holder. */

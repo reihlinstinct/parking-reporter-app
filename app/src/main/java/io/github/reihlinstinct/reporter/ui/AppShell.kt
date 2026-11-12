@@ -102,7 +102,7 @@ fun AppShell(
     var setupStarted by rememberSaveable { mutableStateOf(false) }
     var setupError by remember { mutableStateOf("") }
     // #358 part 2: after a rotation the open report comes back from the process-memory holder (never from a Bundle).
-    val rotated = remember { ReviewRotationState.peekShell() }
+    val rotated = remember { ReviewRotationState.takeShell() }
     var page by remember { mutableStateOf(if (rotated != null) "review" else "home") }
     var profile by remember { mutableStateOf<ReporterSettings?>(null) }
     var draft by remember { mutableStateOf<ReviewDraft?>(rotated?.draft) }
