@@ -54,7 +54,7 @@ data class VehicleRecord(
     val colour: String?,
     /** `shnat_yitzur`: year of manufacture. */
     val yearOfManufacture: Int?,
-    /** True when the record came from the inactive-vehicle resource (issue #366). Not persisted by the fallback cache. */
+    /** True when the record came from the inactive-vehicle resource (issue #366). Persisted by the fallback cache (issue #404). */
     val inactive: Boolean = false,
 ) {
     fun licenceStatus(today: LocalDate): LicenceStatus = when {

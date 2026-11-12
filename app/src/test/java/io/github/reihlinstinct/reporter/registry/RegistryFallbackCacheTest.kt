@@ -26,6 +26,21 @@ class RegistryFallbackCacheTest {
             assertNull(other.get(plate))
         } finally { dir.deleteRecursively() }
     }
+    @Test fun inactiveFlagSurvivesTheCacheAndOldEntriesWithoutItFailClosed() {
+        val dir = Files.createTempDirectory("registry-cache-test").toFile()
+        try {
+            val now = Instant.parse("2026-11-12T08:00:00Z")
+            val cache = RegistryFallbackCache(dir) { now }
+            val inactiveRec = VehicleLookupResult.Found(VehicleRecord(plate, null, null, null, null, null, null, inactive = true))
+            cache.put(plate, tag, inactiveRec, now)
+            assertTrue((cache.get(plate)!!.vehicle as VehicleLookupResult.Found).record.inactive)
+            cache.put(plate, tag, vehicle(), now)
+            assertFalse((cache.get(plate)!!.vehicle as VehicleLookupResult.Found).record.inactive)
+            val f = dir.listFiles()!!.single()
+            f.writeText(f.readLines().filterNot { it.startsWith("inactive") }.joinToString("\n"))
+            assertNull("an entry without the flag must not be served as active", cache.get(plate))
+        } finally { dir.deleteRecursively() }
+    }
     @Test fun expiresAtJerusalemMidnightAfterValidThroughAndErrorsDontOverwrite() {
         val dir = Files.createTempDirectory("registry-cache-test").toFile()
         try {
