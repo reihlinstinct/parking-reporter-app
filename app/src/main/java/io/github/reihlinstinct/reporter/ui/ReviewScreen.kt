@@ -78,7 +78,12 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var confirmExit by remember(initial.evidence.stableId) { mutableStateOf(false) }
     val savedManualStreet = remember(initial) { manualStreet }
     val savedManualHouse = remember(initial) { manualHouse }
-    val hasUnsavedEdits = draft != ReportTime.forSave(initial) ||
+    // Issue #358: an automatic OCR plate prefill is not a user edit. It only moves the clean baseline for the
+    // plate, and only while the user has not touched the plate (recognize() guards that with plateEdits).
+    var ocrPrefilledPlate by remember(initial.evidence.stableId) { mutableStateOf<String?>(null) }
+    val savedDraft = ReportTime.forSave(initial)
+    val cleanDraft = ocrPrefilledPlate?.takeIf { savedDraft.plate.isBlank() }?.let { savedDraft.copy(plate = it) }
+    val hasUnsavedEdits = (draft != savedDraft && draft != cleanDraft) ||
         latitude != initial.confirmedLatitude?.toString().orEmpty() ||
         longitude != initial.confirmedLongitude?.toString().orEmpty() ||
         manualStreet != savedManualStreet || manualHouse != savedManualHouse
@@ -140,7 +145,11 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 catch (_: Exception) { emptyList() }
             }
             if (!draft.needsPlate()) plates = emptyList()
-            if (plateEdits == editsBefore) draft = PlateEntry.prefill(draft, plates, plateBefore)
+            if (plateEdits == editsBefore) {
+                val prefilled = PlateEntry.prefill(draft, plates, plateBefore)
+                if (prefilled.plate != draft.plate) ocrPrefilledPlate = prefilled.plate
+                draft = prefilled
+            }
             ocrStatus = if (plates.isEmpty()) "review.ocr.no_plate" else "review.ocr.suggestions_found"
         } finally { recognizing = false }
     }
