@@ -22,8 +22,14 @@ class DisabilityTagVectorTest(unittest.TestCase):
             self.assertEqual('0 0 64 64', svg.attrib['viewBox'])
             self.assertEqual('false', xml.attrib[A+'autoMirrored'])
             self.assertNotIn(A+'tint', xml.attrib)
-            svg_paths = [(e.attrib['fill'], e.attrib['d']) for e in svg if e.tag.endswith('path')]
-            self.assertEqual(svg_paths, [(e.attrib[A+'fillColor'], e.attrib[A+'pathData']) for e in xml])
+            svg_paths = [(e.attrib['fill'], e.attrib['d']) for e in svg.iter() if e.tag.endswith('path')]
+            self.assertEqual(svg_paths, [(e.attrib[A+'fillColor'], e.attrib[A+'pathData']) for e in xml.iter() if e.tag.endswith('path')])
+            group = next(e for e in svg if e.tag.endswith('g'))
+            self.assertEqual('translate(5.12 5.12) scale(0.84)', group.attrib['transform'])
+            android_group = next(e for e in xml if e.tag.endswith('group'))
+            self.assertEqual(['5.12', '5.12', '0.84', '0.84'],
+                [android_group.attrib[A+k] for k in ['translateX', 'translateY', 'scaleX', 'scaleY']])
+            self.assertEqual('#FFFFFF', svg_paths[0][0])
             self.assertTrue(any(e.tag.endswith('title') and e.text for e in svg))
 
     def test_contrast_and_five_language_labels(self):
