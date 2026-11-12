@@ -33,9 +33,11 @@ fun CityTopicPicker(topics: List<MunicipalSubject>, selected: String?, recent: L
     Dialog(onDismissRequest = dismiss) {
         Surface(shape = MaterialTheme.shapes.large) {
             Column(Modifier.fillMaxWidth().heightIn(max = 600.dp).padding(16.dp)) {
-                Text(s.t("topics.title"), style = MaterialTheme.typography.titleLarge)
-                OutlinedTextField(query, { query = it }, label = { Text(s.t("topics.search")) },
-                    modifier = Modifier.fillMaxWidth(), singleLine = true)
+                Text(s.t("topics.title"), Modifier.testTag("picker-title"), style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.height(12.dp))
+                Text(s.t("topics.search"), Modifier.testTag("picker-search-label"))
+                OutlinedTextField(query, { query = it },
+                    modifier = Modifier.fillMaxWidth().testTag("picker-search-input").semantics { contentDescription = s.t("topics.search") }, singleLine = true)
                 Text(s.t("topics.results", mapOf("count" to results.size.toString())),
                     Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 LazyColumn(Modifier.weight(1f, fill = false).testTag("topic-results")) {
@@ -49,7 +51,7 @@ fun CityTopicPicker(topics: List<MunicipalSubject>, selected: String?, recent: L
                             verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(namesByCode.getValue(topic.code), color = MaterialTheme.colorScheme.primary,
                                 style = MaterialTheme.typography.labelLarge.copy(platformStyle = PlatformTextStyle(includeFontPadding = true)))
-                            Text(pathsByCode.getValue(topic.code),
+                            Text(pathsByCode.getValue(topic.code), Modifier.padding(horizontal = 4.dp).testTag("picker-path-${topic.code}"),
                                 style = MaterialTheme.typography.bodySmall.copy(platformStyle = PlatformTextStyle(includeFontPadding = true)))
                         }
 

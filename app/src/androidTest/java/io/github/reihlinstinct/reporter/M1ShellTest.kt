@@ -256,7 +256,7 @@ class M1ShellTest {
         // the popup and underlying review, not an arbitrary Compose root.
         Thread.sleep(1500)
         compose.onNodeWithText("חנייה אסורה - חנייה על מדרכה").performClick()
-        compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextInput("17841")
+        compose.onNodeWithTag("picker-search-input").performTextInput("17841")
         compose.onNodeWithText("תמרור תנועה נפל / דהוי / שבור / נוטה ליפול").assertIsDisplayed()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().let { image ->
@@ -281,7 +281,7 @@ class M1ShellTest {
         canvas.drawText("SYNTHETIC SIGN", 248f, 75f, android.graphics.Paint().apply { color = android.graphics.Color.BLACK; textSize = 22f })
         compose.setContent { AppTheme { ReviewScreen(draft(), bitmap.asImageBitmap(), { saved = it }, {}, topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         compose.onNodeWithText("חנייה אסורה - חנייה על מדרכה").performClick()
-        compose.onNodeWithText("חפש נושא, תיאור או מספר").performTextInput("17841")
+        compose.onNodeWithTag("picker-search-input").performTextInput("17841")
         compose.onNodeWithText("תמרור תנועה נפל / דהוי / שבור / נוטה ליפול").performClick()
         compose.onNodeWithText("לוחית:", substring = true).assertDoesNotExist()
         compose.onNodeWithText("רכב חונה על המדרכה").assertDoesNotExist()
