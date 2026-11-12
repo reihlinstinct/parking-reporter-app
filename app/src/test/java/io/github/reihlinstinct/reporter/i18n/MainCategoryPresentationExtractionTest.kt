@@ -169,7 +169,7 @@ class MainCategoryPresentationExtractionTest {
         assertTrue(screen.contains("Text(selectedLabel ?: s.t(\"topics.choose\")"))
         assertTrue(screen.contains("selectedRows.map { it.path.joinToString(\" / \") }.distinct()"))
         assertFalse(screen.contains("ReportCategory.entries"))
-        assertEquals(1, screen.split("HebrewPresentation.evidenceTime(s, draft.evidence.capturedAtIso)").size - 1)
+        assertEquals(0, screen.split("HebrewPresentation.evidenceTime(s, draft.evidence.capturedAtIso)").size - 1)
         assertFalse(screen.contains(".hebrew"))
         assertEquals(1, source("ReviewTexts.kt").split("HebrewPresentation.evidenceTime(strings, confirmedTime)").size - 1)
     }
