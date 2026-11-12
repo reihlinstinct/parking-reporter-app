@@ -202,7 +202,8 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         Text(s.t("review.category_note"), style = MaterialTheme.typography.bodySmall)
         if (!editing) {
             if (draft.needsPlate()) {
-                Text(reviewPlateText(s, draft.plate), style = MaterialTheme.typography.titleMedium)
+                if (IsraeliPlateStyle.isRegular(draft.plate)) IsraeliPlate(draft.plate, reviewPlateText(s, draft.plate), Modifier.testTag("review-plate"))
+                else Text(reviewPlateText(s, draft.plate), style = MaterialTheme.typography.titleMedium)
                 RegistryStatus(draft.plate, registryLookup)
                 if (recognizing) { LinearProgressIndicator(Modifier.fillMaxWidth()); Text(s.t("review.ocr.analyzing")) }
                 Text(ocrStatus?.let { s.t(it) }.orEmpty(), style = MaterialTheme.typography.bodySmall)
