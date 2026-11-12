@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.43.5] - 2026-11-12
+
+### Fixes
+
+- fix(ci): disclose bounded emulator recovery in job summary (#379) (5a241a0)
+
 ## [0.43.4] - 2026-11-12
 
 ### Other changes
