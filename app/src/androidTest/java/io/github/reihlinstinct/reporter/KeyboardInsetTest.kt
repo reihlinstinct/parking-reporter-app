@@ -53,11 +53,13 @@ class KeyboardInsetTest {
     private fun waitForIme() {
         compose.waitUntil(10_000) {
             ViewCompat.getRootWindowInsets(compose.activity.window.decorView)
-                ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+                ?.let { it.isVisible(WindowInsetsCompat.Type.ime()) && it.getInsets(WindowInsetsCompat.Type.ime()).bottom > 0 } == true
         }
     }
 
     private fun assertAboveIme(label: String) {
+        waitForIme()
+        capture("ime-before-geometry-${label.hashCode()}.png")
         val decor = compose.activity.window.decorView
         val inset = ViewCompat.getRootWindowInsets(decor)!!.getInsets(WindowInsetsCompat.Type.ime()).bottom
         val target = compose.onNodeWithText(label).fetchSemanticsNode().boundsInRoot
