@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.48.1] - 2026-11-12
+
+### Other changes
+
+- ci: CodeQL advanced setup with explicit Gradle compile, weekly and manual only (refs #395, #60) (#408) (62dc346)
+
 ## [0.48.0] - 2026-11-12
 
 ### Features
