@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-11-12
+
+### Features
+
+- feat(review): registry status below relevant vehicle plate (#333) (9b5dc39)
+
 ## [0.40.3] - 2026-11-12
 
 ### Fixes
