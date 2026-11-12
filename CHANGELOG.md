@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.41.2] - 2026-11-12
+
+### Other changes
+
+- docs: refresh current preview status and README claims (#374) (fcafe15)
+
 ## [0.41.1] - 2026-11-12
 
 ### Other changes
