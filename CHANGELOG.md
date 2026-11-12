@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.46.1] - 2026-11-12
+
+### Other changes
+
+- test: wait for the live relabel and the missing-fields reason in two Settings UI tests (#400) (#401) (1c84018)
+
 ## [0.46.0] - 2026-11-12
 
 ### Features
