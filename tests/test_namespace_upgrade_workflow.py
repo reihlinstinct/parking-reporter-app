@@ -17,6 +17,11 @@ class NamespaceUpgradeWorkflowTest(unittest.TestCase):
         self.assertNotIn('pm clear', workflow)
         self.assertIn('adb install -r app/build/outputs/apk/debug/app-debug.apk', workflow)
         self.assertIn('InstalledNamespaceUpgradeTest', workflow)
+        self.assertIn('python3 scripts/check_upgrade_test.py app/build/reports/namespace-upgrade/seed.txt il.sidewalks.reporter.NamespaceUpgradeSeedTest seedOldInstall', workflow)
+        self.assertIn('python3 scripts/check_upgrade_test.py app/build/reports/namespace-upgrade/verify.txt io.github.reihlinstinct.reporter.InstalledNamespaceUpgradeTest oldInstalledDataSurvivesReplaceInstall', workflow)
+        ci = pathlib.Path('.github/workflows/repository-checks.yml').read_text()
+        for test in ['test_test_summary.py', 'test_upgrade*.py', 'test_namespace_upgrade_workflow.py']:
+            self.assertIn(test, ci)
 
 
 if __name__ == '__main__':

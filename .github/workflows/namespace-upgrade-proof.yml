@@ -57,10 +57,12 @@ jobs:
             adb install -r upgrade-baseline/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             adb shell am instrument -w -r -e class il.sidewalks.reporter.NamespaceUpgradeSeedTest il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/namespace-upgrade/seed.txt
             python3 scripts/test_summary.py --title 'Old installed app seed' --instrumentation app/build/reports/namespace-upgrade/seed.txt --check
+            python3 scripts/check_upgrade_test.py app/build/reports/namespace-upgrade/seed.txt il.sidewalks.reporter.NamespaceUpgradeSeedTest seedOldInstall
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             adb shell am instrument -w -r -e namespaceUpgrade 1 -e class io.github.reihlinstinct.reporter.InstalledNamespaceUpgradeTest il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/namespace-upgrade/verify.txt
             python3 scripts/test_summary.py --title 'New installed namespace preserves old data' --instrumentation app/build/reports/namespace-upgrade/verify.txt --check
+            python3 scripts/check_upgrade_test.py app/build/reports/namespace-upgrade/verify.txt io.github.reihlinstinct.reporter.InstalledNamespaceUpgradeTest oldInstalledDataSurvivesReplaceInstall
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
