@@ -38,6 +38,8 @@ internal object IsraeliPlateStyle {
     val Ink = Color(0xFF111111)
     val Band = Color(0xFF003DA5)
     val BandText = Color.White
+    /** Fixed plate mark (country code on the plate), not translatable UI text. */
+    const val COUNTRY_MARK = "IL"
     fun isRegular(plate: String): Boolean = plate.matches(Regex("[0-9]{7,8}"))
 }
 
@@ -57,7 +59,7 @@ internal fun IsraeliPlate(plate: String, description: String, modifier: Modifier
                     Modifier.fillMaxHeight().width(28.dp).background(IsraeliPlateStyle.Band),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("IL", color = IsraeliPlateStyle.BandText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(IsraeliPlateStyle.COUNTRY_MARK, color = IsraeliPlateStyle.BandText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
                 Text(
                     PlateEntry.format(plate),
