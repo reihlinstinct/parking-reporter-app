@@ -67,7 +67,7 @@ class DisabilityRegistryClient(
             // CKAN currently emits integer codes. Unknown strings/fractions remain unknown.
             val type = if (code is Number && code.toDouble() == code.toInt().toDouble()) code.toInt() else null
             DisabilityLookupResult.Found(DisabilityTagType.fromRegistry(type))
-        } catch (_: RuntimeException) { DisabilityLookupResult.Error(LookupErrorKind.MALFORMED_RESPONSE) }
+        } catch (_: org.json.JSONException) { DisabilityLookupResult.Error(LookupErrorKind.MALFORMED_RESPONSE) } catch (_: RuntimeException) { DisabilityLookupResult.Error(LookupErrorKind.MALFORMED_RESPONSE) }
     }
     companion object {
         const val RESOURCE = "c8b9f9c8-4612-4068-934f-d4acd2e3c06e"
