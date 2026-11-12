@@ -1,8 +1,16 @@
 name: Release
 
+# Release cadence (owner decision, 12 Nov 2026): SemVer is still computed from the commit subjects
+# (fix=PATCH, feat=MINOR, breaking=MAJOR), but a merge no longer releases by itself. A release happens when
+#  - the merged PR carries the "release" label (push to main, label looked up through the commit's PR),
+#  - once a day, only if a feat/fix/breaking commit landed since the last release,
+#  - or on demand (workflow_dispatch).
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,6 +27,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: write
+      pull-requests: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -28,10 +37,46 @@ jobs:
           # stores no credential at all; the push URLs carry it explicitly and
           # it never lands in .git/config.
           persist-credentials: false
+      - name: Decide whether to release
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          SHA: ${{ github.sha }}
+          REF: ${{ github.ref }}
+        run: |
+          # The release pushes to protected main with the owner PAT, so it may only ever run from main.
+          # A manual run from any other ref must not reach the push step.
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "Release runs only from refs/heads/main (got ${REF}); skipping."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          case "$EVENT" in
+            push)
+              # A failed lookup must fail the run, not read as "no label".
+              labels="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/pulls" --jq '.[].labels[].name')" || {
+                echo "::error::Could not read the merged PR labels; not releasing."
+                exit 1
+              }
+              if printf '%s\n' "$labels" | grep -qx release; then
+                echo "go=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "No release label on the merged PR; skipping."
+                echo "go=false" >> "$GITHUB_OUTPUT"
+              fi ;;
+            schedule)
+              echo "go=true" >> "$GITHUB_OUTPUT"
+              echo "require_feat_or_fix=1" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "go=true" >> "$GITHUB_OUTPUT" ;;
+          esac
       - name: Prepare release
         id: prepare
+        if: steps.gate.outputs.go == 'true'
         env:
           RELEASE_NOTES_PATH: ${{ runner.temp }}/release_notes.md
+          RELEASE_REQUIRE_FEAT_OR_FIX: ${{ steps.gate.outputs.require_feat_or_fix }}
         run: python3 scripts/release.py
       - name: Commit, tag and publish release
         if: steps.prepare.outputs.released == 'true'
