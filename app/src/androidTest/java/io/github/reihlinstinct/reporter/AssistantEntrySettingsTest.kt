@@ -29,7 +29,7 @@ class AssistantEntrySettingsTest {
             compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG,100,it)
         }
     }
-    @Test fun defaultOffToggleRevocationFailureAndUnsupportedAreVisibleInHebrew() {
+    @Test fun defaultOffToggleRevocationFailureAndUnsupportedHiddenInHebrew() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         UiPrefsLanguageStore.of(context).set(AppCatalog.defaultCode(context))
         var supported by mutableStateOf(true)
@@ -59,8 +59,10 @@ class AssistantEntrySettingsTest {
         compose.onNodeWithText("לא ניתן לעדכן את החיבור לעוזר כרגע. אפשר לנסות שוב.").assertIsDisplayed()
         capture("assistant-settings-failure.png")
         compose.runOnIdle { supported = false; failed = false }
-        toggle.assertIsOff().assertIsNotEnabled()
-        compose.onNodeWithText("נדרש Android 16 ומעלה.").assertIsDisplayed()
-        capture("assistant-settings-api30-unsupported.png")
+        toggle.assertDoesNotExist()
+        compose.onNodeWithText("כניסה מעוזר חכם").assertDoesNotExist()
+        compose.onNodeWithText("נדרש Android 16 ומעלה.").assertDoesNotExist()
+        compose.onNodeWithText("החיבור משתמש בחבילה ניסיונית", substring = true).assertDoesNotExist()
+        capture("assistant-settings-api30-hidden.png")
     }
 }

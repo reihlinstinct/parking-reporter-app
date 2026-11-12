@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 /** Only shown in full Settings, not basic reporter setup. Default is OFF. */
 @Composable
 fun AssistantEntrySettings() {
+    if (!AssistantEntry.supported()) return
     val context = LocalContext.current
     val store = remember(context) { AssistantEntryStore(context) }
     var enabled by remember { mutableStateOf(store.enabled()) }
@@ -43,6 +44,7 @@ internal fun AssistantEntrySettingsContent(
     supported: Boolean, enabled: Boolean, busy: Boolean, failed: Boolean,
     onEnabledChange: (Boolean) -> Unit,
 ) {
+    if (!supported) return
     val strings = LocalStrings.current
     HorizontalDivider()
     Text(strings.t("settings.assistant.title"), style = MaterialTheme.typography.titleMedium)

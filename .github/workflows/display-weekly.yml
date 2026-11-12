@@ -81,7 +81,7 @@ jobs:
             adb pull /sdcard/display-test.mp4 app/build/reports/display/display-test.mp4 || true
             adb logcat -d -v threadtime > app/build/reports/display/logcat.txt || true
             python3 scripts/test_summary.py --title 'Display screenshots (${{ matrix.label }}, API36)' --instrumentation app/build/reports/display/instrumentation.txt --check; echo $? > app/build/reports/display/summary.rc
-            for f in assistant-settings-default-off.png assistant-settings-on.png assistant-settings-revoked.png assistant-settings-failure.png assistant-settings-api30-unsupported.png picker315-real-paths-top.png picker315-real-paths-bottom.png picker312-all-paths.png category-picker-open.png category-picker-chosen.png design-home-synthetic.png design-home-camera-scrolled.png design-home-gallery-scrolled.png m1-review-no-lockscreen-synthetic.png settings-save-missing-fields.png design303-municipal-settings.png design303-dynamic-settings.png design303-back-home.png; do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/display/screenshots/$f" || true; done
+            for f in assistant-settings-default-off.png assistant-settings-on.png assistant-settings-revoked.png assistant-settings-failure.png assistant-settings-api30-hidden.png picker315-real-paths-top.png picker315-real-paths-bottom.png picker312-all-paths.png category-picker-open.png category-picker-chosen.png design-home-synthetic.png design-home-camera-scrolled.png design-home-gallery-scrolled.png m1-review-no-lockscreen-synthetic.png settings-save-missing-fields.png design303-municipal-settings.png design303-dynamic-settings.png design303-back-home.png; do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/display/screenshots/$f" || true; done
             test -s app/build/reports/display/screenshots/picker315-real-paths-top.png
             test -s app/build/reports/display/screenshots/picker315-real-paths-bottom.png
             test -s app/build/reports/display/screenshots/picker312-all-paths.png
@@ -95,7 +95,7 @@ jobs:
             test -s app/build/reports/display/screenshots/design303-municipal-settings.png
             test -s app/build/reports/display/screenshots/design303-dynamic-settings.png
             test -s app/build/reports/display/screenshots/design303-back-home.png
-            for f in assistant-settings-default-off.png assistant-settings-on.png assistant-settings-revoked.png assistant-settings-failure.png assistant-settings-api30-unsupported.png; do test -s "app/build/reports/display/screenshots/$f"; done
+            for f in assistant-settings-default-off.png assistant-settings-on.png assistant-settings-revoked.png assistant-settings-failure.png assistant-settings-api30-hidden.png; do test -s "app/build/reports/display/screenshots/$f"; done
             test "$(cat app/build/reports/display/instrumentation.rc)" = 0
             test "$(cat app/build/reports/display/summary.rc)" = 0
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
