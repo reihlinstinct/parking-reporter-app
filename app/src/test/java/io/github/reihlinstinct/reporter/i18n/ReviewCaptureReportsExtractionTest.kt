@@ -336,7 +336,7 @@ class ReviewCaptureReportsExtractionTest {
         assertFalse("time field is retired", screen.contains("review.edit.time_field"))
         // The removed confirm button's fold now runs from save and from send.
         assertTrue(screen.contains("ReportTime.forSave(draft)"))
-        assertTrue(screen.contains("onSubmit(ReportTime.forSend(draft))"))
+        assertTrue(screen.contains("onSubmit(ReportTime.forSend(ReportTime.forSave(draft)))"))
         assertEquals(1, screen.split("fun confirmPendingEvidence()").size - 1)
         assertTrue("save folds the confirmation", screen.contains("onClick = { confirmPendingEvidence(); onSave(draft) }"))
         assertTrue("send folds the confirmation", screen.contains("onClick = {\n                confirmPendingEvidence()"))
