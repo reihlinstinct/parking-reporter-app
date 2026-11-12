@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-11-12
+
+### Features
+
+- feat(ui): say when the vehicle record comes from the inactive registry (#366) (#394) (bf60130)
+
 ## [0.46.2] - 2026-11-12
 
 ### Other changes
