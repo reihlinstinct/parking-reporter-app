@@ -43,6 +43,29 @@ class TopicCatalogSyncTest {
             assertEquals(5, client.reads)
         } finally { dir.deleteRecursively() }
     }
+    @Test fun supersededConcurrentResponseCannotReplaceNewerCatalog() {
+        val dir = Files.createTempDirectory("plate-order").toFile()
+        try {
+            val cache = CityTopicCache(java.io.File(dir, "catalog.json"))
+            val fresh = FreshPlateCatalog(cache)
+            val entered = java.util.concurrent.CountDownLatch(1)
+            val release = java.util.concurrent.CountDownLatch(1)
+            val old = object : MunicipalClient by Client() {
+                override fun subjectCategories(token: String): List<MunicipalSubject> {
+                    entered.countDown(); check(release.await(5, java.util.concurrent.TimeUnit.SECONDS))
+                    return listOf(MunicipalSubject("5164", "old", listOf("old")))
+                }
+            }
+            var refused = false
+            val thread = Thread { try { fresh.refresh(true) { old } } catch (_: IllegalStateException) { refused = true } }
+            thread.start(); assertTrue(entered.await(5, java.util.concurrent.TimeUnit.SECONDS))
+            val new = Client().apply { rows = listOf(MunicipalSubject("5164", "new", listOf("new"))) }
+            fresh.refresh(true) { new }
+            release.countDown(); thread.join(5000)
+            assertFalse(thread.isAlive); assertTrue(refused)
+            assertEquals("new", cache.read()!!.topics.single().name)
+        } finally { dir.deleteRecursively() }
+    }
     @Test fun bootstrapIsOnceAndOfflineReadNeverCreatesAClient() {
         val dir = Files.createTempDirectory("topic-bootstrap").toFile()
         try {
