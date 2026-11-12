@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.48.6] - 2026-11-12
+
+### Other changes
+
+- Feat/plate class picker (#414) (c6a9959)
+
 ## [0.48.5] - 2026-11-12
 
 ### Fixes
