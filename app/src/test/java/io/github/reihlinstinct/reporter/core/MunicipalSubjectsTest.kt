@@ -145,4 +145,37 @@ class MunicipalSubjectsTest {
         java.security.MessageDigest.getInstance("SHA-256")
             .digest(text.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
+
+    /**
+     * Golden vector computed with parking-report-helper subjects.catalog_fingerprint
+     * (json.dumps ensure_ascii=False, sorted, sha256) over rows with Hebrew text,
+     * a quote and a backslash. Rows carry no plate flag, so the app must match the
+     * helper exactly.
+     */
+    @Test
+    fun helperGoldenVectorMatchesWithoutPlateFlag() {
+        val rows = listOf(
+            MunicipalSubject("1145", "חנייה אסורה - חנייה על מדרכה", listOf("חנייה", "חנייה אסורה - חנייה על מדרכה")),
+            MunicipalSubject("9", "a\"b\\c", listOf("x", "a\"b\\c")),
+        )
+        assertEquals("e019d9f5c5b1616436beede1e7b606f5d38f91e7064937f4043052534ead53f8",
+            MunicipalSubjects.canonicalFingerprint(rows))
+    }
+
+    /**
+     * Intentional difference: the helper ignores plate-policy metadata; the app
+     * includes a present plateRequired flag in its cache fingerprint so a policy
+     * change invalidates the cache. Absent (unknown) flags do not change it.
+     */
+    @Test
+    fun plateFlagChangesAppFingerprintOnlyWhenPresent() {
+        val base = MunicipalSubject("1144", "n", listOf("n"))
+        val unknown = MunicipalSubjects.canonicalFingerprint(listOf(base))
+        assertEquals(unknown, MunicipalSubjects.canonicalFingerprint(listOf(base.copy(plateRequired = null))))
+        val required = MunicipalSubjects.canonicalFingerprint(listOf(base.copy(plateRequired = true)))
+        val optional = MunicipalSubjects.canonicalFingerprint(listOf(base.copy(plateRequired = false)))
+        assertNotEquals(unknown, required)
+        assertNotEquals(unknown, optional)
+        assertNotEquals(required, optional)
+    }
 }

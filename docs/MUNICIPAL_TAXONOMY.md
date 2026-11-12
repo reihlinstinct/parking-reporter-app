@@ -37,6 +37,18 @@ cross-platform golden vectors, so an accidental asset edit fails the build on
 any platform. Expected fingerprint:
 `77613b820e657c43c7df6558a5f1d24c3a4bcd1ea7d691bb4bb55db2607c66ab`.
 
+### Intentional app/helper differences (issue #368)
+
+- The helper fingerprint covers only `(code, name, path)`. It has no plate-policy field.
+- The app appends `|plateRequired=<flag>` to a row only when the catalog carries a strict
+  Boolean flag. Rows without the flag (including the current captured list) hash exactly
+  like the helper, which the golden-vector test pins.
+- A present flag changes the app cache fingerprint on purpose, so a policy change
+  invalidates cached rows. The helper will not see that change.
+- Receiver policy is never derived from whether the sender supplied a plate.
+- Tests: `helperGoldenVectorMatchesWithoutPlateFlag` and `plateFlagChangesAppFingerprintOnlyWhenPresent`
+  in `MunicipalSubjectsTest`.
+
 ## Local category mapping
 
 | Local category | Municipal subject | Name |
