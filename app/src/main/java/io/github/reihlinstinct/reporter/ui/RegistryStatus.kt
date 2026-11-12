@@ -25,6 +25,9 @@ fun licenceDaysRemaining(until: LocalDate?, checkedAt: Instant): Long? = until?.
     java.time.temporal.ChronoUnit.DAYS.between(checkedAt.atZone(ZoneId.of("Asia/Jerusalem")).toLocalDate(), it)
 }
 
+/** Vehicle half resolved while the tag request is still pending (issue #365). Purely informational. */
+fun tagPending(snapshot: RegistrySnapshot): Boolean = snapshot.tag == null && snapshot.vehicle != null
+
 class RegistrySnapshot(val tag: DisabilityLookupResult?, val vehicle: VehicleLookupResult?, val checkedAt: Instant, val cachedAt: Instant? = null, val cachedUntil: Instant? = null) {
     override fun toString() = "RegistrySnapshot(redacted)"
 }
@@ -124,6 +127,7 @@ private fun RegistryStatusContent(plate: String, lookup: RegistryLookup?) {
                     Text(s.t("registry.cached", mapOf("minutes" to age.toString())), style = MaterialTheme.typography.bodySmall)
                 }
                 val tag = current.tag
+                if (tagPending(current)) Text(s.t("registry.tag.pending"))
                 val type = (tag as? DisabilityLookupResult.Found)?.type
                 if (tag is DisabilityLookupResult.Found) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val icon = when (type) {
