@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.36.5] - 2026-11-12
+
+### Other changes
+
+- ci(upgrade): keep real old-to-new namespace install proof (#328) (fb04c14)
+
 ## [0.36.4] - 2026-11-12
 
 ### Fixes
