@@ -7,7 +7,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
@@ -163,9 +162,8 @@ private fun RegistryStatusContent(plate: String, lookup: RegistryLookup?) {
                         Text(licenceText, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleMedium)
                     }
                 } else if (expiresSoon) {
-                    // Dark orange on light surfaces and light orange on dark surfaces for contrast.
-                    val surface = MaterialTheme.colorScheme.surface
-                    val orange = if (surface.red + surface.green + surface.blue < 1.5f) Color(0xFFFFB74D) else Color(0xFF9A4900)
+                    // Reviewed light/dark token with pinned AA contrast (issue #367).
+                    val orange = io.github.reihlinstinct.reporter.ui.theme.LocalWarningColor.current
                     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Filled.Warning, null, tint = orange, modifier = Modifier.size(28.dp))
                         Text(licenceText, color = orange, style = MaterialTheme.typography.titleMedium)

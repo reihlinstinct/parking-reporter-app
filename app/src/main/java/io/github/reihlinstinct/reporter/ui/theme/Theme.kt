@@ -36,7 +36,10 @@ fun AppTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable ()
     val colors = if (useDynamic && Build.VERSION.SDK_INT >= 31) {
         accessibleDynamicScheme(if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context), municipal)
     } else municipal
-    MaterialTheme(colorScheme = colors, content = content)
+    val warning = opaque(if (darkTheme) WarningTokens.DARK else WarningTokens.LIGHT)
+    androidx.compose.runtime.CompositionLocalProvider(LocalWarningColor provides warning) {
+        MaterialTheme(colorScheme = colors, content = content)
+    }
 }
 
 /**
