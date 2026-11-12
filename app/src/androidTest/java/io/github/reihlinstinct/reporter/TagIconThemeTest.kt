@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.test.*
@@ -25,7 +26,7 @@ class TagIconThemeTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val resources = listOf(R.drawable.ic_disability_tag_triangle, R.drawable.ic_disability_tag_wheelchair)
         // Render the Android vectors at the real display density, not SVG approximations.
-        for (resource in resources) for (dp in listOf(24, 32)) for (background in listOf(Color.WHITE, Color.BLACK)) {
+        for (resource in resources) for (dp in listOf(24, 32)) for (background in listOf(Color.WHITE, Color.BLACK, io.github.reihlinstinct.reporter.ui.theme.AppLightColors.surface.toArgb(), io.github.reihlinstinct.reporter.ui.theme.AppDarkColors.surface.toArgb())) {
             val size = (dp * context.resources.displayMetrics.density).toInt()
             val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
             bitmap.eraseColor(background)
@@ -38,13 +39,13 @@ class TagIconThemeTest {
             }
             assertTrue("light contour must remain visible on dark", pixels.count { luminance(it) > .8 } >= (size / 24).coerceAtLeast(1))
             assertTrue("dark inner contour must remain visible on light", pixels.any { luminance(it) < .2 })
-            val file = File(context.filesDir, "tag-boundary-$resource-$dp-${if (background == Color.BLACK) "dark" else "light"}.png")
+            val file = File(context.filesDir, "tag-boundary-$resource-$dp-${if (background == Color.BLACK) "dark" else background.toUInt().toString(16)}.png")
             file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         }
         compose.setContent {
             Column {
                 for (dark in listOf(false, true)) {
-                    MaterialTheme(colorScheme = if (dark) darkColorScheme() else lightColorScheme()) {
+                    io.github.reihlinstinct.reporter.ui.theme.AppTheme(darkTheme = dark) {
                         Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(24.dp)) {
                             Text(if (dark) "כהה / Dark" else "בהיר / Light", color = MaterialTheme.colorScheme.onSurface)
                             Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
