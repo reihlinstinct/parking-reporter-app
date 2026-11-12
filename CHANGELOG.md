@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.39.2] - 2026-11-12
+
+### Fixes
+
+- fix(catalog): unknown check date without an invented age (#322) (d3c8b7d)
+
 ## [0.39.1] - 2026-11-12
 
 ### Fixes
