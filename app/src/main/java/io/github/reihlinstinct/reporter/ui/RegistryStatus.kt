@@ -3,6 +3,8 @@ package io.github.reihlinstinct.reporter.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -95,7 +97,7 @@ fun RegistryStatus(plate: String, lookup: RegistryLookup? = null) {
             else -> {
                 val tag = current.tag
                 val type = (tag as? DisabilityLookupResult.Found)?.type
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (tag is DisabilityLookupResult.Found) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val icon = when (type) {
                         DisabilityTagType.TRIANGLE -> R.drawable.ic_disability_tag_triangle
                         DisabilityTagType.WHEELCHAIR -> R.drawable.ic_disability_tag_wheelchair
@@ -114,14 +116,20 @@ fun RegistryStatus(plate: String, lookup: RegistryLookup? = null) {
                 }
                 val vehicle = current.vehicle
                 val status = (vehicle as? VehicleLookupResult.Found)?.record?.licenceStatus(LocalDate.now(ZoneId.of("Asia/Jerusalem")))
-                Text(s.t(when {
+                val licenceText = s.t(when {
                     vehicle == null -> "registry.loading"
                     status == LicenceStatus.EXPIRED -> "registry.licence.expired"
                     status == LicenceStatus.VALID -> "registry.licence.valid"
                     status == LicenceStatus.UNKNOWN -> "registry.licence.unknown"
                     vehicle is VehicleLookupResult.NotFound -> "registry.licence.not_found"
                     else -> "registry.unavailable"
-                }))
+                })
+                if (status == LicenceStatus.EXPIRED) {
+                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Filled.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(28.dp))
+                        Text(licenceText, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleMedium)
+                    }
+                } else Text(licenceText)
                 Text(s.t("registry.source", mapOf("time" to current.checkedAt.atZone(ZoneId.of("Asia/Jerusalem")).toLocalTime().withNano(0).toString())), style = MaterialTheme.typography.bodySmall)
             }
         }

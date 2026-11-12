@@ -99,4 +99,14 @@ class RegistryReviewTest {
         screenshot("registry-partial-tag-then-licence.png")
     }
 
+    @Test fun absentTagIsSilentButExpiredLicenceRemainsVisible() {
+        val lookup: RegistryLookup = { _, _ -> RegistrySnapshot(DisabilityLookupResult.NotFound,
+            snapshot(DisabilityTagType.TRIANGLE).vehicle, Instant.now()) }
+        compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}, topicSnapshot = syntheticCityTopics(),
+            topicsAvailable = true, registryLookup = lookup) } }
+        compose.onNodeWithText("לא נמצא רישום תג במאגר").assertDoesNotExist()
+        compose.onNodeWithText("רישיון הרכב פג תוקף לפי המאגר").assertExists()
+        screenshot("registry-no-tag-expired-light.png")
+    }
+
 }
