@@ -1,6 +1,7 @@
 package io.github.reihlinstinct.reporter.ui
 
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -13,6 +14,16 @@ class IsraeliPlateStyleTest {
     @Test fun everythingElseStaysPlainText() {
         listOf("", "123456", "123456789", "12-345-67", "1234567A", "א123456", "١٢٣٤٥٦٧", "12 34567").forEach {
             assertFalse("'$it' must not be drawn as a regular plate", IsraeliPlateStyle.isRegular(it))
+        }
+    }
+
+    // Issue #354: owner-supplied examples of non-regular plates. They are examples only, not verified
+    // formats (docs/PLATE_CLASSES.md). Whatever they are, they must not be styled as a regular plate
+    // and must never reach a public registry query. Unclassified stays plain text.
+    @Test fun specialClassLookingInputsAreNeverStyledOrQueried() {
+        listOf("21-12-20 מ", "2112 20מ", "211220מ", "CD 23 044 22", "CD2304422", "CC 12 345", "174142 צ", "174142צ").forEach {
+            assertFalse("'$it' must not be styled as regular", IsraeliPlateStyle.isRegular(it))
+            assertNull("'$it' must not be a registry plate", io.github.reihlinstinct.reporter.registry.PlateNumber.parse(it))
         }
     }
 }
