@@ -58,7 +58,9 @@ class ReviewUnsavedBackTest {
         compose.onNodeWithText("חזור").performScrollTo().performClick()
         compose.onNodeWithText("יש שינויים שלא נשמרו").assertDoesNotExist()
         compose.onNodeWithText("reopen-synthetic").performClick()
-        compose.onNodeWithText("7654321", substring = true).assertExists()
+        compose.onNodeWithText("לוחית:", substring = true).assertExists()
+        compose.onNodeWithText("ערוך").performClick()
+        compose.onNodeWithText("מספר לוחית (ספרות בלבד)").performScrollTo().assertTextContains("7654321")
     }
 
     @Test fun cleanExifTimestampNormalizationDoesNotInventUnsavedTimeEdits() {
