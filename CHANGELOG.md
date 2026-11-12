@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.41.1] - 2026-11-12
+
+### Other changes
+
+- ci(display): targeted compact200% coverage for risky UI changes (#324) (0ff3ed2)
+
 ## [0.41.0] - 2026-11-12
 
 ### Features
