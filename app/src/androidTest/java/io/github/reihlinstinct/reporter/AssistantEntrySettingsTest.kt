@@ -49,6 +49,7 @@ class AssistantEntrySettingsTest {
         val toggle = compose.onNodeWithTag("assistant-entry-toggle")
         toggle.assertIsOff().assertIsEnabled()
         compose.onNodeWithText("כניסה מעוזר חכם").assertIsDisplayed()
+        compose.onNodeWithText("החיבור משתמש בחבילה ניסיונית", substring = true).assertIsDisplayed()
         capture("assistant-settings-default-off.png")
         toggle.performClick().assertIsOn()
         capture("assistant-settings-on.png")
