@@ -89,6 +89,7 @@ class CityTopicPickerTest {
         compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}, topicSnapshot = snapshot) } }
         compose.onNodeWithText("מועד הבדיקה האחרון אינו ידוע").assertIsDisplayed()
         compose.onNodeWithText("1970-01-01", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("90 ימים", substring = true).assertDoesNotExist()
         compose.waitForIdle()
         val bitmap = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
         File(context.filesDir, "catalog-unknown-date-synthetic.png").outputStream().use {
@@ -96,6 +97,14 @@ class CityTopicPickerTest {
         }
         bitmap.recycle()
         file.delete()
+    }
+
+    @Test fun real91DayOldCatalogStillShowsStaleWarning() {
+        io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set(io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(context))
+        val snapshot = syntheticCityTopics().copy(checkedAt = java.time.Instant.now().minusSeconds(91L * 86400), checkDateKnown = true)
+        compose.setContent { AppTheme { ReviewScreen(draft(), null, {}, {}, topicSnapshot = snapshot) } }
+        compose.onNodeWithText("מועד הבדיקה האחרון אינו ידוע").assertDoesNotExist()
+        compose.onNodeWithText("90 ימים", substring = true).assertIsDisplayed()
     }
 
     @Test fun noCityCredentialsDisablesTopicFieldWithExplanation() {

@@ -54,10 +54,10 @@ class CityTopicSearchTest {
             val root = org.json.JSONObject(file.readText())
             root.put("checked_at", now.plusSeconds(365*86400L).toString()); file.writeText(root.toString())
             val clamped = cache.read()!!
-            assertEquals(Instant.EPOCH, clamped.checkedAt)
+            assertFalse(clamped.checkDateKnown)
             assertNull(clamped.knownCheckDate())
             assertTrue(clamped.refreshDue(now))
-            assertTrue(clamped.stale(now))
+            assertFalse(clamped.stale(now))
             assertTrue(cache.read()!!.refreshDue(now))
             root.put("fingerprint", "invalid"); file.writeText(root.toString())
             assertNull(cache.read())

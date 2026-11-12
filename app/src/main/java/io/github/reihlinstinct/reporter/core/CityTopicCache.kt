@@ -7,12 +7,12 @@ import java.time.Instant
 
 /** Public catalog only, never credentials or query text. Atomic last-good replacement. */
 class CityTopicCache(private val file: File, private val now: () -> Instant = Instant::now) {
-    data class Snapshot(val topics: List<MunicipalSubject>, val checkedAt: Instant, val fingerprint: String) {
-        /** A clamped future timestamp is refresh-due, not a genuine 1970 check. */
-        fun knownCheckDate(): java.time.LocalDate? = checkedAt.takeUnless { it == Instant.EPOCH }
+    data class Snapshot(val topics: List<MunicipalSubject>, val checkedAt: Instant, val fingerprint: String, val checkDateKnown: Boolean = checkedAt != Instant.EPOCH) {
+        /** Unknown timestamps stay refresh-due without claiming a measurable age. */
+        fun knownCheckDate(): java.time.LocalDate? = checkedAt.takeIf { checkDateKnown }
             ?.atZone(java.time.ZoneId.of("Asia/Jerusalem"))?.toLocalDate()
-        fun stale(now: Instant): Boolean = checkedAt.plusSeconds(90L * 86400).isBefore(now)
-        fun refreshDue(now: Instant): Boolean = checkedAt.plusSeconds(7L * 86400).isBefore(now)
+        fun stale(now: Instant): Boolean = checkDateKnown && checkedAt.plusSeconds(90L * 86400).isBefore(now)
+        fun refreshDue(now: Instant): Boolean = !checkDateKnown || checkedAt.plusSeconds(7L * 86400).isBefore(now)
     }
     @Synchronized fun read(): Snapshot? = try {
         val root = JSONObject(file.readText())
@@ -26,7 +26,7 @@ class CityTopicCache(private val file: File, private val now: () -> Instant = In
         require(root.getString("fingerprint") == fingerprint)
         val checkedAt = Instant.parse(root.getString("checked_at"))
         // A clock correction must never suppress the next successful-send refresh.
-        Snapshot(topics, checkedAt.takeUnless { it.isAfter(now()) } ?: Instant.EPOCH, fingerprint)
+        Snapshot(topics, checkedAt, fingerprint, checkDateKnown = checkedAt != Instant.EPOCH && !checkedAt.isAfter(now()))
     } catch (_: Exception) { null }
 
     @Synchronized fun replace(topics: List<MunicipalSubject>): Snapshot {
