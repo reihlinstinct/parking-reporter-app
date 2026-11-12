@@ -340,8 +340,8 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             // N4: when the lock state disables send, TalkBack announces why.
             val sendModifier = if (noDeviceCredential) Modifier.fillMaxWidth().semantics { stateDescription = s.t("review.submit.no_device_lock") } else Modifier.fillMaxWidth()
             Button(enabled = selectedTopic != null && topicsAvailable && plateInDescription && foldedDraft().isReady() && !submitting && missingCredentialKeys.isEmpty() && !noDeviceCredential, onClick = {
-                dismissKeyboard()
                 confirmPendingEvidence()
+                dismissKeyboard()
                 // Runs 42853563754 / 42880867432: an ENABLED send button's
                 // semantics click no-opped silently. First proof point:
                 // does the click reach this lambda at all?
