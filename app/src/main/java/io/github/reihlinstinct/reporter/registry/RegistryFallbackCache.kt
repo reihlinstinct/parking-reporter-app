@@ -32,12 +32,16 @@ class RegistryFallbackCache(private val directory: File, private val now: () -> 
             val inserted = Instant.parse(p.getProperty("inserted"))
             val checked = Instant.parse(p.getProperty("checked"))
             val until = p.getProperty("until")?.takeIf { it.isNotEmpty() }?.let(LocalDate::parse)
+            // Entries written before the inactive flag existed have no "inactive" key for a found vehicle:
+            // treat them as unusable (fail closed) rather than as an active-registry record (issue #404).
+            val inactive = p.getProperty("inactive")?.toBooleanStrictOrNull()
+            if (p.getProperty("vehicle") != "NONE" && inactive == null) { f.delete(); return null }
             val deadline = listOfNotNull(inserted.plusSeconds(7 * 86400L), until?.plusDays(1)?.atStartOfDay(zone)?.toInstant()).minOrNull()!!
             if (now().isBefore(inserted) || !now().isBefore(deadline)) { f.delete(); null }
             else Cached(if (p.getProperty("tag") == "NONE") DisabilityLookupResult.NotFound else
                 DisabilityLookupResult.Found(DisabilityTagType.valueOf(p.getProperty("tag"))),
                 if (p.getProperty("vehicle") == "NONE") VehicleLookupResult.NotFound else
-                    VehicleLookupResult.Found(VehicleRecord(plate, until, null, null, null, null, null)), checked, inserted)
+                    VehicleLookupResult.Found(VehicleRecord(plate, until, null, null, null, null, null, inactive = inactive == true)), checked, inserted)
         }
     } catch (_: Exception) { file(plate).delete(); null }
 
@@ -55,6 +59,7 @@ class RegistryFallbackCache(private val directory: File, private val now: () -> 
             setProperty("tag", (tag as? DisabilityLookupResult.Found)?.type?.name ?: "NONE")
             setProperty("vehicle", if (vehicle is VehicleLookupResult.Found) "FOUND" else "NONE")
             setProperty("until", until?.toString() ?: "")
+            setProperty("inactive", ((vehicle as? VehicleLookupResult.Found)?.record?.inactive == true).toString())
         }
         val target = file(plate); val tmp = File(directory, target.name + ".tmp")
         try {
