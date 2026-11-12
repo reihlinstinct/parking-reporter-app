@@ -20,10 +20,11 @@ class DisabilityRegistryClient(
     private val client: OkHttpClient = boundedClient(),
     clockMillis: () -> Long = { System.nanoTime() / 1_000_000 },
     private val intervalMillis: Long = 1000,
+    cacheTtlMillis: Long = 300_000,
 ) {
     private val endpoint = baseUrl.trimEnd('/').toHttpUrl().newBuilder()
         .addPathSegments(VehicleRegistryClient.SEARCH_PATH.removePrefix("/")).build()
-    private val cache = TtlLruCache<PlateNumber, DisabilityLookupResult>(128, 300_000, clockMillis)
+    private val cache = TtlLruCache<PlateNumber, DisabilityLookupResult>(128, cacheTtlMillis, clockMillis)
     private val limiter = MinIntervalRateLimiter(intervalMillis, clockMillis)
     fun lookup(raw: String): DisabilityLookupResult {
         val plate = PlateNumber.parse(raw) ?: return DisabilityLookupResult.Error(LookupErrorKind.INVALID_PLATE)

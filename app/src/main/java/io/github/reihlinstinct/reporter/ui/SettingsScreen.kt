@@ -76,6 +76,7 @@ fun SettingsScreen(
     basicSetup: Boolean = false,
     setupError: String = "",
     noDeviceCredential: Boolean = false,
+    onPlateCategories: (() -> Unit)? = null, plateCategoriesOnline: Boolean = false,
 ) {
     var firstName by remember { mutableStateOf(initial?.firstName.orEmpty()) }
     var lastName by remember { mutableStateOf(initial?.lastName.orEmpty()) }
@@ -137,6 +138,10 @@ fun SettingsScreen(
         HorizontalDivider()
         TextButton(onClick = { advanced106 = !advanced106 }) { Text(s.t("settings.api.advanced")) }
         if (advanced106) {
+        if (onPlateCategories != null) {
+            TextButton(enabled = plateCategoriesOnline, onClick = onPlateCategories) { Text(s.t("plate_categories.title")) }
+            if (!plateCategoriesOnline) AnnouncedNote(s.t("plate_categories.network_required"))
+        }
         Text(s.t("settings.api.title"), style = MaterialTheme.typography.titleMedium)
         Text(s.t("settings.api.description"), style = MaterialTheme.typography.bodySmall)
         OutlinedTextField(subscriptionKey, { subscriptionKey = it; saved = false; touchedMunicipal = touchedMunicipal + "subscription_key" }, label = { Text(s.t("settings.field.subscription_key")) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())

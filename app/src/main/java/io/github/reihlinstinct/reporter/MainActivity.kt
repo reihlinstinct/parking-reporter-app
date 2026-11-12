@@ -95,6 +95,7 @@ open class MainActivity : ComponentActivity() {
         setContent { AppTheme { NavyStatusBar {
             var showFirstRun by remember { mutableStateOf(!firstRun.seen()) }
             AppShell(
+                registryLookup = io.github.reihlinstinct.reporter.ui.rememberRegistryLookup(),
                 authenticate = ::authenticate,
                 hasDeviceCredential = { deviceCredential.value },
                 requestCamera = ::camera,

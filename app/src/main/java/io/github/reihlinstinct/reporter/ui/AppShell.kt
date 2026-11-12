@@ -77,6 +77,7 @@ fun AppShell(
     // Test-only in-memory lookup. Production always uses the normal loader,
     // including its file pin; a stub test never overwrites installed data.
     streetDirectoryLoader: (() -> StreetDirectory)? = null,
+    registryLookup: (suspend (String) -> RegistrySnapshot)? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -84,6 +85,7 @@ fun AppShell(
     DisposableEffect(Unit) { onDispose { database.close() } }
     // Issue #115: the UI language comes from "ui-prefs" (no authentication) and switches
     // text and layout direction live through ProvideStrings below.
+    val networkOnline = rememberNetworkOnline()
     val topicRepository = remember(context) { io.github.reihlinstinct.reporter.municipal.CityTopicRepository(context) }
     var topicSnapshot by remember { mutableStateOf(topicRepository.snapshot()) }
     var topicsLoading by remember { mutableStateOf(false) }
@@ -165,7 +167,7 @@ fun AppShell(
         // is that the shown draft is complete; the exact shown draft is
         // persisted below before the first network call, so a failed or
         // dropped save never sends stale text (issue #153's M-B property).
-        if (!SendGate.readyToSend(shown)) {
+        if (!SendGate.readyToSend(shown) || !io.github.reihlinstinct.reporter.core.PlatePolicy.descriptionContainsPlate(shown)) {
             Log.i("SUBMIT_FLOW", "submitReport blocked: draft not ready")
             submissionNote = strings.t("shell.submit.blocked.not_ready")
             return
@@ -468,7 +470,7 @@ fun AppShell(
         return@ProvideStrings
     }
     BackHandler(enabled = !showFirstRun && page != "home") {
-        if (page == "licenses") page = "settings"
+        if (page == "licenses" || page == "plate-categories") page = "settings"
         else { profile = null; page = "home" }
     }
     Scaffold(
@@ -580,7 +582,7 @@ fun AppShell(
                 submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, noDeviceCredential = noDeviceCredential,
                 topicSnapshot = topicSnapshot, topicsAvailable = topicsConnection,
                 topicsLoading = topicsLoading, openTopics = ::openCityTopics,
-                topicSelected = { topicRepository.selected(it) }, recentTopics = topicRepository.recentCodes(), topicAliases = topicAliases)
+                topicSelected = { topicRepository.selected(it) }, recentTopics = topicRepository.recentCodes(), topicAliases = topicAliases, plateEnables = topicRepository.plateEnables(), registryLookup = registryLookup)
             // Save feedback lands in the shell status; the review page has no
             // bottom bar, so it keeps its own announced slot (home/settings/
             // reports share the one above the bar).
@@ -603,7 +605,14 @@ fun AppShell(
                 }, modifier = Modifier.fillMaxWidth()) { Text(strings.t("shell.debug.run_button")) }
             }
         } else null, selectedLanguage = selectedLanguage, onLanguageSelected = languageController::select,
-            onLicenses = { page = "licenses" })
+            onLicenses = { page = "licenses" }, plateCategoriesOnline = networkOnline,
+            onPlateCategories = { if (networkOnline) page = "plate-categories" })
+        "plate-categories" -> PlateCategoriesScreen(networkOnline, topicRepository.plateEnables(), refresh = {
+            val settings = readSettings() ?: error("Settings unavailable")
+            topicRepository.forcePlateRefresh(networkOnline) {
+                (municipalClientFactory ?: { stored: ReporterSettings -> OkHttpMunicipalClient(stored.municipalSubscriptionKey, stored.municipalUsername, stored.municipalPassword) })(settings)
+            }.also { refreshed -> topicSnapshot = refreshed }
+        }, enable = topicRepository::enablePlate, back = { page = "settings" })
         // Third-party licences and data attributions (owner decision 2026-11-08).
         // AppShell's ProvideStrings already supplies the catalog and active language
         // (#115 PR-2a), so the screen just reads LocalStrings.

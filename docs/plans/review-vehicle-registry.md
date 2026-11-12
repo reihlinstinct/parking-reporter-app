@@ -26,3 +26,15 @@ The tag result must distinguish the two user-specified symbols: a blue square wh
 Registry lookup is informational and non-blocking. If unreachable or timed out, show a short localized message such as "המאגר לא זמין" and keep report save/send available under their existing independent review/authentication requirements. Use a short bounded asynchronous timeout; never await lookup completion in the send path, queue retries that delay filing, or interpret unavailable as no tag/valid licence. Include slow/unreachable/timeout tests proving submission is neither blocked nor delayed and late results cannot alter the reviewed outgoing description. This does not relax the separate online-only advanced catalog-setting rule.
 
 Asset PR #342 supplies original SVG/XML, localized descriptions and the central type mapper. Official type/schema source: https://data.gov.il/api/3/action/datastore_search?resource_id=c8b9f9c8-4612-4068-934f-d4acd2e3c06e&fields=SUG+TAV&distinct=true&limit=100
+
+## Implementation split
+
+#350 fixes theme boundaries before UI consumption; #351 adds the standalone bounded disability adapter. This branch consumes both and must be rebased after those lanes merge. No live reporting is authorized by this plan.
+
+Canonical optional catalog metadata is `plateRequired` with strict Boolean validation (absent/null means unknown); present string/number flags and conflicting duplicate-code flags reject the refresh. The currently captured city list has no such flag. No inference from labels or undocumented alternative fields is attempted. Existing no-metadata fingerprints remain helper-compatible. Metadata participates in new cache fingerprints and persisted draft policy. Code overrides are additive and removed codes dormant.
+
+The review-visible description is never changed by a registry result or transport. When a required plate is missing from the description, Send is disabled with an explicit Insert button. That button inserts a Hebrew vehicle-number line in the editable, visible description. This is deliberate: municipal text stays Hebrew even when UI language changes. Saving an incomplete draft remains allowed.
+
+Production alone opts into the asynchronous registry reader; isolated previews/instrumented fixtures never contact real registries. Each plate has keyed state; cancellation guards edits and removed topics. Two parallel1.8s bounded clients run off-main; the UI has a2.2s budget. Completed snapshots share a bounded five-minute cache preserving the original check time. No errors are cached as negative results. The registry component cannot mutate the draft and has no send/save callback.
+
+Advanced category entry is hidden in initial setup and lives under the existing secondary/advanced expander. Offline the entry is disabled with a reason. Every entry and retry logs in for authentication then performs only the existing catalog GET, ignoring cache age. Failure provides no cached editable list and leaves last-good cache/checktime unchanged. System Back from this screen returns to Settings. Tests are mocked, and CI screenshots/recording still require inspection before completion.

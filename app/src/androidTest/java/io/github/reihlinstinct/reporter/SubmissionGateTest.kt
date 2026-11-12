@@ -20,7 +20,7 @@ class SubmissionGateTest {
     private fun readyDraft(): ReviewDraft {
         val evidence = Evidence("stable-gate", "a".repeat(64), "2026-11-08T10:00:00+02:00", 31.7683, 35.2137)
         return ReviewDraft(evidence, "12345678", "רחוב 12", "sidewalk_parking",
-            "רכב חנה על המדרכה", emptySet())
+            "רכב 12345678 חנה על המדרכה", emptySet())
     }
 
     @Test fun sendEnabledForReadyDraft() {
@@ -141,7 +141,7 @@ class SubmissionGateTest {
             }
         }
         compose.onNodeWithText("שלח לעירייה").performClick()
-        org.junit.Assert.assertTrue(sent == shown)
+        org.junit.Assert.assertTrue(sent == shown.copy(plateRequired = true))
     }
 
     @Test fun noGateKeepsTheDisabledPlaceholder() {
