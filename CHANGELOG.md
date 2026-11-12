@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-11-12
+
+### Features
+
+- feat(assistant): opt-in AppFunctions entry into visible reporting flow (#320) (efe3d4a)
+
 ## [0.42.0] - 2026-11-12
 
 ### Features
