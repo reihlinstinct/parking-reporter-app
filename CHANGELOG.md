@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.40.1] - 2026-11-12
+
+### Fixes
+
+- fix(insets): keep scroll actions above the real keyboard (#325) (da05990)
+
 ## [0.40.0] - 2026-11-12
 
 ### Features
