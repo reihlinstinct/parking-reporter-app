@@ -6,6 +6,12 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.48.0] - 2026-11-12
+
+### Features
+
+- feat(ui): distinct limiter wording instead of generic unavailable (#369) (#393) (53e9448)
+
 ## [0.47.3] - 2026-11-12
 
 ### Fixes
