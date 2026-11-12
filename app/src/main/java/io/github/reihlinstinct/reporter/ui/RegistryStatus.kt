@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
@@ -19,6 +20,11 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 typealias RegistryLookup = suspend (String, (RegistrySnapshot) -> Unit) -> RegistrySnapshot
+
+/** Registry-check date in Jerusalem, not a later recomposition clock. Today is valid through today. */
+fun licenceDaysRemaining(until: LocalDate?, checkedAt: Instant): Long? = until?.let {
+    java.time.temporal.ChronoUnit.DAYS.between(checkedAt.atZone(ZoneId.of("Asia/Jerusalem")).toLocalDate(), it)
+}
 
 class RegistrySnapshot(val tag: DisabilityLookupResult?, val vehicle: VehicleLookupResult?, val checkedAt: Instant) {
     override fun toString() = "RegistrySnapshot(redacted)"
@@ -115,19 +121,30 @@ fun RegistryStatus(plate: String, lookup: RegistryLookup? = null) {
                     Text(s.t(tagKey))
                 }
                 val vehicle = current.vehicle
-                val status = (vehicle as? VehicleLookupResult.Found)?.record?.licenceStatus(LocalDate.now(ZoneId.of("Asia/Jerusalem")))
+                val days = licenceDaysRemaining((vehicle as? VehicleLookupResult.Found)?.record?.licenceValidUntil, current.checkedAt)
+                val status = when { days == null -> if (vehicle is VehicleLookupResult.Found) LicenceStatus.UNKNOWN else null; days < 0 -> LicenceStatus.EXPIRED; else -> LicenceStatus.VALID }
+                val expiresSoon = days != null && days in 0L..13L
                 val licenceText = s.t(when {
                     vehicle == null -> "registry.loading"
                     status == LicenceStatus.EXPIRED -> "registry.licence.expired"
+                    expiresSoon -> "registry.licence.expires_soon"
                     status == LicenceStatus.VALID -> "registry.licence.valid"
                     status == LicenceStatus.UNKNOWN -> "registry.licence.unknown"
                     vehicle is VehicleLookupResult.NotFound -> "registry.licence.not_found"
                     else -> "registry.unavailable"
-                })
+                }, mapOf("days" to (days ?: 0L).toString()))
                 if (status == LicenceStatus.EXPIRED) {
                     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Filled.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(28.dp))
                         Text(licenceText, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleMedium)
+                    }
+                } else if (expiresSoon) {
+                    // Dark orange on light surfaces and light orange on dark surfaces for contrast.
+                    val surface = MaterialTheme.colorScheme.surface
+                    val orange = if (surface.red + surface.green + surface.blue < 1.5f) Color(0xFFFFB74D) else Color(0xFF9A4900)
+                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Filled.Warning, null, tint = orange, modifier = Modifier.size(28.dp))
+                        Text(licenceText, color = orange, style = MaterialTheme.typography.titleMedium)
                     }
                 } else Text(licenceText)
                 Text(s.t("registry.source", mapOf("time" to current.checkedAt.atZone(ZoneId.of("Asia/Jerusalem")).toLocalTime().withNano(0).toString())), style = MaterialTheme.typography.bodySmall)

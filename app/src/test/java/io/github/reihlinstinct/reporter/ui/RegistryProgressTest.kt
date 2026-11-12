@@ -34,4 +34,13 @@ class RegistryProgressTest {
         started.await(); job.cancel(); release.complete(Unit); job.join()
         assertEquals(0, published)
     }
+    @Test fun licenceBoundariesUseJerusalemCheckDateNotUtcOrLaterClock() {
+        val checked = java.time.Instant.parse("2026-11-12T22:30:00Z") // Nov13 Jerusalem
+        val today = java.time.LocalDate.of(2026, 11, 13)
+        for (days in listOf(-1L, 0L, 1L, 13L, 14L)) {
+            assertEquals(days, licenceDaysRemaining(today.plusDays(days), checked))
+        }
+        assertNull(licenceDaysRemaining(null, checked))
+    }
+
 }
