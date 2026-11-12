@@ -2,6 +2,7 @@ package io.github.reihlinstinct.reporter.core
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -171,7 +172,12 @@ class MunicipalSubjectsTest {
     fun plateFlagChangesAppFingerprintOnlyWhenPresent() {
         val base = MunicipalSubject("1144", "n", listOf("n"))
         val unknown = MunicipalSubjects.canonicalFingerprint(listOf(base))
-        assertEquals(unknown, MunicipalSubjects.canonicalFingerprint(listOf(base.copy(plateRequired = null))))
+        // Rows parsed from JSON with the key missing or an explicit null both mean "unknown" and hash like the helper row.
+        for (json in listOf("""{"code":"1144","name":"n","path":["n"]}""", """{"code":"1144","name":"n","path":["n"],"plateRequired":null}""")) {
+            val parsed = MunicipalSubject("1144", "n", listOf("n"), MunicipalSubjects.plateFlag(org.json.JSONObject(json)))
+            assertNull(json, parsed.plateRequired)
+            assertEquals(json, unknown, MunicipalSubjects.canonicalFingerprint(listOf(parsed)))
+        }
         val required = MunicipalSubjects.canonicalFingerprint(listOf(base.copy(plateRequired = true)))
         val optional = MunicipalSubjects.canonicalFingerprint(listOf(base.copy(plateRequired = false)))
         assertNotEquals(unknown, required)

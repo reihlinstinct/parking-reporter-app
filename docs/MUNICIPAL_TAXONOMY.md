@@ -44,7 +44,7 @@ any platform. Expected fingerprint:
   Boolean flag. Rows without the flag (including the current captured list) hash exactly
   like the helper, which the golden-vector test pins.
 - A present flag changes the app cache fingerprint on purpose, so a policy change
-  invalidates cached rows. The helper will not see that change.
+  invalidates cached rows. The helper will not see that change (revisit this if the helper ever adds the field).
 - Receiver policy is never derived from whether the sender supplied a plate.
 - Tests: `helperGoldenVectorMatchesWithoutPlateFlag` and `plateFlagChangesAppFingerprintOnlyWhenPresent`
   in `MunicipalSubjectsTest`.
