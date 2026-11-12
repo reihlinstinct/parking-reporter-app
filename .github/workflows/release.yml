@@ -27,6 +27,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: write
+      pull-requests: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -42,10 +43,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
           SHA: ${{ github.sha }}
+          REF: ${{ github.ref }}
         run: |
+          # The release pushes to protected main with the owner PAT, so it may only ever run from main.
+          # A manual run from any other ref must not reach the push step.
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "Release runs only from refs/heads/main (got ${REF}); skipping."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           case "$EVENT" in
             push)
-              if gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/pulls" --jq '.[].labels[].name' | grep -qx release; then
+              # A failed lookup must fail the run, not read as "no label".
+              labels="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/pulls" --jq '.[].labels[].name')" || {
+                echo "::error::Could not read the merged PR labels; not releasing."
+                exit 1
+              }
+              if printf '%s\n' "$labels" | grep -qx release; then
                 echo "go=true" >> "$GITHUB_OUTPUT"
               else
                 echo "No release label on the merged PR; skipping."
