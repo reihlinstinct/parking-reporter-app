@@ -165,6 +165,10 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         mutableStateOf(initial.address.isBlank() && initial.confirmedLatitude != null && initial.confirmedLongitude != null)
     }
     // Issue #186: optional, user-triggered one-shot location read. The permission is asked only at the tap.
+    // The button fills the phone's position, so it is offered only for a photo taken a moment ago.
+    val freshCapture = remember(initial.evidence.stableId) {
+        io.github.reihlinstinct.reporter.evidence.CurrentLocation.freshCapture(initial.evidence.capturedAtIso, java.time.Instant.now(), java.time.ZoneId.systemDefault())
+    }
     var gpsBusy by remember { mutableStateOf(false) }
     var gpsStatus by remember { mutableStateOf<String?>(null) }
     fun applyDeviceFix(fix: io.github.reihlinstinct.reporter.evidence.DeviceFix) {
@@ -181,6 +185,9 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
             catch (_: Exception) { null }
             gpsBusy = false
+            // A slow fix must not replace coordinates the user confirmed (for example through the manual address) meanwhile.
+            val alreadyLocated = latitude.toDoubleOrNull() != null && longitude.toDoubleOrNull() != null
+            if (alreadyLocated) return@launch
             if (fix != null) applyDeviceFix(fix) else gpsStatus = "review.location.gps_failed"
         }
     }
@@ -363,14 +370,14 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         gpsStatus?.let { Text(s.t(it), style = MaterialTheme.typography.bodySmall) }
         if (latitude.toDoubleOrNull() == null || longitude.toDoubleOrNull() == null) {
             Text(s.t("review.location.missing_plain"))
-            Button(enabled = !gpsBusy, onClick = {
+            if (freshCapture) Button(enabled = !gpsBusy, onClick = {
                 val granted = listOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION).any {
                     androidx.core.content.ContextCompat.checkSelfPermission(context, it) == android.content.pm.PackageManager.PERMISSION_GRANTED
                 }
                 if (granted) readDeviceFix()
                 else locationPermission.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION))
             }, modifier = Modifier.fillMaxWidth().testTag("use_current_location")) { Text(s.t("review.location.gps_button")) }
-            if (gpsBusy) Text(s.t("review.location.gps_loading"))
+            if (freshCapture && gpsBusy) Text(s.t("review.location.gps_loading"))
             OutlinedTextField(manualStreet, { manualStreet = it; manualResult = null; manualGeneration++ }, label = { Text(s.t("review.location.street")) }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(manualHouse, { manualHouse = it; manualResult = null; manualGeneration++ }, label = { Text(s.t("review.location.house")) }, modifier = Modifier.fillMaxWidth(),
                 singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }))

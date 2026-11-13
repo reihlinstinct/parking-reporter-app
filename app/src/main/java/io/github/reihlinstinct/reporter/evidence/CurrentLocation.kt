@@ -23,6 +23,18 @@ data class DeviceFix(val latitude: Double, val longitude: Double)
  */
 object CurrentLocation {
     const val TIMEOUT_MS = 15_000L
+    const val FRESH_CAPTURE_MINUTES = 10L
+
+    /** True only when the photo's capture time is known and at most [FRESH_CAPTURE_MINUTES] old (not in the future by more than a minute).
+     * Offset-free EXIF wall times are read in the phone's own zone. Unknown or unparsable time: false. */
+    fun freshCapture(capturedAtIso: String?, now: java.time.Instant, zone: java.time.ZoneId): Boolean {
+        val value = capturedAtIso ?: return false
+        val taken = try { java.time.OffsetDateTime.parse(value).toInstant() } catch (_: java.time.format.DateTimeParseException) {
+            try { java.time.LocalDateTime.parse(value).atZone(zone).toInstant() } catch (_: java.time.format.DateTimeParseException) { return false }
+        }
+        val age = java.time.Duration.between(taken, now)
+        return age >= java.time.Duration.ofMinutes(-1) && age <= java.time.Duration.ofMinutes(FRESH_CAPTURE_MINUTES)
+    }
 
     /** Accepts only a finite, in-range coordinate pair that is not the (0, 0) "no fix" placeholder. */
     fun validFix(latitude: Double, longitude: Double): DeviceFix? {

@@ -25,4 +25,17 @@ class CurrentLocationTest {
         assertEquals(listOf("network"), CurrentLocation.providerOrder(listOf("network", "passive")))
         assertEquals(emptyList<String>(), CurrentLocation.providerOrder(emptyList()))
     }
+
+    @Test
+    fun offersTheButtonOnlyForAFreshCapture() {
+        val now = java.time.Instant.parse("2026-11-13T10:00:00Z")
+        val zone = java.time.ZoneId.of("Asia/Jerusalem")
+        assertEquals(true, CurrentLocation.freshCapture("2026-11-13T11:55:00+02:00", now, zone))
+        assertEquals(true, CurrentLocation.freshCapture("2026-11-13T11:55:00", now, zone))
+        assertEquals(false, CurrentLocation.freshCapture("2026-11-13T11:30:00+02:00", now, zone))
+        assertEquals(false, CurrentLocation.freshCapture("2026-11-13T11:30:00", now, zone))
+        assertEquals(false, CurrentLocation.freshCapture("2026-11-13T13:00:00+02:00", now, zone))
+        assertEquals(false, CurrentLocation.freshCapture(null, now, zone))
+        assertEquals(false, CurrentLocation.freshCapture("not a time", now, zone))
+    }
 }
