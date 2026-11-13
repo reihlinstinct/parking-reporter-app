@@ -20,7 +20,9 @@ class SidewalkSuggestionTest {
     @Test
     fun probabilityKeepsProbabilitiesAndSquashesLogits() {
         assertEquals(0.3f, SidewalkSuggestion.probability(0.3f)!!, 1e-6f)
-        assertEquals(0.5f, SidewalkSuggestion.probability(0f)!!, 1e-6f)
+        assertEquals(0f, SidewalkSuggestion.probability(0f)!!, 1e-6f)
+        assertEquals(1f, SidewalkSuggestion.probability(1f)!!, 1e-6f)
+        assertEquals(0.982f, SidewalkSuggestion.probability(4f)!!, 1e-3f)
         assertTrue(SidewalkSuggestion.probability(4f)!! > 0.9f)
         assertTrue(SidewalkSuggestion.probability(-4f)!! < 0.1f)
         assertNull(SidewalkSuggestion.probability(Float.NaN))
