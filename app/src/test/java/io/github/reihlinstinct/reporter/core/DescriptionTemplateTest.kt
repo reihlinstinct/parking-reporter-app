@@ -96,4 +96,39 @@ class DescriptionTemplateTest {
         // a stale user entry is flagged and does not fall through to the shipped one
         assertTrue(TemplateMapping.resolve(topic("1144", "renamed"), user, shipped) is TemplateResolution.NeedsReview)
     }
+
+    @Test fun replacementsAreFoundOnTheOriginalTextSoOneCannotMatchAnother() {
+        val t = DescriptionTemplate("probe", 1, listOf(
+            TemplateSentence("a", listOf(T("Blocked "), S(TemplateSlot.STREET), T("."))),
+            TemplateSentence("b", listOf(T("Blocked "), S(TemplateSlot.HOUSE), T("."))),
+        ))
+        val before = DescriptionTemplates.render(t, facts(TemplateSlot.STREET to "X", TemplateSlot.HOUSE to "Y"))
+        val after = DescriptionTemplates.render(t, facts(TemplateSlot.STREET to "Y", TemplateSlot.HOUSE to "Z"))
+        // Not untouched (extra user text), so the in-place path runs.
+        val current = "Note. " + DescriptionTemplates.join(before)
+        assertEquals("Note. Blocked Y. Blocked Z.", DescriptionTemplates.update(current, before, after))
+    }
+
+    @Test fun aNewSentenceKeepsTemplateOrderSoTheTextStaysUntouched() {
+        val before = DescriptionTemplates.render(template, facts(*full, permit = PermitState.CHECKED_NONE))
+        val after = DescriptionTemplates.render(template, facts(*full, TemplateSlot.LICENSE_EXPIRY to "12.10.2026", permit = PermitState.CHECKED_NONE))
+        val current = DescriptionTemplates.join(before)
+        val updated = DescriptionTemplates.update(current, before, after)
+        assertEquals(DescriptionTemplates.join(after), updated)
+        assertTrue(DescriptionTemplates.isUntouched(updated, after))
+    }
+
+    @Test fun aNewSentenceIsPlacedAfterItsPrecedingNeighbourInAnEditedText() {
+        val before = DescriptionTemplates.render(template, facts(*full, permit = PermitState.CHECKED_NONE))
+        val after = DescriptionTemplates.render(template, facts(*full, TemplateSlot.LICENSE_EXPIRY to "12.10.2026", permit = PermitState.CHECKED_NONE))
+        val current = "Hello. " + DescriptionTemplates.join(before) + " Thanks."
+        assertEquals("Hello. Car Ioniq, plate 1234567, at Main 22. Licence ended 12.10.2026. No permit found. Thanks.",
+            DescriptionTemplates.update(current, before, after))
+    }
+
+    @Test fun hyphenVariantsAreFoldedWhenMatchingNames() {
+        val subject = topic("1144", "חניה על מדרכה \u2013 אדום\u05BEלבן")
+        val shipped = listOf(TemplateMappingEntry("9999", "חניה על מדרכה - אדום-לבן", "tag_x"))
+        assertEquals(TemplateResolution.Match("tag_x"), TemplateMapping.resolve(subject, emptyList(), shipped))
+    }
 }

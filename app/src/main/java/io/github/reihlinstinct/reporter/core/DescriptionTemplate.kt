@@ -48,25 +48,45 @@ object DescriptionTemplates {
 
     fun join(sentences: List<RenderedSentence>): String = sentences.joinToString(" ") { it.text }
 
+    private sealed interface Seg { data class Gap(val text: String) : Seg; data class Sent(val id: String, val text: String) : Seg }
+
     /**
-     * Brings [current] up to date after the form changed. A sentence that is still exactly as last rendered is
-     * replaced or removed; a sentence the user edited is kept as written and never re-added; a sentence that is
-     * new is appended. Text the template never produced is left alone.
+     * Brings [current] up to date after the form changed. An untouched description is simply re-rendered. Otherwise a
+     * sentence that is still exactly as last rendered is replaced or removed in place (all positions are found on the
+     * original text, in template order, so one replacement can never be matched by another); a sentence the user
+     * edited is kept as written and never re-added; a sentence that is new is placed after its nearest preceding
+     * template neighbour that is present (or before the nearest following one, or last). Text the template never
+     * produced is left alone.
      */
     fun update(current: String, previous: List<RenderedSentence>, next: List<RenderedSentence>): String {
-        if (current.isBlank()) return join(next)
-        var result = current
+        if (isUntouched(current, previous)) return join(next)
         val touched = HashSet<String>()
+        val segs = ArrayList<Seg>()
+        var cursor = 0
         val nextById = next.associateBy { it.id }
         for (p in previous) {
-            val at = result.indexOf(p.text)
+            val at = current.indexOf(p.text, cursor)
             if (at < 0) { touched.add(p.id); continue }
-            val replacement = nextById[p.id]?.text ?: ""
-            result = result.substring(0, at) + replacement + result.substring(at + p.text.length)
+            if (at > cursor) segs.add(Seg.Gap(current.substring(cursor, at)))
+            nextById[p.id]?.let { segs.add(Seg.Sent(p.id, it.text)) }
+            cursor = at + p.text.length
         }
+        if (cursor < current.length) segs.add(Seg.Gap(current.substring(cursor)))
         val known = previous.map { it.id }.toSet()
-        for (n in next) if (n.id !in known && n.id !in touched) result = if (result.isBlank()) n.text else result.trimEnd() + " " + n.text
-        return result.replace(Regex("[ \\t]{2,}"), " ").trim()
+        next.forEachIndexed { i, n ->
+            if (n.id in known || n.id in touched) return@forEachIndexed
+            fun indexOfSent(id: String) = segs.indexOfFirst { it is Seg.Sent && it.id == id }
+            val before = (i - 1 downTo 0).map { indexOfSent(next[it].id) }.firstOrNull { it >= 0 }
+            val after = (i + 1 until next.size).map { indexOfSent(next[it].id) }.firstOrNull { it >= 0 }
+            val piece = Seg.Sent(n.id, n.text)
+            when {
+                before != null -> segs.add(before + 1, Seg.Gap(" ")).also { segs.add(before + 2, piece) }
+                after != null -> segs.add(after, piece).also { segs.add(after + 1, Seg.Gap(" ")) }
+                else -> { segs.add(Seg.Gap(" ")); segs.add(piece) }
+            }
+        }
+        val out = segs.joinToString("") { when (it) { is Seg.Gap -> it.text; is Seg.Sent -> it.text } }
+        return out.replace(Regex("[ \\t]{2,}"), " ").trim()
     }
 
     /** The description is untouched when it is blank or exactly what was last rendered. */
@@ -86,7 +106,7 @@ sealed interface TemplateResolution {
 
 object TemplateMapping {
     private fun norm(s: String): String =
-        s.replace(Regex("[\"'\u05F3\u05F4\u201C\u201D\u2018\u2019]"), "").replace(Regex("\\s+"), " ").trim().lowercase()
+        s.replace(Regex("[\u05BE\u2010-\u2015\u2212]"), "-").replace(Regex("[\"'\u05F3\u05F4\u201C\u201D\u2018\u2019]"), "").replace(Regex("\\s+"), " ").trim().lowercase()
 
     /**
      * The user's entries win over the shipped ones. The city code is tried first; a matching code whose recorded
