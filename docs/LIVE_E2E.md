@@ -142,3 +142,8 @@ tar xzf bundle.tgz   # recording.mp4, instrumentation.txt, screenshots, case num
   retention; older digests need the manual 106 check before re-dispatch.
 - Device-unlock is a pass-through in the test, as in the synthetic E2E; on a
   real device the user confirms with the device credential.
+
+## Device readiness (run 14)
+
+Run 14 stopped before any send: the emulator sat on its lock screen, the app activity was stopped right after launch and Compose found no hierarchy (`LIVE_E2E FAIL class=IllegalStateException`, no `SEND_TAPPED`). Its recording also showed a launcher "not responding" dialog. The live test now calls `DeviceReady.ensureReady` before anything else: wake the screen, dismiss the keyguard (the throwaway PIN is tried once if needed), press "Wait" on a system not-responding dialog, and require a short quiet stretch. It writes `LIVE_E2E DEVICE_READY` on success and fails with a fixed message otherwise, before the photo is claimed or any case data is read. `DeviceReadyTest` is the dry check in the normal emulator CI: it sets a PIN, puts the screen to sleep, requires the helper to bring the device back, and always clears the PIN again. It makes no city contact.
+
