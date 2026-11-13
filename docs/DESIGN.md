@@ -56,3 +56,7 @@ encrypted write and missing-field index/rollback as Settings, preserving untouch
 API credentials. Success clears/disposes the form; cancellation or failure stays
 on setup. Only the nonsensitive setup stage survives rotation. Pending shared-photo
 and tile entry is deferred until setup finishes. No live workflow or evidence changes.
+
+## Description templates, engine (issue #424)
+
+A suggested description is built from parts, not from a category code. A template is sentences of text and slots (plate, vehicle, street, house number, licence expiry, last test). A sentence with an empty slot, or with an unmet permit-state condition, is dropped whole; the text never contains a placeholder. A sentence that depends on the disabled-permit state is shown only when that state was checked. When the form changes, the description is re-rendered per sentence: a sentence still exactly as last rendered follows the form, a sentence the user edited is kept as written and never re-added. Templates are keyed by a stable tag. A separate mapping (user entries first, then the shipped ones) connects a live city category to a tag: by city code first, by normalised name as the fallback, and a code whose name changed is flagged for review instead of applied. An unmapped category gets the generic template when one exists, otherwise nothing. This first slice is the engine and its tests only: no Hebrew template text and no screen yet, because each wording needs the owner's approval.
