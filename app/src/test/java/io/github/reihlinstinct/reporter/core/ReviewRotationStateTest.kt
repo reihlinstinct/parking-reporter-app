@@ -20,6 +20,13 @@ class ReviewRotationStateTest {
         assertEquals(edited, ReviewRotationState.take(initial)?.draft)
         assertNull(ReviewRotationState.take(initial))
     }
+    @Test fun phoneCoordinatesFlagSurvivesRotation() {
+        val initial = draft("r1")
+        ReviewRotationState.hold(ReviewRotationState.Held(initial, initial, "31.7", "35.2", "", "", "", "", null, gpsFilled = true))
+        assertTrue(ReviewRotationState.take(initial)!!.gpsFilled)
+        ReviewRotationState.hold(held(initial, initial))
+        assertFalse(ReviewRotationState.take(initial)!!.gpsFilled)
+    }
     @Test fun anotherReportOrChangedInitialNeverGetsIt() {
         val initial = draft("r1")
         ReviewRotationState.hold(held(initial, initial.copy(plate = "1234567")))
