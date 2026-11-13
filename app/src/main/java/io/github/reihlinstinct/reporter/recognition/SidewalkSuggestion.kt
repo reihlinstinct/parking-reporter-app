@@ -44,14 +44,11 @@ object SidewalkSuggestion {
     fun pinMatches(actualSha256: String, pin: String = PINNED_SHA256): Boolean =
         pin.matches(Regex("[a-f0-9]{64}")) && actualSha256.equals(pin, ignoreCase = true)
 
-    fun sha256(file: File): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        file.inputStream().use { input ->
-            val buffer = ByteArray(1 shl 16)
-            while (true) { val n = input.read(buffer); if (n < 0) break; digest.update(buffer, 0, n) }
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) }
-    }
+    fun sha256(bytes: ByteArray): String =
+        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+
+    /** Model files are about 45 MB; refuse anything absurd before reading it into memory. */
+    const val MAX_MODEL_BYTES = 120L * 1024 * 1024
 
     /** Resize so the short side is 256, center crop 224, scale to 0..1, ImageNet mean/std. Pure math on ARGB pixels. */
     fun normalize(argb: IntArray, channelsFirst: Boolean): FloatArray {
@@ -80,29 +77,31 @@ object SidewalkSuggestion {
         return pixels
     }
 
-    private var verifiedPath: String? = null
-
-    /** Blocking; call off the main thread. Returns the sidewalk_parking score, or null when the feature is off or anything fails. */
+    /**
+     * Blocking; call off the main thread. Returns the sidewalk_parking score, or null when the feature is off or anything fails.
+     * The file is read once, the pin is checked on exactly those bytes, and the interpreter is built from the same
+     * bytes, so a file swapped after the check can never be the one that runs.
+     */
     fun score(context: Context, bitmap: Bitmap): Float? {
         return try {
-        val file = modelFile(context)?.takeIf { it.isFile } ?: return null
-        if (PINNED_SHA256.isBlank()) return null
-        if (verifiedPath != file.path + ":" + file.length() + ":" + file.lastModified()) {
-            if (!pinMatches(sha256(file))) return null
-            verifiedPath = file.path + ":" + file.length() + ":" + file.lastModified()
-        }
-        Interpreter(file).use { interpreter ->
-            val shape = interpreter.getInputTensor(0).shape()
-            val channelsFirst = shape.size == 4 && shape[1] == 3
-            val input = normalize(cropped(bitmap), channelsFirst)
-            val buffer = ByteBuffer.allocateDirect(input.size * 4).order(ByteOrder.nativeOrder())
-            input.forEach { buffer.putFloat(it) }
-            buffer.rewind()
-            val outShape = interpreter.getOutputTensor(0).shape()
-            val output = Array(outShape.firstOrNull() ?: 1) { FloatArray(outShape.lastOrNull() ?: 1) }
-            interpreter.run(buffer, output)
-            probability(output[0][0])
-        }
+            if (PINNED_SHA256.isBlank()) return null
+            val file = modelFile(context)?.takeIf { it.isFile && it.length() in 1..MAX_MODEL_BYTES } ?: return null
+            val bytes = file.readBytes()
+            if (!pinMatches(sha256(bytes))) return null
+            val model = ByteBuffer.allocateDirect(bytes.size).order(ByteOrder.nativeOrder())
+            model.put(bytes); model.rewind()
+            Interpreter(model).use { interpreter ->
+                val shape = interpreter.getInputTensor(0).shape()
+                val channelsFirst = shape.size == 4 && shape[1] == 3
+                val input = normalize(cropped(bitmap), channelsFirst)
+                val buffer = ByteBuffer.allocateDirect(input.size * 4).order(ByteOrder.nativeOrder())
+                input.forEach { buffer.putFloat(it) }
+                buffer.rewind()
+                val outShape = interpreter.getOutputTensor(0).shape()
+                val output = Array(outShape.firstOrNull() ?: 1) { FloatArray(outShape.lastOrNull() ?: 1) }
+                interpreter.run(buffer, output)
+                probability(output[0][0])
+            }
         } catch (_: Throwable) { null }
     }
 }
