@@ -73,6 +73,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var latitude by remember(initial.evidence.stableId) { mutableStateOf(restored?.latitude ?: initial.confirmedLatitude?.toString().orEmpty()) }
     var longitude by remember(initial.evidence.stableId) { mutableStateOf(restored?.longitude ?: initial.confirmedLongitude?.toString().orEmpty()) }
     var editing by remember(initial.evidence.stableId) { mutableStateOf(false) }
+    var showPlateTypes by remember(initial.evidence.stableId) { mutableStateOf(false) }
     var manualStreet by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualStreet.orEmpty()) }
     var manualHouse by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualHouse.orEmpty()) }
     var manualResult by remember(initial.evidence.stableId) { mutableStateOf<io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress?>(null) }
@@ -314,8 +315,9 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate, plateClass = PlateClass.REGULAR) }) { Text(reviewPlateSuggestionText(s, plate)) } }
         // Plate type picker: only here (after tapping edit), nothing is detected. Changing the type clears the plate.
         if (draft.needsPlate()) {
-            Text(s.t("review.plate_class.title"), style = MaterialTheme.typography.labelLarge)
-            Column(Modifier.selectableGroup()) {
+            // Issue: the plate type picker is hidden by default, also in edit mode. The title is the toggle (existing catalog text).
+            TextButton(onClick = { showPlateTypes = !showPlateTypes }) { Text(s.t("review.plate_class.title"), style = MaterialTheme.typography.labelLarge) }
+            if (showPlateTypes) Column(Modifier.selectableGroup()) {
                 listOf(PlateClass.REGULAR to s.t("review.plate_class.regular"), PlateClass.POLICE to s.t("review.plate_class.police"),
                     PlateClass.DIPLOMATIC_CD to s.t("review.plate_class.cd"), PlateClass.CONSULAR_CC to s.t("review.plate_class.cc")).forEach { (plateClass, label) ->
                     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(selected = draft.plateClass == plateClass, role = Role.RadioButton,
