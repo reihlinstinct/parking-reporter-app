@@ -2,6 +2,7 @@ package io.github.reihlinstinct.reporter.recognition
 
 import android.content.Context
 import android.graphics.Bitmap
+import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
 import java.io.File
 import java.nio.ByteBuffer
@@ -21,6 +22,11 @@ import kotlin.math.exp
 object SidewalkSuggestion {
     /** SHA-256 (lowercase hex) of the approved v3 tflite. Blank until the owner supplies it: blank keeps the feature off. */
     const val PINNED_SHA256 = ""
+    /**
+     * Whether the v3 head emits a raw logit (true) or already a probability (false). It is a property of the model
+     * export, not of one output, so the owner sets it together with the pin. Unverified: assumed probability.
+     */
+    const val OUTPUT_IS_LOGIT = false
     const val THRESHOLD = 0.5f
     const val INPUT_SIZE = 224
     const val RESIZE_SHORT_SIDE = 256
@@ -37,9 +43,9 @@ object SidewalkSuggestion {
     fun shouldSuggest(score: Float?, selectedCode: String?): Boolean =
         score != null && score.isFinite() && score >= THRESHOLD && selectedCode != SIDEWALK_SUBJECT_CODE
 
-    /** The head may emit a probability or a raw logit; anything outside 0..1 is treated as a logit. */
-    fun probability(raw: Float): Float? =
-        if (!raw.isFinite()) null else if (raw in 0f..1f) raw else (1.0 / (1.0 + exp(-raw.toDouble()))).toFloat()
+    /** Turns the model output into a probability: a logit is squashed, a probability is kept. Null when not finite. */
+    fun probability(raw: Float, isLogit: Boolean = OUTPUT_IS_LOGIT): Float? =
+        if (!raw.isFinite()) null else if (!isLogit) raw else (1.0 / (1.0 + exp(-raw.toDouble()))).toFloat()
 
     fun pinMatches(actualSha256: String, pin: String = PINNED_SHA256): Boolean =
         pin.matches(Regex("[a-f0-9]{64}")) && actualSha256.equals(pin, ignoreCase = true)
@@ -77,31 +83,49 @@ object SidewalkSuggestion {
         return pixels
     }
 
+    private var cached: Interpreter? = null
+    private var cachedPin: String? = null
+
+    /** Built once per process from the verified bytes; the heap copy is released right after the buffer copy. */
+    private fun verifiedInterpreter(context: Context): Interpreter? {
+        cached?.let { if (cachedPin == PINNED_SHA256) return it }
+        val file = modelFile(context)?.takeIf { it.isFile && it.length() in 1..MAX_MODEL_BYTES } ?: return null
+        val model = file.readBytes().let { bytes ->
+            if (!pinMatches(sha256(bytes))) return null
+            ByteBuffer.allocateDirect(bytes.size).order(ByteOrder.nativeOrder()).also { it.put(bytes); it.rewind() }
+        }
+        val interpreter = Interpreter(model)
+        val outShape = interpreter.getOutputTensor(0).shape()
+        val ok = interpreter.getInputTensor(0).dataType() == DataType.FLOAT32 &&
+            interpreter.getOutputTensor(0).dataType() == DataType.FLOAT32 &&
+            outShape.size == 2 && outShape[0] == 1 && outShape[1] >= 1
+        if (!ok) { interpreter.close(); return null }
+        cached = interpreter
+        cachedPin = PINNED_SHA256
+        return interpreter
+    }
+
     /**
      * Blocking; call off the main thread. Returns the sidewalk_parking score, or null when the feature is off or anything fails.
      * The file is read once, the pin is checked on exactly those bytes, and the interpreter is built from the same
-     * bytes, so a file swapped after the check can never be the one that runs.
+     * bytes, so a file swapped after the check can never be the one that runs. Only a float32 model with a [1, N]
+     * output is accepted; anything else returns null on purpose.
      */
+    @Synchronized
     fun score(context: Context, bitmap: Bitmap): Float? {
         return try {
             if (PINNED_SHA256.isBlank()) return null
-            val file = modelFile(context)?.takeIf { it.isFile && it.length() in 1..MAX_MODEL_BYTES } ?: return null
-            val bytes = file.readBytes()
-            if (!pinMatches(sha256(bytes))) return null
-            val model = ByteBuffer.allocateDirect(bytes.size).order(ByteOrder.nativeOrder())
-            model.put(bytes); model.rewind()
-            Interpreter(model).use { interpreter ->
-                val shape = interpreter.getInputTensor(0).shape()
-                val channelsFirst = shape.size == 4 && shape[1] == 3
-                val input = normalize(cropped(bitmap), channelsFirst)
-                val buffer = ByteBuffer.allocateDirect(input.size * 4).order(ByteOrder.nativeOrder())
-                input.forEach { buffer.putFloat(it) }
-                buffer.rewind()
-                val outShape = interpreter.getOutputTensor(0).shape()
-                val output = Array(outShape.firstOrNull() ?: 1) { FloatArray(outShape.lastOrNull() ?: 1) }
-                interpreter.run(buffer, output)
-                probability(output[0][0])
-            }
+            val interpreter = verifiedInterpreter(context) ?: return null
+            val shape = interpreter.getInputTensor(0).shape()
+            val channelsFirst = shape.size == 4 && shape[1] == 3
+            val input = normalize(cropped(bitmap), channelsFirst)
+            val buffer = ByteBuffer.allocateDirect(input.size * 4).order(ByteOrder.nativeOrder())
+            input.forEach { buffer.putFloat(it) }
+            buffer.rewind()
+            val outShape = interpreter.getOutputTensor(0).shape()
+            val output = Array(1) { FloatArray(outShape[1]) }
+            interpreter.run(buffer, output)
+            probability(output[0][0])
         } catch (_: Throwable) { null }
     }
 }
