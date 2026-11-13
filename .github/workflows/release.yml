@@ -3,7 +3,7 @@ name: Release
 # Release cadence (owner decision, 12 Nov 2026): SemVer is still computed from the commit subjects
 # (fix=PATCH, feat=MINOR, breaking=MAJOR), but a merge no longer releases by itself. A release happens when
 #  - the merged PR carries the "release" label (push to main, label looked up through the commit's PR),
-#  - once a day, only if a feat/fix/breaking commit landed since the last release,
+#  - once a day, only if a feat/fix/perf/revert/breaking commit landed since the last release,
 #  - or on demand (workflow_dispatch).
 on:
   push:
