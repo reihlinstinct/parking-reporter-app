@@ -609,7 +609,8 @@ fun AppShell(
                 submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, noDeviceCredential = noDeviceCredential,
                 topicSnapshot = topicSnapshot, topicsAvailable = topicsConnection,
                 topicsLoading = topicsLoading, openTopics = ::openCityTopics,
-                topicSelected = { topicRepository.selected(it) }, recentTopics = topicRepository.recentCodes(), topicAliases = topicAliases, plateEnables = topicRepository.plateEnables(), registryLookup = registryLookup)
+                topicSelected = { topicRepository.selected(it) }, recentTopics = topicRepository.recentCodes(), topicAliases = topicAliases, plateEnables = topicRepository.plateEnables(), registryLookup = registryLookup,
+                sidewalkScorer = { bitmap -> withContext(Dispatchers.Default) { io.github.reihlinstinct.reporter.recognition.SidewalkSuggestion.score(context, bitmap) } })
             // Save feedback lands in the shell status; the review page has no
             // bottom bar, so it keeps its own announced slot (home/settings/
             // reports share the one above the bar).

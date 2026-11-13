@@ -55,6 +55,7 @@ dependencies {
     implementation("androidx.appfunctions:appfunctions:1.0.0-rc01")
     ksp("androidx.appfunctions:appfunctions-compiler:1.0.0-rc01")
     implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation("com.google.ai.edge.litert:litert:1.4.2")
     implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
     implementation("com.google.crypto.tink:tink-android:1.24.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")

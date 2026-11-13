@@ -54,3 +54,7 @@ encrypted write and missing-field index/rollback as Settings, preserving untouch
 API credentials. Success clears/disposes the form; cancellation or failure stays
 on setup. Only the nonsensitive setup stage survives rotation. Pending shared-photo
 and tile entry is deferred until setup finishes. No live workflow or evidence changes.
+
+## Experimental sidewalk-parking suggestion (issue #158)
+
+An optional, advisory line on the review screen: "הצעה ניסיונית: נראה כמו חניה על מדרכה". Tapping it selects the sidewalk-parking city topic (code 1145), only when that topic is in the loaded city list; ignoring it changes nothing. It never selects, fills or files anything by itself. The model is private: not in this repository, not a release asset, not in the APK. The owner side-loads `sidewalk_v3.tflite` into the app's own external files folder (`Android/data/<package>/files/models/`). The app runs it only when the file's SHA-256 equals the pin in `SidewalkSuggestion.PINNED_SHA256` (blank pin means the feature is off). Preprocessing: resize the short side to 256, center crop 224, scale to 0..1, ImageNet mean/std; channel order follows the model's input shape. Output 0 (sidewalk_parking) is shown at 0.5 or above. Inference runs on the phone, off the main thread, with LiteRT; the photo never leaves the device. The en/ar/ru/am wording is derived from the owner-approved Hebrew line and needs native review.
