@@ -2,7 +2,7 @@ package io.github.reihlinstinct.reporter.recognition
 
 import android.content.Context
 import android.graphics.Bitmap
-import com.google.ai.edge.litert.Interpreter
+import org.tensorflow.lite.Interpreter
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
