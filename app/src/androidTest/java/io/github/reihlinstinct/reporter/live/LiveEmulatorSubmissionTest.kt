@@ -108,6 +108,13 @@ class LiveEmulatorSubmissionTest {
         io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set("he")
         marker("START")
 
+        // Run 14 failed here: the emulator sat on its lock screen, so the activity stopped right after launch.
+        // Wake, unlock with the throwaway PIN and clear any system not-responding dialog before anything else.
+        if (!io.github.reihlinstinct.reporter.DeviceReady.ensureReady(context, liveDevicePin)) {
+            throw IllegalStateException("device not ready (keyguard or system dialog)")
+        }
+        marker("DEVICE_READY")
+
         // Consent binding, same rule as the engine submit trial: the staged
         // text must hash to the exact digest the owner approved. Constant
         // message only: never print the digests.
