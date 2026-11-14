@@ -20,7 +20,7 @@ State exactly which checks ran. Scaffolding CI is not Android/unit/e2e evidence.
 - [ ] Approval, deduplication, checkpoint and no-retry rules preserved
 - [ ] Synthetic fixtures and mock transport only; no live municipal calls
 - [ ] Unit and functional/e2e tests added for changed app behavior, or explain why not applicable
-- [ ] README/design updated where needed
+- [ ] Docs checked: README, docs/DESIGN.md, ACCESSIBILITY.md, the Hebrew user guide in docs/wiki/ (synced to the GitHub wiki on merge to main) or other docs updated in this PR where behavior, wording or setup changed, or a linked docs issue is named here (CHANGELOG is generated at release, do not edit it)
 - [ ] No generated output or unrelated files
 
 ## Risks and remaining decisions
