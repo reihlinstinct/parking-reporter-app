@@ -25,6 +25,10 @@ class HardcodedUiStringLintTest {
             // Fixed Hebrew municipal report disclosure, deliberately identical under
             // every UI language. This is payload text reviewed before sending, not UI.
             "PassportSubmission.kt",
+            // Owner-approved Hebrew wording of the suggested report description (issue #424,
+            // approved 2026-11-13 06:13). Municipal payload text, identical under every UI
+            // language and shown to the user in the editable description before sending.
+            "BuiltInTemplates.kt",
         )
 
         /**
