@@ -202,7 +202,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             catch (_: Exception) { null }
             gpsBusy = false
             // A slow fix must not replace coordinates the user confirmed (for example through the manual address) meanwhile.
-            if (fix != null && io.github.reihlinstinct.reporter.evidence.CurrentLocation.applyLateFix(latitude, longitude, fix) == null) return@launch
+            if (io.github.reihlinstinct.reporter.evidence.CurrentLocation.alreadyLocated(latitude, longitude)) return@launch
             if (fix != null) applyDeviceFix(fix) else gpsStatus = "review.location.gps_failed"
         }
     }

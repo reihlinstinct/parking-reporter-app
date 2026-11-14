@@ -36,15 +36,15 @@ object CurrentLocation {
         return age >= java.time.Duration.ofMinutes(-1) && age <= java.time.Duration.ofMinutes(FRESH_CAPTURE_MINUTES)
     }
 
+    /** True when both coordinate fields already hold numbers (typed, or confirmed through the manual address). */
+    fun alreadyLocated(latText: String, lonText: String): Boolean = latText.toDoubleOrNull() != null && lonText.toDoubleOrNull() != null
+
     /**
-     * A slow phone fix must not replace coordinates already on the screen (for example confirmed through the manual
-     * address). Returns the fix to apply, or null when both coordinate fields already hold numbers or there is no fix.
+     * A slow phone fix must not replace coordinates already on the screen. Returns the fix to apply, or null when the
+     * fields are already located or there is no fix.
      */
-    fun applyLateFix(latText: String, lonText: String, fix: DeviceFix?): DeviceFix? {
-        if (fix == null) return null
-        val alreadyLocated = latText.toDoubleOrNull() != null && lonText.toDoubleOrNull() != null
-        return if (alreadyLocated) null else fix
-    }
+    fun applyLateFix(latText: String, lonText: String, fix: DeviceFix?): DeviceFix? =
+        if (fix == null || alreadyLocated(latText, lonText)) null else fix
 
     /** Accepts only a finite, in-range coordinate pair that is not the (0, 0) "no fix" placeholder. */
     fun validFix(latitude: Double, longitude: Double): DeviceFix? {

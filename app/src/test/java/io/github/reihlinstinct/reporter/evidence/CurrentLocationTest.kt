@@ -47,5 +47,7 @@ class CurrentLocationTest {
         assertEquals(fix, CurrentLocation.applyLateFix("abc", "35.2", fix))
         assertNull(CurrentLocation.applyLateFix("31.7", "35.2", fix))
         assertNull(CurrentLocation.applyLateFix("", "", null))
+        assertEquals(true, CurrentLocation.alreadyLocated("31.7", "35.2"))
+        assertEquals(false, CurrentLocation.alreadyLocated("31.7", ""))
     }
 }
