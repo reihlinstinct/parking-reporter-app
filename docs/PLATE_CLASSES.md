@@ -11,16 +11,19 @@ The app does not pass raw strings. Two rules keep a special-looking plate from b
 
 Still true: only REGULAR is implemented. A raw string that is not 7 or 8 ASCII digits is drawn as plain text and rejected by `PlateNumber.parse`. Nothing here infers legal status, licence validity or parking permission from a plate.
 
-## Plate type picker (user-chosen, nothing detected)
+## Plate type is read from the typed text (owner decision 2026-11-13)
 
-In Review, after tapping edit, the user can choose the plate type: regular (default), police, diplomatic (CD) or consular (CC). Labels are the owner-approved Hebrew ones. Rules:
+The review screen has one plate field and no type picker. `PlateDetect` reads the type from what is typed, using only the markers the app already uses:
 
-- The type is never inferred from the digits or from OCR. OCR suggestions always select regular.
-- Regular: unchanged (7 or 8 digits, registry lookup).
-- Police, CD, CC: the typed digits only (police also allows hyphens between digits, no letters; the app adds the mem or the "CD"/"CC" marker). Ready means at least one digit, no digit-count rule, because no official count is verified. No registry lookup.
-- The report text must contain the exact string with its marker (for example "11-22-33 מ" synthetic). `PlatePolicy.descriptionContainsPlate` checks it. A 7-digit police plate is never accepted as a regular plate: the class is part of the digest and the ledger record.
-- Display: police is drawn red with white characters (spec 119/2016, above). CD and CC are drawn neutral grey because no colour is verified. Changing the type clears the plate field.
-- Nothing structured is sent for a non-regular plate: the city submission carries the report text only, and `EncryptedPackage.reviewedReport` (demo path, not live) refuses a non-regular plate.
+- "CD" or "CC" (any case, optional space or hyphen) before the digits: diplomatic or consular. Digits only after it (up to 12). The report text carries "CD 123" or "CC 123".
+- A hyphen between the digits, or a trailing "מ": police (spec 119/2016: digits, hyphen and the letter mem). Both ways are accepted (owner answer). The mem is added to the report text by the app when typed or not.
+- A 7 or 8 digit number grouped exactly like the app's own regular display (12-345-67, 123-45-678) stays regular, so a pasted regular plate is not read as police.
+- Plain digits: regular (registry lookup as before). A police number typed as 7 or 8 plain digits with no hyphen and no mem cannot be told from a regular plate and is regular.
+- Any other letter is not accepted in the field. A mix (CD with mem) or a lone "C" or "D" gives an empty plate: never ready.
+- Ready means what `PlateClasses.ready` says: 7 or 8 digits for regular, at least one digit for the others. Digit counts and grammar for police, CD and CC are still not officially verified, and no colour claim is made beyond the police red.
+- Changing the detected type removes the old plate line from the report text, as the picker did. Nothing structured is sent for a non-regular plate, as before.
+- `PlateDetectTest` pins the rules. The picker strings stay in the catalog, unused.
+- The ML Kit note and choice are hidden by default behind a button with the existing ML Kit label.
 
 ## Verified from official text (checked 2026-11-12)
 

@@ -25,11 +25,9 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.ui.semantics.Role
 import io.github.reihlinstinct.reporter.core.PlateClass
 import io.github.reihlinstinct.reporter.core.PlateClasses
+import io.github.reihlinstinct.reporter.core.PlateDetect
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
@@ -69,11 +67,18 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var draft by remember(initial.evidence.stableId) { mutableStateOf(restored?.draft ?: policy(ReportTime.forSave(initial))) }
     LaunchedEffect(initial) { if (restoredNow() == null) draft = policy(ReportTime.forSave(initial)) }
     LaunchedEffect(topicSnapshot, plateEnables) { draft = policy(draft) }
+    // The plate field shows what the user typed; the type (regular, police, CD, CC) is read from it by PlateDetect.
+    fun plateShown(d: ReviewDraft) = if (d.plate.isBlank()) "" else PlateClasses.text(d.plate, d.plateClass)
+    var plateRaw by remember(initial.evidence.stableId) { mutableStateOf(plateShown(draft)) }
+    // Invariant: detect(plateRaw) equals what onValueChange stored, so this converges without a loop.
+    // An outside change (OCR suggestion, restore) moves the field. Typing that already matches the draft leaves it alone.
+    PlateDetect.detect(plateRaw).let { if ((it.plate != draft.plate || it.plateClass != draft.plateClass) && !(draft.plate.isBlank() && !PlateClasses.ready(it.plate, it.plateClass))) plateRaw = plateShown(draft) }
     val registryPlate = if (draft.plateClass == PlateClass.REGULAR) draft.plate else ""
     var latitude by remember(initial.evidence.stableId) { mutableStateOf(restored?.latitude ?: initial.confirmedLatitude?.toString().orEmpty()) }
     var longitude by remember(initial.evidence.stableId) { mutableStateOf(restored?.longitude ?: initial.confirmedLongitude?.toString().orEmpty()) }
     var editing by remember(initial.evidence.stableId) { mutableStateOf(false) }
-    var showPlateTypes by remember(initial.evidence.stableId) { mutableStateOf(false) }
+    // ML Kit note and choice are hidden by default; one tap on the ML Kit line shows them.
+    var showMlKit by remember(initial.evidence.stableId) { mutableStateOf(false) }
     var manualStreet by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualStreet.orEmpty()) }
     var manualHouse by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualHouse.orEmpty()) }
     var manualResult by remember(initial.evidence.stableId) { mutableStateOf<io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress?>(null) }
@@ -307,32 +312,26 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         }
         if (editing) {
 
-        // ML Kit note and choice are hidden by default too; they appear with the plate options.
-        if (showPlateTypes || useGoogle) Text(s.t("review.edit.privacy_note"))
         if (draft.needsPlate()) {
-        if (showPlateTypes || useGoogle) Row { Checkbox(checked = useGoogle, enabled = !recognizing, onCheckedChange = { useGoogle = it; plates = emptyList(); ocrStatus = null }); Text(s.t("review.edit.use_mlkit")) }
+        TextButton(onClick = { showMlKit = !showMlKit }) { Text(s.t("review.edit.use_mlkit"), style = MaterialTheme.typography.labelLarge) }
+        if (showMlKit || useGoogle) Text(s.t("review.edit.privacy_note"))
+        if (showMlKit || useGoogle) Row { Checkbox(checked = useGoogle, enabled = !recognizing, onCheckedChange = { useGoogle = it; plates = emptyList(); ocrStatus = null }); Text(s.t("review.edit.use_mlkit")) }
         Button(enabled = image != null && !recognizing, onClick = { scope.launch { recognize() } }, modifier = Modifier.fillMaxWidth()) { Text(s.t(if (recognizing) "review.edit.recognizing" else "review.edit.suggest_plate")) }
         Text(ocrStatus?.let { s.t(it) }.orEmpty())
         plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate, plateClass = PlateClass.REGULAR) }) { Text(reviewPlateSuggestionText(s, plate)) } }
-        // Plate type picker: only here (after tapping edit), nothing is detected. Changing the type clears the plate.
-        if (draft.needsPlate()) {
-            // Issue: the plate type picker is hidden by default, also in edit mode. The title is the toggle (existing catalog text).
-            TextButton(onClick = { showPlateTypes = !showPlateTypes }) { Text(s.t("review.plate_class.title"), style = MaterialTheme.typography.labelLarge) }
-            if (showPlateTypes) Column(Modifier.selectableGroup()) {
-                listOf(PlateClass.REGULAR to s.t("review.plate_class.regular"), PlateClass.POLICE to s.t("review.plate_class.police"),
-                    PlateClass.DIPLOMATIC_CD to s.t("review.plate_class.cd"), PlateClass.CONSULAR_CC to s.t("review.plate_class.cc")).forEach { (plateClass, label) ->
-                    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(selected = draft.plateClass == plateClass, role = Role.RadioButton,
-                        onClick = { if (draft.plateClass != plateClass) { plateEdits++; draft = draft.edit(plate = "", plateClass = plateClass, text = PlateClasses.withoutPlateLines(draft.exactHebrewText, draft.plate, draft.plateClass)) } }),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = draft.plateClass == plateClass, onClick = null)
-                        Text(label, Modifier.padding(start = 8.dp))
-                    }
+        // One plate field, no type picker: the type is read from the typed text (digits = regular, hyphen or trailing mem = police, CD or CC prefix).
+        if (draft.needsPlate()) OutlinedTextField(plateRaw, { input ->
+                if (PlateDetect.allowed(input)) {
+                    plateEdits++
+                    val found = PlateDetect.detect(input)
+                    plateRaw = input
+                    val text = PlateDetect.textAfterChange(draft.exactHebrewText, draft.plate, draft.plateClass, found.plateClass)
+                    draft = draft.edit(plate = found.plate, plateClass = found.plateClass, text = text)
                 }
-            }
-        }
-        if (draft.needsPlate()) OutlinedTextField(draft.plate, { plateEdits++; draft = draft.edit(plate = PlateEntry.acceptFor(draft.plateClass, draft.plate, it)) }, singleLine = true,
-            isError = draft.plate.isNotBlank() && !PlateClasses.ready(draft.plate, draft.plateClass),
-            visualTransformation = if (draft.plateClass == PlateClass.REGULAR) PlateEntry else VisualTransformation.None, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, autoCorrectEnabled = false, imeAction = ImeAction.Done),
+            }, singleLine = true,
+            isError = plateRaw.isNotBlank() && !PlateClasses.ready(draft.plate, draft.plateClass),
+            visualTransformation = if (draft.plateClass == PlateClass.REGULAR && plateRaw.all { it.isDigit() }) PlateEntry else VisualTransformation.None,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, autoCorrectEnabled = false, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }),
             textStyle = MaterialTheme.typography.titleLarge.copy(textDirection = TextDirection.Ltr),
             label = { Text(s.t("review.edit.plate_field")) }, modifier = Modifier.width(216.dp))
