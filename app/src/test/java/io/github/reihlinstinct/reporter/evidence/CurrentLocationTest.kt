@@ -38,4 +38,14 @@ class CurrentLocationTest {
         assertEquals(false, CurrentLocation.freshCapture(null, now, zone))
         assertEquals(false, CurrentLocation.freshCapture("not a time", now, zone))
     }
+
+    @Test
+    fun aLateFixNeverReplacesCoordinatesAlreadyOnTheScreen() {
+        val fix = DeviceFix(31.78, 35.21)
+        assertEquals(fix, CurrentLocation.applyLateFix("", "", fix))
+        assertEquals(fix, CurrentLocation.applyLateFix("31.7", "", fix))
+        assertEquals(fix, CurrentLocation.applyLateFix("abc", "35.2", fix))
+        assertNull(CurrentLocation.applyLateFix("31.7", "35.2", fix))
+        assertNull(CurrentLocation.applyLateFix("", "", null))
+    }
 }
