@@ -20,17 +20,19 @@ import kotlin.math.exp
  * it never selects a category, never fills a field and never changes what is filed.
  */
 object SidewalkSuggestion {
-    /** SHA-256 (lowercase hex) of the approved v3 tflite. Blank until the owner supplies it: blank keeps the feature off. */
-    const val PINNED_SHA256 = ""
+    /** SHA-256 (lowercase hex) of the approved v4 tflite (municipal-v4-fp32.tflite, 44,739,912 bytes). A blank pin keeps the feature off. */
+    const val PINNED_SHA256 = "a9b7c18cd1e97588503048c66bf4916c40edd5c4d4ec0959248623b5dbe598d3"
     /**
-     * Whether the v3 head emits a raw logit (true) or already a probability (false). It is a property of the model
-     * export, not of one output, so the owner sets it together with the pin. Unverified: assumed probability.
+     * Whether the v4 head emits a raw logit (true) or already a probability (false). It is a property of the model
+     * export, not of one output, so it is set together with the pin. Verified by the model owner on the v4 export: the
+     * sigmoid is folded into the graph (matches PyTorch to 8e-7 on three photos), so the output is a probability.
      */
     const val OUTPUT_IS_LOGIT = false
-    const val THRESHOLD = 0.5f
+    /** Sidewalk threshold from the v4 model owner (labels [sidewalk_parking, red_white, crosswalk_obstruction] use 0.10 / 0.75 / 0.90). Only output 0 is used. */
+    const val THRESHOLD = 0.10f
     const val INPUT_SIZE = 224
     const val RESIZE_SHORT_SIDE = 256
-    const val MODEL_FILE_NAME = "sidewalk_v3.tflite"
+    const val MODEL_FILE_NAME = "sidewalk_v4.tflite"
     /** Category the suggestion points at: the municipal subject code of sidewalk parking. */
     const val SIDEWALK_SUBJECT_CODE = "1145"
 

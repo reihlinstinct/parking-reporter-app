@@ -8,10 +8,17 @@ import org.junit.Test
 
 class SidewalkSuggestionTest {
     @Test
+    fun v4PinIsAFullSha256AndTheHeadIsAProbability() {
+        assertTrue(SidewalkSuggestion.PINNED_SHA256.matches(Regex("[a-f0-9]{64}")))
+        assertFalse(SidewalkSuggestion.OUTPUT_IS_LOGIT)
+        assertEquals(0.3f, SidewalkSuggestion.probability(0.3f)!!, 1e-6f)
+    }
+
+    @Test
     fun suggestsOnlyAtOrAboveTheThresholdAndNotWhenAlreadySidewalk() {
-        assertTrue(SidewalkSuggestion.shouldSuggest(0.5f, "17841"))
+        assertTrue(SidewalkSuggestion.shouldSuggest(0.10f, "17841"))
         assertTrue(SidewalkSuggestion.shouldSuggest(0.9f, null))
-        assertFalse(SidewalkSuggestion.shouldSuggest(0.49f, null))
+        assertFalse(SidewalkSuggestion.shouldSuggest(0.09f, null))
         assertFalse(SidewalkSuggestion.shouldSuggest(0.9f, SidewalkSuggestion.SIDEWALK_SUBJECT_CODE))
         assertFalse(SidewalkSuggestion.shouldSuggest(null, null))
         assertFalse(SidewalkSuggestion.shouldSuggest(Float.NaN, null))
