@@ -45,9 +45,9 @@ object SidewalkSuggestion {
     fun shouldSuggest(score: Float?, selectedCode: String?): Boolean =
         score != null && score.isFinite() && score >= THRESHOLD && selectedCode != SIDEWALK_SUBJECT_CODE
 
-    /** Turns the model output into a probability: a logit is squashed, a probability is kept. Null when not finite. */
+    /** Turns the model output into a probability: a logit is squashed, a probability is kept. Null when not finite, or when a probability head returns a value outside 0..1. */
     fun probability(raw: Float, isLogit: Boolean = OUTPUT_IS_LOGIT): Float? =
-        if (!raw.isFinite()) null else if (!isLogit) raw else (1.0 / (1.0 + exp(-raw.toDouble()))).toFloat()
+        if (!raw.isFinite()) null else if (!isLogit) raw.takeIf { it in 0f..1f } else (1.0 / (1.0 + exp(-raw.toDouble()))).toFloat()
 
     fun pinMatches(actualSha256: String, pin: String = PINNED_SHA256): Boolean =
         pin.matches(Regex("[a-f0-9]{64}")) && actualSha256.equals(pin, ignoreCase = true)

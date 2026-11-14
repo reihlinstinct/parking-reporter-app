@@ -34,6 +34,9 @@ class SidewalkSuggestionTest {
         assertTrue(SidewalkSuggestion.probability(-4f, isLogit = true)!! < 0.1f)
         assertNull(SidewalkSuggestion.probability(Float.NaN, isLogit = true))
         assertNull(SidewalkSuggestion.probability(Float.NaN, isLogit = false))
+        assertNull(SidewalkSuggestion.probability(1.5f, isLogit = false))
+        assertNull(SidewalkSuggestion.probability(-0.1f, isLogit = false))
+        assertEquals(1f, SidewalkSuggestion.probability(1f, isLogit = false)!!, 1e-6f)
     }
 
     @Test
