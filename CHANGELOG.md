@@ -6,6 +6,22 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.49.0] - 2026-11-13
+
+### Features
+
+- feat(review): optional use-my-current-location button with a runtime … (#418) (3349679)
+
+### Fixes
+
+- fix(review): keep the in-progress review across rotation only, in pro… (#411) (88be945)
+
+### Other changes
+
+- docs(release): say perf and revert commits also trigger the daily release (#416 review follow-up) (#420) (9f96b1d)
+- ci(live): stage the encrypted input bundle for the next owner-chosen live app test (#422) (f8b0a36)
+- ci(release): release on the release label, once a day when a feat/fix… (#416) (f8740c8)
+
 ## [0.48.7] - 2026-11-12
 
 ### Other changes

@@ -25,11 +25,9 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.ui.semantics.Role
 import io.github.reihlinstinct.reporter.core.PlateClass
 import io.github.reihlinstinct.reporter.core.PlateClasses
+import io.github.reihlinstinct.reporter.core.PlateDetect
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
@@ -79,10 +77,18 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var draft by remember(initial.evidence.stableId) { mutableStateOf(restored?.draft ?: policy(ReportTime.forSave(initial))) }
     LaunchedEffect(initial) { if (restoredNow() == null) draft = policy(ReportTime.forSave(initial)) }
     LaunchedEffect(topicSnapshot, plateEnables) { draft = policy(draft) }
+    // The plate field shows what the user typed; the type (regular, police, CD, CC) is read from it by PlateDetect.
+    fun plateShown(d: ReviewDraft) = if (d.plate.isBlank()) "" else PlateClasses.text(d.plate, d.plateClass)
+    var plateRaw by remember(initial.evidence.stableId) { mutableStateOf(plateShown(draft)) }
+    // Invariant: detect(plateRaw) equals what onValueChange stored, so this converges without a loop.
+    // An outside change (OCR suggestion, restore) moves the field. Typing that already matches the draft leaves it alone.
+    PlateDetect.detect(plateRaw).let { if ((it.plate != draft.plate || it.plateClass != draft.plateClass) && !(draft.plate.isBlank() && !PlateClasses.ready(it.plate, it.plateClass))) plateRaw = plateShown(draft) }
     val registryPlate = if (draft.plateClass == PlateClass.REGULAR) draft.plate else ""
     var latitude by remember(initial.evidence.stableId) { mutableStateOf(restored?.latitude ?: initial.confirmedLatitude?.toString().orEmpty()) }
     var longitude by remember(initial.evidence.stableId) { mutableStateOf(restored?.longitude ?: initial.confirmedLongitude?.toString().orEmpty()) }
     var editing by remember(initial.evidence.stableId) { mutableStateOf(false) }
+    // ML Kit note and choice are hidden by default; one tap on the ML Kit line shows them.
+    var showMlKit by remember(initial.evidence.stableId) { mutableStateOf(false) }
     var manualStreet by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualStreet.orEmpty()) }
     var manualHouse by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualHouse.orEmpty()) }
     var manualResult by remember(initial.evidence.stableId) { mutableStateOf<io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress?>(null) }
@@ -105,6 +111,8 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // Issue #358: an automatic OCR plate prefill is not a user edit. It only moves the clean baseline for the
     // plate, and only while the user has not touched the plate (recognize() guards that with plateEdits).
     var ocrPrefilledPlate by remember(initial.evidence.stableId) { mutableStateOf<String?>(restored?.ocrPrefilledPlate) }
+    // Issue #186: coordinates that came from the phone survive a rotation together with the rest of the state.
+    var gpsFilled by remember(initial.evidence.stableId) { mutableStateOf(restored?.gpsFilled ?: false) }
     // The screen's draft always has the topic plate policy applied, so the clean baseline must too, or a screen
     // with a topic snapshot would count as edited before the user touched anything.
     val savedDraft = policy(ReportTime.forSave(initial))
@@ -117,7 +125,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // (save, discard, back, process death) leaves nothing held.
     val holdOnRotation by rememberUpdatedState {
         ReviewRotationState.Held(initial, draft, latitude, longitude, manualStreet, manualHouse,
-            savedManualStreet, savedManualHouse, ocrPrefilledPlate)
+            savedManualStreet, savedManualHouse, ocrPrefilledPlate, gpsFilled)
     }
     val rotationActivity = context.findActivity()
     DisposableEffect(initial.evidence.stableId) {
@@ -171,6 +179,38 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // though the resulting street/house lookup needs no coordinate typing.
     var askAddressConsent by rememberSaveable(initial.evidence.stableId) {
         mutableStateOf(initial.address.isBlank() && initial.confirmedLatitude != null && initial.confirmedLongitude != null)
+    }
+    // Issue #186: optional, user-triggered one-shot location read. The permission is asked only at the tap.
+    // The button fills the phone's position, so it is offered only for a photo taken a moment ago.
+    val freshCapture = remember(initial.evidence.stableId) {
+        io.github.reihlinstinct.reporter.evidence.CurrentLocation.freshCapture(initial.evidence.capturedAtIso, java.time.Instant.now(), java.time.ZoneId.systemDefault())
+    }
+    var gpsBusy by remember { mutableStateOf(false) }
+    var gpsStatus by remember { mutableStateOf<String?>(null) }
+    fun applyDeviceFix(fix: io.github.reihlinstinct.reporter.evidence.DeviceFix) {
+        latitude = fix.latitude.toString(); longitude = fix.longitude.toString()
+        gpsFilled = true; editing = true; suggestions = emptyList(); geocodeStatus = null
+        draft = draft.copy(confirmedLatitude = fix.latitude, confirmedLongitude = fix.longitude,
+            unresolved = draft.unresolved - ReviewWarning.MISSING_GPS.code + ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code)
+        gpsStatus = "review.location.gps_done"
+    }
+    fun readDeviceFix() {
+        gpsBusy = true; gpsStatus = null
+        scope.launch {
+            val fix = try { io.github.reihlinstinct.reporter.evidence.CurrentLocation.read(context) }
+            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { null }
+            gpsBusy = false
+            // A slow fix must not replace coordinates the user confirmed (for example through the manual address) meanwhile.
+            val alreadyLocated = latitude.toDoubleOrNull() != null && longitude.toDoubleOrNull() != null
+            if (alreadyLocated) return@launch
+            if (fix != null) applyDeviceFix(fix) else gpsStatus = "review.location.gps_failed"
+        }
+    }
+    // Android lint requires FINE to be requested together with COARSE; the user may grant only approximate
+    // location, which still allows the network provider.
+    val locationPermission = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) { granted ->
+        if (granted.values.any { it }) readDeviceFix() else gpsStatus = "review.location.gps_denied"
     }
     suspend fun recognize() {
         recognizing = true
@@ -277,7 +317,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate, plateClass = PlateClass.REGULAR) }) { Text(reviewPlateSuggestionText(s, plate)) } }
             }
             Text(reviewAddressText(s, draft.address))
-            if (draft.address.isBlank() && draft.evidence.latitude != null && draft.evidence.longitude != null) {
+            if (draft.address.isBlank() && (draft.evidence.latitude != null && draft.evidence.longitude != null || gpsFilled)) {
                 Text(s.t("review.edit.geocode_note"), style = MaterialTheme.typography.bodySmall)
                 if (geocoding) Text(s.t("review.geocode.loading"))
                 Text(geocodeStatus?.let { s.t(it) }.orEmpty())
@@ -292,30 +332,26 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         }
         if (editing) {
 
-        Text(s.t("review.edit.privacy_note"))
         if (draft.needsPlate()) {
-        Row { Checkbox(checked = useGoogle, enabled = !recognizing, onCheckedChange = { useGoogle = it; plates = emptyList(); ocrStatus = null }); Text(s.t("review.edit.use_mlkit")) }
+        TextButton(onClick = { showMlKit = !showMlKit }) { Text(s.t("review.edit.use_mlkit"), style = MaterialTheme.typography.labelLarge) }
+        if (showMlKit || useGoogle) Text(s.t("review.edit.privacy_note"))
+        if (showMlKit || useGoogle) Row { Checkbox(checked = useGoogle, enabled = !recognizing, onCheckedChange = { useGoogle = it; plates = emptyList(); ocrStatus = null }); Text(s.t("review.edit.use_mlkit")) }
         Button(enabled = image != null && !recognizing, onClick = { scope.launch { recognize() } }, modifier = Modifier.fillMaxWidth()) { Text(s.t(if (recognizing) "review.edit.recognizing" else "review.edit.suggest_plate")) }
         Text(ocrStatus?.let { s.t(it) }.orEmpty())
         plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate, plateClass = PlateClass.REGULAR) }) { Text(reviewPlateSuggestionText(s, plate)) } }
-        // Plate type picker: only here (after tapping edit), nothing is detected. Changing the type clears the plate.
-        if (draft.needsPlate()) {
-            Text(s.t("review.plate_class.title"), style = MaterialTheme.typography.labelLarge)
-            Column(Modifier.selectableGroup()) {
-                listOf(PlateClass.REGULAR to s.t("review.plate_class.regular"), PlateClass.POLICE to s.t("review.plate_class.police"),
-                    PlateClass.DIPLOMATIC_CD to s.t("review.plate_class.cd"), PlateClass.CONSULAR_CC to s.t("review.plate_class.cc")).forEach { (plateClass, label) ->
-                    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(selected = draft.plateClass == plateClass, role = Role.RadioButton,
-                        onClick = { if (draft.plateClass != plateClass) { plateEdits++; draft = draft.edit(plate = "", plateClass = plateClass, text = PlateClasses.withoutPlateLines(draft.exactHebrewText, draft.plate, draft.plateClass)) } }),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = draft.plateClass == plateClass, onClick = null)
-                        Text(label, Modifier.padding(start = 8.dp))
-                    }
+        // One plate field, no type picker: the type is read from the typed text (digits = regular, hyphen or trailing mem = police, CD or CC prefix).
+        if (draft.needsPlate()) OutlinedTextField(plateRaw, { input ->
+                if (PlateDetect.allowed(input)) {
+                    plateEdits++
+                    val found = PlateDetect.detect(input)
+                    plateRaw = input
+                    val text = PlateDetect.textAfterChange(draft.exactHebrewText, draft.plate, draft.plateClass, found.plateClass)
+                    draft = draft.edit(plate = found.plate, plateClass = found.plateClass, text = text)
                 }
-            }
-        }
-        if (draft.needsPlate()) OutlinedTextField(draft.plate, { plateEdits++; draft = draft.edit(plate = PlateEntry.acceptFor(draft.plateClass, draft.plate, it)) }, singleLine = true,
-            isError = draft.plate.isNotBlank() && !PlateClasses.ready(draft.plate, draft.plateClass),
-            visualTransformation = if (draft.plateClass == PlateClass.REGULAR) PlateEntry else VisualTransformation.None, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, autoCorrectEnabled = false, imeAction = ImeAction.Done),
+            }, singleLine = true,
+            isError = plateRaw.isNotBlank() && !PlateClasses.ready(draft.plate, draft.plateClass),
+            visualTransformation = if (draft.plateClass == PlateClass.REGULAR && plateRaw.all { it.isDigit() }) PlateEntry else VisualTransformation.None,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, autoCorrectEnabled = false, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }),
             textStyle = MaterialTheme.typography.titleLarge.copy(textDirection = TextDirection.Ltr),
             label = { Text(s.t("review.edit.plate_field")) }, modifier = Modifier.width(216.dp))
@@ -330,13 +366,13 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             draft = edited.copy(unresolved = edited.unresolved -
                 ReviewWarning.ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code +
                 if (it != addressBaseline) emptySet() else pendingAddressWarnings)
-            if (draft.evidence.latitude == null || draft.evidence.longitude == null) {
+            if (!gpsFilled && (draft.evidence.latitude == null || draft.evidence.longitude == null)) {
                 latitude = ""; longitude = ""; manualResult = null; manualGeneration++
                 draft = draft.copy(confirmedLatitude = null, confirmedLongitude = null,
                     unresolved = draft.unresolved + ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code)
             }
         }, label = { Text(s.t("review.edit.address_field")) }, modifier = Modifier.fillMaxWidth())
-        if (draft.evidence.latitude != null && draft.evidence.longitude != null) {
+        if (draft.evidence.latitude != null && draft.evidence.longitude != null || gpsFilled) {
         Text(s.t("review.edit.geocode_note"))
         Button(enabled = !geocoding && latitude.toDoubleOrNull() != null && longitude.toDoubleOrNull() != null, onClick = {
             scope.launch { findAddress() }
@@ -353,8 +389,17 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         Text(reviewAddressText(s, draft.address))
         if (draft.unresolved.isNotEmpty()) Text(unresolvedText(s, draft.unresolved))
         }
+        gpsStatus?.let { Text(s.t(it), style = MaterialTheme.typography.bodySmall) }
         if (latitude.toDoubleOrNull() == null || longitude.toDoubleOrNull() == null) {
             Text(s.t("review.location.missing_plain"))
+            if (freshCapture) Button(enabled = !gpsBusy, onClick = {
+                val granted = listOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION).any {
+                    androidx.core.content.ContextCompat.checkSelfPermission(context, it) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                }
+                if (granted) readDeviceFix()
+                else locationPermission.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION))
+            }, modifier = Modifier.fillMaxWidth().testTag("use_current_location")) { Text(s.t("review.location.gps_button")) }
+            if (freshCapture && gpsBusy) Text(s.t("review.location.gps_loading"))
             OutlinedTextField(manualStreet, { manualStreet = it; manualResult = null; manualGeneration++ }, label = { Text(s.t("review.location.street")) }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(manualHouse, { manualHouse = it; manualResult = null; manualGeneration++ }, label = { Text(s.t("review.location.house")) }, modifier = Modifier.fillMaxWidth(),
                 singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }))

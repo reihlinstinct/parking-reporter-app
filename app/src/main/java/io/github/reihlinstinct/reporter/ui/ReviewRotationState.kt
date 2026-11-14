@@ -23,6 +23,7 @@ object ReviewRotationState {
         val savedManualStreet: String,
         val savedManualHouse: String,
         val ocrPrefilledPlate: String?,
+        val gpsFilled: Boolean = false,
     )
 
     class Shell(val draft: ReviewDraft, val original: File?, val revision: Long)
