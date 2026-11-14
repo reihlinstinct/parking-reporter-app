@@ -27,6 +27,9 @@ object BuiltInTemplates {
         TemplateSentence("request", listOf(t(request))),
     )
 
+    /** The ids of the sentences shared by every template that depend on verified facts. */
+    val stateSentenceIds = setOf("no_disabled_permit", "licence_expired")
+
     /** Sentences added to every template by state. Each is a removable chip: deleting it keeps it deleted. */
     private val stateSentences = listOf(
         TemplateSentence(
@@ -52,7 +55,7 @@ object BuiltInTemplates {
 
     fun byTag(tag: String): DescriptionTemplate? = templates.firstOrNull { it.tag == tag }
 
-    /** City code first, the recorded name beside it so a renamed category is flagged. Codes from the live list at 2026-11-14. */
+    /** City code first, the recorded name beside it so a renamed category is flagged. Codes and names from the bundled taxonomy snapshot assets/taxonomy/municipal_subjects.json. */
     val shippedMapping: List<TemplateMappingEntry> = listOf(
         TemplateMappingEntry("1144", "חנייה אסורה- אדום לבן / אין עצירה", RED_WHITE_CURB),
         TemplateMappingEntry("1145", "חנייה אסורה - חנייה על מדרכה", SIDEWALK_PARKING),

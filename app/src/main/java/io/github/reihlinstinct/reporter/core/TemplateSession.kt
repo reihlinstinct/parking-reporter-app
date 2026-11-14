@@ -9,7 +9,7 @@ package io.github.reihlinstinct.reporter.core
  * those facts then appear, and nothing else makes them appear.
  */
 object TemplateSession {
-    /** [frozen]: the user changed the text before the category changed, so this category's template is not applied. */
+    /** [frozen]: the user changed the text before the category changed, so this category's template is not applied. Then [rendered] holds only the state sentences still tracked. */
     data class State(val tag: String? = null, val rendered: List<RenderedSentence> = emptyList(), val frozen: Boolean = false)
 
     data class Result(val text: String, val state: State, val needsReview: TemplateResolution.NeedsReview? = null)
@@ -26,19 +26,24 @@ object TemplateSession {
         val review = resolution as? TemplateResolution.NeedsReview
         val template = (resolution as? TemplateResolution.Match)?.let { BuiltInTemplates.byTag(it.tag) }
         if (template == null) {
-            // No template for this category (or it needs review): the text stays as it is and nothing is tracked.
-            return Result(currentText, State(), review)
+            // No template for this category (or it needs review): the text stays as it is and the tracking is kept,
+            // so a later category still sees an untouched template text as untouched.
+            return Result(currentText, state, review)
         }
         val next = DescriptionTemplates.render(template, facts)
         if (state.frozen && currentText.isNotBlank()) {
-            // The user took over. Only an emptied box lets a template come back, which also happens on a new category.
-            return if (template.tag == state.tag) Result(currentText, state) else Result(currentText, state.copy(tag = template.tag))
+            // The user took over the text. Only the shared state sentences keep following the facts, each tracked on its
+            // own, so a fact that is no longer true never stays and a verified one can still appear.
+            val ids = BuiltInTemplates.stateSentenceIds
+            val nextState = next.filter { it.id in ids }
+            val text = DescriptionTemplates.update(currentText, state.rendered.filter { it.id in ids }, nextState)
+            return Result(text, State(template.tag, nextState, frozen = true))
         }
         if (template.tag != state.tag) {
             return if (DescriptionTemplates.isUntouched(currentText, state.rendered)) {
                 Result(DescriptionTemplates.join(next), State(template.tag, next))
             } else {
-                Result(currentText, State(template.tag, emptyList(), frozen = true))
+                Result(currentText, State(template.tag, state.rendered.filter { it.id in BuiltInTemplates.stateSentenceIds }, frozen = true))
             }
         }
         return Result(DescriptionTemplates.update(currentText, state.rendered, next), State(template.tag, next))

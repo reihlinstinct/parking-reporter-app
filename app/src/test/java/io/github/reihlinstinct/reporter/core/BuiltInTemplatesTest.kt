@@ -72,6 +72,9 @@ class BuiltInTemplatesTest {
         assertEquals("my text", r.text)
         assertNotNull(r.needsReview)
         assertEquals(TemplateSession.State(), r.state)
+        // the tracking passed in is kept
+        val kept = TemplateSession.apply(sidewalk, emptyList(), facts(*full), "", TemplateSession.State())
+        assertEquals(kept.state, TemplateSession.apply(renamed, emptyList(), facts(*full), kept.text, kept.state).state)
     }
 
     @Test fun theUsersMappingOverridesTheShippedOne() {
@@ -87,8 +90,35 @@ class BuiltInTemplatesTest {
         val second = TemplateSession.apply(curb, emptyList(), f, edited, first.state)
         assertEquals(edited, second.text)
         assertTrue(second.state.frozen)
-        val third = TemplateSession.apply(curb, emptyList(), facts(*full, permit = PermitState.CHECKED_NONE), edited, second.state)
+        val third = TemplateSession.apply(curb, emptyList(), f, edited, second.state)
         assertEquals(edited, third.text)
+    }
+
+    @Test fun whileFrozenOnlyTheStateSentencesFollowTheFacts() {
+        val none = facts(*full, permit = PermitState.CHECKED_NONE)
+        val chip = "לפי הנתונים הפומביים של משרד התחבורה לא נמצא תו חניה לנכה על מספר הרישוי הזה."
+        val first = TemplateSession.apply(sidewalk, emptyList(), none, "", TemplateSession.State())
+        assertTrue(first.text.endsWith(chip))
+        val edited = first.text.replace("עגנון", "רחוב אחר")
+        val frozen = TemplateSession.apply(curb, emptyList(), none, edited, first.state)
+        assertTrue(frozen.state.frozen)
+        assertEquals(edited, frozen.text)
+        val permitFound = TemplateSession.apply(curb, emptyList(), facts(*full, permit = PermitState.HAS_PERMIT), frozen.text, frozen.state)
+        assertEquals(edited.removeSuffix(chip).trim(), permitFound.text)
+        val again = TemplateSession.apply(curb, emptyList(), none, permitFound.text, permitFound.state)
+        assertEquals(edited.removeSuffix(chip).trim() + " " + chip, again.text)
+    }
+
+    @Test fun aRenamedCategoryInTheMiddleDoesNotFreezeAnUntouchedText() {
+        val f = facts(*full)
+        val a = TemplateSession.apply(sidewalk, emptyList(), f, "", TemplateSession.State())
+        val renamed = MunicipalSubject("1145", "שם חדש", emptyList())
+        val b = TemplateSession.apply(renamed, emptyList(), f, a.text, a.state)
+        assertEquals(a.text, b.text)
+        assertEquals(a.state, b.state)
+        val c = TemplateSession.apply(curb, emptyList(), f, b.text, b.state)
+        assertTrue(c.text.contains("אדום-לבן") && !c.text.contains("על המדרכה"))
+        assertFalse(c.state.frozen)
     }
 
     @Test fun anUntouchedDescriptionFollowsTheCategoryAndThePermitState() {
