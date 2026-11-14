@@ -48,13 +48,23 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     topicsAvailable: Boolean = false, topicsLoading: Boolean = false,
     openTopics: (() -> Unit)? = null, topicSelected: ((String) -> Unit)? = null,
     recentTopics: List<String> = emptyList(), topicAliases: Map<String, List<String>> = emptyMap(),
-    plateEnables: Set<String> = emptySet(), registryLookup: RegistryLookup? = null) {
+    plateEnables: Set<String> = emptySet(), registryLookup: RegistryLookup? = null,
+    sidewalkScorer: (suspend (android.graphics.Bitmap) -> Float?)? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     // Issue #358 part 2: state held across a rotation only (process memory, see ReviewRotationState).
     val restored = remember(initial.evidence.stableId) { ReviewRotationState.take(initial) }
     fun restoredNow() = restored?.takeIf { it.initial == initial }
     var plates by remember(initial.evidence.stableId) { mutableStateOf<List<String>>(emptyList()) }
+    var sidewalkScore by remember(initial.evidence.stableId) { mutableStateOf<Float?>(null) }
+    LaunchedEffect(initial.evidence.stableId, image) {
+        val scorer = sidewalkScorer
+        if (scorer != null && image != null) {
+            sidewalkScore = try { scorer(image.asAndroidBitmap()) }
+            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { null }
+        }
+    }
     var useGoogle by remember { mutableStateOf(false) }
     var recognizing by remember { mutableStateOf(false) }
     var plateEdits by remember { mutableIntStateOf(0) }
@@ -286,6 +296,16 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 topicSelected?.invoke(topic.code); categoryMenu = false
             })
         Text(s.t("review.category_note"), style = MaterialTheme.typography.bodySmall)
+        // Issue #158: experimental, advisory only. Silent unless the private model is on the phone and scores high.
+        val sidewalkCode = io.github.reihlinstinct.reporter.recognition.SidewalkSuggestion.SIDEWALK_SUBJECT_CODE
+        val sidewalkTopicAvailable = topicSnapshot?.topics.orEmpty().any { it.code == sidewalkCode }
+        if (sidewalkTopicAvailable && io.github.reihlinstinct.reporter.recognition.SidewalkSuggestion.shouldSuggest(sidewalkScore, selectedCode)) {
+            TextButton(onClick = {
+                draft = policy(draft.edit(subject = "municipal:" + sidewalkCode))
+                if (!draft.needsPlate()) plates = emptyList()
+                topicSelected?.invoke(sidewalkCode)
+            }, modifier = Modifier.fillMaxWidth().testTag("sidewalk_suggestion")) { Text(s.t("review.suggest.sidewalk")) }
+        }
         if (!editing) {
             if (draft.needsPlate()) {
                 if (draft.plateClass != PlateClass.REGULAR && draft.plate.isNotBlank()) SpecialPlate(PlateClasses.text(draft.plate, draft.plateClass), draft.plateClass, reviewPlateClassText(s, draft), Modifier.testTag("review-plate"))
