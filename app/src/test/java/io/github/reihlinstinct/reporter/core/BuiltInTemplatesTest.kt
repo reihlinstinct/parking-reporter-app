@@ -121,6 +121,17 @@ class BuiltInTemplatesTest {
         assertFalse(c.state.frozen)
     }
 
+    @Test fun aTemplateLessCategoryStillLetsTheStateSentencesFollowTheFacts() {
+        val none = facts(*full, permit = PermitState.CHECKED_NONE)
+        val chip = "לפי הנתונים הפומביים של משרד התחבורה לא נמצא תו חניה לנכה על מספר הרישוי הזה."
+        val a = TemplateSession.apply(sidewalk, emptyList(), none, "", TemplateSession.State())
+        assertTrue(a.text.endsWith(chip))
+        val renamed = MunicipalSubject("1145", "שם חדש", emptyList())
+        val b = TemplateSession.apply(renamed, emptyList(), facts(*full, permit = PermitState.HAS_PERMIT), a.text, a.state)
+        assertEquals(a.text.removeSuffix(chip).trim(), b.text)
+        assertNotNull(b.needsReview)
+    }
+
     @Test fun anUntouchedDescriptionFollowsTheCategoryAndThePermitState() {
         val f = facts(*full)
         val a = TemplateSession.apply(sidewalk, emptyList(), f, "", TemplateSession.State())

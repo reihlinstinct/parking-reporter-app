@@ -28,7 +28,14 @@ object TemplateSession {
         if (template == null) {
             // No template for this category (or it needs review): the text stays as it is and the tracking is kept,
             // so a later category still sees an untouched template text as untouched.
-            return Result(currentText, state, review)
+            // The shared state sentences still follow the verified facts, each tracked on its own.
+            val ids = BuiltInTemplates.stateSentenceIds
+            val tracked = state.rendered.filter { it.id in ids }
+            val stateNext = BuiltInTemplates.byTag(BuiltInTemplates.GENERIC)
+                ?.let { DescriptionTemplates.render(it, facts) }.orEmpty().filter { it.id in ids }
+            if (tracked.isEmpty() && stateNext.isEmpty()) return Result(currentText, state, review)
+            val text = DescriptionTemplates.update(currentText, tracked, stateNext)
+            return Result(text, state.copy(rendered = state.rendered.filter { it.id !in ids } + stateNext), review)
         }
         val next = DescriptionTemplates.render(template, facts)
         if (state.frozen && currentText.isNotBlank()) {
