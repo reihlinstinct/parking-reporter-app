@@ -111,12 +111,12 @@ fun SettingsScreen(
             Text(s.t("settings.ocr.title"), style = MaterialTheme.typography.titleLarge)
             Column(Modifier.selectableGroup()) {
                 listOf(
-                    io.github.reihlinstinct.reporter.recognition.OcrEngine.MLKIT to "settings.ocr.mlkit",
-                    io.github.reihlinstinct.reporter.recognition.OcrEngine.TESSERACT to "settings.ocr.tesseract",
-                ).forEach { (engine, key) ->
+                    io.github.reihlinstinct.reporter.recognition.OcrEngine.MLKIT to s.t("settings.ocr.mlkit"),
+                    io.github.reihlinstinct.reporter.recognition.OcrEngine.TESSERACT to s.t("settings.ocr.tesseract"),
+                ).forEach { (engine, label) ->
                     Row(Modifier.fillMaxWidth().selectable(selected = ocrEngine == engine, role = Role.RadioButton, onClick = { ocrEngine = engine; ocrStore.set(engine) }), verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(selected = ocrEngine == engine, onClick = null)
-                        Text(s.t(key), Modifier.padding(start = 8.dp))
+                        Text(label, Modifier.padding(start = 8.dp))
                     }
                 }
             }
