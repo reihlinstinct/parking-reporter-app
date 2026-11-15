@@ -5,7 +5,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import io.github.reihlinstinct.reporter.evidence.OutgoingEvidence
 import io.github.reihlinstinct.reporter.recognition.MlKitPlateOcr
 import io.github.reihlinstinct.reporter.recognition.PlateCandidates
-import io.github.reihlinstinct.reporter.recognition.OfflinePlateOcr
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Test
@@ -35,15 +34,20 @@ class PrivateRealPhotoOcrTest {
                 .put("original_sha256", prepared.originalHash).put("prepared_sha256", prepared.hash)
                 .put("width", prepared.width).put("height", prepared.height)
             try {
-                // Alternate order to reduce consistent warm/cold first-engine bias.
-                val engines = if (i % 2 == 0) listOf("tesseract", "mlkit") else listOf("mlkit", "tesseract")
+                // Rotate the order over the variants to reduce consistent warm/cold first-variant bias.
+                val all = listOf("mlkit", "mlkit_tiles", "mlkit_tiles_x2")
+                val engines = all.drop(i % 3) + all.take(i % 3)
                 for (engine in engines) {
                     val start = System.nanoTime()
                     val answer = JSONObject()
                     try {
-                        val raw = if (engine == "tesseract") OfflinePlateOcr(context).recognizeText(bitmap)
-                            else MlKitPlateOcr.recognizeText(bitmap)
-                        val values = PlateCandidates.fromText(raw)
+                        val windows = when (engine) {
+                            "mlkit_tiles" -> MlKitPlateOcr.recognizeTileTexts(bitmap, 1)
+                            "mlkit_tiles_x2" -> MlKitPlateOcr.recognizeTileTexts(bitmap, 2)
+                            else -> listOf(MlKitPlateOcr.recognizeText(bitmap))
+                        }
+                        val raw = windows.joinToString("\n---\n")
+                        val values = PlateCandidates.rank(windows)
                         // This file is exported only by the manual benchmark and encrypted
                         // before artifact upload. Never print raw OCR to instrumentation/logcat.
                         answer.put("raw_text", raw).put("candidates", JSONArray(values)).put("error", JSONObject.NULL)

@@ -31,3 +31,7 @@ The manual benchmark records bounded raw OCR text (64,000 characters per engine/
 ## Result: Tesseract digit whitelist (15 Nov 2026)
 
 One private run, 30 photos, same prepared image per variant. Exact top-1: Tesseract plain 0, Tesseract with digit whitelist 0, ML Kit 13. Expected digits anywhere in the raw text: 1, 1 and 17. Median time 0.66 s, 0.63 s and 3.7 s. The whitelist did not help, so the option was removed again. Aggregates only.
+
+## Variants: plate localisation by windows (#442)
+
+The manual benchmark compares three ML Kit variants on the same prepared photo: the whole frame (`mlkit`), the whole frame plus a 3 x 3 grid of half-size windows with 25% steps (`mlkit_tiles`), and the same windows enlarged 2x (`mlkit_tiles_x2`). Candidates from all windows are ranked by how many windows read the same number (`PlateCandidates.rank`); the usual strict filter still decides what counts as a candidate. These variants are measured only here and are not used by the app. Cost is reported as median time per photo. Aggregates only, no plates, photos or raw text in any public place.

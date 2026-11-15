@@ -53,4 +53,12 @@ class PlateCandidatesTest {
         assertTrue(PlateCandidates.fromText("12:345 67").isEmpty())
         assertTrue(PlateCandidates.fromText("1:2:3:4:5:6:7").isEmpty())
     }
+    @Test fun rankPutsTheNumberSeenInMostWindowsFirst() {
+        val windows = listOf("12-345-67", "99-888-77", "99-888-77", "", "12-345-67 99-888-77")
+        assertEquals(listOf("9988877", "1234567"), PlateCandidates.rank(windows))
+    }
+    @Test fun rankKeepsTheFirstWindowOnATieAndDropsRejectedShapes() {
+        assertEquals(listOf("1234567", "9988877"), PlateCandidates.rank(listOf("12-345-67 AB12-345-67", "99-888-77")))
+        assertTrue(PlateCandidates.rank(listOf("123456", "")).isEmpty())
+    }
 }

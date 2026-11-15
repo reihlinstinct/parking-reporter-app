@@ -19,4 +19,33 @@ object MlKitPlateOcr {
             return result.text.take(64_000)
         } finally { client.close() }
     }
+
+    /** Experimental, measured only by the private benchmark (not wired into the app). Reads the whole frame, then a
+     * 3 x 3 grid of half-size windows with 25% steps, optionally enlarged, with one recognizer. A small plate that the
+     * full frame misses can sit whole inside one window. Returns one text per window, full frame first. */
+    internal fun recognizeTileTexts(bitmap: Bitmap, scale: Int): List<String> {
+        require(bitmap.width in 1..2560 && bitmap.height in 1..2560 && scale in 1..3)
+        val client = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+        try {
+            val texts = ArrayList<String>(10)
+            fun read(image: Bitmap) {
+                val result = Tasks.await(client.process(InputImage.fromBitmap(image, 0)), 30, TimeUnit.SECONDS)
+                texts.add(result.text.take(64_000))
+            }
+            read(bitmap)
+            val w = bitmap.width / 2
+            val h = bitmap.height / 2
+            for (row in 0..2) for (col in 0..2) {
+                val x = minOf(col * (bitmap.width / 4), bitmap.width - w)
+                val y = minOf(row * (bitmap.height / 4), bitmap.height - h)
+                val crop = Bitmap.createBitmap(bitmap, x, y, w, h)
+                val sized = if (scale == 1) crop else Bitmap.createScaledBitmap(crop, minOf(w * scale, 2560), minOf(h * scale, 2560), true)
+                try { read(sized) } finally {
+                    if (sized !== crop) sized.recycle()
+                    crop.recycle()
+                }
+            }
+            return texts
+        } finally { client.close() }
+    }
 }

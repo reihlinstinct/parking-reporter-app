@@ -37,4 +37,12 @@ object PlateCandidates {
             .filter { !standaloneBefore(bounded, it.range.first) && !standaloneAfter(bounded, it.range.last + 1) }
             .map { match -> match.value.filter { it in '0'..'9' } }.distinct().take(10).toList()
     }
+
+    /** Candidates from several windows of one photo, most-seen first (ties keep the first window that had it). A number
+     * that several overlapping windows read the same way is more likely the real plate than a one-off read. */
+    fun rank(windowTexts: List<String>): List<String> {
+        val votes = LinkedHashMap<String, Int>()
+        for (text in windowTexts) for (candidate in fromText(text)) votes[candidate] = (votes[candidate] ?: 0) + 1
+        return votes.entries.sortedByDescending { it.value }.map { it.key }.take(10)
+    }
 }
