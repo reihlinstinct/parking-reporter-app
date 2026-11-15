@@ -81,6 +81,18 @@ class OfflineReceiverTest {
         assertThrows(RuntimeException::class.java) { f.open(complete = done.replaceFirst("{", "{\"count\":" + f.upload.count + ",")) }
         assertThrows(IllegalArgumentException::class.java) { f.open(complete = " " + done) }
     }
+    @Test fun malformedJsonIsAlwaysTheTypedRejection() {
+        val f = Fixture(); val chunks = (0 until f.upload.count).map { f.upload.chunk(it, 7) }; val done = f.upload.completion(7)
+        val bad = listOf("{", "[]", "null", "{\"schema\":\"2\"}", "{\"schema\":2}", "{\"schema\":2,\"package\":5}", "")
+        for (text in bad) {
+            assertThrows(IllegalArgumentException::class.java) {
+                OfflineReceiver.open(text, chunks, done, 7, "test-receiver", "test-device",
+                    f.receiver.getPrimitive(HybridDecrypt::class.java), f.device.publicKeysetHandle.getPrimitive(PublicKeyVerify::class.java))
+            }
+            assertThrows(IllegalArgumentException::class.java) { f.open(complete = text) }
+            assertThrows(IllegalArgumentException::class.java) { f.open(parts = listOf(text) + chunks.drop(1)) }
+        }
+    }
     @Test fun strangerSignatureDoesNotCountAsEnrollment() {
         val f = Fixture(); val stranger = KeysetHandle.generateNew(SignatureKeyTemplates.ECDSA_P256)
         assertThrows(java.security.GeneralSecurityException::class.java) {

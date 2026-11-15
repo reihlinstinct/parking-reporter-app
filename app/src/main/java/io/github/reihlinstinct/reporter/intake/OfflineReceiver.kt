@@ -44,7 +44,21 @@ object OfflineReceiver {
         require(draft.isReady())
     }
     private fun key(value: String) = require(value.matches(Regex("[a-zA-Z0-9_-]{1,80}")))
+    /**
+     * Opens a package or throws. Malformed, schema-missing or wrong-type JSON always becomes the same
+     * [IllegalArgumentException] as every other rejection: on Android `org.json.JSONException` is a checked
+     * exception, so it must never escape as an unexpected platform type (#353).
+     */
     fun open(manifestText: String, chunks: List<String>, completionText: String, expectedIssue: Long,
+             expectedReceiver: String, expectedDevice: String, decryptor: HybridDecrypt,
+             enrolledVerifier: PublicKeyVerify): Received =
+        try {
+            openChecked(manifestText, chunks, completionText, expectedIssue, expectedReceiver, expectedDevice, decryptor, enrolledVerifier)
+        } catch (e: org.json.JSONException) {
+            throw IllegalArgumentException("Malformed package JSON")
+        }
+
+    private fun openChecked(manifestText: String, chunks: List<String>, completionText: String, expectedIssue: Long,
              expectedReceiver: String, expectedDevice: String, decryptor: HybridDecrypt,
              enrolledVerifier: PublicKeyVerify): Received {
         require(expectedIssue > 0 && manifestText.length <= 2000 && completionText.length <= 2000)
