@@ -202,7 +202,7 @@ fun AppShell(
             Log.i("SUBMIT_FLOW", "submitReport authenticate callback: setting submitting=true")
             submitting = true
             submissionNote = strings.t("shell.submit.sending")
-            scope.launch {
+            scope.launch(Dispatchers.Main) {
                 // Persist the exact shown draft before anything network-bound
                 // unless it is already the last saved copy; a failed save
                 // blocks the send instead of sending stale text.
@@ -305,7 +305,7 @@ fun AppShell(
     fun saveDraft(value: ReviewDraft) {
         if (saving) return
         saving = true
-        scope.launch {
+        scope.launch(Dispatchers.Main) {
             try {
                 val updated = withContext(Dispatchers.IO) {
                     database.reports().store(value.evidence.stableId, revision,
@@ -338,7 +338,7 @@ fun AppShell(
         val startSubject = categoryHint?.let { code ->
             io.github.reihlinstinct.reporter.core.ReportCategory.from(code)?.let { "municipal:" + it.municipalSubjectCode }
         }.orEmpty()
-        scope.launch {
+        scope.launch(Dispatchers.Main) {
             try {
                 var evidence = withContext(Dispatchers.IO) { EvidenceReader().read(file) }
                 if (!usePhotoLocation && (evidence.latitude != null || evidence.longitude != null)) {
@@ -387,7 +387,7 @@ fun AppShell(
     // One import pipeline for the system picker and the share-sheet target
     // (issue #149): copy bytes, read EXIF from the copy, confirm location use.
     fun importShared(uri: Uri) {
-        scope.launch {
+        scope.launch(Dispatchers.Main) {
             var copied: File? = null
             try {
                 val file = withContext(Dispatchers.IO) {
@@ -623,7 +623,7 @@ fun AppShell(
                 Text(strings.t("shell.debug.title"), style = MaterialTheme.typography.titleMedium)
                 Text(strings.t("shell.debug.description"))
                 Button(onClick = {
-                    scope.launch {
+                    scope.launch(Dispatchers.Main) {
                         status = strings.t("shell.debug.running")
                         status = withContext(Dispatchers.Default) {
                             try { io.github.reihlinstinct.reporter.intake.SyntheticIntakeDemo.run() }
