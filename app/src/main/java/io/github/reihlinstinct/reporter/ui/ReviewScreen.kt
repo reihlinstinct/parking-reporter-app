@@ -55,7 +55,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // Issue #358 part 2: state held across a rotation only (process memory, see ReviewRotationState).
     val restored = remember(initial.evidence.stableId) { ReviewRotationState.take(initial) }
     fun restoredNow() = restored?.takeIf { it.initial == initial }
-    var plates by remember(initial.evidence.stableId) { mutableStateOf<List<String>>(emptyList()) }
+    var plates by remember(initial.evidence.stableId) { mutableStateOf<List<String>>(restored?.plates.orEmpty()) }
     var sidewalkScore by remember(initial.evidence.stableId) { mutableStateOf<Float?>(null) }
     LaunchedEffect(initial.evidence.stableId, image) {
         val scorer = sidewalkScorer
@@ -92,10 +92,10 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var longitude by remember(initial.evidence.stableId) { mutableStateOf(restored?.longitude ?: initial.confirmedLongitude?.toString().orEmpty()) }
     // True only after the user typed in the description field here; text that arrived with the draft is not theirs to protect.
     var textTyped by remember(initial.evidence.stableId) { mutableStateOf(restored?.textTyped ?: false) }
-    var editing by remember(initial.evidence.stableId) { mutableStateOf(false) }
+    var editing by remember(initial.evidence.stableId) { mutableStateOf(restored?.editing ?: false) }
     var manualStreet by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualStreet.orEmpty()) }
     var manualHouse by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualHouse.orEmpty()) }
-    var manualResult by remember(initial.evidence.stableId) { mutableStateOf<io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress?>(null) }
+    var manualResult by remember(initial.evidence.stableId) { mutableStateOf<io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress?>(restored?.manualResult) }
     var manualBusy by remember { mutableStateOf(false) }
     var manualError by remember { mutableStateOf(false) }
     // Tab review (#266): address warnings clear only when the field value
@@ -109,7 +109,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     }
     var manualGeneration by remember { mutableIntStateOf(0) }
     var categoryMenu by remember { mutableStateOf(false) }
-    var confirmExit by remember(initial.evidence.stableId) { mutableStateOf(false) }
+    var confirmExit by remember(initial.evidence.stableId) { mutableStateOf(restored?.confirmExit ?: false) }
     val savedManualStreet = remember(initial) { restoredNow()?.savedManualStreet ?: manualStreet }
     val savedManualHouse = remember(initial) { restoredNow()?.savedManualHouse ?: manualHouse }
     // Issue #358: an automatic OCR plate prefill is not a user edit. It only moves the clean baseline for the
@@ -133,7 +133,8 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // (save, discard, back, process death) leaves nothing held.
     val holdOnRotation by rememberUpdatedState {
         ReviewRotationState.Held(initial, draft, latitude, longitude, manualStreet, manualHouse,
-            savedManualStreet, savedManualHouse, ocrPrefilledPlate, gpsFilled, templateState, textTyped)
+            savedManualStreet, savedManualHouse, ocrPrefilledPlate, gpsFilled, templateState, textTyped,
+            editing, plates, manualResult, confirmExit)
     }
     val rotationActivity = context.findActivity()
     DisposableEffect(initial.evidence.stableId) {

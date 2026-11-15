@@ -28,6 +28,11 @@ object ReviewRotationState {
         val templateState: io.github.reihlinstinct.reporter.core.TemplateSession.State = io.github.reihlinstinct.reporter.core.TemplateSession.State(),
         /** Issue #424: the user typed in the description field, so a later category change keeps the text. */
         val textTyped: Boolean = false,
+        /** Issue #419: the edit panel was open, the OCR plate suggestions, the confirmed manual address and the open discard dialog. */
+        val editing: Boolean = false,
+        val plates: List<String> = emptyList(),
+        val manualResult: io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress? = null,
+        val confirmExit: Boolean = false,
     )
 
     class Shell(val draft: ReviewDraft, val original: File?, val revision: Long)

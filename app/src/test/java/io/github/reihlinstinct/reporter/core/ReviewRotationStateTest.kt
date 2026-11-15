@@ -98,4 +98,17 @@ class ReviewRotationStateTest {
         assertNull("holding the screen state must not extend the shell", ReviewRotationState.takeShell())
         assertNotNull(ReviewRotationState.take(a))
     }
+
+    @Test fun editingPlatesManualAddressAndDiscardDialogSurviveRotation() {
+        val initial = draft("r1")
+        val address = io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress("test 1", 31.0, 35.0)
+        ReviewRotationState.hold(ReviewRotationState.Held(initial, initial, "31.0", "35.0", "", "", "", "", null,
+            editing = true, plates = listOf("1234567"), manualResult = address, confirmExit = true))
+        val taken = ReviewRotationState.take(initial)!!
+        assertTrue(taken.editing); assertTrue(taken.confirmExit)
+        assertEquals(listOf("1234567"), taken.plates); assertEquals(address, taken.manualResult)
+        ReviewRotationState.hold(held(initial, initial))
+        val plain = ReviewRotationState.take(initial)!!
+        assertFalse(plain.editing); assertFalse(plain.confirmExit); assertTrue(plain.plates.isEmpty()); assertNull(plain.manualResult)
+    }
 }
