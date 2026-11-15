@@ -63,7 +63,7 @@ Owner requirement (2026-11-12): adding the experimental feature must not block p
 
 ## Voice entry, phase 2 proposal (issue #149)
 
-Status: proposal only. No code, manifest or `shortcuts.xml` change, no paid speech API, no account or Play step. Owner direction relayed 15 Nov 2026: voice entry is wanted, free only.
+Status: step 1 implemented (owner approved step 1 and the "דיווח חדש" wording on 15 Nov 2026). No paid speech API, no account or Play step.
 
 Already on main: deep link, share-sheet target and Quick Settings tile (#151), opt-in AppFunctions entry (#320, #389). These are language-independent and cover the "report on this photo" case without any assistant.
 
@@ -79,3 +79,9 @@ Tests without a device: manifest and `shortcuts.xml` parse test (feature, deep l
 Open and unverified, to settle before promising anything: how Gemini treats App Actions today, and Hebrew support. Documentation: https://developer.android.com/develop/devices/assistant/intents and https://developer.android.com/develop/devices/assistant/custom-intents. Do not advertise voice entry until it is tested on a real device.
 
 Decision for the owner: approve step 1 and the wording of the "new report" feature names, then implementation is a separate PR.
+
+### Step 1 as built
+
+`res/xml/shortcuts.xml` declares the `actions.intent.OPEN_APP_FEATURE` capability and one static shortcut `new_report`, both opening `il.sidewalks.reporter://report/new` in `MainActivity`. The feature name and shortcut label reuse the approved `tile_new_report` string ("דיווח חדש", "New report"). The am, ar and ru feature names are empty until the owner approves those derived names; the shortcut label there is the existing tile label. The shortcut also shows on a long press of the launcher icon.
+
+Proven on a real system image in CI: the shortcut is registered, points only at the new-report link, and that link makes the shell request the camera (`VoiceShortcutTest`). A plain Play-Store emulator without any account only opens the Google app search page and has no Gemini app, so nothing further can be tested there. Not proven: that Google Assistant or Gemini matches a spoken phrase, and Hebrew matching. Claim voice entry only after a real-device test. Gemini and App Actions also need the app published on Google Play per Google's documentation.

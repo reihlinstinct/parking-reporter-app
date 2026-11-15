@@ -8,6 +8,7 @@
             android:data="il.sidewalks.reporter://report/new"
             android:targetPackage="il.sidewalks.reporter"
             android:targetClass="il.sidewalks.reporter.MainActivity">
+            <!-- The assistant passes the matched feature name (the app's own label) as an extra; EntryIntents.parse ignores extras. -->
             <parameter android:name="feature" android:key="feature" />
         </intent>
     </capability>
