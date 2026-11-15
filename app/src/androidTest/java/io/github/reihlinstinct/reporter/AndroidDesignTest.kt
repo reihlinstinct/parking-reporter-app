@@ -34,6 +34,25 @@ class AndroidDesignTest {
         File(context.filesDir, name).outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
     }
+    @Test fun ocrEngineChoiceIsShownSwitchedAndPersisted() {
+        val store = io.github.reihlinstinct.reporter.recognition.UiPrefsOcrEngineStore.of(context)
+        store.set(io.github.reihlinstinct.reporter.recognition.OcrEngine.DEFAULT)
+        val catalog = io.github.reihlinstinct.reporter.i18n.AppCatalog.get(context)
+        val code = io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(context)
+        val mlkit = catalog.t(code, "settings.ocr.mlkit")
+        val tesseract = catalog.t(code, "settings.ocr.tesseract")
+        compose.setContent { AppTheme { NavyStatusBar { SettingsScreen(null, { _, _, _ -> }, {}) } } }
+        compose.onNodeWithText(catalog.t(code, "settings.ocr.title")).performScrollTo().assertIsDisplayed()
+        compose.onNode(hasText(mlkit) and isSelectable()).performScrollTo().assertIsSelected()
+        compose.onNode(hasText(tesseract) and isSelectable()).assertIsNotSelected()
+        screenshot("ocr-engine-settings-mlkit.png")
+        compose.onNode(hasText(tesseract) and isSelectable()).performScrollTo().performClick().assertIsSelected()
+        compose.onNode(hasText(mlkit) and isSelectable()).assertIsNotSelected()
+        compose.runOnIdle { assertEquals(io.github.reihlinstinct.reporter.recognition.OcrEngine.TESSERACT, store.get()) }
+        screenshot("ocr-engine-settings-tesseract.png")
+        compose.onNode(hasText(mlkit) and isSelectable()).performScrollTo().performClick().assertIsSelected()
+        compose.runOnIdle { assertEquals(io.github.reihlinstinct.reporter.recognition.OcrEngine.MLKIT, store.get()) }
+    }
     @Test fun municipalDefaultAndOptionalDynamicColorsArePersistedAndReadable() {
         assertFalse(DynamicPaletteStore(context).enabled())
         compose.setContent { AppTheme { NavyStatusBar { SettingsScreen(null, { _, _, _ -> }, {}) } } }

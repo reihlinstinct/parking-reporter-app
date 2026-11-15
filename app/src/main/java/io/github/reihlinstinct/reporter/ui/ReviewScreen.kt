@@ -93,7 +93,6 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // True only after the user typed in the description field here; text that arrived with the draft is not theirs to protect.
     var textTyped by remember(initial.evidence.stableId) { mutableStateOf(restored?.textTyped ?: false) }
     var editing by remember(initial.evidence.stableId) { mutableStateOf(false) }
-    // ML Kit note and choice are hidden by default; one tap on the ML Kit line shows them.
     var manualStreet by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualStreet.orEmpty()) }
     var manualHouse by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualHouse.orEmpty()) }
     var manualResult by remember(initial.evidence.stableId) { mutableStateOf<io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress?>(null) }
