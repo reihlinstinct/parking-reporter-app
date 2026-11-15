@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Derived-locale voice feature names are not approved yet (#457): empty means no voice feature name in this locale. -->
-    <string-array name="new_report_feature_names" />
-</resources>
