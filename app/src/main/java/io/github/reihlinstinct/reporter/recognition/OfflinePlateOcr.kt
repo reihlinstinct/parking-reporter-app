@@ -8,12 +8,10 @@ import io.github.reihlinstinct.reporter.intake.EncryptedPackage
 import java.io.File
 
 /** Bundled model, no SDK networking/telemetry; explicit user confirmation always required. */
-class OfflinePlateOcr(private val context: Context, private val digitsOnly: Boolean = false) {
+class OfflinePlateOcr(private val context: Context) {
     companion object {
         const val MODEL_HASH = "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"
         private val lock = Any()
-        /** Characters a plate can show in the OCR text: digits and the separators PlateCandidates accepts. Used only when [digitsOnly] is on (default off, measured in the private benchmark first). */
-        const val DIGIT_WHITELIST = "0123456789-.:"
     }
     private fun modelDirectory(): File = synchronized(lock) {
         val directory = File(context.noBackupFilesDir, "offline-ocr").apply { check(mkdirs() || isDirectory) }
@@ -47,7 +45,6 @@ class OfflinePlateOcr(private val context: Context, private val digitsOnly: Bool
         try {
             check(tess.init(modelDirectory().absolutePath, "eng", TessBaseAPI.OEM_LSTM_ONLY))
             tess.pageSegMode = TessBaseAPI.PageSegMode.PSM_SPARSE_TEXT
-            if (digitsOnly) tess.setVariable(TessBaseAPI.VAR_CHAR_WHITELIST, DIGIT_WHITELIST)
             tess.setImage(bitmap)
             return (tess.utF8Text ?: "").take(64_000)
         } finally { tess.recycle() }
