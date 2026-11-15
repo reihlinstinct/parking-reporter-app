@@ -103,6 +103,25 @@ fun SettingsScreen(
             onLanguageSelected?.let { LanguageMenu(s.catalog.languages, selectedLanguage, it) }
             if (setupError.isNotBlank()) Text(setupError, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         } else Text(s.t("settings.privacy.mlkit_note"))
+        if (!basicSetup) {
+            // Issue #210: Settings-only engine switch. The data note above (settings.privacy.mlkit_note) stays beside it.
+            val ocrContext = androidx.compose.ui.platform.LocalContext.current
+            val ocrStore = remember { io.github.reihlinstinct.reporter.recognition.UiPrefsOcrEngineStore.of(ocrContext) }
+            var ocrEngine by remember { mutableStateOf(ocrStore.get()) }
+            Text(s.t("settings.ocr.title"), style = MaterialTheme.typography.titleLarge)
+            Column(Modifier.selectableGroup()) {
+                listOf(
+                    io.github.reihlinstinct.reporter.recognition.OcrEngine.MLKIT to "settings.ocr.mlkit",
+                    io.github.reihlinstinct.reporter.recognition.OcrEngine.TESSERACT to "settings.ocr.tesseract",
+                ).forEach { (engine, key) ->
+                    Row(Modifier.fillMaxWidth().selectable(selected = ocrEngine == engine, role = Role.RadioButton, onClick = { ocrEngine = engine; ocrStore.set(engine) }), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = ocrEngine == engine, onClick = null)
+                        Text(s.t(key), Modifier.padding(start = 8.dp))
+                    }
+                }
+            }
+            Text(s.t("settings.ocr.note"), style = MaterialTheme.typography.bodySmall)
+        }
         Text(s.t("settings.privacy.title"), style = MaterialTheme.typography.titleLarge)
         if (!basicSetup) Text(s.t("settings.privacy.description"))
         OutlinedTextField(firstName, { firstName = ReporterInput.nameInput(it); saved = false }, label = { Text(s.t("settings.field.first_name")) }, modifier = Modifier.fillMaxWidth())

@@ -49,7 +49,7 @@ Never commit private evidence, reporter profiles, keys or tokens. Prefer synthet
 
 ## Offline recognition preview
 
-Explicit local Tesseract OCR offers plate candidates, with manual fallback and required review. Optional bundled Google ML Kit recognition sends API usage/performance metrics to Google; photos and plate results stay on-device. See [OCR limits, model provenance and licensing](docs/OFFLINE_OCR.md). This does not complete field validation or grant permission for live reporting.
+Plate recognition offers plate candidates, with manual fallback and required review. The default engine is bundled Google ML Kit (it measured clearly better on real photos, #210); it sends API usage/performance metrics to Google, while photos and plate results stay on-device. On-device-only Tesseract is a Settings-only alternative. See [OCR limits, model provenance and licensing](docs/OFFLINE_OCR.md). This does not complete field validation or grant permission for live reporting.
 
 ### Emulator health and display cadence
 

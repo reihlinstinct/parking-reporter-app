@@ -61,7 +61,6 @@ class ReviewCaptureReportsExtractionTest {
         "review.edit.gps_missing" to "חסר",
         "review.edit.gps_read" to "נקרא מהראיה",
         "review.edit.privacy_note" to "התמונות והלוחיות מעובדות במכשיר ואינן נשלחות ל-Google. ML Kit שולח ל-Google נתוני שימוש וביצועים ועשוי לפנות לשרתיה לעדכונים. תוצאה היא הצעה בלבד.",
-        "review.edit.use_mlkit" to "זיהוי עם Google ML Kit במקום Tesseract",
         "review.edit.recognizing" to "מזהה במכשיר...",
         "review.edit.suggest_plate" to "הצע לוחית מתוך הצילום",
         "review.edit.plate_field" to "מספר לוחית (ספרות בלבד)",

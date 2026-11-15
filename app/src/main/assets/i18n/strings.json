@@ -492,6 +492,34 @@
       "ru": "Настройки конфиденциальности",
       "am": "የግላዊነት ቅንብሮች"
     },
+    "settings.ocr.title": {
+      "he": "זיהוי לוחית מהצילום",
+      "en": "Plate recognition from the photo",
+      "ar": "التعرّف على اللوحة من الصورة",
+      "ru": "Распознавание номера по фото",
+      "am": "ከፎቶ ሰሌዳ መለየት"
+    },
+    "settings.ocr.mlkit": {
+      "he": "Google ML Kit - מדויק יותר (מומלץ)",
+      "en": "Google ML Kit - more accurate (recommended)",
+      "ar": "Google ML Kit - أدق (موصى به)",
+      "ru": "Google ML Kit - точнее (рекомендуется)",
+      "am": "Google ML Kit - የበለጠ ትክክለኛ (የሚመከር)"
+    },
+    "settings.ocr.tesseract": {
+      "he": "Tesseract - במכשיר בלבד, פחות מדויק",
+      "en": "Tesseract - on the device only, less accurate",
+      "ar": "Tesseract - على الجهاز فقط، أقل دقة",
+      "ru": "Tesseract - только на устройстве, менее точно",
+      "am": "Tesseract - በመሣሪያው ላይ ብቻ፣ ያነሰ ትክክለኛ"
+    },
+    "settings.ocr.note": {
+      "he": "בחירה זו משפיעה רק על הצעת הלוחית. התוצאה היא הצעה בלבד ותמיד דורשת אישור שלך.",
+      "en": "This choice only affects the plate suggestion. A result is a suggestion only and always needs your approval.",
+      "ar": "هذا الاختيار يؤثر على اقتراح اللوحة فقط. النتيجة اقتراح فقط وتحتاج دائمًا إلى موافقتك.",
+      "ru": "Этот выбор влияет только на предложение номера. Результат - только вариант и всегда требует вашего подтверждения.",
+      "am": "ይህ ምርጫ የሰሌዳ ጥቆማውን ብቻ ይነካል። ውጤቱ ጥቆማ ብቻ ነው፤ ሁልጊዜም የእርስዎን ማረጋገጫ ይፈልጋል።"
+    },
     "settings.privacy.description": {
       "he": "כל מדווח מזין את פרטיו שלו. הפרטים מוצפנים במכשיר, ללא גיבוי. אין שליחה או בדיקת התחברות ממסך זה. פרטי הגישה העירוניים מוזנים ידנית ונשמרים מוצפנים במכשיר בלבד.",
       "en": "Each reporter enters their own details. The details are encrypted on the device, with no backup. Nothing is sent and no sign-in is checked from this screen. Municipal access details are entered manually and stored encrypted on the device only.",
@@ -855,13 +883,6 @@
       "ar": "تُعالَج الصور واللوحات على الجهاز ولا تُرسل إلى Google. يرسل ML Kit بيانات الاستخدام والأداء إلى Google وقد يتصل بخوادمها للحصول على التحديثات. النتيجة اقتراح فقط.",
       "ru": "Фото и номера обрабатываются на устройстве и не отправляются в Google. ML Kit отправляет в Google данные об использовании и производительности и может обращаться к её серверам за обновлениями. Результат — только вариант.",
       "am": "ፎቶዎቹና ሰሌዳዎቹ በመሣሪያው ላይ ይሠራሉ፤ ወደ Google አይላኩም። ML Kit የአጠቃቀምና የአፈጻጸም መረጃ ወደ Google ይልካል፤ ለዝማኔዎችም አገልጋዮቹን ሊያገኝ ይችላል። ውጤቱ ጥቆማ ብቻ ነው።"
-    },
-    "review.edit.use_mlkit": {
-      "he": "זיהוי עם Google ML Kit במקום Tesseract",
-      "en": "Recognize with Google ML Kit instead of Tesseract",
-      "ar": "التعرّف باستخدام Google ML Kit بدلًا من Tesseract",
-      "ru": "Распознавать через Google ML Kit вместо Tesseract",
-      "am": "ከTesseract ይልቅ በGoogle ML Kit ለይ"
     },
     "review.edit.recognizing": {
       "he": "מזהה במכשיר...",

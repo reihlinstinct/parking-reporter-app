@@ -65,7 +65,8 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             catch (_: Exception) { null }
         }
     }
-    var useGoogle by remember { mutableStateOf(false) }
+    // Issue #210: the engine is a Settings-only preference (default Google ML Kit); the review screen has no selector.
+    val useGoogle = remember { io.github.reihlinstinct.reporter.recognition.UiPrefsOcrEngineStore.of(context).get() == io.github.reihlinstinct.reporter.recognition.OcrEngine.MLKIT }
     var recognizing by remember { mutableStateOf(false) }
     var plateEdits by remember { mutableIntStateOf(0) }
     // Status lines hold catalog keys and are translated when shown, so they follow a language switch.
@@ -88,7 +89,6 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var longitude by remember(initial.evidence.stableId) { mutableStateOf(restored?.longitude ?: initial.confirmedLongitude?.toString().orEmpty()) }
     var editing by remember(initial.evidence.stableId) { mutableStateOf(false) }
     // ML Kit note and choice are hidden by default; one tap on the ML Kit line shows them.
-    var showMlKit by remember(initial.evidence.stableId) { mutableStateOf(false) }
     var manualStreet by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualStreet.orEmpty()) }
     var manualHouse by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualHouse.orEmpty()) }
     var manualResult by remember(initial.evidence.stableId) { mutableStateOf<io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress?>(null) }
@@ -332,9 +332,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         if (editing) {
 
         if (draft.needsPlate()) {
-        TextButton(onClick = { showMlKit = !showMlKit }) { Text(s.t("review.edit.use_mlkit"), style = MaterialTheme.typography.labelLarge) }
-        if (showMlKit || useGoogle) Text(s.t("review.edit.privacy_note"))
-        if (showMlKit || useGoogle) Row { Checkbox(checked = useGoogle, enabled = !recognizing, onCheckedChange = { useGoogle = it; plates = emptyList(); ocrStatus = null }); Text(s.t("review.edit.use_mlkit")) }
+        if (useGoogle) Text(s.t("review.edit.privacy_note"))
         Button(enabled = image != null && !recognizing, onClick = { scope.launch { recognize() } }, modifier = Modifier.fillMaxWidth()) { Text(s.t(if (recognizing) "review.edit.recognizing" else "review.edit.suggest_plate")) }
         Text(ocrStatus?.let { s.t(it) }.orEmpty())
         plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate, plateClass = PlateClass.REGULAR) }) { Text(reviewPlateSuggestionText(s, plate)) } }
