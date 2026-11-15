@@ -25,7 +25,9 @@ class DeviceReadyTest {
         if (!set.contains("set to")) { println("DEVICE_READY_DRYCHECK skipped: emulator did not accept a PIN"); return }
         try {
             shell("input keyevent KEYCODE_SLEEP")
-            Thread.sleep(1500)
+            // API 36 can take longer than 1.5 s to raise the keyguard after sleep (#444): poll up to 15 s.
+            val until = System.currentTimeMillis() + 15_000
+            while (!DeviceReady.keyguardLocked(context) && System.currentTimeMillis() < until) Thread.sleep(500)
             assertTrue("keyguard should be up after sleep with a PIN set", DeviceReady.keyguardLocked(context))
             val ready = DeviceReady.ensureReady(context, pin)
             println("DEVICE_READY_DRYCHECK ready=$ready locked=${DeviceReady.keyguardLocked(context)}")
