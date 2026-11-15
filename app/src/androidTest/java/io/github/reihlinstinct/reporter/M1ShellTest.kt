@@ -296,7 +296,9 @@ class M1ShellTest {
         compose.onNodeWithText("שלח").performScrollTo()
         screenshot("design-sign-actions-synthetic.png")
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
-        compose.runOnIdle { assertEquals("", saved?.plate); assertFalse(saved?.isReady() == true) }
+        // Issue #424 slice 2b: the generic template now suggests the request sentence, so the draft may be ready;
+        // what must hold is that no plate and no plate sentence exists for a non-vehicle category.
+        compose.runOnIdle { assertEquals("", saved?.plate); assertFalse(saved?.exactHebrewText.orEmpty().contains("\u05DE\u05E1\u05E4\u05E8 \u05E8\u05D9\u05E9\u05D5\u05D9")) }
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
         compose.onNodeWithText("מספר לוחית (ספרות בלבד)").assertDoesNotExist()
     }
