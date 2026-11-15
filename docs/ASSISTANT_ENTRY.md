@@ -7,6 +7,10 @@ This integration exposes two narrow AppFunctions, both default disabled and behi
 
 Neither function submits a report, creates an invisible draft (the draft exists only once the person captures or imports a photo in the visible flow), reads saved reports, exports evidence, or returns identity fields, credentials, photos or locations. There is no plate, address or free-text parameter.
 
+## Deep link trust
+
+The VIEW deep link `il.sidewalks.reporter://report/new?category=<code>` can be sent by any app and is not gated by the assistant consent switch. It has the same trust as the existing `report/new` link: the only effect is a visible, editable category preselection in the normal capture flow. The consent switch gates only the AppFunctions.
+
 ## Consent and compatibility
 
 - OFF by default, only in full Settings. Basic reporter setup is unchanged.

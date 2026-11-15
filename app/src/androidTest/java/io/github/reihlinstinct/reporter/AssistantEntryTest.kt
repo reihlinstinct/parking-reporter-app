@@ -52,6 +52,34 @@ class AssistantEntryTest {
         }
     }
 
+    @Test fun categoryEntryActionRefusesWithoutConsentRejectsBadCodesAndStaysImmutable() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val store = AssistantEntryStore(context)
+        store.save(false)
+        if (Build.VERSION.SDK_INT < 36) return
+        try {
+            try {
+                AssistantEntry.categoryEntryAction(context, "sidewalk_parking")
+                fail("Disabled entry must reject category calls")
+            } catch (_: AppFunctionAppUnknownException) { }
+            store.save(true)
+            try {
+                AssistantEntry.categoryEntryAction(context, "not_a_category")
+                fail("Unknown category code must be rejected")
+            } catch (_: androidx.appfunctions.AppFunctionInvalidArgumentException) { }
+            val action = AssistantEntry.categoryEntryAction(context, "sidewalk_parking")
+            assertTrue(action.isImmutable)
+            assertEquals("il.sidewalks.reporter", action.creatorPackage)
+            store.save(false)
+            try {
+                AssistantEntry.categoryEntryAction(context, "sidewalk_parking")
+                fail("Revoked entry must reject category calls")
+            } catch (_: AppFunctionAppUnknownException) { }
+        } finally {
+            store.save(false)
+        }
+    }
+
     @Test fun systemManagerExecutesGeneratedFunctionWithoutFiling() = runBlocking {
         assumeTrue(Build.VERSION.SDK_INT >= 36)
         val context = InstrumentationRegistry.getInstrumentation().targetContext

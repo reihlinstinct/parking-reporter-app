@@ -61,9 +61,9 @@ object AssistantEntry {
         if (!supported()) return false
         return try {
             val manager = AppFunctionManager.getInstance(context) ?: return false
-            val state = if (enabled) AppFunctionManager.APP_FUNCTION_STATE_ENABLED else AppFunctionManager.APP_FUNCTION_STATE_DISABLED
-            manager.setAppFunctionEnabled(FUNCTION_ID, state)
-            manager.setAppFunctionEnabled(FUNCTION_ID_CATEGORY, state)
+            setBothFunctions(listOf(FUNCTION_ID, FUNCTION_ID_CATEGORY), enabled) { id, on ->
+                manager.setAppFunctionEnabled(id, if (on) AppFunctionManager.APP_FUNCTION_STATE_ENABLED else AppFunctionManager.APP_FUNCTION_STATE_DISABLED)
+            }
             store.save(enabled)
             true
         } catch (_: Exception) {
@@ -71,5 +71,19 @@ object AssistantEntry {
             false
         }
     }
-}
 
+    /**
+     * Sets every function to [enabled]. If enabling fails part-way, the ones already enabled are turned back
+     * off (best effort) so the system never keeps a function on while local consent stays off (#390).
+     * Disabling never re-enables anything: consent is already revoked and each call rechecks it.
+     */
+    internal fun setBothFunctions(ids: List<String>, enabled: Boolean, set: (String, Boolean) -> Unit) {
+        val done = mutableListOf<String>()
+        try {
+            ids.forEach { set(it, enabled); done += it }
+        } catch (e: Exception) {
+            if (enabled) done.forEach { runCatching { set(it, false) } }
+            throw e
+        }
+    }
+}
