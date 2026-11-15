@@ -120,7 +120,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // with a topic snapshot would count as edited before the user touched anything.
     val savedDraft = policy(ReportTime.forSave(initial))
     val cleanDraft = ocrPrefilledPlate?.takeIf { savedDraft.plate.isBlank() }?.let { savedDraft.copy(plate = it) }
-    val // Text the template wrote on a report that had none is not a user edit.
+    // Text the template wrote on a report that had none is not a user edit.
     val templateOnly = savedDraft.exactHebrewText.isBlank() && templateState.rendered.isNotEmpty() &&
         draft.exactHebrewText == io.github.reihlinstinct.reporter.core.DescriptionTemplates.join(templateState.rendered)
     val draftForEdits = if (templateOnly) draft.copy(exactHebrewText = "") else draft
