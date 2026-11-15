@@ -77,7 +77,7 @@ object AssistantEntry {
      * off (best effort) so the system never keeps a function on while local consent stays off (#390).
      * Disabling never re-enables anything: consent is already revoked and each call rechecks it.
      */
-    internal fun setBothFunctions(ids: List<String>, enabled: Boolean, set: (String, Boolean) -> Unit) {
+    internal suspend fun setBothFunctions(ids: List<String>, enabled: Boolean, set: suspend (String, Boolean) -> Unit) {
         val done = mutableListOf<String>()
         try {
             ids.forEach { set(it, enabled); done += it }
