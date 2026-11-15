@@ -74,4 +74,21 @@ class ReviewRotationStateTest {
         assertNotNull(ReviewRotationState.takeShell())
         assertEquals(edited, ReviewRotationState.take(a)?.draft)
     }
+    @Test fun eachEntryKeepsItsOwnTimestamp() {
+        var now = 1_000L
+        ReviewRotationState.clock = { now }
+        val a = draft("a")
+        ReviewRotationState.hold(held(a, a.copy(plate = "1234567")))
+        now += ReviewRotationState.MAX_AGE_MS - 10
+        ReviewRotationState.holdShell(ReviewRotationState.Shell(a, null, 0L))
+        now += 20
+        assertNull("parking the shell must not extend the screen state", ReviewRotationState.take(a))
+        assertNotNull(ReviewRotationState.takeShell())
+        ReviewRotationState.holdShell(ReviewRotationState.Shell(a, null, 0L))
+        now += ReviewRotationState.MAX_AGE_MS - 10
+        ReviewRotationState.hold(held(a, a))
+        now += 20
+        assertNull("holding the screen state must not extend the shell", ReviewRotationState.takeShell())
+        assertNotNull(ReviewRotationState.take(a))
+    }
 }
