@@ -100,7 +100,22 @@ class PlateClassTest {
         assertFalse(PlateClasses.mentions("9912-34 $mem", "12-34", PlateClass.POLICE))
         assertTrue(PlateClasses.mentions("plate 12-34 $mem here", "12-34", PlateClass.POLICE))
         assertTrue(PlateClasses.mentions("12-34 $mem", "12-34", PlateClass.POLICE))
+        assertFalse(PlateClasses.mentions("1\u05BE12-34 $mem", "12-34", PlateClass.POLICE))
+        assertFalse(PlateClasses.mentions("1\u201312-34 $mem", "12-34", PlateClass.POLICE))
+        assertFalse(PlateClasses.mentions("1\u201412-34 $mem", "12-34", PlateClass.POLICE))
+        assertTrue("a Hebrew prefix letter glued to the number still matches", PlateClasses.mentions("\u05D1" + "12-34 $mem", "12-34", PlateClass.POLICE))
+        assertTrue("a Hebrew prefix letter glued to a regular plate still matches", PlateClasses.mentions("\u05D1" + "1234567", "1234567", PlateClass.REGULAR))
         assertFalse(PlatePolicy.descriptionContainsPlate(draft("12-34", PlateClass.POLICE, "x 1-12-34 $mem y")))
+    }
+    @Test fun diplomaticRightBoundaryRejectsALongerSpacedOrHyphenatedNumber() {
+        assertTrue(PlateClasses.mentions("plate CD 11 here", "11", PlateClass.DIPLOMATIC_CD))
+        assertTrue(PlateClasses.mentions("plate CD 11", "11", PlateClass.DIPLOMATIC_CD))
+        assertFalse(PlateClasses.mentions("CD 11 222 33", "11", PlateClass.DIPLOMATIC_CD))
+        assertFalse(PlateClasses.mentions("CD 123-45", "123", PlateClass.DIPLOMATIC_CD))
+        assertFalse(PlateClasses.mentions("CD 1234", "123", PlateClass.DIPLOMATIC_CD))
+        assertTrue(PlateClasses.mentions("CC 77.", "77", PlateClass.CONSULAR_CC))
+        assertFalse(PlateClasses.mentions("CC 77 88", "77", PlateClass.CONSULAR_CC))
+        assertEquals("CD 11 222 33", PlateClasses.withoutPlateLines("CD 11 222 33", "11", PlateClass.DIPLOMATIC_CD))
     }
     @Test fun changingTheTypeKeepsALineThatOnlyContainsTheNumberInsideAnotherToken() {
         val longer = "other 1-11-22-33 $mem remains"
