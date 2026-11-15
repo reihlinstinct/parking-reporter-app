@@ -35,6 +35,9 @@ class DeviceReadyTest {
             shell("locksettings clear --old $pin")
             shell("input keyevent KEYCODE_WAKEUP")
             shell("wm dismiss-keyguard")
+            // A failed check must not leave a locked or sleeping device for the tests that run after it (the
+            // "no compose hierarchies" cascade seen on API 36, #444). The PIN is already cleared here.
+            DeviceReady.ensureReady(context, null)
         }
     }
 }
