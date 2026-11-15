@@ -60,3 +60,22 @@ Pinned rc01 sources: https://dl.google.com/dl/android/maven2/androidx/appfunctio
 
 ## Older Android compatibility
 Owner requirement (2026-11-12): adding the experimental feature must not block publishing or installing the app on older Android. minSdk remains26. The AppFunctions service is disabled by resource default and enabled only by values-v36; no required uses-library or uses-feature was introduced. The Settings wrapper returns before loading saved state on unsupported API levels; the component is absent, not a disabled upsell. Instrumentation checks the installed merged application minSdk26 and disabled service on API30, and the API30 suite installs/launches the same APK. Basic first-run setup asserts the assistant title and toggle are absent. Latest exact-head API30 results must pass before merge.
+
+## Voice entry, phase 2 proposal (issue #149)
+
+Status: proposal only. No code, manifest or `shortcuts.xml` change, no paid speech API, no account or Play step. Owner direction relayed 15 Nov 2026: voice entry is wanted, free only.
+
+Already on main: deep link, share-sheet target and Quick Settings tile (#151), opt-in AppFunctions entry (#320, #389). These are language-independent and cover the "report on this photo" case without any assistant.
+
+Proposed phase 2, in order:
+
+1. `OPEN_APP_FEATURE` built-in intent with an inline inventory, one feature "new report", targeting the existing `il.sidewalks.reporter://report/new` link. Free, on-device, no new permission, no network.
+2. Feature names and shortcut labels live in Android `res/values-*` resources (never literals), so each locale works when the device and assistant language match. Hebrew and English names are owner-approved wording; any other locale name is derived and must be disclosed and approved before shipping.
+3. The voice path never carries a photo, plate, text or location. It only opens the visible capture flow. Review, consent, device authentication and Send stay unchanged.
+4. Defer custom `queryPatterns` intents (documented en-US only).
+
+Tests without a device: manifest and `shortcuts.xml` parse test (feature, deep link target, exported flags, resource-only labels), a resource completeness check across locales, and the existing deep-link parser tests.
+
+Open and unverified, to settle before promising anything: how Gemini treats App Actions today, and Hebrew support. Documentation: https://developer.android.com/develop/devices/assistant/intents and https://developer.android.com/develop/devices/assistant/custom-intents. Do not advertise voice entry until it is tested on a real device.
+
+Decision for the owner: approve step 1 and the wording of the "new report" feature names, then implementation is a separate PR.
