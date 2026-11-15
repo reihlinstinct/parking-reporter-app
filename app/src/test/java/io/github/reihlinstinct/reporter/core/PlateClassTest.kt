@@ -94,4 +94,19 @@ class PlateClassTest {
         assertEquals(text, PlateClasses.withoutPlateLines(text, "", PlateClass.POLICE))
         assertEquals(text, PlateClasses.withoutPlateLines(text, "11-22-33", PlateClass.DIPLOMATIC_CD))
     }
+    @Test fun policeLeftBoundaryRejectsAHyphenOrDigitBefore() {
+        // Issue #417: "1-12-34 mem" must not count as "12-34 mem".
+        assertFalse(PlateClasses.mentions("1-12-34 $mem", "12-34", PlateClass.POLICE))
+        assertFalse(PlateClasses.mentions("9912-34 $mem", "12-34", PlateClass.POLICE))
+        assertTrue(PlateClasses.mentions("plate 12-34 $mem here", "12-34", PlateClass.POLICE))
+        assertTrue(PlateClasses.mentions("12-34 $mem", "12-34", PlateClass.POLICE))
+        assertFalse(PlatePolicy.descriptionContainsPlate(draft("12-34", PlateClass.POLICE, "x 1-12-34 $mem y")))
+    }
+    @Test fun changingTheTypeKeepsALineThatOnlyContainsTheNumberInsideAnotherToken() {
+        val longer = "other 1-11-22-33 $mem remains"
+        val text = "plate: 11-22-33 $mem\n$longer"
+        assertEquals(longer, PlateClasses.withoutPlateLines(text, "11-22-33", PlateClass.POLICE))
+        val cd = "CD 1234 kept\nCD 123 removed"
+        assertEquals("CD 1234 kept", PlateClasses.withoutPlateLines(cd, "123", PlateClass.DIPLOMATIC_CD))
+    }
 }

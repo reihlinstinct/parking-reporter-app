@@ -43,3 +43,5 @@ Synthetic examples (red "11-22-33 מ", white "CD 11 222 33", black "123456 צ") 
 ## Rule
 
 A new class needs an official source for its exact format first. Ambiguous or unknown input stays unclassified, with no registry query and no invented color.
+
+The report text must mention the plate as a whole token (`PlateClasses.mentions`, #417): for police a hyphen or digit before the number does not count ("1-12-34 מ" is not "12-34 מ"), and changing the plate type removes only the lines that mention the old plate as a token, not a longer line that contains the number.

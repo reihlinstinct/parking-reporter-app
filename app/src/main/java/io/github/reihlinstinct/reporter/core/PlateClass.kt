@@ -37,12 +37,29 @@ object PlateClasses {
     }
 
     /**
-     * Removes the report-text lines that contain the old plate string. Used when the user changes the plate type, so the
-     * text never keeps a plate line of the previous type next to the new one.
+     * True when [report] mentions the plate as a whole token. The left side must not continue the plate: a digit or Latin
+     * letter before it never does, and for police a hyphen before it does not either ("1-12-34" is not "12-34").
+     * Police ends with a Hebrew letter, so it must not be the first letter of a longer word.
+     */
+    fun mentions(report: String, plate: String, plateClass: PlateClass): Boolean {
+        if (plate.isBlank()) return false
+        val shown = text(plate, plateClass)
+        val before = when (plateClass) {
+            PlateClass.REGULAR -> "(?<![0-9])"
+            PlateClass.POLICE -> "(?<![0-9A-Za-z-])"
+            else -> "(?<![0-9A-Za-z])"
+        }
+        val after = if (plateClass == PlateClass.POLICE) "(?![0-9\\u05D0-\\u05EA])" else "(?![0-9])"
+        return Regex(before + Regex.escape(shown) + after).containsMatchIn(report)
+    }
+
+    /**
+     * Removes the report-text lines that mention the old plate. Used when the user changes the plate type, so the text
+     * never keeps a plate line of the previous type next to the new one. A line that only contains the number inside a
+     * longer number or token is kept.
      */
     fun withoutPlateLines(text: String, plate: String, plateClass: PlateClass): String {
         if (plate.isBlank()) return text
-        val shown = text(plate, plateClass)
-        return text.lines().filterNot { it.contains(shown) }.joinToString("\n").trimStart('\n')
+        return text.lines().filterNot { mentions(it, plate, plateClass) }.joinToString("\n").trimStart('\n')
     }
 }
