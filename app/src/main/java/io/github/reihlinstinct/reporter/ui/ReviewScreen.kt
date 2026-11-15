@@ -306,7 +306,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         if (categoryMenu && topicSnapshot != null && canBrowseTopics) CityTopicPicker(
             topicSnapshot.topics, selectedCode, recentTopics, topicAliases,
             dismiss = { categoryMenu = false }, choose = { topic ->
-                draft = policy(draft.edit(subject = "municipal:" + topic.code))
+                draft = policy(io.github.reihlinstinct.reporter.core.TemplateSession.withSubject(draft, "municipal:" + topic.code))
                 if (!draft.needsPlate()) plates = emptyList()
                 topicSelected?.invoke(topic.code); categoryMenu = false
             })
@@ -316,7 +316,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         val sidewalkTopicAvailable = topicSnapshot?.topics.orEmpty().any { it.code == sidewalkCode }
         if (sidewalkTopicAvailable && io.github.reihlinstinct.reporter.recognition.SidewalkSuggestion.shouldSuggest(sidewalkScore, selectedCode)) {
             TextButton(onClick = {
-                draft = policy(draft.edit(subject = "municipal:" + sidewalkCode))
+                draft = policy(io.github.reihlinstinct.reporter.core.TemplateSession.withSubject(draft, "municipal:" + sidewalkCode))
                 if (!draft.needsPlate()) plates = emptyList()
                 topicSelected?.invoke(sidewalkCode)
             }, modifier = Modifier.fillMaxWidth().testTag("sidewalk_suggestion")) { Text(s.t("review.suggest.sidewalk")) }

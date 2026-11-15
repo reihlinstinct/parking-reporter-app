@@ -298,7 +298,8 @@ class M1ShellTest {
         compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
         // Issue #424 slice 2b: the generic template now suggests the request sentence, so the draft may be ready;
         // what must hold is that no plate and no plate sentence exists for a non-vehicle category.
-        compose.runOnIdle { assertEquals("", saved?.plate); assertFalse(saved?.exactHebrewText.orEmpty().contains("\u05DE\u05E1\u05E4\u05E8 \u05E8\u05D9\u05E9\u05D5\u05D9")) }
+        compose.runOnIdle { assertEquals("", saved?.plate); assertFalse(saved?.exactHebrewText.orEmpty().contains("\u05DE\u05E1\u05E4\u05E8 \u05E8\u05D9\u05E9\u05D5\u05D9"))
+            assertEquals("the generic request sentence is the whole suggested text", io.github.reihlinstinct.reporter.core.DescriptionTemplates.join(io.github.reihlinstinct.reporter.core.DescriptionTemplates.render(io.github.reihlinstinct.reporter.core.BuiltInTemplates.byTag(io.github.reihlinstinct.reporter.core.BuiltInTemplates.GENERIC)!!, io.github.reihlinstinct.reporter.core.TemplateFacts())), saved?.exactHebrewText) }
         compose.onNodeWithText("ערוך").performScrollTo().performClick()
         compose.onNodeWithText("מספר לוחית (ספרות בלבד)").assertDoesNotExist()
     }

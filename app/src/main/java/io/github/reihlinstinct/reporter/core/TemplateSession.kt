@@ -9,6 +9,13 @@ package io.github.reihlinstinct.reporter.core
  * those facts then appear, and nothing else makes them appear.
  */
 object TemplateSession {
+    /**
+     * The draft with another category. [ReviewDraft.edit] clears the description when the subject changes; the template
+     * must see the user's real text first, or an edited description would look empty and be replaced.
+     */
+    fun withSubject(draft: ReviewDraft, subject: String): ReviewDraft =
+        draft.edit(subject = subject).copy(exactHebrewText = draft.exactHebrewText)
+
     /** [frozen]: the user changed the text before the category changed, so this category's template is not applied. Then [rendered] holds only the state sentences still tracked. */
     data class State(val tag: String? = null, val rendered: List<RenderedSentence> = emptyList(), val frozen: Boolean = false)
 
