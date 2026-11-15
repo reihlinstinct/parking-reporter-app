@@ -154,6 +154,11 @@ jobs:
             adb shell screenrecord --time-limit 180 /sdcard/test-run.mp4 > /dev/null 2>&1 &
             adb shell am instrument -w -r il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/androidTests/instrumentation.txt 2>&1; echo $? > app/build/reports/androidTests/instrumentation.rc; cat app/build/reports/androidTests/instrumentation.txt
             adb shell pkill -INT screenrecord || true
+            # #149 step 1: real launch of the voice shortcut's target (the new-report link) on the emulator.
+            # Best-effort evidence, not a gate; a camera permission prompt is a valid screen to show.
+            adb shell "screenrecord --time-limit 9 /sdcard/voice-link.mp4 & sleep 1; am start -W -a android.intent.action.VIEW -d il.sidewalks.reporter://report/new -n il.sidewalks.reporter/il.sidewalks.reporter.MainActivity; sleep 7; wait" > app/build/reports/androidTests/voice-link-launch.txt 2>&1 || true
+            adb pull /sdcard/voice-link.mp4 app/build/reports/androidTests/voice-link-launch.mp4 || true
+            adb exec-out screencap -p > app/build/reports/androidTests/screenshots/voice-link-launch-emulator.png || true
             sleep 2
             adb pull /sdcard/test-run.mp4 app/build/reports/androidTests/test-run.mp4 || true
             adb shell rm /sdcard/test-run.mp4 || true
