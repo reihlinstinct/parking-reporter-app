@@ -82,9 +82,25 @@ class SecureSettings(context: Context) {
     }
 
     companion object {
-        internal fun isKeyInvalidation(e: Throwable): Boolean = generateSequence(e) { it.cause }.any {
-            it is android.security.keystore.KeyPermanentlyInvalidatedException || it is java.security.UnrecoverableKeyException
+        /**
+         * Permanent invalidation only: a KeyPermanentlyInvalidatedException anywhere in the cause chain, or (API 33+)
+         * an UnrecoverableKeyException caused by a non-transient KeyStoreException. A transient keystore error
+         * (busy, restarting) must never delete a valid key. Below API 33 only the first case counts.
+         */
+        internal fun isKeyInvalidation(
+            e: Throwable,
+            sdk: Int = android.os.Build.VERSION.SDK_INT,
+            isTransient: (java.security.KeyStoreException) -> Boolean = { transientFailure(it) },
+        ): Boolean {
+            val chain = generateSequence(e) { it.cause }.toList()
+            if (chain.any { it is android.security.keystore.KeyPermanentlyInvalidatedException }) return true
+            if (sdk < 33) return false
+            return chain.any { it is java.security.UnrecoverableKeyException } &&
+                chain.filterIsInstance<java.security.KeyStoreException>().any { !isTransient(it) }
         }
+        @android.annotation.SuppressLint("NewApi")
+        private fun transientFailure(e: java.security.KeyStoreException): Boolean =
+            android.os.Build.VERSION.SDK_INT < 33 || e.isTransientFailure
         /** Runs [block]; on an invalidation failure runs [discard] once and retries once. Other failures propagate. */
         internal fun <T> recoverIfInvalidated(isInvalid: (Throwable) -> Boolean, discard: () -> Unit, block: () -> T): T =
             try { block() } catch (e: Exception) {

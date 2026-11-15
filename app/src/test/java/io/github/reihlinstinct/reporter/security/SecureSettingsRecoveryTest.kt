@@ -33,9 +33,21 @@ class SecureSettingsRecoveryTest {
         assertEquals(1, discards); assertEquals(2, calls)
     }
 
-    @Test fun invalidationIsFoundThroughTheCauseChain() {
-        val wrapped = RuntimeException("wrapper", java.security.UnrecoverableKeyException("gone"))
-        assertEquals(true, SecureSettings.isKeyInvalidation(wrapped))
-        assertEquals(false, SecureSettings.isKeyInvalidation(IllegalStateException("x")))
+    private fun unrecoverable(cause: Throwable?) = java.security.UnrecoverableKeyException("x").apply { cause?.let { initCause(it) } }
+
+    @Test fun unrecoverableKeyWithoutAKeystoreCauseIsNotInvalidation() {
+        assertEquals(false, SecureSettings.isKeyInvalidation(RuntimeException("w", unrecoverable(null)), 34) { false })
+    }
+
+    @Test fun transientKeystoreFailureIsNeverInvalidation() {
+        val e = RuntimeException("w", unrecoverable(java.security.KeyStoreException("busy")))
+        assertEquals(false, SecureSettings.isKeyInvalidation(e, 34) { true })
+    }
+
+    @Test fun permanentKeystoreFailureIsFoundThroughTheCauseChainOnApi33Plus() {
+        val e = RuntimeException("w", unrecoverable(java.security.KeyStoreException("permanent")))
+        assertEquals(true, SecureSettings.isKeyInvalidation(e, 34) { false })
+        assertEquals(false, SecureSettings.isKeyInvalidation(e, 32) { false })
+        assertEquals(false, SecureSettings.isKeyInvalidation(IllegalStateException("x"), 34) { false })
     }
 }

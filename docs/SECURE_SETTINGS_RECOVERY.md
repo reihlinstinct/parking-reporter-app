@@ -3,7 +3,7 @@
 `SecureSettings` keeps the reporter profile and municipal credentials under an AndroidKeyStore AES key that needs recent device-credential authentication. Removing or force-resetting the screen lock permanently invalidates that key, and the old ciphertext can never be read again (by design, no plaintext fallback).
 
 Behavior:
-- `save` runs after a fresh device-credential check and replaces all settings. If the key is permanently invalidated (`KeyPermanentlyInvalidatedException` or `UnrecoverableKeyException`, also through the cause chain), the unusable key and its file are deleted once and the save retries under a new key.
+- `save` runs after a fresh device-credential check and replaces all settings. If the key is permanently invalidated (`KeyPermanentlyInvalidatedException` anywhere in the cause chain, or on API 33+ an `UnrecoverableKeyException` caused by a non-transient `KeyStoreException`; a transient keystore error never deletes the key), the unusable key and its file are deleted once and the save retries under a new key.
 - `read` on an invalidated key deletes the key and file once and returns no settings, so the app asks for re-entry like a first run.
 - Any other failure (for example a missing or timed-out authentication) is never treated as invalidation and nothing is deleted.
 - Never retried more than once. No plaintext fallback. No secrets are logged.
