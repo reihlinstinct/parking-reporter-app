@@ -27,3 +27,7 @@ no OCR result automatically approves or sends a report.
 ## Encrypted raw-text diagnostics
 
 The manual benchmark records bounded raw OCR text (64,000 characters per engine/sample) alongside candidates in its private JSON output. The existing compare-only script encrypts this file and all collected output before uploading; normal CI has no staged private input and exports no OCR output. Raw text is never printed by the test. Production recognition still calls the exact same PlateCandidates filter. This diagnostic does not join numeric fragments, loosen plate matching, approve a plate or submit a report. Compare empty results against raw text privately before choosing an engine.
+
+## Tesseract digit whitelist variant (#435 follow-up)
+
+The manual benchmark also runs Tesseract with `OfflinePlateOcr(digitsOnly = true)` (character whitelist: digits, "-", ".", ":") as `tesseract_digits`, on the same prepared bitmap, with the order of the three variants rotated per sample. The whitelist is off in production. It is enabled only if a private run shows a gain over plain Tesseract and ML Kit stays the default. ML Kit has no character-set option, so it is unaffected.

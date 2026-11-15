@@ -35,14 +35,18 @@ class PrivateRealPhotoOcrTest {
                 .put("original_sha256", prepared.originalHash).put("prepared_sha256", prepared.hash)
                 .put("width", prepared.width).put("height", prepared.height)
             try {
-                // Alternate order to reduce consistent warm/cold first-engine bias.
-                val engines = if (i % 2 == 0) listOf("tesseract", "mlkit") else listOf("mlkit", "tesseract")
+                // Rotate the order over three variants to reduce consistent warm/cold first-engine bias.
+                val all = listOf("tesseract", "tesseract_digits", "mlkit")
+                val engines = all.drop(i % 3) + all.take(i % 3)
                 for (engine in engines) {
                     val start = System.nanoTime()
                     val answer = JSONObject()
                     try {
-                        val raw = if (engine == "tesseract") OfflinePlateOcr(context).recognizeText(bitmap)
-                            else MlKitPlateOcr.recognizeText(bitmap)
+                        val raw = when (engine) {
+                            "tesseract" -> OfflinePlateOcr(context).recognizeText(bitmap)
+                            "tesseract_digits" -> OfflinePlateOcr(context, digitsOnly = true).recognizeText(bitmap)
+                            else -> MlKitPlateOcr.recognizeText(bitmap)
+                        }
                         val values = PlateCandidates.fromText(raw)
                         // This file is exported only by the manual benchmark and encrypted
                         // before artifact upload. Never print raw OCR to instrumentation/logcat.
