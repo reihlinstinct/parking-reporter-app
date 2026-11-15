@@ -10,8 +10,8 @@ changes live staged inputs. Ordinary CI stages no manifest and skips private wor
 - Encrypt locally with a dedicated random OCR_BENCH_KEY. Host only the encrypted
   archive; set dedicated OCR_BENCH_INPUT_URL, OCR_BENCH_INPUT_SHA256 and
   OCR_BENCH_KEY secrets. Never reuse or modify TRIAL_* / J106_* inputs.
-- After exact-head green/review, dispatch main with COMPARE-ONLY. Both engines use
-  the same production OutgoingEvidence-prepared bitmap, alternating engine order.
+- After exact-head green/review, dispatch main with COMPARE-ONLY. All variants use
+  the same production OutgoingEvidence-prepared bitmap, rotating variant order.
   The emulator network is off; models are bundled. No screenshots or video.
 - Upload only encrypted results/logs with three-day retention. Decrypt privately,
   verify every original hash and sample count, then compare exact top-1, expected
