@@ -24,6 +24,8 @@ object ReviewRotationState {
         val savedManualHouse: String,
         val ocrPrefilledPlate: String?,
         val gpsFilled: Boolean = false,
+        /** Issue #424: which template sentences were last rendered, so an edit made before the rotation is still recognised. */
+        val templateState: io.github.reihlinstinct.reporter.core.TemplateSession.State = io.github.reihlinstinct.reporter.core.TemplateSession.State(),
     )
 
     class Shell(val draft: ReviewDraft, val original: File?, val revision: Long)
