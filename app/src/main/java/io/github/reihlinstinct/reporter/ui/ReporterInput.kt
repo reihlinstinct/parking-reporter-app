@@ -31,10 +31,11 @@ object ReporterInput {
     fun isIsraeliMobile(value: String) = canonicalPhone(value).matches(Regex("\\+9725[0-9]{8}"))
     fun validId(value: String): Boolean = try { MunicipalPayloads.normalizeNationalId(value); true } catch (_: Exception) { false }
     fun validPhone(value: String): Boolean = io.github.reihlinstinct.reporter.municipal.PassportSubmission.isSupportedPhone(canonicalPhone(value))
-    fun formattedPhone(value: String): String {
+    /** [platform] formats numbers that are not Israeli mobiles; injectable so JVM tests do not depend on the Android version (#235). */
+    fun formattedPhone(value: String, platform: (String) -> String? = { android.telephony.PhoneNumberUtils.formatNumber(it, "IL") }): String {
         val canonical = canonicalPhone(value)
         if (canonical.matches(Regex("\\+9725[0-9]{8}")))
             return "+972-" + canonical.substring(4, 6) + "-" + canonical.substring(6, 9) + "-" + canonical.substring(9)
-        return android.telephony.PhoneNumberUtils.formatNumber(canonical, "IL")?.replace(' ', '-') ?: canonical
+        return platform(canonical)?.replace(' ', '-') ?: canonical
     }
 }
