@@ -35,4 +35,22 @@ class PlateCandidatesTest {
         assertEquals(listOf("1234567"), PlateCandidates.fromText("1234567\n\u05DE"))
         assertEquals(listOf("1234567"), PlateCandidates.fromText("\u05DE\n1234567"))
     }
+    @Test fun mlKitSeparatorsAndAnAttachedFlagLetterStillGiveTheDigits() {
+        // Synthetic strings in the shapes the real-photo benchmark showed (#210); not real plates.
+        assertEquals(listOf("1234567"), PlateCandidates.fromText("12:345-67"))
+        assertEquals(listOf("12345678"), PlateCandidates.fromText("123.45-678"))
+        assertEquals(listOf("1234567"), PlateCandidates.fromText("I12-345-67"))
+        assertEquals(listOf("12345678"), PlateCandidates.fromText("L123:45-678\nIL"))
+        assertEquals(listOf("1234567"), PlateCandidates.fromText("12:34567"))
+        assertEquals(listOf("12345678"), PlateCandidates.fromText("123.45678"))
+    }
+    @Test fun looseShapesAreStillRejected() {
+        assertTrue(PlateCandidates.fromText("AB12-345-67").isEmpty())
+        assertTrue(PlateCandidates.fromText("I12-345-67X").isEmpty())
+        assertTrue(PlateCandidates.fromText("12-34567").isEmpty())
+        assertTrue(PlateCandidates.fromText("12:345:6").isEmpty())
+        assertTrue(PlateCandidates.fromText("I1234567").isEmpty())
+        assertTrue(PlateCandidates.fromText("12:345 67").isEmpty())
+        assertTrue(PlateCandidates.fromText("1:2:3:4:5:6:7").isEmpty())
+    }
 }

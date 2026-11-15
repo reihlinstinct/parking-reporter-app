@@ -29,6 +29,9 @@ class HardcodedUiStringLintTest {
             // approved 2026-11-13 06:13). Municipal payload text, identical under every UI
             // language and shown to the user in the editable description before sending.
             "BuiltInTemplates.kt",
+            // Owner-approved vehicle wording for the description (issue #424 slice 2b, approved
+            // 2026-11-15 "מאשר"): the registry country suffixes dropped from the manufacturer. Payload text.
+            "ReviewTemplateFacts.kt",
         )
 
         /**
