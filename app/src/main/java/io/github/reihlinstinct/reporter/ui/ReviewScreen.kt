@@ -89,6 +89,8 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var templateState by remember(initial.evidence.stableId) { mutableStateOf(restored?.templateState ?: io.github.reihlinstinct.reporter.core.TemplateSession.State()) }
     var latitude by remember(initial.evidence.stableId) { mutableStateOf(restored?.latitude ?: initial.confirmedLatitude?.toString().orEmpty()) }
     var longitude by remember(initial.evidence.stableId) { mutableStateOf(restored?.longitude ?: initial.confirmedLongitude?.toString().orEmpty()) }
+    // True only after the user typed in the description field here; text that arrived with the draft is not theirs to protect.
+    var textTyped by remember(initial.evidence.stableId) { mutableStateOf(false) }
     var editing by remember(initial.evidence.stableId) { mutableStateOf(false) }
     // ML Kit note and choice are hidden by default; one tap on the ML Kit line shows them.
     var showMlKit by remember(initial.evidence.stableId) { mutableStateOf(false) }
@@ -306,7 +308,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         if (categoryMenu && topicSnapshot != null && canBrowseTopics) CityTopicPicker(
             topicSnapshot.topics, selectedCode, recentTopics, topicAliases,
             dismiss = { categoryMenu = false }, choose = { topic ->
-                draft = policy(io.github.reihlinstinct.reporter.core.TemplateSession.withSubject(draft, "municipal:" + topic.code))
+                draft = policy(io.github.reihlinstinct.reporter.core.TemplateSession.withSubject(draft, "municipal:" + topic.code, textTyped))
                 if (!draft.needsPlate()) plates = emptyList()
                 topicSelected?.invoke(topic.code); categoryMenu = false
             })
@@ -316,7 +318,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         val sidewalkTopicAvailable = topicSnapshot?.topics.orEmpty().any { it.code == sidewalkCode }
         if (sidewalkTopicAvailable && io.github.reihlinstinct.reporter.recognition.SidewalkSuggestion.shouldSuggest(sidewalkScore, selectedCode)) {
             TextButton(onClick = {
-                draft = policy(io.github.reihlinstinct.reporter.core.TemplateSession.withSubject(draft, "municipal:" + sidewalkCode))
+                draft = policy(io.github.reihlinstinct.reporter.core.TemplateSession.withSubject(draft, "municipal:" + sidewalkCode, textTyped))
                 if (!draft.needsPlate()) plates = emptyList()
                 topicSelected?.invoke(sidewalkCode)
             }, modifier = Modifier.fillMaxWidth().testTag("sidewalk_suggestion")) { Text(s.t("review.suggest.sidewalk")) }
@@ -403,7 +405,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             }
         }
         }
-        OutlinedTextField(draft.exactHebrewText, { draft = draft.edit(text = it) }, label = { Text(s.t("review.edit.text_field")) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
+        OutlinedTextField(draft.exactHebrewText, { textTyped = true; draft = draft.edit(text = it) }, label = { Text(s.t("review.edit.text_field")) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
         Text(reviewAddressText(s, draft.address))
         if (draft.unresolved.isNotEmpty()) Text(unresolvedText(s, draft.unresolved))
         }

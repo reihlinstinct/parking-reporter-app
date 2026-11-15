@@ -14,16 +14,25 @@ class TemplateSubjectChangeTest {
     @Test fun withSubjectKeepsTheTextThatEditWouldClear() {
         val d = draft("הטקסט שלי", "municipal:1145")
         assertEquals("", d.edit(subject = "municipal:1144").exactHebrewText)
-        val changed = TemplateSession.withSubject(d, "municipal:1144")
+        val changed = TemplateSession.withSubject(d, "municipal:1144", true)
         assertEquals("הטקסט שלי", changed.exactHebrewText)
         assertEquals("municipal:1144", changed.subject)
+    }
+
+    @Test fun textThatOnlyArrivedWithTheDraftIsNotKeptAndCannotCarryAPlateIntoANoPlateCategory() {
+        val arrived = draft("רכב 1234567 חונה על המדרכה", "municipal:1145")
+        val changed = TemplateSession.withSubject(arrived, "municipal:1144", false)
+        assertEquals("", changed.exactHebrewText)
+        val next = TemplateSession.apply(curb, emptyList(), TemplateFacts(), changed.exactHebrewText, TemplateSession.State())
+        assertFalse(next.text.contains("1234567"))
+        assertFalse(next.state.frozen)
     }
 
     @Test fun anEditedDescriptionSurvivesACategoryChangeAndTheTemplateFreezes() {
         val first = TemplateSession.apply(sidewalk, emptyList(), facts, "", TemplateSession.State())
         assertTrue(first.text.contains("חונה על המדרכה"))
         val edited = first.text + " הערה שלי."
-        val d = TemplateSession.withSubject(draft(edited, "municipal:1145"), "municipal:1144")
+        val d = TemplateSession.withSubject(draft(edited, "municipal:1145"), "municipal:1144", true)
         val second = TemplateSession.apply(curb, emptyList(), facts, d.exactHebrewText, first.state)
         assertEquals(edited, second.text)
         assertTrue(second.state.frozen)
@@ -31,7 +40,7 @@ class TemplateSubjectChangeTest {
 
     @Test fun anUntouchedDescriptionFollowsTheNewCategory() {
         val first = TemplateSession.apply(sidewalk, emptyList(), facts, "", TemplateSession.State())
-        val d = TemplateSession.withSubject(draft(first.text, "municipal:1145"), "municipal:1144")
+        val d = TemplateSession.withSubject(draft(first.text, "municipal:1145"), "municipal:1144", true)
         val second = TemplateSession.apply(curb, emptyList(), facts, d.exactHebrewText, first.state)
         assertTrue(second.text, second.text.contains("אדום-לבן"))
         assertFalse(second.state.frozen)
