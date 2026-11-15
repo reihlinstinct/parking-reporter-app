@@ -40,7 +40,7 @@ object PlateClasses {
      * True when [report] mentions the plate as a whole token. The left side must not continue the plate: a digit or
      * Latin letter before it never does, and for police a hyphen or dash (ASCII, Hebrew maqaf, U+2010 to U+2015, minus
      * sign U+2212) before it does not either ("1-12-34" is not "12-34"). For CD and CC a digit after a run of spaces,
-     * tabs, no-break spaces or dashes means a longer number.
+     * tabs, no-break or figure spaces, maqaf, minus sign or dashes means a longer number.
      * Police ends with a Hebrew letter, so it must not be the first letter of a longer word.
      */
     fun mentions(report: String, plate: String, plateClass: PlateClass): Boolean {
@@ -55,7 +55,7 @@ object PlateClasses {
             PlateClass.POLICE -> "(?![0-9\\u05D0-\\u05EA])"
             PlateClass.REGULAR -> "(?![0-9])"
             // CD and CC are shown with spaces, so a digit after a run of spaces or dashes is a longer number.
-            else -> "(?![0-9]|[ \\t\\u00A0\\-\\u2010-\\u2015]+[0-9])"
+            else -> "(?![0-9]|[ \\t\\u00A0\\u2007\\u202F\\-\\u05BE\\u2010-\\u2015\\u2212]+[0-9])"
         }
         return Regex(before + Regex.escape(shown) + after).containsMatchIn(report)
     }
