@@ -39,7 +39,8 @@ class DeviceReadyTest {
             shell("wm dismiss-keyguard")
             // A failed check must not leave a locked or sleeping device for the tests that run after it (the
             // "no compose hierarchies" cascade seen on API 36, #444). The PIN is already cleared here.
-            DeviceReady.ensureReady(context, null)
+            val cleanupReady = DeviceReady.ensureReady(context, null)
+            println("DEVICE_READY_DRYCHECK cleanup ready=$cleanupReady")
         }
     }
 }
