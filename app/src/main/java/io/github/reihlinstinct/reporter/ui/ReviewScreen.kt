@@ -90,7 +90,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var latitude by remember(initial.evidence.stableId) { mutableStateOf(restored?.latitude ?: initial.confirmedLatitude?.toString().orEmpty()) }
     var longitude by remember(initial.evidence.stableId) { mutableStateOf(restored?.longitude ?: initial.confirmedLongitude?.toString().orEmpty()) }
     // True only after the user typed in the description field here; text that arrived with the draft is not theirs to protect.
-    var textTyped by remember(initial.evidence.stableId) { mutableStateOf(false) }
+    var textTyped by remember(initial.evidence.stableId) { mutableStateOf(restored?.textTyped ?: false) }
     var editing by remember(initial.evidence.stableId) { mutableStateOf(false) }
     // ML Kit note and choice are hidden by default; one tap on the ML Kit line shows them.
     var showMlKit by remember(initial.evidence.stableId) { mutableStateOf(false) }
@@ -134,7 +134,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // (save, discard, back, process death) leaves nothing held.
     val holdOnRotation by rememberUpdatedState {
         ReviewRotationState.Held(initial, draft, latitude, longitude, manualStreet, manualHouse,
-            savedManualStreet, savedManualHouse, ocrPrefilledPlate, gpsFilled, templateState)
+            savedManualStreet, savedManualHouse, ocrPrefilledPlate, gpsFilled, templateState, textTyped)
     }
     val rotationActivity = context.findActivity()
     DisposableEffect(initial.evidence.stableId) {

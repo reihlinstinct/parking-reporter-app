@@ -40,7 +40,7 @@ class TemplateSubjectChangeTest {
 
     @Test fun anUntouchedDescriptionFollowsTheNewCategory() {
         val first = TemplateSession.apply(sidewalk, emptyList(), facts, "", TemplateSession.State())
-        val d = TemplateSession.withSubject(draft(first.text, "municipal:1145"), "municipal:1144", true)
+        val d = TemplateSession.withSubject(draft(first.text, "municipal:1145"), "municipal:1144", false)
         val second = TemplateSession.apply(curb, emptyList(), facts, d.exactHebrewText, first.state)
         assertTrue(second.text, second.text.contains("אדום-לבן"))
         assertFalse(second.state.frozen)

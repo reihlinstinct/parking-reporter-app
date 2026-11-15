@@ -14,7 +14,8 @@ import java.time.format.DateTimeFormatter
 /**
  * Issue #424 slice 2b: turns the review form and the government registry result into [TemplateFacts]. Pure, so it is
  * unit-tested on the JVM. Only a completed live lookup may drive the state sentences; a cached, partial or failed
- * lookup leaves the permit state unknown and adds nothing. A missing part of the vehicle is dropped, never a placeholder.
+ * lookup leaves the permit state unknown and adds nothing. A completed permit answer is final, though: a "none" answer
+ * adds the no-permit sentence even while the vehicle lookup is still pending. A missing part of the vehicle is dropped, never a placeholder.
  */
 object ReviewTemplateFacts {
     private val houseTail = Regex("^(.*\\S)\\s+(\\d+\\s?[\u05D0-\u05EA]?)$")
