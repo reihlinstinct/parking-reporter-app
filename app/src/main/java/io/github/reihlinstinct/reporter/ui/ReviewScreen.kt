@@ -84,8 +84,13 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // An outside change (OCR suggestion, restore) moves the field. Typing that already matches the draft leaves it alone.
     PlateDetect.detect(plateRaw).let { if ((it.plate != draft.plate || it.plateClass != draft.plateClass) && !(draft.plate.isBlank() && !PlateClasses.ready(it.plate, it.plateClass))) plateRaw = plateShown(draft) }
     val registryPlate = if (draft.plateClass == PlateClass.REGULAR) draft.plate else ""
+    // Issue #424 slice 2b: the registry result the description template reads (live results only, see ReviewTemplateFacts).
+    var registrySnapshot by remember(registryPlate) { mutableStateOf<RegistrySnapshot?>(null) }
+    var templateState by remember(initial.evidence.stableId) { mutableStateOf(restored?.templateState ?: io.github.reihlinstinct.reporter.core.TemplateSession.State()) }
     var latitude by remember(initial.evidence.stableId) { mutableStateOf(restored?.latitude ?: initial.confirmedLatitude?.toString().orEmpty()) }
     var longitude by remember(initial.evidence.stableId) { mutableStateOf(restored?.longitude ?: initial.confirmedLongitude?.toString().orEmpty()) }
+    // True only after the user typed in the description field here; text that arrived with the draft is not theirs to protect.
+    var textTyped by remember(initial.evidence.stableId) { mutableStateOf(restored?.textTyped ?: false) }
     var editing by remember(initial.evidence.stableId) { mutableStateOf(false) }
     // ML Kit note and choice are hidden by default; one tap on the ML Kit line shows them.
     var showMlKit by remember(initial.evidence.stableId) { mutableStateOf(false) }
@@ -117,7 +122,11 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // with a topic snapshot would count as edited before the user touched anything.
     val savedDraft = policy(ReportTime.forSave(initial))
     val cleanDraft = ocrPrefilledPlate?.takeIf { savedDraft.plate.isBlank() }?.let { savedDraft.copy(plate = it) }
-    val hasUnsavedEdits = (draft != savedDraft && draft != cleanDraft) ||
+    // Text the template wrote on a report that had none is not a user edit.
+    val templateOnly = savedDraft.exactHebrewText.isBlank() && templateState.rendered.isNotEmpty() &&
+        draft.exactHebrewText == io.github.reihlinstinct.reporter.core.DescriptionTemplates.join(templateState.rendered)
+    val draftForEdits = if (templateOnly) draft.copy(exactHebrewText = "") else draft
+    val hasUnsavedEdits = (draftForEdits != savedDraft && draftForEdits != cleanDraft) ||
         latitude != initial.confirmedLatitude?.toString().orEmpty() ||
         longitude != initial.confirmedLongitude?.toString().orEmpty() ||
         manualStreet != savedManualStreet || manualHouse != savedManualHouse
@@ -125,7 +134,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // (save, discard, back, process death) leaves nothing held.
     val holdOnRotation by rememberUpdatedState {
         ReviewRotationState.Held(initial, draft, latitude, longitude, manualStreet, manualHouse,
-            savedManualStreet, savedManualHouse, ocrPrefilledPlate, gpsFilled)
+            savedManualStreet, savedManualHouse, ocrPrefilledPlate, gpsFilled, templateState, textTyped)
     }
     val rotationActivity = context.findActivity()
     DisposableEffect(initial.evidence.stableId) {
@@ -234,6 +243,15 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     LaunchedEffect(initial.evidence.stableId, image) {
         if (image != null && draft.plate.isEmpty() && draft.needsPlate()) recognize()
     }
+    // Issue #424 slice 2b: the suggested description follows the category and the facts. The user's own words are
+    // never overwritten (see TemplateSession); the text stays editable and the form still needs the plate in it.
+    val templateFacts = ReviewTemplateFacts.build(draft, registrySnapshot)
+    val templateTopic = topicSnapshot?.topics?.firstOrNull { it.code == io.github.reihlinstinct.reporter.core.TopicIdentity.code(draft.subject) }
+    LaunchedEffect(templateFacts, templateTopic, draft.subject) {
+        val applied = io.github.reihlinstinct.reporter.core.TemplateSession.apply(templateTopic, emptyList(), templateFacts, draft.exactHebrewText, templateState)
+        templateState = applied.state
+        if (applied.text != draft.exactHebrewText) draft = draft.edit(text = applied.text)
+    }
     ProvideStringsIfMissing {
     val s = LocalStrings.current
     BackHandler(enabled = !categoryMenu && !askAddressConsent) { requestExit() }
@@ -290,7 +308,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         if (categoryMenu && topicSnapshot != null && canBrowseTopics) CityTopicPicker(
             topicSnapshot.topics, selectedCode, recentTopics, topicAliases,
             dismiss = { categoryMenu = false }, choose = { topic ->
-                draft = policy(draft.edit(subject = "municipal:" + topic.code))
+                draft = policy(io.github.reihlinstinct.reporter.core.TemplateSession.withSubject(draft, "municipal:" + topic.code, textTyped))
                 if (!draft.needsPlate()) plates = emptyList()
                 topicSelected?.invoke(topic.code); categoryMenu = false
             })
@@ -300,7 +318,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         val sidewalkTopicAvailable = topicSnapshot?.topics.orEmpty().any { it.code == sidewalkCode }
         if (sidewalkTopicAvailable && io.github.reihlinstinct.reporter.recognition.SidewalkSuggestion.shouldSuggest(sidewalkScore, selectedCode)) {
             TextButton(onClick = {
-                draft = policy(draft.edit(subject = "municipal:" + sidewalkCode))
+                draft = policy(io.github.reihlinstinct.reporter.core.TemplateSession.withSubject(draft, "municipal:" + sidewalkCode, textTyped))
                 if (!draft.needsPlate()) plates = emptyList()
                 topicSelected?.invoke(sidewalkCode)
             }, modifier = Modifier.fillMaxWidth().testTag("sidewalk_suggestion")) { Text(s.t("review.suggest.sidewalk")) }
@@ -310,7 +328,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 if (draft.plateClass != PlateClass.REGULAR && draft.plate.isNotBlank()) SpecialPlate(PlateClasses.text(draft.plate, draft.plateClass), draft.plateClass, reviewPlateClassText(s, draft), Modifier.testTag("review-plate"))
                 else if (IsraeliPlateStyle.isRegular(draft.plate)) IsraeliPlate(draft.plate, reviewPlateText(s, draft.plate), Modifier.testTag("review-plate"))
                 else Text(reviewPlateText(s, draft.plate), style = MaterialTheme.typography.titleMedium)
-                RegistryStatus(registryPlate, registryLookup)
+                RegistryStatus(registryPlate, registryLookup) { registrySnapshot = it }
                 if (recognizing) { LinearProgressIndicator(Modifier.fillMaxWidth()); Text(s.t("review.ocr.analyzing")) }
                 Text(ocrStatus?.let { s.t(it) }.orEmpty(), style = MaterialTheme.typography.bodySmall)
                 plates.forEach { plate -> TextButton(onClick = { draft = draft.edit(plate = plate, plateClass = PlateClass.REGULAR) }) { Text(reviewPlateSuggestionText(s, plate)) } }
@@ -344,7 +362,10 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                     plateEdits++
                     val found = PlateDetect.detect(input)
                     plateRaw = input
-                    val text = PlateDetect.textAfterChange(draft.exactHebrewText, draft.plate, draft.plateClass, found.plateClass)
+                    // A description the template wrote follows the plate through the template; stripping lines would drop it whole.
+                    val templateOwned = templateState.rendered.isNotEmpty() &&
+                        io.github.reihlinstinct.reporter.core.DescriptionTemplates.isUntouched(draft.exactHebrewText, templateState.rendered)
+                    val text = if (templateOwned) draft.exactHebrewText else PlateDetect.textAfterChange(draft.exactHebrewText, draft.plate, draft.plateClass, found.plateClass)
                     draft = draft.edit(plate = found.plate, plateClass = found.plateClass, text = text)
                 }
             }, singleLine = true,
@@ -354,7 +375,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }),
             textStyle = MaterialTheme.typography.titleLarge.copy(textDirection = TextDirection.Ltr),
             label = { Text(s.t("review.edit.plate_field")) }, modifier = Modifier.width(216.dp))
-        RegistryStatus(registryPlate, registryLookup)
+        RegistryStatus(registryPlate, registryLookup) { registrySnapshot = it }
         }
         OutlinedTextField(draft.address, {
             // Editing the field labeled "רחוב ומספר בית שאישרת" IS the explicit
@@ -384,7 +405,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             }
         }
         }
-        OutlinedTextField(draft.exactHebrewText, { draft = draft.edit(text = it) }, label = { Text(s.t("review.edit.text_field")) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
+        OutlinedTextField(draft.exactHebrewText, { textTyped = true; draft = draft.edit(text = it) }, label = { Text(s.t("review.edit.text_field")) }, modifier = Modifier.fillMaxWidth(), minLines = 3)
         Text(reviewAddressText(s, draft.address))
         if (draft.unresolved.isNotEmpty()) Text(unresolvedText(s, draft.unresolved))
         }

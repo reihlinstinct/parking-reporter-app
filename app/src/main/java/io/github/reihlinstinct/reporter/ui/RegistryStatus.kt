@@ -81,14 +81,14 @@ fun rememberRegistryLookup(): RegistryLookup {
 
 /** Independent read-only information. No draft, text, save or submit callback exists here. */
 @Composable
-fun RegistryStatus(plate: String, lookup: RegistryLookup? = null) {
+fun RegistryStatus(plate: String, lookup: RegistryLookup? = null, onSnapshot: ((RegistrySnapshot?) -> Unit)? = null) {
     io.github.reihlinstinct.reporter.i18n.ProvideStringsIfMissing {
-        RegistryStatusContent(plate, lookup)
+        RegistryStatusContent(plate, lookup, onSnapshot)
     }
 }
 
 @Composable
-private fun RegistryStatusContent(plate: String, lookup: RegistryLookup?) {
+private fun RegistryStatusContent(plate: String, lookup: RegistryLookup?, onSnapshot: ((RegistrySnapshot?) -> Unit)?) {
     if (PlateNumber.parse(plate) == null) return
     val s = LocalStrings.current
     // Keyed state is cleared synchronously on an edit, before any effect can return.
@@ -113,6 +113,8 @@ private fun RegistryStatusContent(plate: String, lookup: RegistryLookup?) {
             unavailable = result == null
         }
     }
+    // Issue #424: the description template reads the same result; read-only, no other effect.
+    LaunchedEffect(result, unavailable) { onSnapshot?.invoke(if (unavailable) null else result) }
     val fallbackDeadline = result?.cachedUntil
     LaunchedEffect(fallbackDeadline) {
         if (fallbackDeadline != null) {
