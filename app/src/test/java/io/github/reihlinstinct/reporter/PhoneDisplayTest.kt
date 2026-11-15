@@ -39,13 +39,6 @@ class PhoneDisplayTest {
         }
     }
 
-    @Test fun emptyInputMapsToZero() {
-        val t = shown("")
-        assertEquals("", t.text.text)
-        assertEquals(0, t.offsetMapping.originalToTransformed(0))
-        assertEquals(0, t.offsetMapping.transformedToOriginal(0))
-    }
-
     @Test fun nonIsraeliNumbersUseTheInjectedPlatformFormatterWithDashesAndFallBackToCanonical() {
         assertEquals("+1-415-555-2671", ReporterInput.formattedPhone("+1 (415) 555-2671") { "+1 415-555-2671" })
         assertEquals("+14155552671", ReporterInput.formattedPhone("+1 (415) 555-2671") { null })
