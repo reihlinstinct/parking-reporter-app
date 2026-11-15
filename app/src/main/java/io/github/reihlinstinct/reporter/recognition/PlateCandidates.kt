@@ -9,10 +9,16 @@ package io.github.reihlinstinct.reporter.recognition
  */
 object PlateCandidates {
     private const val CLASS_LETTERS = "\u05DE\u05DD\u05E6\u05E5"
+    // ML Kit reads the plate's separators as ":" or "." and often glues a misread flag letter ("IL") to the first group
+    // (real-photo benchmark, #210). Those grouped forms are accepted with a single Latin letter before them. A plain
+    // 7 or 8 digit run stays strict: no letter or digit may touch it.
+    private const val GROUP_SEPARATOR = "[-:.]"
     private val shapes = Regex(
-        "(?<![A-Za-z0-9])" +
-            "(?:[0-9]{7,8}|[0-9]{2}-[0-9]{3}-[0-9]{2}|[0-9]{3}-[0-9]{2}-[0-9]{3})" +
-            "(?![A-Za-z0-9])")
+        "(?<![A-Za-z0-9])(?:" +
+            "[0-9]{7,8}(?![A-Za-z0-9])" +
+            "|[A-Za-z]?(?:[0-9]{2}$GROUP_SEPARATOR[0-9]{3}$GROUP_SEPARATOR[0-9]{2}|[0-9]{3}$GROUP_SEPARATOR[0-9]{2}$GROUP_SEPARATOR[0-9]{3}" +
+            "|[0-9]{2}[:.][0-9]{5}|[0-9]{3}[:.][0-9]{5})(?![A-Za-z0-9])" +
+            ")")
     private fun hebrewLetter(c: Char) = c in '\u05D0'..'\u05EA'
     private fun classLetter(c: Char) = CLASS_LETTERS.indexOf(c) >= 0
     private fun standaloneBefore(text: String, start: Int): Boolean {
@@ -29,6 +35,6 @@ object PlateCandidates {
         val bounded = text.take(64_000)
         return shapes.findAll(bounded)
             .filter { !standaloneBefore(bounded, it.range.first) && !standaloneAfter(bounded, it.range.last + 1) }
-            .map { it.value.replace("-", "") }.distinct().take(10).toList()
+            .map { match -> match.value.filter { it in '0'..'9' } }.distinct().take(10).toList()
     }
 }
