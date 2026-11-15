@@ -10,7 +10,7 @@ flowchart TB
     subgraph device["Android device"]
         ui["Kotlin + Jetpack Compose UI<br/>(photo-first review)"]
         cam["CameraX capture"]
-        ocr["On-device OCR<br/>(small local model, optional ML Kit;<br/>no cloud photo analysis)"]
+        ocr["On-device OCR<br/>(ML Kit by default, small local Tesseract model as a Settings choice;<br/>no cloud photo analysis)"]
         store[("Room ledger + Keystore AES-GCM<br/>encrypted reporter settings<br/>(noBackupFilesDir)")]
         pack["PRPKG2 packager<br/>(Tink: ECDSA sign, ECIES encrypt)"]
     end

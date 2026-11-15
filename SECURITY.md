@@ -10,7 +10,7 @@ Do not open an issue containing credentials, real plates, evidence photos, repor
 
 ## Security requirements
 
-- On-device recognition; no cloud photo analysis. Optional bundled Google ML Kit sends API usage/performance metrics to Google, not input images or recognition output.
+- On-device recognition; no cloud photo analysis. Bundled Google ML Kit is the default engine (switchable to the offline Tesseract engine in Settings) and sends API usage/performance metrics to Google, not input images or recognition output; the note is shown at the point of use in Review and next to the switch in Settings.
 - Explicit per-report approval bound to the exact reviewed payload; edits invalidate it.
 - Deduplication by original-photo hash and stable report ID, single-flight writes, durable checkpoints and no automatic retry of municipal POSTs.
 - Uncertain outcomes block resubmission until reconciliation.

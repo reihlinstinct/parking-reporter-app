@@ -23,7 +23,7 @@ The review screen has one plate field and no type picker. `PlateDetect` reads th
 - Ready means what `PlateClasses.ready` says: 7 or 8 digits for regular, at least one digit for the others. Digit counts and grammar for police, CD and CC are still not officially verified, and no colour claim is made beyond the police red.
 - Changing the detected type removes the old plate line from the report text, as the picker did. Nothing structured is sent for a non-regular plate, as before.
 - `PlateDetectTest` pins the rules. The picker strings stay in the catalog, unused.
-- The ML Kit note and choice are hidden by default behind a button with the existing ML Kit label.
+- The OCR engine is chosen only in Settings (ML Kit by default, Tesseract as the offline choice). The Review screen shows the ML Kit data note above the recognise button while ML Kit is active.
 
 ## Verified from official text (checked 2026-11-12)
 

@@ -66,7 +66,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         }
     }
     // Issue #210: the engine is a Settings-only preference (default Google ML Kit); the review screen has no selector.
-    val useGoogle = remember { io.github.reihlinstinct.reporter.recognition.UiPrefsOcrEngineStore.of(context).get() == io.github.reihlinstinct.reporter.recognition.OcrEngine.MLKIT }
+    val useGoogle = remember(initial.evidence.stableId) { io.github.reihlinstinct.reporter.recognition.UiPrefsOcrEngineStore.of(context).get() == io.github.reihlinstinct.reporter.recognition.OcrEngine.MLKIT }
     var recognizing by remember { mutableStateOf(false) }
     var plateEdits by remember { mutableIntStateOf(0) }
     // Status lines hold catalog keys and are translated when shown, so they follow a language switch.

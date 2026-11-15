@@ -24,7 +24,7 @@ Bundled Latin text-recognition 16.0.1 is the default OCR engine since #210 (owne
 
 Sources: https://developers.google.com/ml-kit/terms and https://developers.google.com/ml-kit/vision/text-recognition/v2/android
 
-Synthetic comparison uses equal inputs and the same candidate parser. It is a tiny development check, not field accuracy or evidence of behavior on the test phone. Public emulator run 38066741292: both engines returned the expected candidate on all four plate cases and no candidates on all four blank/distractor cases. Accuracy tied on this tiny corpus; (Superseded: ML Kit is now the default, see above.) Tesseract took 100-329 ms and ML Kit 3177-3641 ms per case on this network-disabled emulator, creating a recognizer for each call. These are not phone performance or field accuracy measurements. All 15 instrumented tests passed.
+(Superseded: ML Kit is now the default, see above.) Synthetic comparison uses equal inputs and the same candidate parser. It is a tiny development check, not field accuracy or evidence of behavior on the test phone. Public emulator run 38066741292: both engines returned the expected candidate on all four plate cases and no candidates on all four blank/distractor cases. Accuracy tied on this tiny corpus. Tesseract took 100-329 ms and ML Kit 3177-3641 ms per case on this network-disabled emulator, creating a recognizer for each call. These are not phone performance or field accuracy measurements. All 15 instrumented tests passed.
 
 Observed run: https://github.com/reihlinstinct/parking-reporter-app/actions/runs/38066741292
 

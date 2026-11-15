@@ -11,7 +11,7 @@ enum class OcrEngine(val code: String) {
     companion object {
         val DEFAULT = MLKIT
         /** Anything missing or unknown means the default. */
-        fun parse(code: String?): OcrEngine = values().firstOrNull { it.code == code } ?: DEFAULT
+        fun parse(code: String?): OcrEngine = entries.firstOrNull { it.code == code } ?: DEFAULT
     }
 }
 
