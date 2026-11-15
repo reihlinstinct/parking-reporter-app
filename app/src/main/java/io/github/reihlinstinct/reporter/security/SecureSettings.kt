@@ -42,6 +42,11 @@ class SecureSettings(context: Context) {
         }
     }
     fun save(settings: ReporterSettings) {
+        // Saving follows a fresh device-credential check and replaces all settings, so an invalidated key
+        // (screen lock removed, #132) is discarded and the new settings are stored under a new key.
+        recoverIfInvalidated(::keyInvalidated, ::discardInvalidatedKey) { saveOnce(settings) }
+    }
+    private fun saveOnce(settings: ReporterSettings) {
         val plaintext = SettingsCodec.encode(settings)
         try {
             val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key()) }
@@ -53,7 +58,10 @@ class SecureSettings(context: Context) {
             } catch (failure: Exception) { file.failWrite(stream); throw failure }
         } finally { plaintext.fill(0) }
     }
-    fun read(): ReporterSettings? {
+    /** An invalidated key makes the old ciphertext unrecoverable by design: report "no settings" so re-entry is required. */
+    fun read(): ReporterSettings? =
+        recoverIfInvalidated(::keyInvalidated, ::discardInvalidatedKey) { readOnce() }
+    private fun readOnce(): ReporterSettings? {
         if (!file.baseFile.exists()) return null
         val plaintext = decodeForDisk(file.readFully()) { iv ->
             Cipher.getInstance("AES/GCM/NoPadding").apply {
@@ -64,9 +72,26 @@ class SecureSettings(context: Context) {
             return SettingsCodec.decode(plaintext)
         } finally { plaintext.fill(0) }
     }
-    // No plaintext fallback, no automatic key reset on invalidation.
+    // No plaintext fallback. Only a PERMANENTLY invalidated key is reset, never a transient failure
+    // (for example a missing or timed-out authentication).
+    private fun keyInvalidated(e: Throwable) = isKeyInvalidation(e)
+    /** Deletes the unusable key and its undecryptable file; the next save generates a fresh key. */
+    private fun discardInvalidatedKey() {
+        runCatching { KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.deleteEntry(alias) }
+        file.delete()
+    }
 
     companion object {
+        internal fun isKeyInvalidation(e: Throwable): Boolean = generateSequence(e) { it.cause }.any {
+            it is android.security.keystore.KeyPermanentlyInvalidatedException || it is java.security.UnrecoverableKeyException
+        }
+        /** Runs [block]; on an invalidation failure runs [discard] once and retries once. Other failures propagate. */
+        internal fun <T> recoverIfInvalidated(isInvalid: (Throwable) -> Boolean, discard: () -> Unit, block: () -> T): T =
+            try { block() } catch (e: Exception) {
+                if (!isInvalid(e)) throw e
+                discard()
+                block()
+            }
         /** Framed as iv-length byte + IV + AES-GCM ciphertext. Unit-tested with a non-Keystore key. */
         internal fun encodeForDisk(plaintext: ByteArray, cipher: Cipher): ByteArray {
             val encrypted = cipher.doFinal(plaintext)
