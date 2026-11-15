@@ -21,10 +21,10 @@ object MlKitPlateOcr {
     }
 
     /** Experimental, measured only by the private benchmark (not wired into the app). Reads the whole frame, then a
-     * 3 x 3 grid of half-size windows with 25% steps, optionally enlarged, with one recognizer. A small plate that the
+     * 3 x 3 grid of half-size windows, evenly spread so the last one ends at the frame edge, optionally enlarged 2x (a window is at most 1280 px per side, so no clamping), with one recognizer. A small plate that the
      * full frame misses can sit whole inside one window. Returns one text per window, full frame first. */
     internal fun recognizeTileTexts(bitmap: Bitmap, scale: Int): List<String> {
-        require(bitmap.width in 1..2560 && bitmap.height in 1..2560 && scale in 1..3)
+        require(bitmap.width in 2..2560 && bitmap.height in 2..2560 && scale in 1..2)
         val client = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
         try {
             val texts = ArrayList<String>(10)
@@ -36,10 +36,10 @@ object MlKitPlateOcr {
             val w = bitmap.width / 2
             val h = bitmap.height / 2
             for (row in 0..2) for (col in 0..2) {
-                val x = minOf(col * (bitmap.width / 4), bitmap.width - w)
-                val y = minOf(row * (bitmap.height / 4), bitmap.height - h)
+                val x = col * (bitmap.width - w) / 2
+                val y = row * (bitmap.height - h) / 2
                 val crop = Bitmap.createBitmap(bitmap, x, y, w, h)
-                val sized = if (scale == 1) crop else Bitmap.createScaledBitmap(crop, minOf(w * scale, 2560), minOf(h * scale, 2560), true)
+                val sized = if (scale == 1) crop else Bitmap.createScaledBitmap(crop, w * scale, h * scale, true)
                 try { read(sized) } finally {
                     if (sized !== crop) sized.recycle()
                     crop.recycle()

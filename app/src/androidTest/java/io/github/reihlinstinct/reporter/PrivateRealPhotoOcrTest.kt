@@ -11,7 +11,7 @@ import org.junit.Test
 import java.io.File
 
 /** Manual private benchmark only. Normal CI stages no input and performs no private work.
- * Both engines receive the SAME production-prepared image. Never imports a ledger,
+ * Every variant receives the SAME production-prepared image. Never imports a ledger,
  * constructs a municipal client, approves or submits anything. All output stays private. */
 class PrivateRealPhotoOcrTest {
     @Test fun comparePrivatePhotoSample() {
