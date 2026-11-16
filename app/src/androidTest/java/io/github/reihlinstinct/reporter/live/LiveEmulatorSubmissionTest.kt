@@ -13,6 +13,9 @@ import io.github.reihlinstinct.reporter.FlowDriver
 import io.github.reihlinstinct.reporter.FlowFields
 import io.github.reihlinstinct.reporter.ledger.ReportDatabase
 import io.github.reihlinstinct.reporter.ledger.ReportRecord
+import io.github.reihlinstinct.reporter.ledger.DraftCodec
+import io.github.reihlinstinct.reporter.core.Evidence
+import io.github.reihlinstinct.reporter.core.ReviewDraft
 import io.github.reihlinstinct.reporter.security.ReporterSettings
 import io.github.reihlinstinct.reporter.ui.AppShell
 import java.io.File
@@ -327,11 +330,14 @@ class LiveEmulatorSubmissionTest {
         val db = Room.databaseBuilder(context, ReportDatabase::class.java, "report-ledger.db").build()
         try {
             val dir = File(context.noBackupFilesDir, "submissions").also { it.mkdirs() }
-            syntheticHistory.forEach { (suffix, number) ->
+            syntheticHistory.forEachIndexed { index, (suffix, number) ->
                 val id = "synthetic-history-$suffix"
-                runBlocking { db.reports().reserve(ReportRecord(id, id, "synthetic-none", 1L, "{}", null)) }
-                File(dir, "$id.json").writeText(
-                    JSONObject().put("status", "complete").put("case", JSONObject().put("CaseNumberInCRM", number)).toString())
+                // A real draft shape (synthetic values, no plate, no photo) so a details screen can read it.
+                val draft = ReviewDraft(Evidence(id, id, null, null, null), "", "רחוב הדוגמה ${index + 1}", "sidewalk_parking", "דיווח לדוגמה", emptySet())
+                runBlocking { db.reports().reserve(ReportRecord(id, id, "synthetic-none", 1L, DraftCodec.encode(draft), null)) }
+                val state = File(dir, "$id.json")
+                state.writeText(JSONObject().put("status", "complete").put("case", JSONObject().put("CaseNumberInCRM", number)).toString())
+                state.setLastModified(1_794_000_000_000L + index * 86_400_000L)
             }
         } finally {
             db.close()
