@@ -23,5 +23,5 @@ class LiveEmulatorApiTest(unittest.TestCase):
         text = (ROOT / '.github/workflows/live-emulator-e2e.yml').read_text()
         self.assertIn('workflow_dispatch:', text)
         self.assertIn('approved_sha256:', text)
-        self.assertIn('approved digest already went through a live run', text)
+        self.assertIn('already went through a live run - refusing to re-dispatch', text)
         self.assertIn('fail closed', text)
