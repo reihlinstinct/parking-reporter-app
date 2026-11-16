@@ -313,11 +313,17 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 topicSelected?.invoke(topic.code); categoryMenu = false
             })
         Text(s.t("review.category_note"), style = MaterialTheme.typography.bodySmall)
+        // Issue #158: experimental, advisory only. Silent unless the private model is on the phone and scores high.
+        val sidewalkCode = io.github.reihlinstinct.reporter.recognition.SidewalkSuggestion.SIDEWALK_SUBJECT_CODE
+        val sidewalkTopicAvailable = topicSnapshot?.topics.orEmpty().any { it.code == sidewalkCode }
+        val showSidewalkSuggestion = sidewalkTopicAvailable && io.github.reihlinstinct.reporter.recognition.SidewalkSuggestion.shouldSuggest(sidewalkScore, selectedCode)
         // Issues #105/#109: a hint, never a decision. Tapping it is the user's explicit choice; nothing is selected or sent for them.
-        val suggestionHint = topicSnapshot?.let { snapshot ->
+        // When the private sidewalk suggestion shows, the stub hint stays hidden so two hints never compete.
+        val suggester = remember { io.github.reihlinstinct.reporter.core.StubCategorySuggester() }
+        val suggestionHint = topicSnapshot?.takeIf { !showSidewalkSuggestion }?.let { snapshot ->
             io.github.reihlinstinct.reporter.core.CategorySuggestions.visible(
                 io.github.reihlinstinct.reporter.core.CategorySuggestions.safely(
-                    io.github.reihlinstinct.reporter.core.StubCategorySuggester(),
+                    suggester,
                     io.github.reihlinstinct.reporter.core.SuggestionInput(snapshot.topics, recentTopics)),
                 snapshot.topics, selectedCode).firstOrNull()
         }
@@ -333,13 +339,10 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 if (SHOW_SUGGESTION_PERCENT) Text(s.t("review.suggestion_hint", mapOf("category" to suggestionTopic.name, "percent" to suggestionPercent)))
                 else Text(s.t("review.suggestion_hint_plain", mapOf("category" to suggestionTopic.name)))
             }
-            TextButton(onClick = { openTopics?.invoke(); categoryMenu = true }) { Text(s.t("review.suggestion_change")) }
+            TextButton(enabled = !topicsLoading, onClick = { openTopics?.invoke(); categoryMenu = true }) { Text(s.t("review.suggestion_change")) }
             if (suggestionPercent < 50) Text(s.t("review.suggestion_low"), style = MaterialTheme.typography.bodySmall)
         }
-        // Issue #158: experimental, advisory only. Silent unless the private model is on the phone and scores high.
-        val sidewalkCode = io.github.reihlinstinct.reporter.recognition.SidewalkSuggestion.SIDEWALK_SUBJECT_CODE
-        val sidewalkTopicAvailable = topicSnapshot?.topics.orEmpty().any { it.code == sidewalkCode }
-        if (sidewalkTopicAvailable && io.github.reihlinstinct.reporter.recognition.SidewalkSuggestion.shouldSuggest(sidewalkScore, selectedCode)) {
+        if (showSidewalkSuggestion) {
             TextButton(onClick = {
                 draft = policy(io.github.reihlinstinct.reporter.core.TemplateSession.withSubject(draft, "municipal:" + sidewalkCode, textTyped))
                 if (!draft.needsPlate()) plates = emptyList()
