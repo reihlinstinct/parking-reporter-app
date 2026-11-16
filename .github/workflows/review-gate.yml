@@ -1,0 +1,92 @@
+name: Review gate
+
+# Required status check "Independent review gate": green only when a genuine
+# independent review with "Verdict: PASS" exists at the PR's exact head commit.
+# Lets GitHub auto-merge honour the repository's merge gate (green CI plus an
+# independent review of the exact head). Read-only: it reports through the job
+# result and writes nothing. It does not check the @claude request.
+#
+# Genuine reviewers: the owner's reviewer accounts listed in REVIEWERS. Reviews
+# by github-actions[bot], by the reihlinstinct account, and any review marked
+# "not independent" never count. A new head commit has no review until a new one
+# is submitted at that commit.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
+  pull_request_review:
+    types: [submitted, dismissed, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: review-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: Independent review gate
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      REVIEWERS: reihl reihl-poke reihl-folk
+    steps:
+      - name: Require a genuine PASS review at the exact head
+        run: |
+          set -euo pipefail
+          # Current head from the API, so a re-run after a push cannot pass on an old head.
+          head=$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha)
+          if [ "$head" != "$HEAD_SHA" ]; then
+            echo "Event head $HEAD_SHA is not the current head $head; a newer run decides."
+            exit 1
+          fi
+          gh api --paginate "repos/$REPO/pulls/$PR/reviews?per_page=100" > /tmp/reviews.json
+          python3 - <<'PY'
+          import json, os, re, sys
+          head = os.environ["HEAD_SHA"]
+          allowed = set(os.environ["REVIEWERS"].split())
+          text = open("/tmp/reviews.json").read()
+          # --paginate concatenates JSON arrays; decode them one by one
+          dec, i, reviews = json.JSONDecoder(), 0, []
+          while i < len(text):
+              while i < len(text) and text[i].isspace():
+                  i += 1
+              if i >= len(text):
+                  break
+              obj, i = dec.raw_decode(text, i)
+              reviews.extend(obj if isinstance(obj, list) else [obj])
+          ok = []
+          for r in reviews:
+              user = (r.get("user") or {}).get("login", "")
+              body = r.get("body") or ""
+              if user not in allowed or r.get("commit_id") != head:
+                  continue
+              if r.get("state") not in ("COMMENTED", "APPROVED"):
+                  continue
+              if re.search(r"not independent", body, re.I):
+                  continue
+              if re.search(r"Verdict:\W*PASS", body):
+                  ok.append(f"{user} review {r.get('id')} ({r.get('state')})")
+          # A later CHANGES_REQUESTED or FAIL verdict by an allowed reviewer at this head blocks.
+          blocked = [
+              f"{(r.get('user') or {}).get('login')} review {r.get('id')}"
+              for r in reviews
+              if (r.get("user") or {}).get("login") in allowed
+              and r.get("commit_id") == head
+              and (r.get("state") == "CHANGES_REQUESTED"
+                   or re.search(r"Verdict:\W*(FAIL|BLOCK)", r.get("body") or ""))
+          ]
+          if blocked:
+              print("Blocking review at this head:", ", ".join(blocked))
+              sys.exit(1)
+          if not ok:
+              print(f"No genuine PASS review at head {head}.")
+              sys.exit(1)
+          print(f"Genuine PASS at head {head}: " + "; ".join(ok))
+          PY
