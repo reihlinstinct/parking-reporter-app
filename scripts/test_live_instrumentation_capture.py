@@ -24,6 +24,9 @@ elif a[:2]==['shell','pidof']:
     value=['111','','222','222'][min(n,3)]
     if value: print(value)
     else: sys.exit(1)
+elif a[:3]==['shell','getprop','sys.boot_completed']:
+    if os.environ.get('MOCK_NOT_READY'): sys.exit(1)
+    print('1')
 elif a[:3]==['shell','am','instrument']:
     print('PRIVATE synthetic instrumentation')
     time.sleep(3.3)
@@ -69,6 +72,23 @@ class CaptureTest(unittest.TestCase):
 
     def test_instrument_failure_preserves_rc_and_private_diagnostics(self):
         self.capture(7)
+
+    def test_device_never_ready_skips_instrument_and_records_254(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            (base / 'adb').write_text(MOCK)
+            (base / 'adb').chmod(0o700)
+            (base / 'sleep').write_text("#!/bin/sh\nexit 0\n")
+            (base / 'sleep').chmod(0o700)
+            env = dict(os.environ, PATH=str(base) + os.pathsep + os.environ['PATH'],
+                       MOCK_STATE=tmp, MOCK_RC='0', MOCK_NOT_READY='1')
+            out = base / 'private'
+            result = subprocess.run(['sh', str(ROOT / 'scripts/capture-live-instrumentation.sh'), str(out)],
+                                    env=env, text=True, capture_output=True, timeout=20)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual((out / 'instrumentation.rc').read_text().strip(), '254')
+            self.assertIn('device not ready', (out / 'instrumentation.txt').read_text())
+            self.assertNotIn('INSTRUMENTATION_STATUS_CODE', (out / 'instrumentation.txt').read_text())
 
     def test_logcat_failure_does_not_stop_instrument_or_other_collection(self):
         self.capture(0, logcat_fail=True)

@@ -65,11 +65,9 @@ jobs:
           TRIAL_DATA_KEY: ${{ secrets.TRIAL_DATA_KEY }}
         run: |
           set -euo pipefail
-          # The guard keys on the photo AND the text: the same wording with a
-          # different photo is a different case and may be filed. A prior
-          # record that also names this photo, or an older record written
-          # before photos were recorded (it cannot prove a different photo),
-          # still refuses the same text. Cross-run duplicate guard: every past run that staged params left
+          # The guard keys on the photo, not the wording: the same wording with
+          # a different photo is a different case and may be filed. Cross-run
+          # duplicate guard: every past run that staged params left
           # a small encrypted run record naming its approved digest. Records
           # that cannot be decrypted fail CLOSED. Records expire with their
           # 14-day artifact retention; a re-dispatch after that window needs
@@ -96,13 +94,19 @@ jobs:
                 echo 'cannot decrypt a prior run record - refusing (fail closed)'; exit 1; }
               prior=$(jq -r '.approvedSha256' <<<"$plain")
               prior_photo=$(jq -r '.approvedPhotoSha256 // ""' <<<"$plain")
-              if [ "$prior" = "$APPROVED_SHA256_INPUT" ] && { [ -z "$prior_photo" ] || [ "$prior_photo" = "$APPROVED_PHOTO_SHA256_INPUT" ]; }; then
-                echo 'this approved text and photo already went through a live run - refusing to re-dispatch'
+              # The report identity is the photo: the wording is not a
+              # duplicate-protection parameter. A record naming this photo
+              # refuses whatever the text. An older record without a photo
+              # digest cannot be compared by photo, so it still refuses the
+              # same text (fail closed) until it expires.
+              if { [ -n "$prior_photo" ] && [ "$prior_photo" = "$APPROVED_PHOTO_SHA256_INPUT" ]; } \
+                || { [ -z "$prior_photo" ] && [ "$prior" = "$APPROVED_SHA256_INPUT" ]; }; then
+                echo 'this photo (or an older record of this text) already went through a live run - refusing to re-dispatch'
                 exit 1
               fi
             done < <(jq -r '.artifacts[] | select(.expired | not) | [.id, .archive_download_url] | @tsv' <<<"$resp")
           fi
-          echo 'no prior live run took this text and photo'
+          echo 'no prior live run took this photo'
       - name: Build app and test APKs
         run: sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
       - name: Pre-download the emulator system image (direct, before any tunnel)

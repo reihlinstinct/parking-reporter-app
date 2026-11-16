@@ -47,8 +47,23 @@ stop_capture() {
 }
 trap stop_capture EXIT
 trap 'exit 130' INT TERM
-adb shell am instrument -w -r -e class io.github.reihlinstinct.reporter.live.LiveEmulatorSubmissionTest il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > "$work/instrumentation.txt" 2>&1
-printf '%s\n' "$?" > "$work/instrumentation.rc"
+# Run 43801552279 lost its device ("adb: device offline") exactly as this
+# command started. Wait for the device to answer first; if it never does, skip
+# the instrument (nothing can be sent) and record rc=254 so the workflow's
+# before-start proof, not the test, explains the failure.
+ready=''
+for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    state=$(timeout -k 2 10 adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+    if [ "$state" = "1" ]; then ready=1; break; fi
+    sleep 2
+done
+if [ -n "$ready" ]; then
+    adb shell am instrument -w -r -e class io.github.reihlinstinct.reporter.live.LiveEmulatorSubmissionTest il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > "$work/instrumentation.txt" 2>&1
+    printf '%s\n' "$?" > "$work/instrumentation.rc"
+else
+    printf 'device not ready before instrument\n' > "$work/instrumentation.txt"
+    printf '254\n' > "$work/instrumentation.rc"
+fi
 # Android 11+ historical exit reasons distinguish Java/native crashes, LMK,
 # ANR and requested exits where supported. A failed dump is private evidence.
 timeout -k 2 30 adb shell dumpsys activity exit-info "$package" > "$work/process-exit-info.txt" 2>&1 || true
