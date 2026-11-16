@@ -101,7 +101,9 @@ class Client:
     def status(self, head, state, description):
         result = self.api('/statuses/' + head, {'state': state, 'context': CONTEXT,
             'description': description, 'target_url': os.environ.get('RUN_URL', '')})
-        if result.get('sha') != head or result.get('context') != CONTEXT:
+        # GitHub's commit-status response identifies the SHA in url, not a sha field.
+        if (result.get('url') != self.base + '/statuses/' + head
+                or result.get('context') != CONTEXT or result.get('state') != state):
             raise RuntimeError('Status response did not identify the exact requested head')
 
 
