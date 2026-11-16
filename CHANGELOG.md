@@ -6,6 +6,53 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.51.0] - 2026-11-16
+
+### Features
+
+- feat(ui): crossing street entry, nearest-address result and description line (#492) (21d63b6)
+- feat(municipal): nearest numbered address for a street crossing (#487) (#488) (56a49a2)
+- feat(ui): server-returned case number on the success screen in every build (#490) (3b52286)
+- feat(ui): report history lists sent reports by case number, else WebCaseIdInCRM (#493) (#494) (1991229)
+- feat(ui): full-screen report-submitted confirmation; debug-only server receipt line (#478) (#480) (3a9b033)
+- feat(review): show the category suggestion hint with confidence and a change-category button (#109, #105) (#466) (c291e2d)
+- feat(core): CategorySuggester interface, low-confidence stub and visible-hint rules (#109, #105) (#463) (99192e5)
+- feat(assistant): OPEN_APP_FEATURE voice shortcut to the new-report deep link (#149 step 1) (#458) (4b8380b)
+- feat(ocr): benchmark ML Kit window variants for plate localisation (#442) (#443) (485d590)
+
+### Fixes
+
+- fix(reports): a sent report appears only in the history (#498) (#499) (976b9e3)
+- fix(review): category hint follow-ups from #466 (#486) (9fe4b19)
+- fix(municipal): address lookup matches points named by the tail of the street name (#484) (ee64b8a)
+- fix(ui): adjustResize for API 29 keyboard insets; run API 29 in PR checks (#472) (2014ec8)
+- fix(review): hide the stub's constant confidence percent in the category hint (#109, #105) (#468) (164ef70)
+- fix(review): restore edit panel, plate suggestions, manual address and discard dialog after rotation (#358, #419) (#461) (35ea1b6)
+- fix(security): recover SecureSettings from a permanently invalidated Keystore key (#132) (#459) (dbd1fe7)
+- fix(assistant): roll back a partial enable, test categoryEntryAction, document deep link trust (#390) (#460) (f62d4d8)
+- fix(plate): include minus sign, maqaf and narrow spaces in the CD/CC dash run (#451) (#453) (5df4cdf)
+- fix(plate): tighten the CD/CC and police boundaries in mentions (#445) (#450) (c99c6ec)
+
+### Other changes
+
+- test(live): show the report-history tab after the submission in the live recording (#496) (1452117)
+- ci(live): stage the encrypted input bundle for the owner-approved pavement-island request of 16 Nov (#467 pattern) (#481) (#482) (547bbe7)
+- test(live): confirm the location by street and house when the photo has no GPS (#477) (#479) (e4944fa)
+- ci: rotating emulator slices over a month (#475) (a8ac524)
+- ci(live): stage the encrypted input bundle for the owner-approved bollard request of 16 Nov (#467 pattern) (#476) (de39eea)
+- test: wait for window focus before pressBack in the design back test (#444) (#473) (55471c3)
+- ci(live): key the duplicate guard on text and photo; skip the burn only with device-side proof (#470) (78f8759)
+- ci(live): stage the encrypted input bundle for the owner-approved live app submission of 16 Nov (#467) (3db6d12)
+- test(ci): exercise the real recovery failure path and make the preflight summary best-effort (#388) (#465) (08de4c4)
+- test(ocr): count bounds and raw text sources per engine file (#448) (#464) (2d799f7)
+- test(settings): pin phone display mapping and international fallback (#235) (#462) (48f8bcc)
+- docs: voice entry phase 2 proposal (#149) (#457) (b56e426)
+- Pin remaining AppShell state-writing launches to the main dispatcher (#386) (#456) (a5a48fc)
+- Normalize OfflineReceiver malformed JSON to the typed rejection (#353) (#455) (68e1e05)
+- test(ci): log the dry-check cleanup result and fix the doc order (#452) (#454) (88799de)
+- test(ci): leave the emulator awake and unlocked after the device-ready dry check (#444) (#449) (3ce0e35)
+- docs(ocr): record the window localisation benchmark result (#442) (#447) (1038dcd)
+
 ## [0.50.0] - 2026-11-15
 
 ### Features
