@@ -64,3 +64,14 @@ class JacocoRequirementTest(unittest.TestCase):
         result = self.run_main(self.FULL, "--require-jacoco")
         self.assertEqual(result.returncode, 0)
         self.assertIn("line 75.0%", result.stdout)
+
+    def test_floor_passes_at_or_above_and_fails_below(self):
+        self.assertEqual(self.run_main(self.FULL, "--min-line-coverage", "75").returncode, 0)
+        below = self.run_main(self.FULL, "--min-line-coverage", "80")
+        self.assertEqual(below.returncode, 1)
+        self.assertIn("below the floor", below.stderr)
+
+    def test_floor_fails_when_nothing_was_measured(self):
+        result = self.run_main(self.EMPTY, "--min-line-coverage", "50")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("cannot check the floor", result.stderr)

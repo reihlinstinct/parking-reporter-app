@@ -36,7 +36,10 @@ tasks.register<JacocoReport>("jacocoDebugUnitTestReport") {
     reports {
         xml.required.set(true)
     }
-    val generatedFilters = listOf("**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*")
+    // Generated code is not production logic: R/BuildConfig, Room DAO implementations (*_Impl), Compose
+    // ComposableSingletons and the KSP appfunctions registry. Hand-written code is never excluded (issue #44).
+    val generatedFilters = listOf("**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*",
+        "**/*_Impl.class", "**/*_Impl$*.class", "**/ComposableSingletons*.class", "appfunctions_aggregated_deps/**")
     // The Kotlin output folder differs between plugin versions; take every debug class folder that exists (issue #44: the report was empty).
     classDirectories.setFrom(fileTree(layout.buildDirectory) {
         include("tmp/kotlin-classes/debug/**/*.class", "intermediates/built_in_kotlinc/debug/**/*.class", "intermediates/javac/debug/**/*.class")
