@@ -43,6 +43,7 @@ import io.github.reihlinstinct.reporter.i18n.systemLanguageCode
 import io.github.reihlinstinct.reporter.ledger.ReportDatabase
 import io.github.reihlinstinct.reporter.ledger.ReportRecord
 import io.github.reihlinstinct.reporter.municipal.FileSubmissionStateStore
+import io.github.reihlinstinct.reporter.municipal.historyIdentifier
 import io.github.reihlinstinct.reporter.municipal.MunicipalClient
 import io.github.reihlinstinct.reporter.municipal.OkHttpMunicipalClient
 import io.github.reihlinstinct.reporter.municipal.AddressLookupPin
@@ -553,7 +554,21 @@ fun AppShell(
     Box(Modifier.padding(innerPadding)) {
     when (page) {
         "camera" -> CaptureScreen(onCaptured = { file -> val hint = pendingCategory; pendingCategory = null; startReview(file, categoryHint = hint) }, onCancel = { pendingCategory = null; page = "home" })
-        "reports" -> ReportsScreen(records, open = { openRecord(it) })
+        "reports" -> {
+            // Sent reports show the identifier saved with the submission (case number, else WebCaseIdInCRM).
+            var sentIdentifiers by remember { mutableStateOf<List<String>>(emptyList()) }
+            LaunchedEffect(records) {
+                sentIdentifiers = withContext(Dispatchers.IO) {
+                    records.mapNotNull { record ->
+                        try {
+                            FileSubmissionStateStore.forReport(File(context.noBackupFilesDir, "submissions"), record.stableId).read()
+                                ?.let { historyIdentifier(it) }
+                        } catch (_: Exception) { null }
+                    }
+                }
+            }
+            ReportsScreen(records, open = { openRecord(it) }, sentIdentifiers = sentIdentifiers)
+        }
         "submitted" -> SubmittedScreen(submittedReceipt, onDone = { submittedReceipt = null; page = "reports" })
         "review" -> draft?.let { value ->
             val preview by produceState<Pair<io.github.reihlinstinct.reporter.evidence.OutgoingImage, androidx.compose.ui.graphics.ImageBitmap>?>(null, original) {

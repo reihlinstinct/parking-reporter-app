@@ -6,6 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import io.github.reihlinstinct.reporter.i18n.LocalStrings
 import io.github.reihlinstinct.reporter.i18n.ProvideStringsIfMissing
@@ -24,7 +25,7 @@ internal fun reportsOpenReadyText(strings: Strings, stableId: String): String =
  * draft with a ready digest is "ready to send"; anything else is a draft.
  */
 @Composable
-fun ReportsScreen(records: List<ReportRecord>, open: (ReportRecord) -> Unit) {
+fun ReportsScreen(records: List<ReportRecord>, open: (ReportRecord) -> Unit, sentIdentifiers: List<String> = emptyList()) {
     val drafts = records.filter { it.reviewedDigest == null }
     val ready = records.filter { it.reviewedDigest != null }
     ProvideStringsIfMissing {
@@ -42,7 +43,9 @@ fun ReportsScreen(records: List<ReportRecord>, open: (ReportRecord) -> Unit) {
             OutlinedButton(onClick = { open(record) }, modifier = Modifier.fillMaxWidth()) { Text(reportsOpenReadyText(s, record.stableId)) }
         }
         Text(s.t("reports.history.title"), style = MaterialTheme.typography.titleMedium)
-        Text(s.t("reports.history.empty"), style = MaterialTheme.typography.bodySmall)
+        if (sentIdentifiers.isEmpty()) Text(s.t("reports.history.empty"), style = MaterialTheme.typography.bodySmall)
+        // Sent reports: the identifier as the city returned it (case number, else WebCaseIdInCRM), nothing added.
+        sentIdentifiers.forEach { id -> Text(id, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.testTag("history-identifier")) }
     }
     }
 }
