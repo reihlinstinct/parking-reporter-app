@@ -168,7 +168,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, CATEGORIES)
         try:
             body = json.loads(raw.decode("utf-8"))
-        except (ValueError, UnicodeError):
+        except (ValueError, UnicodeError, RecursionError):
             return self._send(400, {"Success": False})
         if not isinstance(body, dict):
             return self._send(400, {"Success": False})

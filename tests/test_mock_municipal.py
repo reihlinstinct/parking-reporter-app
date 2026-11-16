@@ -60,6 +60,17 @@ class MockMunicipalTest(unittest.TestCase):
         self.assertEqual(json.loads(self.post("Login", {})[1])["Token"], "mock-token-1")
         self.assertEqual(json.loads(self.post("CreateCase", {})[1])["CaseIdInCRM"], "mock-case-1")
 
+    def test_deeply_nested_json_returns_400(self):
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=3)
+        try:
+            c.request("POST", PREFIX + "CreateCase", b"[" * 2000 + b"]" * 2000,
+                      {"Ocp-Apim-Subscription-Key": "k"})
+            response = c.getresponse()
+            self.assertEqual(response.status, 400)
+            self.assertIs(json.loads(response.read())["Success"], False)
+        finally:
+            c.close()
+
     def test_missing_key_is_401(self):
         self.assertEqual(self.post("Login", {}, key="")[0], 401)
 
