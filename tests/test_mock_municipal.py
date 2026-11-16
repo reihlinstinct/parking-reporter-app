@@ -61,9 +61,13 @@ class MockMunicipalTest(unittest.TestCase):
         self.assertEqual(json.loads(self.post("CreateCase", {})[1])["CaseIdInCRM"], "mock-case-1")
 
     def test_deeply_nested_json_returns_400(self):
+        # Exceed the decoder's separate recursion limit on Python 3.12+ too.
+        payload = b"[" * 100_000 + b"]" * 100_000
+        with self.assertRaises(RecursionError):
+            json.loads(payload)
         c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=3)
         try:
-            c.request("POST", PREFIX + "CreateCase", b"[" * 2000 + b"]" * 2000,
+            c.request("POST", PREFIX + "CreateCase", payload,
                       {"Ocp-Apim-Subscription-Key": "k"})
             response = c.getresponse()
             self.assertEqual(response.status, 400)
