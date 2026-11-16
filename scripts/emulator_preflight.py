@@ -109,8 +109,12 @@ def main():
     (directory / 'preflight.rc').write_text(str(code) + '\n')
     target = os.environ.get('GITHUB_STEP_SUMMARY')
     if target:
-        with open(target, 'a', encoding='utf-8') as summary:
-            summary.write(summary_markdown(directory, code))
+        # Best effort: a summary failure must never skip the diagnostics below or change the result.
+        try:
+            with open(target, 'a', encoding='utf-8') as summary:
+                summary.write(summary_markdown(directory, code))
+        except OSError:
+            print('PREFLIGHT note: job summary could not be written')
     if code:
         # System diagnostics only, before any synthetic app flow or private input.
         for name, command in [('preflight-window.txt', ('shell', 'dumpsys', 'window')),

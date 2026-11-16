@@ -109,3 +109,34 @@ class PreflightSummaryTest(unittest.TestCase):
             self.assertIn('**FAIL**', target.read_text())
             self.assertIn('not a clean first boot', target.read_text())
             self.assertEqual('1\n', (directory / 'preflight.rc').read_text())
+
+    def test_real_recovery_failure_writes_marker_before_failing_and_summary_reports_it(self):
+        # #388: only probe and recover are patched, so recorded_recovery and gate run for real.
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            target = directory / 'job.md'
+            with patch('sys.argv', ['preflight', '--report-dir', temp]), \
+                    patch.object(m, 'probe', return_value='ANR'), \
+                    patch.object(m, 'recover', side_effect=RuntimeError('boot failed')), \
+                    patch.object(m, 'adb', return_value='diagnostics'), \
+                    patch.object(m.time, 'sleep'), \
+                    patch.dict('os.environ', {'GITHUB_STEP_SUMMARY': str(target)}):
+                self.assertEqual(1, m.main())
+            self.assertTrue((directory / 'preflight-recovered.txt').exists())
+            self.assertEqual('1\n', (directory / 'preflight.rc').read_text())
+            self.assertIn('not a clean first boot', target.read_text())
+            self.assertIn('**FAIL**', target.read_text())
+            self.assertEqual('diagnostics', (directory / 'preflight-window.txt').read_text())
+
+    def test_summary_append_failure_does_not_skip_diagnostics_or_change_the_result(self):
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            missing = directory / 'no-such-dir' / 'job.md'
+            with patch('sys.argv', ['preflight', '--report-dir', temp]), \
+                    patch.object(m, 'gate', return_value=1), \
+                    patch.object(m, 'adb', return_value='diagnostics'), \
+                    patch.dict('os.environ', {'GITHUB_STEP_SUMMARY': str(missing)}):
+                self.assertEqual(1, m.main())
+            self.assertEqual('1\n', (directory / 'preflight.rc').read_text())
+            self.assertEqual('diagnostics', (directory / 'preflight-window.txt').read_text())
+            self.assertEqual('diagnostics', (directory / 'preflight-processes.txt').read_text())
