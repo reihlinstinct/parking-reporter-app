@@ -61,10 +61,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APPROVED_SHA256_INPUT: ${{ inputs.approved_sha256 }}
+          APPROVED_PHOTO_SHA256_INPUT: ${{ inputs.approved_photo_sha256 }}
           TRIAL_DATA_KEY: ${{ secrets.TRIAL_DATA_KEY }}
         run: |
           set -euo pipefail
-          # Cross-run duplicate guard: every past run that staged params left
+          # The guard keys on the photo AND the text: the same wording with a
+          # different photo is a different case and may be filed. A prior
+          # record that also names this photo, or an older record written
+          # before photos were recorded (it cannot prove a different photo),
+          # still refuses the same text. Cross-run duplicate guard: every past run that staged params left
           # a small encrypted run record naming its approved digest. Records
           # that cannot be decrypted fail CLOSED. Records expire with their
           # 14-day artifact retention; a re-dispatch after that window needs
@@ -90,13 +95,14 @@ jobs:
               plain=$(openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in "$enc" -pass env:TRIAL_DATA_KEY) || {
                 echo 'cannot decrypt a prior run record - refusing (fail closed)'; exit 1; }
               prior=$(jq -r '.approvedSha256' <<<"$plain")
-              if [ "$prior" = "$APPROVED_SHA256_INPUT" ]; then
-                echo 'this approved digest already went through a live run - refusing to re-dispatch'
+              prior_photo=$(jq -r '.approvedPhotoSha256 // ""' <<<"$plain")
+              if [ "$prior" = "$APPROVED_SHA256_INPUT" ] && { [ -z "$prior_photo" ] || [ "$prior_photo" = "$APPROVED_PHOTO_SHA256_INPUT" ]; }; then
+                echo 'this approved text and photo already went through a live run - refusing to re-dispatch'
                 exit 1
               fi
             done < <(jq -r '.artifacts[] | select(.expired | not) | [.id, .archive_download_url] | @tsv' <<<"$resp")
           fi
-          echo 'no prior live run took this digest'
+          echo 'no prior live run took this text and photo'
       - name: Build app and test APKs
         run: sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
       - name: Pre-download the emulator system image (direct, before any tunnel)
@@ -348,6 +354,7 @@ jobs:
             # missing file.
             if [ -s /tmp/live-e2e/live-log.txt ]; then touch /tmp/live-e2e/log.collected; fi
             adb shell "run-as il.sidewalks.reporter ls files/" > /tmp/live-e2e/files-app.txt 2>/dev/null || true
+            adb shell "run-as il.sidewalks.reporter sh -c 'test -d no_backup && ls -A no_backup/submissions 2>/dev/null | wc -l'" > /tmp/live-e2e/submissions-count.txt 2>/dev/null || true
             adb shell "run-as il.sidewalks.reporter.test ls files/" > /tmp/live-e2e/files-test.txt 2>/dev/null || true
             adb shell "run-as il.sidewalks.reporter cat files/live-e2e-case-number.txt" > /tmp/live-e2e/live-e2e-case-number.txt || true
             adb shell "run-as il.sidewalks.reporter cat files/live-e2e-submission-state.json" > /tmp/live-e2e/live-e2e-submission-state.json || true
@@ -391,11 +398,26 @@ jobs:
         if: always()
         env:
           APPROVED_SHA256_INPUT: ${{ inputs.approved_sha256 }}
+          APPROVED_PHOTO_SHA256_INPUT: ${{ inputs.approved_photo_sha256 }}
           TRIAL_DATA_KEY: ${{ secrets.TRIAL_DATA_KEY }}
         run: |
           set -euo pipefail
           cd /tmp/live-e2e
-          if [ -f staged.ok ] && [ -f log.collected ] \
+          if [ -f staged.ok ] && [ ! -f log.collected ] \
+            && [ "$(cat instrumentation.rc 2>/dev/null || echo 0)" != "0" ] \
+            && [ -f instrumentation.txt ] && ! grep -q 'INSTRUMENTATION_STATUS_CODE' instrumentation.txt \
+            && [ "$(tr -d '[:space:]' < submissions-count.txt 2>/dev/null || true)" = "0" ] \
+            && [ ! -s live-e2e-case-number.txt ]; then
+            # failed_before_start: device-side proof that nothing was sent.
+            # The instrument command failed (rc != 0), no marker log exists,
+            # its raw output shows no test-started status, AND the device
+            # answered afterwards with an empty submissions directory in the
+            # app's no_backup area (the real submission state is written
+            # there before the first network call) and no case number.
+            # An unreachable device leaves submissions-count.txt empty, so
+            # that case still burns the digest. No run record is written.
+            echo 'failed before any submission state existed (device answered, none found); digest stays re-runnable'
+          elif [ -f staged.ok ] && [ -f log.collected ] \
             && grep -q 'LIVE_E2E START' live-log.txt \
             && ! grep -q 'LIVE_E2E SEND_TAPPED' live-log.txt; then
             # Only a positively collected log that proves the test started but
@@ -410,8 +432,8 @@ jobs:
               if grep -q 'LIVE_E2E OUTCOME_UNKNOWN' live-log.txt; then outcome=outcome_unknown; fi
               if grep -q 'LIVE_E2E SUBMITTED case=' live-log.txt; then outcome=submitted; fi
             fi
-            jq -n --arg d "$APPROVED_SHA256_INPUT" --arg o "$outcome" --arg r "$GITHUB_RUN_ID" --arg a "$GITHUB_RUN_ATTEMPT" --arg t "$(date -u +%FT%TZ)" \
-              '{approvedSha256:$d, outcome:$o, runId:$r, runAttempt:$a, recordedAt:$t}' > run-record.json
+            jq -n --arg d "$APPROVED_SHA256_INPUT" --arg p "$APPROVED_PHOTO_SHA256_INPUT" --arg o "$outcome" --arg r "$GITHUB_RUN_ID" --arg a "$GITHUB_RUN_ATTEMPT" --arg t "$(date -u +%FT%TZ)" \
+              '{approvedSha256:$d, approvedPhotoSha256:$p, outcome:$o, runId:$r, runAttempt:$a, recordedAt:$t}' > run-record.json
             openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
               -in run-record.json -out live-e2e-run-record.json.enc -pass env:TRIAL_DATA_KEY
             shred -u run-record.json

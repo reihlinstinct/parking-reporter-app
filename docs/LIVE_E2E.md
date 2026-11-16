@@ -29,20 +29,27 @@ on a schedule.
    `confirm = FILE-LIVE-REPORT`.
 2. **Environment approval**: the job runs in the `m0-trial-submit`
    environment, whose required reviewer is the owner.
-3. **Cross-run duplicate guard**: the run refuses an `approved_sha256` that
-   any earlier live run already sent (or may have sent), checked against
+3. **Cross-run duplicate guard**: the run refuses a live run whose
+   `approved_sha256` (text) AND `approved_photo_sha256` (photo) both match an
+   earlier run that already sent (or may have sent), checked against
    earlier runs' encrypted run records (`live-e2e-run-record-encrypted`
    artifacts, read with `actions: read` and decrypted with
-   `TRIAL_DATA_KEY`). An undecryptable record fails the run closed. Runs are
-   serialized by the workflow concurrency group. The burn is fail-safe: a
-   run record is written unless the positively collected marker log proves
-   the test started and the send was never tapped, so a run that failed
-   early (emulator boot, staging, a refused gate) burns nothing and the
-   same digest can be dispatched again - while a missing or empty log
-   (timeout, cancel, dead adb) still burns. The records expire
-   with their 14-day artifact retention: a re-dispatch of an older case
-   needs the manual 106 check first, exactly like an ambiguous outcome
-   (below).
+   `TRIAL_DATA_KEY`). The same wording with a different photo is a different
+   case and may be filed. A record written before photos were recorded has no
+   photo digest, cannot prove a different photo, and still refuses the same
+   text until it expires. An undecryptable record fails the run closed. Runs
+   are serialized by the workflow concurrency group. The burn is fail-safe: a
+   run record is written unless one of two proofs shows nothing was sent:
+   (a) the positively collected marker log proves the test started and the
+   send was never tapped; or (b) the run failed before any submission existed:
+   the instrument command failed, no marker log exists, its raw output has no
+   test-started status line, and the device answered afterwards with an empty
+   `no_backup/submissions` directory and no case number. A missing or empty
+   log with no such device-side proof (timeout, cancel, dead adb) still burns.
+   The records expire with their 14-day artifact retention: a re-dispatch of
+   an older case needs the manual 106 check first, exactly like an ambiguous
+   outcome (below).
+
 4. **Digest binding**: the dispatch input `approved_sha256` must equal the
    sha256 of the staged `TRIAL_APPROVED_TEXT` secret. The runner checks this
    before staging and the test re-checks it on-device before the flow

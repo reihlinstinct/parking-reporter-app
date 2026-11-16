@@ -130,6 +130,18 @@ class LiveE2eSafetyTest {
         assertTrue(yaml.contains("LIVE_E2E START"))
         assertTrue(yaml.contains("live-e2e-run-record"))
         assertTrue(yaml.contains("refusing to re-dispatch"))
+        // The guard keys on text AND photo: the same wording with a different
+        // photo may be filed; the same text and photo (or an older record with
+        // no photo) is still refused.
+        assertTrue(yaml.contains("approvedPhotoSha256"))
+        assertTrue(yaml.contains("this approved text and photo already went through a live run"))
+        assertTrue(yaml.contains("prior_photo=") && yaml.contains("{ [ -z "))
+        // A run that failed before any submission existed leaves no record,
+        // but only with device-side proof (no test-start line, empty
+        // submissions directory read from the device afterwards).
+        assertTrue(yaml.contains("INSTRUMENTATION_STATUS_CODE"))
+        assertTrue(yaml.contains("submissions-count.txt"))
+        assertTrue(yaml.contains("failed before any submission state existed"))
         // An ambiguous outcome fails loudly with the check-106-first rule.
         assertTrue(yaml.contains("OUTCOME_UNKNOWN"))
         assertTrue(yaml.contains("check 106 first"))
