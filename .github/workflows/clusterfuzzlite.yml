@@ -4,6 +4,8 @@ on:
     paths:
       - '.clusterfuzzlite/**'
       - '.github/workflows/clusterfuzzlite.yml'
+      - 'app/build.gradle.kts'
+      - 'app/src/main/java/io/github/reihlinstinct/reporter/security/SecureSettings.kt'
       - 'app/src/main/java/io/github/reihlinstinct/reporter/core/**'
       - 'app/src/main/java/io/github/reihlinstinct/reporter/intake/**'
       - 'docs/prpkg2-spec/**'
