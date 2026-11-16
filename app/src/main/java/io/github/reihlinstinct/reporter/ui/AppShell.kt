@@ -551,18 +551,18 @@ fun AppShell(
         "camera" -> CaptureScreen(onCaptured = { file -> val hint = pendingCategory; pendingCategory = null; startReview(file, categoryHint = hint) }, onCancel = { pendingCategory = null; page = "home" })
         "reports" -> {
             // Sent reports show the identifier saved with the submission (case number, else WebCaseIdInCRM).
-            var sentIdentifiers by remember { mutableStateOf<List<String>>(emptyList()) }
+            var sent by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
             LaunchedEffect(records) {
-                sentIdentifiers = withContext(Dispatchers.IO) {
+                sent = withContext(Dispatchers.IO) {
                     records.mapNotNull { record ->
                         try {
                             FileSubmissionStateStore.forReport(File(context.noBackupFilesDir, "submissions"), record.stableId).read()
-                                ?.let { historyIdentifier(it) }
+                                ?.let { historyIdentifier(it) }?.let { record.stableId to it }
                         } catch (_: Exception) { null }
                     }
                 }
             }
-            ReportsScreen(records, open = { openRecord(it) }, sentIdentifiers = sentIdentifiers)
+            ReportsScreen(records, open = { openRecord(it) }, sentIdentifiers = sent.map { it.second }, sentStableIds = sent.map { it.first }.toSet())
         }
         "submitted" -> SubmittedScreen(submittedReceipt, onDone = { submittedReceipt = null; page = "reports" })
         "review" -> draft?.let { value ->
