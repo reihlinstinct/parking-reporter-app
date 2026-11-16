@@ -93,7 +93,7 @@ class ShellSettingsExtractionTest {
      */
     private val submitExtracted = linkedMapOf(
         "shell.submit.sent" to "נשלח לעירייה. מספר קריאה: {case_number}",
-        "shell.submit.case_number_received" to "התקבל בעירייה",
+        "shell.submit.sent_unassigned" to "נשלח לעירייה. המספר טרם הוקצה",
         "shell.submit.already_sent" to "הדיווח כבר נשלח. מספר קריאה: {case_number}",
         "shell.submit.blocked.not_ready" to "השלם את הטיוטה לפני שליחה",
         "shell.submit.blocked.missing_credentials" to "חסרים פרטי גישה לעירייה בהגדרות",
@@ -195,7 +195,7 @@ class ShellSettingsExtractionTest {
         val d = "settings unreadable"
         fun blocked(reason: Reason) = municipalOutcomeText(he, Outcome.Blocked(reason, d))
         assertEquals("נשלח לעירייה. מספר קריאה: \u20661234567\u2069", municipalOutcomeText(he, Outcome.Submitted("1234567")))
-        assertEquals("נשלח לעירייה. מספר קריאה: ${fsi}התקבל בעירייה$pdi", municipalOutcomeText(he, Outcome.Submitted(null)))
+        assertEquals("נשלח לעירייה. המספר טרם הוקצה", municipalOutcomeText(he, Outcome.Submitted(null)))
         assertEquals("הדיווח כבר נשלח. מספר קריאה: \u20667654321\u2069", municipalOutcomeText(he, Outcome.AlreadySubmitted("7654321")))
         assertEquals("הדיווח כבר נשלח. מספר קריאה: \u2066\u2069", municipalOutcomeText(he, Outcome.AlreadySubmitted(null)))
         val expected = mapOf(

@@ -32,9 +32,9 @@ import io.github.reihlinstinct.reporter.i18n.ProvideStringsIfMissing
 
 /**
  * Full-screen confirmation shown after the municipality accepted a report.
- * [receiptText] is the server confirmation line and is passed only by debug
- * builds (null in release): it is shown small at the bottom and never
- * written anywhere else.
+ * [receiptText] is the server confirmation line (the case number as the city
+ * returned it; debug builds add the other returned references). It is shown
+ * small at the bottom and never written anywhere else.
  */
 @Composable
 fun SubmittedScreen(receiptText: String?, onDone: () -> Unit) = ProvideStringsIfMissing {

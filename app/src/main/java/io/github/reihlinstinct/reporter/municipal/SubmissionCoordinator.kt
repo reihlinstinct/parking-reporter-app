@@ -38,7 +38,7 @@ class SubmissionCoordinator(
 
     sealed interface Outcome {
         /** The city accepted the case; [caseNumber] is the municipal number. */
-        data class Submitted(val caseNumber: String?) : Outcome
+        data class Submitted(val caseNumber: String?, val caseId: String? = null, val webCaseId: String? = null) : Outcome
 
         /** This exact report was already submitted earlier (state short-circuit). */
         data class AlreadySubmitted(val caseNumber: String?) : Outcome
@@ -180,7 +180,8 @@ class SubmissionCoordinator(
         }
         val caseNumber = result.case["CaseNumberInCRM"] as? String
         return when (result) {
-            is SubmissionResult.Submitted -> Outcome.Submitted(caseNumber)
+            is SubmissionResult.Submitted -> Outcome.Submitted(caseNumber,
+                result.case["CaseIdInCRM"] as? String, result.case["WebCaseIdInCRM"] as? String)
             is SubmissionResult.AlreadySubmitted -> Outcome.AlreadySubmitted(caseNumber)
         }
     }
