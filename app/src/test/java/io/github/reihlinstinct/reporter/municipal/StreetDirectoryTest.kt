@@ -122,4 +122,28 @@ class StreetDirectoryTest {
             assertTrue(e.message!!.contains("absent"))
         }
     }
+
+    private fun tailFixture(extraStreet: String = "") = StreetDirectory.load("""
+        {"version": 1,
+         "streets": [
+           {"StreetCode": "1787", "StreetName": "גנרל פייר קניג"},
+           {"StreetCode": "728", "StreetName": "י.ל. דיסקין"}$extraStreet
+         ],
+         "addresses": [
+           [31.7683, 35.2137, "33", "פייר קניג"],
+           [31.77, 35.214, "7", "דיסקין"]
+         ]}
+    """.trimIndent())
+
+    @Test fun pointNamedWithTheTailOfTheStreetNameResolvesForExplicitLookup() {
+        val d = tailFixture()
+        assertEquals("גנרל פייר קניג 33", d.findConfirmedAddress("גנרל פייר קניג", "33").address)
+        assertEquals("י.ל. דיסקין 7", d.findConfirmedAddress("י.ל. דיסקין", "7").address)
+    }
+
+    @Test fun tailMatchStaysUniqueAndHouseExact() {
+        assertTrue(runCatching { tailFixture().findConfirmedAddress("גנרל פייר קניג", "40") }.isFailure)
+        val ambiguous = tailFixture(""", {"StreetCode": "9", "StreetName": "רחוב פייר קניג"}""")
+        assertTrue(runCatching { ambiguous.findConfirmedAddress("גנרל פייר קניג", "33") }.isFailure)
+    }
 }

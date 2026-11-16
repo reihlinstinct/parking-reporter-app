@@ -15,7 +15,9 @@ class StreetDirectory private constructor(
     private val aliases: Map<String, Set<String>>,
     private val points: List<Point>,
 ) {
-    private data class Point(val x: Double, val y: Double, val house: String, val code: String?, val name: String, val latitude: Double, val longitude: Double)
+    private data class Point(val x: Double, val y: Double, val house: String, val code: String?, val name: String, val latitude: Double, val longitude: Double,
+        /** Street the point belongs to when its short name is the tail words of exactly one street name (e.g. point "פייר קניג", street "גנרל פייר קניג"). Used only for explicit street+house lookups. */
+        val tailCode: String? = null)
 
     data class Resolved(
         val streetCode: String,
@@ -31,13 +33,15 @@ class StreetDirectory private constructor(
     /** Offline explicit address lookup, never device location or nearest-house guessing. */
     fun findConfirmedAddress(street: String, house: String): ConfirmableAddress {
         val resolved = resolve(street, house, null)
-        val matches = points.filter { it.code == resolved.streetCode && normalize(it.house) == normalize(resolved.house) }
+        val matches = points.filter { it.onStreet(resolved.streetCode) && normalize(it.house) == normalize(resolved.house) }
         require(matches.isNotEmpty())
         val point = matches.first()
         if (matches.any { hypot(it.x - point.x, it.y - point.y) > 1.0 })
             throw MunicipalInputException("This address has multiple location points. Confirm another exact address.")
         return ConfirmableAddress("${resolved.streetName} ${resolved.house}", point.latitude, point.longitude)
     }
+
+    private fun Point.onStreet(streetCode: String): Boolean = code == streetCode || (code == null && tailCode == streetCode)
 
     private fun normalize(text: String): String {
         val folded = Normalizer.normalize(text, Normalizer.Form.NFKC)
@@ -72,7 +76,7 @@ class StreetDirectory private constructor(
             if (!HOUSE_NUMBER.matches(resolvedHouse) || resolvedHouse.length > HOUSE_NUMBER_MAX_LENGTH) {
                 throw MunicipalInputException("Invalid house number.")
             }
-            val housePoints = points.filter { it.code == code && normalize(it.house) == normalize(resolvedHouse) }
+            val housePoints = points.filter { it.onStreet(code) && normalize(it.house) == normalize(resolvedHouse) }
             if (gpsXy != null) {
                 x = gpsXy.first; y = gpsXy.second
                 if (housePoints.isNotEmpty() &&
@@ -81,7 +85,7 @@ class StreetDirectory private constructor(
                         "The supplied address is more than 200 m from the photo GPS. Check the address.")
                 }
                 if (housePoints.isEmpty()) {
-                    val streetPoints = points.filter { it.code == code }
+                    val streetPoints = points.filter { it.onStreet(code) }
                     if (streetPoints.isNotEmpty() &&
                         streetPoints.minOf { p -> hypot(p.x - x, p.y - y) } > 200) {
                         throw MunicipalInputException(
@@ -136,6 +140,17 @@ class StreetDirectory private constructor(
     companion object {
         private val HEBREW_FINALS = mapOf('ך' to 'כ', 'ם' to 'מ', 'ן' to 'נ', 'ף' to 'פ', 'ץ' to 'צ')
 
+        private fun words(text: String): List<String> =
+            text.split(Regex("[^\\p{L}\\p{N}]+")).map { StreetDirectoryHolder.normalizeStatic(it) }.filter { it.isNotEmpty() }
+
+        /** The one street whose name ends with all the words of [pointName], or null when none or several do. */
+        private fun tailMatch(pointName: String, streetWords: List<Pair<String, List<String>>>): String? {
+            val tail = words(pointName)
+            if (tail.isEmpty()) return null
+            return streetWords.filter { (_, w) -> w.size > tail.size && w.takeLast(tail.size) == tail }
+                .map { it.first }.singleOrNull()
+        }
+
         private fun inJerusalem(lat: Double, lon: Double): Boolean =
             lat in 31.65..31.95 && lon in 35.05..35.35
 
@@ -163,6 +178,7 @@ class StreetDirectory private constructor(
                     if (key.isNotEmpty()) aliases.getOrPut(key) { mutableSetOf() }.add(code)
                 }
             }
+            val streetWords = streets.map { (c, n) -> c to words(n) }
             val points = mutableListOf<Point>()
             val addressRows = data["addresses"] as? List<Any?> ?: emptyList()
             for (row in addressRows) {
@@ -176,7 +192,9 @@ class StreetDirectory private constructor(
                 if (!inJerusalem(lat, lon)) continue
                 val (x, y) = Itm.toItm(lat, lon)
                 val codes = aliases[StreetDirectoryHolder.normalizeStatic(name)] ?: emptySet()
-                points.add(Point(x.toDouble(), y.toDouble(), house, codes.singleOrNull(), name, lat, lon))
+                val exact = codes.singleOrNull()
+                val tail = if (exact == null && codes.isEmpty()) tailMatch(name, streetWords) else null
+                points.add(Point(x.toDouble(), y.toDouble(), house, exact, name, lat, lon, tail))
             }
             return StreetDirectory(streets, aliases, points)
         }
