@@ -93,6 +93,16 @@
       "allow_paths": [
         "trial/live-input.sha256"
       ]
+    },
+    ".clusterfuzzlite": {
+      "allow": [
+        "*.kt",
+        "*.py",
+        "*.yaml",
+        "*.sh",
+        "*.md",
+        "Dockerfile"
+      ]
     }
   }
 }
