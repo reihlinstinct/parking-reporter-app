@@ -18,7 +18,10 @@ object OfflineReceiver {
     private fun schema(json: JSONObject) = require(json.get("schema") is Number && json.getInt("schema") == 2)
     private fun parseCanonical(text: String): JSONObject {
         val json = JSONObject(text)
-        require(EncryptedPackage.canonical(json) == text) // rejects duplicate keys/noncanonical encodings after parse
+        // canonical() refuses arrays and other unsupported values with IllegalStateException; a received package
+        // must only ever be rejected with IllegalArgumentException (#353).
+        val again = try { EncryptedPackage.canonical(json) } catch (e: IllegalStateException) { throw IllegalArgumentException("Unsupported canonical value") }
+        require(again == text) // rejects duplicate keys/noncanonical encodings after parse
         return json
     }
     private fun validateReport(report: JSONObject) {

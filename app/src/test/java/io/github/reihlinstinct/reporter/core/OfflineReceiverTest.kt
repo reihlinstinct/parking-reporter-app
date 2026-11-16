@@ -83,7 +83,9 @@ class OfflineReceiverTest {
     }
     @Test fun malformedJsonIsAlwaysTheTypedRejection() {
         val f = Fixture(); val chunks = (0 until f.upload.count).map { f.upload.chunk(it, 7) }; val done = f.upload.completion(7)
-        val bad = listOf("{", "[]", "null", "{\"schema\":\"2\"}", "{\"schema\":2}", "{\"schema\":2,\"package\":5}", "")
+        val bad = listOf("{", "[]", "null", "{\"schema\":\"2\"}", "{\"schema\":2}", "{\"schema\":2,\"package\":5}", "",
+            // arrays and nested arrays: canonical() refuses them with IllegalStateException; open() must still reject with the typed error
+            "{\"a\":[1]}", "{\"schema\":2,\"x\":[1]}", "{\"schema\":2,\"x\":{\"y\":[1]}}")
         for (text in bad) {
             assertThrows(IllegalArgumentException::class.java) {
                 OfflineReceiver.open(text, chunks, done, 7, "test-receiver", "test-device",
