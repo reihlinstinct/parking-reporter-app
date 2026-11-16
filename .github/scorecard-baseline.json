@@ -64,6 +64,14 @@
       "evidence": "security-events: write",
       "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/395",
       "reason": "CodeQL advanced setup (#395) needs security-events: write to upload results. Job-scoped, top level stays read-all, runs only on schedule and workflow_dispatch from main, no PAT. Replaces Default setup. Order: Default setup is turned off first (owner-approved), because code scanning rejects advanced-workflow uploads while Default setup is on; this workflow is then dispatched once, and Default setup is turned back on if that run fails."
+    },
+    {
+      "path": ".github/workflows/review-gate.yml",
+      "rule": "job-write",
+      "scope": "gate",
+      "evidence": "statuses: write",
+      "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/518",
+      "reason": "Owner approved 2026-11-16: one trusted-base review-verifier job writes an exact-head status; no PR code checkout, no content changes. Auto-merge remains disabled pending separate proof and approval."
     }
   ]
 }

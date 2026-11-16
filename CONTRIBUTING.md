@@ -38,7 +38,9 @@ CI never calls the municipal API on its own: no workflow that runs on push, pull
 
 ## Merge gate and auto-merge
 
-A pull request merges only with green required CI at its exact head and a genuine independent review with "Verdict: PASS" at that same commit. The "Independent review gate" check (.github/workflows/review-gate.yml) enforces the review half: it passes only for a PASS review at the current head from an allowed reviewer account, and a new head commit has no review until a new one is posted. Reviews by github-actions[bot], by the reihlinstinct account, or marked "not independent" never count. The gate does not check the `@claude` request; request it at each new head as before. Auto-merge may be enabled on a pull request only after that request is made.
+Merge only with green CI and a genuine independent PASS at the exact head, after requesting `@claude` at each new head. The trusted-base review status writer never checks out PR code and re-reads live heads and review states. Dismissed, stale, self-authored and untrusted reviews do not count.
+
+**Auto-merge stays disabled.** The shared GitHub Actions status identity can be impersonated by another same-repo workflow with write permission. This status is a review aid, not proof against that threat. A separately authenticated check source or an enforced trusted workflow is needed before automatic merging can replace manual validation. Do not change required checks or enable auto-merge without the owner's separate approval after proof.
 
 ## Issues: labels, milestones and order
 
