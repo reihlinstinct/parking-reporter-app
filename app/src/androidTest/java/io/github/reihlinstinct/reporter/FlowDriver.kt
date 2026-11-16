@@ -206,9 +206,39 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
             compose.onNodeWithText("מספר לוחית (ספרות בלבד)").performScrollTo().performTextReplacement(fields.plate)
         }
         compose.onNodeWithText("רחוב ומספר בית שאישרת").performScrollTo().performTextReplacement(fields.address)
+        confirmLocationByAddressIfPhotoHasNone(fields.address)
         compose.onNodeWithText("הטקסט המדויק לבדיקה").performScrollTo().performTextReplacement(fields.text)
         // Location comes from the original photo EXIF, never hidden UI injection.
         // The synthetic provider supplies known synthetic EXIF; live uses real EXIF.
+    }
+
+    /**
+     * A photo without GPS (run 43813427507: send never enabled, nothing sent) leaves
+     * the location unconfirmed, and the review screen then keeps send disabled until
+     * the street and house are looked up in the pinned directory and confirmed. This
+     * does what the user does: types the approved street and house, taps the lookup
+     * and confirms the address it finds. Photos with GPS never show the missing-location
+     * note, so they are untouched. Failures throw fixed text, never the address.
+     */
+    private fun confirmLocationByAddressIfPhotoHasNone(address: String) {
+        if (compose.onAllNodesWithText("לא נמצא מיקום בתמונה", substring = true).fetchSemanticsNodes().isEmpty()) return
+        val (street, house) = io.github.reihlinstinct.reporter.municipal.SubmissionCoordinator.splitAddress(address)
+            ?: throw AssertionError("approved address has no house number; cannot confirm the location")
+        compose.onNodeWithText("רחוב בירושלים").performScrollTo().performTextReplacement(street)
+        compose.onNodeWithText("מספר בית").performScrollTo().performTextReplacement(house)
+        hideImeAndAwaitHidden()
+        clickButton("חפש כתובת מדויקת")
+        try {
+            compose.waitUntil(15_000) { compose.onAllNodesWithText("אשר את כתובת האירוע").fetchSemanticsNodes().isNotEmpty() }
+        } catch (e: ComposeTimeoutException) {
+            throw AssertionError("the address lookup returned no confirmable address")
+        }
+        clickButton("אשר את כתובת האירוע")
+        try {
+            compose.waitUntil(10_000) { compose.onAllNodesWithText("לא נמצא מיקום בתמונה", substring = true).fetchSemanticsNodes().isEmpty() }
+        } catch (e: ComposeTimeoutException) {
+            throw AssertionError("the location was not confirmed")
+        }
     }
 
     /** Shared-photo entry through a locally saved draft. */
