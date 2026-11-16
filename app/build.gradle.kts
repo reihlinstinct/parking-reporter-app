@@ -37,7 +37,11 @@ tasks.register<JacocoReport>("jacocoDebugUnitTestReport") {
         xml.required.set(true)
     }
     val generatedFilters = listOf("**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*")
-    classDirectories.setFrom(fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) { exclude(generatedFilters) })
+    // The Kotlin output folder differs between plugin versions; take every debug class folder that exists (issue #44: the report was empty).
+    classDirectories.setFrom(fileTree(layout.buildDirectory) {
+        include("tmp/kotlin-classes/debug/**/*.class", "intermediates/built_in_kotlinc/debug/**/*.class", "intermediates/javac/debug/**/*.class")
+        exclude(generatedFilters)
+    })
     sourceDirectories.setFrom("src/main/java", "src/main/kotlin")
     executionData.setFrom(fileTree(layout.buildDirectory) { include("outputs/unit_test_code_coverage/debugUnitTest/*.exec") })
 }

@@ -155,7 +155,7 @@ def case_block(case):
         body_parts.append('_Passed; the runner records no per-assertion detail for passing tests._')
     return '<details><summary>' + head + '</summary>\n\n' + '\n\n'.join(body_parts) + '\n\n</details>'
 
-def render(title, cases, coverage):
+def render(title, cases, coverage, jacoco_requested=False):
     total = len(cases)
     failed = [c for c in cases if c.status == 'failed']
     skipped = [c for c in cases if c.status == 'skipped']
@@ -167,6 +167,8 @@ def render(title, cases, coverage):
     if coverage:
         cov = ' · '.join(f'{k.lower()} {v:.1f}%' for k, v in coverage.items())
         lines += [f'**Coverage (JaCoCo):** {cov}', '']
+    elif jacoco_requested:
+        lines += ['**Coverage (JaCoCo):** not measured. The report has no line counters (no class files were analysed), so no percentage is stated.', '']
     if failed:
         lines += [f'### Failed ({len(failed)})', '']
         lines += [case_block(c) for c in failed]
@@ -195,6 +197,7 @@ def main():
     parser.add_argument('--unittest', action='append', default=[])
     parser.add_argument('--jacoco', action='append', default=[])
     parser.add_argument('--check', action='store_true')
+    parser.add_argument('--require-jacoco', action='store_true', help='fail when --jacoco is given but the report has no line counters')
     args = parser.parse_args()
     cases = []
     for pattern in args.junit:
@@ -208,7 +211,7 @@ def main():
     coverage = None
     for pattern in args.jacoco:
         coverage = load_jacoco(pattern) or coverage
-    summary = render(args.title, cases, coverage)
+    summary = render(args.title, cases, coverage, bool(args.jacoco))
     target = os.environ.get('GITHUB_STEP_SUMMARY')
     if target:
         with open(target, 'a', encoding='utf-8') as handle:
@@ -217,6 +220,9 @@ def main():
         sys.stdout.write(summary)
     if args.check and (not cases or any(c.status == 'failed' for c in cases)):
         print(f'test_summary: gate failed ({len(cases)} tests, {sum(1 for c in cases if c.status=="failed")} failed)', file=sys.stderr)
+        return 1
+    if args.require_jacoco and not (coverage and 'LINE' in coverage):
+        print('test_summary: JaCoCo report has no line counters, coverage not measured', file=sys.stderr)
         return 1
     return 0
 
