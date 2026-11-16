@@ -13,6 +13,9 @@ import io.github.reihlinstinct.reporter.i18n.ProvideStringsIfMissing
 import io.github.reihlinstinct.reporter.i18n.Strings
 import io.github.reihlinstinct.reporter.ledger.ReportRecord
 
+internal fun pendingReports(records: List<ReportRecord>, sentStableIds: Set<String>): List<ReportRecord> =
+    records.filter { it.stableId !in sentStableIds }
+
 internal fun reportsOpenDraftText(strings: Strings, stableId: String): String =
     strings.t("reports.drafts.open", mapOf("id" to stableId.take(8)))
 
@@ -25,9 +28,11 @@ internal fun reportsOpenReadyText(strings: Strings, stableId: String): String =
  * draft with a ready digest is "ready to send"; anything else is a draft.
  */
 @Composable
-fun ReportsScreen(records: List<ReportRecord>, open: (ReportRecord) -> Unit, sentIdentifiers: List<String> = emptyList()) {
-    val drafts = records.filter { it.reviewedDigest == null }
-    val ready = records.filter { it.reviewedDigest != null }
+fun ReportsScreen(records: List<ReportRecord>, open: (ReportRecord) -> Unit, sentIdentifiers: List<String> = emptyList(), sentStableIds: Set<String> = emptySet()) {
+    // A report the city already accepted lives in the history only, never in drafts or ready to send.
+    val pending = pendingReports(records, sentStableIds)
+    val drafts = pending.filter { it.reviewedDigest == null }
+    val ready = pending.filter { it.reviewedDigest != null }
     ProvideStringsIfMissing {
     val s = LocalStrings.current
     Column(Modifier.fillMaxSize().systemBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
