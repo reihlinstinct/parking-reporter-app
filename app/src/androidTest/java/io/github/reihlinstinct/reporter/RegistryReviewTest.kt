@@ -28,11 +28,6 @@ class RegistryReviewTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set(io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(InstrumentationRegistry.getInstrumentation().targetContext))
     }
-    // Every test starts from the default language (above); put it back after the English test too.
-    @org.junit.After fun resetLanguage() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set(io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(context))
-    }
     private fun draft(plate: String = "1234567") = ReviewDraft(Evidence("registry-synthetic", "a".repeat(64), null, 31.0, 35.0),
         plate, "רחוב בדיקה 12", "municipal:1145", "רכב $plate חונה על המדרכה", emptySet())
     private fun snapshot(type: DisabilityTagType) = RegistrySnapshot(DisabilityLookupResult.Found(type),
@@ -233,13 +228,20 @@ class RegistryReviewTest {
         compose.onNodeWithText("רישום הרכב במאגר אינו פעיל", substring = true).assertDoesNotExist()
     }
 
-    @Test fun inactiveRecordLineShowsInEnglishOnlyWhenInactive() {
-        io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(InstrumentationRegistry.getInstrumentation().targetContext).set("en")
+    @Test fun inactiveRecordLineShowsInAnotherLanguageOnlyWhenInactive() {
+        // A non-default catalog language taken from the catalog (no hardcoded code), supplied directly to the screen.
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val catalog = io.github.reihlinstinct.reporter.i18n.AppCatalog.get(context)
+        val other = catalog.languages.first { it.code != io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(context) }.code
+        val strings = io.github.reihlinstinct.reporter.i18n.Strings(catalog, other)
+        val line = strings.t("registry.licence.inactive_record")
+        assertNotEquals("registry.licence.inactive_record", line)
         var inactive by mutableStateOf(true)
-        compose.setContent { AppTheme { Surface(Modifier.fillMaxSize()) { RegistryStatus("1234567", remember(inactive) { inactiveLookup(inactive) }) } } }
-        compose.waitUntil(10_000) { compose.onAllNodesWithText("The vehicle record in this registry is not active", substring = true).fetchSemanticsNodes().isNotEmpty() }
+        compose.setContent { AppTheme { androidx.compose.runtime.CompositionLocalProvider(io.github.reihlinstinct.reporter.i18n.LocalStrings provides strings) {
+            Surface(Modifier.fillMaxSize()) { RegistryStatus("1234567", remember(inactive) { inactiveLookup(inactive) }) } } } }
+        compose.waitUntil(10_000) { compose.onAllNodesWithText(line, substring = true).fetchSemanticsNodes().isNotEmpty() }
         compose.runOnIdle { inactive = false }
-        compose.waitUntil(10_000) { compose.onAllNodesWithText("The vehicle record in this registry is not active", substring = true).fetchSemanticsNodes().isEmpty() }
+        compose.waitUntil(10_000) { compose.onAllNodesWithText(line, substring = true).fetchSemanticsNodes().isEmpty() }
     }
 
 }
