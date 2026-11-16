@@ -273,7 +273,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     val dismissKeyboard = { focusManager.clearFocus(); keyboard?.hide() }
-    Column(Modifier.fillMaxSize().systemBarsPadding().imePadding().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxSize().systemBarsPadding().imePaddingCompat().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(s.t("review.title"), style = MaterialTheme.typography.titleLarge)
             TextButton(onClick = { if (editing) dismissKeyboard(); editing = !editing }) { Text(s.t(if (editing) "review.edit.done" else "review.edit.start")) }

@@ -427,6 +427,14 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
      * blocker. False when the IME is still visible after the bounded wait.
      * App-side IME handling is #256.
      */
+    /** Before API 30 the compat isVisible(ime) is an estimate that never reports hidden (weekly API 29
+     *  run 43710836441), so ask the input method service itself. */
+    private fun imeShownByInputMethodService(): Boolean {
+        val fd = InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("dumpsys input_method")
+        val text = android.os.ParcelFileDescriptor.AutoCloseInputStream(fd).bufferedReader().use { it.readText() }
+        return text.contains("mInputShown=true")
+    }
+
     private fun hideImeAndAwaitHidden(): Boolean {
         val rule = compose as? AndroidComposeTestRule<*, *> ?: return true
         val decorView = rule.activity.window.decorView
@@ -435,7 +443,8 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         }
         return try {
             compose.waitUntil(IME_HIDE_WAIT_MS) {
-                rule.runOnUiThread {
+                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) !imeShownByInputMethodService()
+                else rule.runOnUiThread {
                     ViewCompat.getRootWindowInsets(decorView)?.isVisible(WindowInsetsCompat.Type.ime()) != true
                 }
             }
