@@ -224,6 +224,8 @@ class LiveEmulatorSubmissionTest {
                     val caseNumber = Regex("\\d{4}-\\d{7}").find(shown)?.value
                     File(context.filesDir, "live-e2e-case-number.txt").writeText(caseNumber ?: "")
                     marker("SUBMITTED case=" + if (caseNumber != null) "present" else "unparsed")
+                    // The recording also shows the report-history tab with the sent report's identifier.
+                    driver.showHistoryAfterSubmission()
                     cleanOwnedPhoto(context, hash)
                     cleaned = true
                     marker("DONE")

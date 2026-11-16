@@ -511,6 +511,25 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
         }
     }
 
+    /**
+     * Live runs only, after a confirmed submission: goes back to the reports tab and holds there so the screen
+     * recording shows the history entry (case number, else WebCaseIdInCRM) of the report just sent. Best effort:
+     * it never fails the run, the submission outcome is already settled. The screenshot goes to the same
+     * encrypted bundle as the others.
+     */
+    fun showHistoryAfterSubmission(holdMs: Long = 6_000) {
+        try {
+            clickButton("חזרה לדיווחים")
+            compose.waitUntil(15_000) {
+                compose.onAllNodesWithTag("history-identifier").fetchSemanticsNodes().isNotEmpty()
+            }
+            screenshot("live-e2e-history.png")
+            Thread.sleep(holdMs)
+        } catch (e: Throwable) {
+            println("FLOW_DRIVER history view skipped: ${e.javaClass.simpleName}")
+        }
+    }
+
     /** Full text of the first node containing [substring], or null. */
     fun nodeTextContaining(substring: String): String? {
         val node = compose.onAllNodesWithText(substring, substring = true)
