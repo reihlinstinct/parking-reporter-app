@@ -22,6 +22,8 @@ import org.junit.Test
 
 /** Issues #105/#109/#158: the category hint is only a hint, never a decision. Synthetic data only. */
 class ReviewSuggestionHintTest {
+    /** The catalog value is wrapped in bidi isolates, so match the fixed prefix and the topic name apart. */
+    private val HINT = "הצעה:"
     @get:Rule val compose = createComposeRule()
     @Before fun language() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -48,10 +50,10 @@ class ReviewSuggestionHintTest {
     @Test fun hintShowsWithNoCategoryAndSelectsOnlyWhenTapped() {
         val selected = mutableListOf<String>()
         show(selected = selected)
-        compose.onNodeWithText("הצעה: חניה על מדרכה").assertExists()
+        compose.onNodeWithText(HINT, substring = true).assertExists()
         compose.onNodeWithText("שנה קטגוריה").assertIsEnabled()
         compose.runOnIdle { assertEquals(emptyList<String>(), selected) }
-        compose.onNodeWithText("הצעה: חניה על מדרכה").performClick()
+        compose.onNodeWithText(HINT, substring = true).performClick()
         compose.runOnIdle { assertEquals(listOf("1145"), selected) }
     }
 
@@ -61,7 +63,7 @@ class ReviewSuggestionHintTest {
             compose.onAllNodesWithTagCount("sidewalk_suggestion") == 1
         }
         compose.onNodeWithTag("sidewalk_suggestion").assertExists()
-        assertEquals(0, compose.onAllNodesWithTextCount("הצעה: חניה על מדרכה"))
+        assertEquals(0, compose.onAllNodesWithTextCount(HINT))
     }
 
     @Test fun changeCategoryIsDisabledWhileTopicsLoad() {
@@ -72,5 +74,5 @@ class ReviewSuggestionHintTest {
     private fun androidx.compose.ui.test.junit4.ComposeContentTestRule.onAllNodesWithTagCount(tag: String) =
         onAllNodes(androidx.compose.ui.test.hasTestTag(tag)).fetchSemanticsNodes().size
     private fun androidx.compose.ui.test.junit4.ComposeContentTestRule.onAllNodesWithTextCount(text: String) =
-        onAllNodes(androidx.compose.ui.test.hasText(text)).fetchSemanticsNodes().size
+        onAllNodes(androidx.compose.ui.test.hasText(text, substring = true)).fetchSemanticsNodes().size
 }
