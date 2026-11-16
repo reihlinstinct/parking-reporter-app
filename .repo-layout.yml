@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "comment": "Repo layout contract, enforced by tools/check_repo_layout.py. JSON syntax: valid YAML too, parses with the Python standard library. required: paths that must exist (trailing slash = directory). root: files at the repository root must match allow and never match deny. directories: every tracked top-level directory must be listed; files under it (any depth) must match one allow pattern (matched against the basename).",
+  "required": [
+    "README.md",
+    "LICENSE",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "SECURITY.md",
+    "ACCESSIBILITY.md",
+    ".github/CODEOWNERS",
+    ".github/ISSUE_TEMPLATE/"
+  ],
+  "root": {
+    "allow": [
+      "*.kts",
+      "*.md",
+      "*.properties",
+      "*.txt",
+      "*.yml",
+      ".editorconfig",
+      ".gitignore",
+      "LICENSE",
+      "gradlew",
+      "deps-inventory.json"
+    ],
+    "deny": [
+      "*.py"
+    ]
+  },
+  "directories": {
+    ".github": {
+      "allow": [
+        "*.json",
+        "*.md",
+        "*.yml",
+        "CODEOWNERS"
+      ]
+    },
+    "app": {
+      "allow": [
+        "*.json",
+        "*.kt",
+        "*.kts",
+        "*.txt",
+        "*.xml",
+        "*.java"
+      ]
+    },
+    "docs": {
+      "allow": [
+        "*.md"
+      ],
+      "allow_paths": [
+        "docs/assets/disability_tag_triangle.svg",
+        "docs/assets/disability_tag_wheelchair.svg"
+      ]
+    },
+    "gradle": {
+      "allow": [
+        "*.properties"
+      ],
+      "allow_paths": [
+        "gradle/wrapper/gradle-wrapper.jar"
+      ]
+    },
+    "scripts": {
+      "allow": [
+        "*.py",
+        "*.sh"
+      ]
+    },
+    "tests": {
+      "allow": [
+        "*.py"
+      ]
+    },
+    "tools": {
+      "allow": [
+        "*.py"
+      ]
+    },
+    "trial": {
+      "allow": [
+        "*.md",
+        "*.py",
+        "*.enc"
+      ],
+      "comment": "Temporary M0 engine trial assets; removed after the trial concludes.",
+      "allow_paths": [
+        "trial/live-input.sha256"
+      ]
+    }
+  }
+}

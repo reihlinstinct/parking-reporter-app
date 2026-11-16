@@ -1,0 +1,71 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "54340c9bf76fd96e24f7fd16eee41624",
+    "entities": [
+      {
+        "tableName": "reports",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`stableId` TEXT NOT NULL, `originalSha256` TEXT NOT NULL, `originalRelativePath` TEXT NOT NULL, `revision` INTEGER NOT NULL, `draftJson` TEXT NOT NULL, `reviewedDigest` TEXT, PRIMARY KEY(`stableId`))",
+        "fields": [
+          {
+            "fieldPath": "stableId",
+            "columnName": "stableId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "originalSha256",
+            "columnName": "originalSha256",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "originalRelativePath",
+            "columnName": "originalRelativePath",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "revision",
+            "columnName": "revision",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "draftJson",
+            "columnName": "draftJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reviewedDigest",
+            "columnName": "reviewedDigest",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "stableId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_reports_originalSha256",
+            "unique": true,
+            "columnNames": [
+              "originalSha256"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_reports_originalSha256` ON `${TABLE_NAME}` (`originalSha256`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '54340c9bf76fd96e24f7fd16eee41624')"
+    ]
+  }
+}

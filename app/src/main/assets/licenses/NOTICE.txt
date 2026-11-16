@@ -1,0 +1,8 @@
+This software is based in part on the work of the Independent JPEG Group.
+Tesseract4Android: Copyright 2019 Adaptech s.r.o., Robert Pösel, Apache-2.0.
+Tesseract OCR and tessdata_fast English model: Apache-2.0.
+Leptonica: BSD-style license, included in Leptonica.txt.
+libpng: license included in libpng.txt.
+Tink: Copyright Google LLC, Apache-2.0.
+AndroidX and Kotlin dependencies retain their upstream licenses.
+The application source MIT license does not replace third-party license terms.

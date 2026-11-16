@@ -1,0 +1,107 @@
+name: Repository checks
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+
+concurrency:
+  group: repository-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scaffold:
+    name: Scaffolding and policy checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6 (Node 24)
+        with:
+          persist-credentials: false
+      - name: Check repository foundation
+        run: python3 scripts/check_repository.py
+      # Android build, unit and emulator/e2e jobs belong to M1.
+      # This workflow never uses secrets or calls the municipal API.
+  staging-regression:
+    name: Live staging regression (first-install files dir)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6 (Node 24)
+        with:
+          persist-credentials: false
+      # Reproduces the fresh-install device state (no files/ dir) with a mock
+      # adb; guards the fix for run 42755730613's pre-launch staging failure.
+      - name: Run the staging regression test
+        run: bash scripts/test-stage-live-files.sh
+      - name: Test encrypted live process diagnostics (mock adb only)
+        run: python3 scripts/test_live_instrumentation_capture.py
+      - name: Private live photo staging safety tests
+        run: python3 scripts/test_fetch_live_photo.py
+  python-smoke:
+    name: Python tooling smoke test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned tooling dependencies
+        run: |
+          python3 -m venv /tmp/venv
+          /tmp/venv/bin/pip install --require-hashes -r requirements-lock.txt
+      - name: Regression test test summaries and strict installed-upgrade gates
+        run: |
+          python3 -m unittest discover -s tests -p 'test_test_summary.py' -v
+          python3 -m unittest discover -s tests -p 'test_upgrade*.py' -v
+          python3 -m unittest discover -s tests -p 'test_namespace_upgrade_workflow.py' -v
+      - name: Encrypted live input bundle regression tests
+        run: python3 -m unittest discover -s tests -p 'test_live_bundle.py' -v
+      - name: Disability tag vector parity and contrast tests
+        run: python3 -m unittest discover -s tests -p 'test_disability_tag_vectors.py' -v
+      - name: Live emulator API and predownload regression tests
+        run: python3 -m unittest discover -s tests -p 'test_live_emulator_api.py' -v
+      - name: Emulator health gate regression tests
+        run: python3 -m unittest discover -s tests -p test_emulator_preflight.py
+      - name: Offline submit preflight and VPN regression tests
+        run: |
+          /tmp/venv/bin/python -m unittest discover -s tests -p 'test_trial_submit_preflight.py' -v
+          /tmp/venv/bin/python -m unittest discover -s tests -p 'test_vpn_submit.py' -v
+      - name: Weekly matrix failure reporter regression (mock gh, no network)
+        run: python3 -m unittest discover -s tests -p 'test_weekly_matrix_reporter.py' -v
+      - name: Offline OCR network-isolation behavioral regression tests
+        run: /tmp/venv/bin/python -m unittest discover -s tests -p 'test_ocr_network_isolation.py' -v
+      - name: Run synthetic intake smoke tests
+        # pipefail: without it a failing or crashing test run still exits 0 through tee.
+        run: |
+          set -o pipefail
+          /tmp/venv/bin/python scripts/synthetic_intake_prototype.py -v 2>&1 | tee /tmp/unittest.txt
+      - name: Python test summary
+        if: always()
+        # --check: fail the job on failed tests or a zero-test run.
+        run: python3 scripts/test_summary.py --title 'Python tooling smoke tests' --unittest /tmp/unittest.txt --check
+
+  summary:
+    permissions:
+      contents: read
+    name: Run summary
+    if: always()
+    needs: [scaffold, python-smoke]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Write run summary
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/ci/run_summary.py

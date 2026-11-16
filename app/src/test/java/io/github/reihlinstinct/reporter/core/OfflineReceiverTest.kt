@@ -1,0 +1,102 @@
+package io.github.reihlinstinct.reporter.core
+
+import com.google.crypto.tink.*
+import com.google.crypto.tink.hybrid.*
+import com.google.crypto.tink.signature.*
+import io.github.reihlinstinct.reporter.intake.*
+import io.github.reihlinstinct.reporter.security.ReporterSettings
+import org.json.JSONObject
+import org.junit.Assert.*
+import org.junit.Test
+
+class OfflineReceiverTest {
+    private class Fixture(time: String? = "2026-01-01T12:00:00Z", packageTime: String? = null, packagePlate: String? = null, packageSubject: String? = null) {
+        init { HybridConfig.register(); SignatureConfig.register() }
+        val receiver = KeysetHandle.generateNew(HybridKeyTemplates.ECIES_P256_HKDF_HMAC_SHA256_AES128_GCM)
+        val device = KeysetHandle.generateNew(SignatureKeyTemplates.ECDSA_P256)
+        val jpeg = byteArrayOf(-1, -40) + ByteArray(68_000) { 4 } + byteArrayOf(-1, -39)
+        val report = EncryptedPackage.reviewedReport(
+            ReviewDraft(Evidence("synthetic-id", "a".repeat(64), time, 31.0, 35.0),
+                "1234567", "רחוב בדיקה 1", "sidewalk_parking", "בדיקה", emptySet()),
+            ReporterSettings("synthetic", "reporter", "0000000", "000000000", "synthetic@example.invalid"), jpeg)
+        init {
+            if (packageTime != null) report.put("time", packageTime)
+            if (packagePlate != null) report.put("plate", packagePlate)
+            if (packageSubject != null) report.put("subject", packageSubject)
+        }
+        val upload = EncryptedPackage.seal(report, jpeg, EncryptedPackage.approvalDigest(report), "test-receiver", "test-device",
+            receiver.publicKeysetHandle.getPrimitive(HybridEncrypt::class.java), device.getPrimitive(PublicKeySign::class.java))
+        fun open(parts: List<String> = (0 until upload.count).map { upload.chunk(it, 7) }, issue: Long = 7,
+                 key: String = "test-receiver", sender: String = "test-device", complete: String = upload.completion(7),
+                 verifier: PublicKeyVerify = device.publicKeysetHandle.getPrimitive(PublicKeyVerify::class.java)) =
+            OfflineReceiver.open(upload.manifest(), parts, complete, issue, key, sender,
+                receiver.getPrimitive(HybridDecrypt::class.java), verifier)
+    }
+    @Test fun senderAndOfflineReceiverProtocolRoundtrip() {
+        val f = Fixture(); val r = f.open((0 until f.upload.count).reversed().map { f.upload.chunk(it, 7) })
+        assertArrayEquals(f.jpeg, r.jpeg)
+        assertEquals("synthetic-id", r.report.getString("id"))
+        assertEquals("Received(redacted)", r.toString())
+    }
+    @Test fun offsetFreeAndMissingExifRoundtripAndMalformedSignedTimeRefused() {
+        assertEquals("2026-01-01T12:00:00", Fixture("2026-01-01T12:00:00").open().report.getString("time"))
+        assertTrue(ReportTime.validPackageTime(Fixture(null).open().report.getString("time")))
+        for (bad in listOf("tomorrow", "2026-02-30T12:00:00", "2026-01-01", "2026-01-01T25:00:00")) {
+            assertThrows(IllegalArgumentException::class.java) { Fixture(packageTime = bad).open() }
+        }
+    }
+    @Test fun signedPackageCannotChooseItsOwnPlateRequirementByPresence() {
+        for (subject in listOf("sidewalk_parking", "municipal:1144", "municipal:1145")) {
+            assertThrows(IllegalArgumentException::class.java) {
+                Fixture(packagePlate = "", packageSubject = subject).open()
+            }
+            assertEquals("1234567", Fixture(packageSubject = subject).open().report.getString("plate"))
+        }
+        for (subject in listOf("municipal:5164", "municipal:1143")) {
+            assertThrows(IllegalArgumentException::class.java) {
+                Fixture(packageSubject = subject).open()
+            }
+            assertEquals("", Fixture(packagePlate = "", packageSubject = subject).open().report.getString("plate"))
+        }
+    }
+
+    @Test fun wrongIssueKeysAndCompletionRejected() {
+        val f = Fixture()
+        assertThrows(IllegalArgumentException::class.java) { f.open(issue = 8) }
+        assertThrows(IllegalArgumentException::class.java) { f.open(key = "stranger") }
+        assertThrows(IllegalArgumentException::class.java) { f.open(sender = "stranger") }
+        val done = EncryptedPackage.canonical(JSONObject(f.upload.completion(7)).put("complete", false))
+        assertThrows(IllegalArgumentException::class.java) { f.open(complete = done) }
+    }
+    @Test fun missingDuplicateAndCorruptChunksRejected() {
+        val f = Fixture(); val chunks = (0 until f.upload.count).map { f.upload.chunk(it, 7) }
+        assertThrows(IllegalArgumentException::class.java) { f.open(chunks.dropLast(1)) }
+        assertThrows(IllegalArgumentException::class.java) { f.open(List(chunks.size) { chunks[0] }) }
+        val bad = chunks.toMutableList(); val j = JSONObject(bad[0]); val data = j.getString("data")
+        bad[0] = EncryptedPackage.canonical(j.put("data", (if (data[0] == 'A') "B" else "A") + data.substring(1)))
+        assertThrows(IllegalArgumentException::class.java) { f.open(bad) }
+    }
+    @Test fun duplicateJsonKeyAndWhitespaceAreRejected() {
+        val f = Fixture(); val done = f.upload.completion(7)
+        assertThrows(RuntimeException::class.java) { f.open(complete = done.replaceFirst("{", "{\"count\":" + f.upload.count + ",")) }
+        assertThrows(IllegalArgumentException::class.java) { f.open(complete = " " + done) }
+    }
+    @Test fun malformedJsonIsAlwaysTheTypedRejection() {
+        val f = Fixture(); val chunks = (0 until f.upload.count).map { f.upload.chunk(it, 7) }; val done = f.upload.completion(7)
+        val bad = listOf("{", "[]", "null", "{\"schema\":\"2\"}", "{\"schema\":2}", "{\"schema\":2,\"package\":5}", "")
+        for (text in bad) {
+            assertThrows(IllegalArgumentException::class.java) {
+                OfflineReceiver.open(text, chunks, done, 7, "test-receiver", "test-device",
+                    f.receiver.getPrimitive(HybridDecrypt::class.java), f.device.publicKeysetHandle.getPrimitive(PublicKeyVerify::class.java))
+            }
+            assertThrows(IllegalArgumentException::class.java) { f.open(complete = text) }
+            assertThrows(IllegalArgumentException::class.java) { f.open(parts = listOf(text) + chunks.drop(1)) }
+        }
+    }
+    @Test fun strangerSignatureDoesNotCountAsEnrollment() {
+        val f = Fixture(); val stranger = KeysetHandle.generateNew(SignatureKeyTemplates.ECDSA_P256)
+        assertThrows(java.security.GeneralSecurityException::class.java) {
+            f.open(verifier = stranger.publicKeysetHandle.getPrimitive(PublicKeyVerify::class.java))
+        }
+    }
+}

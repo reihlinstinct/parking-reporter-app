@@ -1,0 +1,72 @@
+name: Namespace install upgrade proof
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  install-upgrade:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: reihlinstinct/parking-reporter-app
+          ref: f0cf7a8b75fa5cb686cbc5bd6235a4dfeb16b3fa
+          path: upgrade-baseline
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Create one ephemeral synthetic debug signing identity
+        run: |
+          keytool -genkeypair -keystore "$RUNNER_TEMP/namespace-upgrade-debug.jks" -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 2 -dname "CN=Synthetic namespace upgrade CI" -noprompt
+          echo "UPGRADE_KEYSTORE=$RUNNER_TEMP/namespace-upgrade-debug.jks" >> "$GITHUB_ENV"
+      - name: Build pinned old source with synthetic local seed test
+        run: |
+          cp app/src/androidTest/assets/namespace-upgrade/NamespaceUpgradeSeedTest.kt.txt upgrade-baseline/app/src/androidTest/java/il/sidewalks/reporter/NamespaceUpgradeSeedTest.kt
+          cd upgrade-baseline
+          sh scripts/prepare_wrapper.sh
+          sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest -Pandroid.injected.signing.store.file="$UPGRADE_KEYSTORE" -Pandroid.injected.signing.store.password=android -Pandroid.injected.signing.key.alias=androiddebugkey -Pandroid.injected.signing.key.password=android
+      - run: sh scripts/prepare_wrapper.sh
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: '36'
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: |
+            sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest -Pandroid.injected.signing.store.file="$UPGRADE_KEYSTORE" -Pandroid.injected.signing.store.password=android -Pandroid.injected.signing.key.alias=androiddebugkey -Pandroid.injected.signing.key.password=android
+            sh gradlew --stop || true
+            mkdir -p app/build/reports/namespace-upgrade
+            python3 scripts/emulator_preflight.py --report-dir app/build/reports/namespace-upgrade
+            "$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)" verify --print-certs upgrade-baseline/app/build/outputs/apk/debug/app-debug.apk > app/build/reports/namespace-upgrade/old-certificate.txt
+            "$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)" verify --print-certs app/build/outputs/apk/debug/app-debug.apk > app/build/reports/namespace-upgrade/new-certificate.txt
+            python3 scripts/check_upgrade_certificates.py app/build/reports/namespace-upgrade/old-certificate.txt app/build/reports/namespace-upgrade/new-certificate.txt > app/build/reports/namespace-upgrade/matching-certificate-sha256.txt
+            adb install -r upgrade-baseline/app/build/outputs/apk/debug/app-debug.apk
+            adb install -r upgrade-baseline/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            adb shell am instrument -w -r -e class il.sidewalks.reporter.NamespaceUpgradeSeedTest il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/namespace-upgrade/seed.txt
+            python3 scripts/test_summary.py --title 'Old installed app seed' --instrumentation app/build/reports/namespace-upgrade/seed.txt --check
+            python3 scripts/check_upgrade_test.py app/build/reports/namespace-upgrade/seed.txt il.sidewalks.reporter.NamespaceUpgradeSeedTest seedOldInstall
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            adb shell am instrument -w -r -e namespaceUpgrade 1 -e class io.github.reihlinstinct.reporter.InstalledNamespaceUpgradeTest il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/namespace-upgrade/verify.txt
+            python3 scripts/test_summary.py --title 'New installed namespace preserves old data' --instrumentation app/build/reports/namespace-upgrade/verify.txt --check
+            python3 scripts/check_upgrade_test.py app/build/reports/namespace-upgrade/verify.txt io.github.reihlinstinct.reporter.InstalledNamespaceUpgradeTest oldInstalledDataSurvivesReplaceInstall
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: namespace-install-upgrade-proof
+          path: app/build/reports/namespace-upgrade/
+          if-no-files-found: error
+          retention-days: 14

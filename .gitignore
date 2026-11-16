@@ -1,0 +1,37 @@
+# Android and local tooling
+.gradle/
+.kotlin/
+**/build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+# Signing and credentials
+*.jks
+*.keystore
+*.p12
+*.pem
+.env
+.env.*
+!.env.example
+secrets/
+credentials/
+# Real evidence and local report stores (synthetic fixtures are reviewed separately)
+private-data/
+evidence/
+reports/
+*.db
+*.db-shm
+*.db-wal
+# Generated distributions and local checks
+*.apk
+*.aab
+__pycache__/
+*.pyc
+
+# Official Gradle wrapper is tracked for CodeQL autobuild discovery.
+# scripts/prepare_wrapper.sh still verifies its SHA256 before explicit builds.
+
+# Verified upstream model fetched only at build time.
+app/src/main/assets/tessdata/*.traineddata
+app/src/main/assets/addresses.json

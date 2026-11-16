@@ -1,0 +1,115 @@
+name: Rotating emulator slices
+
+# Wider than the PR checks (API 29/30/36) and the weekly probe, without one
+# huge run: each week runs one of four slices, so every API/device/screen
+# combination listed in the slices below is covered once every four weeks.
+# "all" (manual dispatch) runs those eight combinations at once. It is not the
+# full 4 x 3 grid: 33 small, 34 Foldable, 35 small and 36 pixel_2 are not run.
+# Public repo: Linux minutes are free.
+# Devices: pixel_2, 7.6in Foldable, small screen (pixel_2 with 720x1280, 320dpi).
+# Font-scale stress stays in display-weekly.yml.
+# No issue-writing job on purpose: that needs an owner-approved scorecard
+# baseline entry. A red scheduled run is the signal until the owner decides.
+
+on:
+  schedule:
+    # Sunday 05:00 UTC, one hour after the weekly probe, to avoid overlap.
+    - cron: '0 5 * * 0'
+  workflow_dispatch:
+    inputs:
+      slice:
+        description: 'Slice 0-3, or all for the full maximum'
+        required: false
+        default: 'all'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: emulator-rotating
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.pick.outputs.matrix }}
+    steps:
+      - id: pick
+        env:
+          INPUT_SLICE: ${{ github.event.inputs.slice }}
+        run: |
+          python3 - <<'PY'
+          import datetime, json, os
+          slices = [
+              [("33", "pixel_2", ""), ("33", "7.6in Foldable", "")],
+              [("34", "pixel_2", ""), ("34", "pixel_2", "720x1280")],
+              [("35", "pixel_2", ""), ("35", "7.6in Foldable", "")],
+              [("36", "pixel_2", "720x1280"), ("36", "7.6in Foldable", "")],
+          ]
+          choice = (os.environ.get("INPUT_SLICE") or "").strip().lower()
+          if choice in ("0", "1", "2", "3"):
+              picked = slices[int(choice)]
+          elif choice == "all":
+              picked = [c for s in slices for c in s]
+          else:
+              # Days since year 1 divided by 7 never repeats across ISO year ends
+              # (week 53 then week 1 would have run one slice twice in a row).
+              week = datetime.date.today().toordinal() // 7
+              picked = slices[week % 4]
+          include = [{"api": a, "profile": p, "size": s, "label": f"api{a}-{p.split()[0].replace('.', '')}-{s or 'default'}"} for a, p, s in picked]
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write("matrix=" + json.dumps({"include": include}) + "\n")
+          print(json.dumps(include, indent=1))
+          PY
+
+  emulator:
+    needs: plan
+    name: slice (${{ matrix.label }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - run: sh scripts/prepare_wrapper.sh
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: ${{ matrix.api }}
+          arch: x86_64
+          profile: ${{ matrix.profile }}
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: |
+            sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            sh gradlew --stop || true
+            adb shell svc wifi disable || echo "warning: svc wifi disable failed on API ${{ matrix.api }}"
+            adb shell svc data disable || echo "warning: svc data disable failed on API ${{ matrix.api }}"
+            if [ -n '${{ matrix.size }}' ]; then adb shell wm size '${{ matrix.size }}'; adb shell wm density 320; fi
+            mkdir -p app/build/reports/androidTests
+            adb shell am instrument -w -r il.sidewalks.reporter.test/androidx.test.runner.AndroidJUnitRunner > app/build/reports/androidTests/instrumentation.txt 2>&1; echo $? > app/build/reports/androidTests/instrumentation.rc; cat app/build/reports/androidTests/instrumentation.txt
+            adb logcat -d -v threadtime > app/build/reports/androidTests/logcat.txt || true
+            python3 scripts/test_summary.py --title 'Instrumented tests (${{ matrix.label }})' --instrumentation app/build/reports/androidTests/instrumentation.txt --check; echo $? > app/build/reports/androidTests/summary.rc
+            test "$(cat app/build/reports/androidTests/instrumentation.rc)" = "0"
+            test "$(cat app/build/reports/androidTests/summary.rc)" = "0"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: rotating-emulator-results-${{ matrix.label }}
+          path: app/build/reports/androidTests/
+          retention-days: 14

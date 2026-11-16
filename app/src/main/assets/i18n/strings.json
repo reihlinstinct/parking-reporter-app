@@ -1,0 +1,2127 @@
+{
+  "languages": [
+    {
+      "code": "he",
+      "name": "עברית",
+      "dir": "rtl",
+      "default": true,
+      "machine_draft": false,
+      "plural": "one_two_other",
+      "aliases": [
+        "iw"
+      ]
+    },
+    {
+      "code": "en",
+      "name": "English",
+      "dir": "ltr",
+      "default": false,
+      "machine_draft": true,
+      "plural": "one_is_1",
+      "fallback": true,
+      "status": "machine-draft, needs native review"
+    },
+    {
+      "code": "ar",
+      "name": "العربية",
+      "dir": "rtl",
+      "default": false,
+      "machine_draft": true,
+      "plural": "arabic_6",
+      "status": "machine-draft, needs native review"
+    },
+    {
+      "code": "ru",
+      "name": "Русский",
+      "dir": "ltr",
+      "default": false,
+      "machine_draft": true,
+      "plural": "slavic_one_few_many",
+      "status": "machine-draft, needs native review"
+    },
+    {
+      "code": "am",
+      "name": "አማርኛ",
+      "dir": "ltr",
+      "default": false,
+      "machine_draft": true,
+      "plural": "one_is_0_1",
+      "status": "machine-draft, needs native review"
+    }
+  ],
+  "strings": {
+    "common.ok": {
+      "he": "אישור",
+      "en": "OK",
+      "ar": "موافق",
+      "ru": "ОК",
+      "am": "እሺ"
+    },
+    "common.cancel": {
+      "he": "ביטול",
+      "en": "Cancel",
+      "ar": "إلغاء",
+      "ru": "Отмена",
+      "am": "ሰርዝ"
+    },
+    "common.retry": {
+      "he": "נסו שוב",
+      "en": "Try again",
+      "ar": "حاول مرة أخرى",
+      "ru": "Повторить",
+      "am": "እንደገና ይሞክሩ"
+    },
+    "common.error.generic": {
+      "he": "משהו השתבש. נסו שוב.",
+      "en": "Something went wrong. Please try again.",
+      "ar": "حدث خطأ ما. حاول مرة أخرى.",
+      "ru": "Что-то пошло не так. Попробуйте ещё раз.",
+      "am": "የሆነ ችግር ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።"
+    },
+    "common.plate_label": {
+      "he": "מספר רכב: {plate}",
+      "en": "Plate number: {plate}",
+      "ar": "رقم اللوحة: {plate}",
+      "ru": "Номер автомобиля: {plate}",
+      "am": "የሰሌዳ ቁጥር: {plate}"
+    },
+    "common.reports_count": {
+      "he": {
+        "one": "דיווח אחד",
+        "two": "שני דיווחים",
+        "other": "{count} דיווחים"
+      },
+      "en": {
+        "one": "{count} report",
+        "other": "{count} reports"
+      },
+      "ar": {
+        "zero": "لا توجد بلاغات",
+        "one": "بلاغ واحد",
+        "two": "بلاغان",
+        "few": "{count} بلاغات",
+        "many": "{count} بلاغًا",
+        "other": "{count} بلاغ"
+      },
+      "ru": {
+        "one": "{count} обращение",
+        "few": "{count} обращения",
+        "many": "{count} обращений",
+        "other": "{count} обращения"
+      },
+      "am": {
+        "one": "{count} ሪፖርት",
+        "other": "{count} ሪፖርቶች"
+      }
+    },
+    "shell.nav.home": {
+      "he": "בית",
+      "en": "Home",
+      "ar": "الرئيسية",
+      "ru": "Главная",
+      "am": "መነሻ"
+    },
+    "shell.nav.reports": {
+      "he": "הדיווחים שלי",
+      "en": "My reports",
+      "ar": "بلاغاتي",
+      "ru": "Мои обращения",
+      "am": "የእኔ ሪፖርቶች"
+    },
+    "shell.nav.settings": {
+      "he": "הגדרות",
+      "en": "Settings",
+      "ar": "الإعدادات",
+      "ru": "Настройки",
+      "am": "ቅንብሮች"
+    },
+    "shell.home.title": {
+      "he": "דיווח ל-106 עיריית ירושלים",
+      "en": "Report to Jerusalem 106",
+      "ar": "بلاغ إلى 106 بلدية القدس",
+      "ru": "Обращение в 106 мэрии Иерусалима",
+      "am": "ሪፖርት ወደ 106 የኢየሩሳሌም ከተማ አስተዳደር"
+    },
+    "shell.home.subtitle": {
+      "he": "צלם תמונה כדי להתחיל דיווח",
+      "en": "Take a photo to start a report",
+      "ar": "التقط صورة لبدء بلاغ",
+      "ru": "Сделайте фото, чтобы начать обращение",
+      "am": "ሪፖርት ለመጀመር ፎቶ ያንሱ"
+    },
+    "shell.home.on_device_note": {
+      "he": "הניתוח נעשה במכשיר. תוכל לבדוק ולתקן לפני שליחה.",
+      "en": "Analysis happens on the device. You can check and correct it before sending.",
+      "ar": "يتم التحليل على الجهاز. يمكنك المراجعة والتصحيح قبل الإرسال.",
+      "ru": "Анализ выполняется на устройстве. Вы сможете проверить и исправить данные перед отправкой.",
+      "am": "ትንተናው በመሣሪያው ላይ ይከናወናል። ከመላክዎ በፊት መፈተሽና ማረም ይችላሉ።"
+    },
+    "shell.home.take_photo": {
+      "he": "צלם תמונה",
+      "en": "Take photo",
+      "ar": "التقط صورة",
+      "ru": "Сделать фото",
+      "am": "ፎቶ አንሳ"
+    },
+    "shell.home.upload_photo": {
+      "he": "העלה תמונה",
+      "en": "Upload photo",
+      "ar": "رفع صورة",
+      "ru": "Загрузить фото",
+      "am": "ፎቶ ስቀል"
+    },
+    "shell.home.test_build_note": {
+      "he": "גרסת בדיקה מקומית. אין שליחה.",
+      "en": "Local test version. No sending.",
+      "ar": "نسخة تجريبية محلية. لا إرسال.",
+      "ru": "Локальная тестовая версия. Отправки нет.",
+      "am": "የአካባቢ የሙከራ ስሪት። መላክ የለም።"
+    },
+    "shell.home.drafts_title": {
+      "he": "טיוטות",
+      "en": "Drafts",
+      "ar": "المسودات",
+      "ru": "Черновики",
+      "am": "ረቂቆች"
+    },
+    "shell.home.no_drafts": {
+      "he": "אין טיוטות שמורות",
+      "en": "No saved drafts",
+      "ar": "لا توجد مسودات محفوظة",
+      "ru": "Нет сохранённых черновиков",
+      "am": "የተቀመጡ ረቂቆች የሉም"
+    },
+    "shell.home.open_draft": {
+      "he": "פתח טיוטה {id}",
+      "en": "Open draft {id}",
+      "ar": "فتح المسودة {id}",
+      "ru": "Открыть черновик {id}",
+      "am": "ረቂቅ {id} ክፈት"
+    },
+    "shell.home.continue_review": {
+      "he": "המשך בדיקת טיוטה",
+      "en": "Continue reviewing draft",
+      "ar": "متابعة مراجعة المسودة",
+      "ru": "Продолжить проверку черновика",
+      "am": "ረቂቁን መገምገም ቀጥል"
+    },
+    "shell.home.login_unavailable": {
+      "he": "התחברות לשירות הדיווח עדיין אינה זמינה. פרטי גישה עירוניים אינם חלק מהאפליקציה.",
+      "en": "Signing in to the reporting service is not available yet. Municipal access details are not part of the app.",
+      "ar": "تسجيل الدخول إلى خدمة البلاغات غير متاح بعد. بيانات الوصول البلدية ليست جزءًا من التطبيق.",
+      "ru": "Вход в службу обращений пока недоступен. Муниципальные данные доступа не входят в приложение.",
+      "am": "ወደ ሪፖርት አገልግሎቱ መግባት ገና አይገኝም። የማዘጋጃ ቤት የመዳረሻ መረጃ የመተግበሪያው አካል አይደለም።"
+    },
+    "shell.import_location.title": {
+      "he": "נמצא מיקום בתמונה",
+      "en": "Location found in the photo",
+      "ar": "تم العثور على موقع في الصورة",
+      "ru": "В фото найдено местоположение",
+      "am": "በፎቶው ውስጥ ቦታ ተገኝቷል"
+    },
+    "shell.import_location.message": {
+      "he": "להשתמש במיקום מהתמונה לדיווח? ניתן גם בלי, ולסמן את המיקום ידנית.",
+      "en": "Use the photo's location for the report? You can also continue without it and mark the location manually.",
+      "ar": "هل تريد استخدام موقع الصورة للبلاغ؟ يمكنك أيضًا المتابعة بدونه وتحديد الموقع يدويًا.",
+      "ru": "Использовать местоположение из фото для обращения? Можно и без него, указав место вручную.",
+      "am": "የፎቶውን ቦታ ለሪፖርቱ ልጠቀም? ያለሱም መቀጠልና ቦታውን በእጅ መምረጥ ይቻላል።"
+    },
+    "shell.import_location.use": {
+      "he": "השתמש במיקום",
+      "en": "Use location",
+      "ar": "استخدام الموقع",
+      "ru": "Использовать место",
+      "am": "ቦታውን ተጠቀም"
+    },
+    "shell.import_location.skip": {
+      "he": "ללא מיקום",
+      "en": "Without location",
+      "ar": "بدون موقع",
+      "ru": "Без местоположения",
+      "am": "ያለ ቦታ"
+    },
+    "shell.status.draft_saved": {
+      "he": "נשמר מקומית, לא נשלח",
+      "en": "Saved on this device, not sent",
+      "ar": "تم الحفظ على الجهاز، لم يُرسل",
+      "ru": "Сохранено на устройстве, не отправлено",
+      "am": "በመሣሪያው ላይ ተቀምጧል፣ አልተላከም"
+    },
+    "shell.status.draft_save_failed": {
+      "he": "שמירה נכשלה, לא בוצעה שליחה",
+      "en": "Saving failed, nothing was sent",
+      "ar": "فشل الحفظ، لم يُرسل شيء",
+      "ru": "Не удалось сохранить, ничего не отправлено",
+      "am": "ማስቀመጥ አልተሳካም፣ ምንም አልተላከም"
+    },
+    "shell.status.settings_read_failed": {
+      "he": "לא ניתן לקרוא מידע מוצפן",
+      "en": "Encrypted data could not be read",
+      "ar": "تعذّرت قراءة البيانات المشفّرة",
+      "ru": "Не удалось прочитать зашифрованные данные",
+      "am": "የተመሰጠረውን መረጃ ማንበብ አልተቻለም"
+    },
+    "shell.status.evidence_duplicate_or_unsaved": {
+      "he": "הראיה כפולה או שלא נשמרה, לא בוצעה שליחה",
+      "en": "The evidence is a duplicate or was not saved; nothing was sent",
+      "ar": "الدليل مكرر أو لم يُحفظ، لم يُرسل شيء",
+      "ru": "Доказательство повторяется или не сохранено, ничего не отправлено",
+      "am": "ማስረጃው የተደገመ ነው ወይም አልተቀመጠም፣ ምንም አልተላከም"
+    },
+    "shell.status.evidence_restore_failed": {
+      "he": "לא ניתן לשחזר את הראיה; אין שליחה",
+      "en": "The evidence could not be restored; nothing is sent",
+      "ar": "تعذّرت استعادة الدليل؛ لا إرسال",
+      "ru": "Не удалось восстановить доказательство; отправки нет",
+      "am": "ማስረጃውን መመለስ አልተቻለም፤ ምንም አይላክም"
+    },
+    "shell.status.image_read_failed": {
+      "he": "התמונה לא נקראה, לא בוצעה שליחה",
+      "en": "The photo could not be read; nothing was sent",
+      "ar": "تعذّرت قراءة الصورة، لم يُرسل شيء",
+      "ru": "Не удалось прочитать фото, ничего не отправлено",
+      "am": "ፎቶው ሊነበብ አልቻለም፣ ምንም አልተላከም"
+    },
+    "shell.status.settings_saved": {
+      "he": "נשמר מוצפן",
+      "en": "Saved encrypted",
+      "ar": "تم الحفظ مشفّرًا",
+      "ru": "Сохранено в зашифрованном виде",
+      "am": "ተመስጥሮ ተቀምጧል"
+    },
+    "shell.status.settings_save_failed": {
+      "he": "הצפנה או אימות נכשלו, לא נשמר מידע גלוי",
+      "en": "Encryption or authentication failed; no readable data was saved",
+      "ar": "فشل التشفير أو التحقق، لم تُحفظ أي بيانات مكشوفة",
+      "ru": "Шифрование или проверка подлинности не удались, открытые данные не сохранены",
+      "am": "ምስጠራ ወይም ማረጋገጫ አልተሳካም፣ ምንም ግልጽ መረጃ አልተቀመጠም"
+    },
+    "shell.status.import_cancelled": {
+      "he": "הייבוא בוטל, לא בוצעה שליחה",
+      "en": "Import cancelled, nothing was sent",
+      "ar": "أُلغي الاستيراد، لم يُرسل شيء",
+      "ru": "Импорт отменён, ничего не отправлено",
+      "am": "ማስገባቱ ተሰርዟል፣ ምንም አልተላከም"
+    },
+    "shell.debug.title": {
+      "he": "כלי בדיקה (מצב פיתוח בלבד)",
+      "en": "Test tools (development mode only)",
+      "ar": "أدوات الاختبار (وضع التطوير فقط)",
+      "ru": "Инструменты проверки (только режим разработки)",
+      "am": "የሙከራ መሣሪያዎች (የልማት ሁነታ ብቻ)"
+    },
+    "shell.debug.description": {
+      "he": "בדיקת פיתוח מקומית של חבילת ההצפנה: יוצרת דיווח מלאכותי, מצפינה ופותחת במכשיר. ללא רשת, ללא שליחה. מוסתרת לחלוטין מחוץ למצב פיתוח.",
+      "en": "Local development check of the encrypted package: creates a synthetic report, encrypts it and opens it on the device. No network, no sending. Completely hidden outside development mode.",
+      "ar": "فحص تطوير محلي لحزمة التشفير: ينشئ بلاغًا اصطناعيًا ويشفّره ويفتحه على الجهاز. بلا شبكة وبلا إرسال. مخفي تمامًا خارج وضع التطوير.",
+      "ru": "Локальная проверка зашифрованного пакета для разработки: создаёт синтетическое обращение, шифрует и открывает его на устройстве. Без сети, без отправки. Полностью скрыта вне режима разработки.",
+      "am": "የምስጠራ ጥቅሉ የአካባቢ የልማት ሙከራ፦ ሰው ሠራሽ ሪፖርት ይፈጥራል፣ ያመሰጥራል እና በመሣሪያው ላይ ይከፍታል። ያለ አውታረ መረብ፣ ያለ መላክ። ከልማት ሁነታ ውጭ ሙሉ በሙሉ ተደብቋል።"
+    },
+    "shell.debug.run_button": {
+      "he": "בדיקת פיתוח: חבילה מוצפנת ללא רשת",
+      "en": "Development check: encrypted package without network",
+      "ar": "فحص التطوير: حزمة مشفّرة بلا شبكة",
+      "ru": "Проверка разработки: зашифрованный пакет без сети",
+      "am": "የልማት ሙከራ፦ ያለ አውታረ መረብ የተመሰጠረ ጥቅል"
+    },
+    "shell.debug.running": {
+      "he": "מריץ בדיקה סינתטית מקומית",
+      "en": "Running local synthetic check",
+      "ar": "جارٍ تشغيل فحص اصطناعي محلي",
+      "ru": "Выполняется локальная синтетическая проверка",
+      "am": "የአካባቢ ሰው ሠራሽ ሙከራ በሂደት ላይ"
+    },
+    "shell.debug.failed": {
+      "he": "הבדיקה המקומית נכשלה, אין שליחה",
+      "en": "The local check failed; nothing is sent",
+      "ar": "فشل الفحص المحلي، لا إرسال",
+      "ru": "Локальная проверка не удалась, отправки нет",
+      "am": "የአካባቢው ሙከራ አልተሳካም፣ ምንም አይላክም"
+    },
+    "submitted.screen.title": {
+      "he": "הדיווח הוגש בהצלחה",
+      "en": "Report submitted successfully",
+      "ar": "تم تقديم البلاغ بنجاح",
+      "ru": "Обращение успешно отправлено",
+      "am": "ሪፖርቱ በተሳካ ሁኔታ ገብቷል"
+    },
+    "submitted.screen.body": {
+      "he": "העירייה קיבלה את הדיווח. תודה שעזרת לשפר את העיר.",
+      "en": "The municipality received your report. Thank you for helping improve the city.",
+      "ar": "استلمت البلدية بلاغك. شكرًا لمساهمتك في تحسين المدينة.",
+      "ru": "Муниципалитет получил ваше обращение. Спасибо, что помогаете улучшать город.",
+      "am": "ማዘጋጃ ቤቱ ሪፖርትዎን ተቀብሏል። ከተማዋን ለማሻሻል ስለረዱ እናመሰግናለን።"
+    },
+    "submitted.screen.back": {
+      "he": "חזרה לדיווחים",
+      "en": "Back to reports",
+      "ar": "العودة إلى البلاغات",
+      "ru": "К списку обращений",
+      "am": "ወደ ሪፖርቶች ተመለስ"
+    },
+    "shell.submit.sent": {
+      "he": "נשלח לעירייה. מספר קריאה: {case_number}",
+      "en": "Sent to the municipality. Case number: {case_number}",
+      "ar": "أُرسل إلى البلدية. رقم البلاغ: {case_number}",
+      "ru": "Отправлено в муниципалитет. Номер обращения: {case_number}",
+      "am": "ለማዘጋጃ ቤቱ ተልኳል። የጉዳይ ቁጥር: {case_number}"
+    },
+    "shell.submit.sent_unassigned": {
+      "he": "נשלח לעירייה. המספר טרם הוקצה",
+      "en": "Sent to the municipality. The case number has not been assigned yet",
+      "ar": "أُرسل إلى البلدية. لم يُخصَّص رقم البلاغ بعد",
+      "ru": "Отправлено в муниципалитет. Номер обращения ещё не присвоен",
+      "am": "ለማዘጋጃ ቤቱ ተልኳል። የጉዳይ ቁጥሩ እስካሁን አልተመደበም"
+    },
+    "shell.submit.already_sent": {
+      "he": "הדיווח כבר נשלח. מספר קריאה: {case_number}",
+      "en": "This report was already sent. Case number: {case_number}",
+      "ar": "تم إرسال هذا البلاغ مسبقًا. رقم البلاغ: {case_number}",
+      "ru": "Это обращение уже отправлено. Номер обращения: {case_number}",
+      "am": "ይህ ሪፖርት አስቀድሞ ተልኳል። የጉዳይ ቁጥር: {case_number}"
+    },
+    "shell.submit.blocked.not_ready": {
+      "he": "השלם את הטיוטה לפני שליחה",
+      "en": "Complete the draft before sending",
+      "ar": "أكمل المسودة قبل الإرسال",
+      "ru": "Завершите черновик перед отправкой",
+      "am": "ረቂቁን ከመላክ በፊት ያሟሉ"
+    },
+    "shell.submit.blocked.missing_credentials": {
+      "he": "חסרים פרטי גישה לעירייה בהגדרות",
+      "en": "Municipal access details are missing in Settings",
+      "ar": "بيانات الوصول إلى البلدية ناقصة في الإعدادات",
+      "ru": "В настройках не хватает данных доступа к муниципалитету",
+      "am": "የማዘጋጃ ቤት መዳረሻ ዝርዝሮች በቅንብሮች ውስጥ የሉም"
+    },
+    "shell.submit.blocked.unsupported_category": {
+      "he": "הקטגוריה אינה נתמכת לשליחה",
+      "en": "This category can't be sent",
+      "ar": "هذه الفئة غير مدعومة للإرسال",
+      "ru": "Эта категория не поддерживается для отправки",
+      "am": "ይህ ምድብ ለመላክ አይደገፍም"
+    },
+    "shell.submit.blocked.address_unresolved": {
+      "he": "הכתובת לא נקבעה: {detail}",
+      "en": "The address could not be determined: {detail}",
+      "ar": "لم يتم تحديد العنوان: {detail}",
+      "ru": "Адрес не определён: {detail}",
+      "am": "አድራሻው አልተወሰነም: {detail}"
+    },
+    "shell.submit.blocked.input_invalid": {
+      "he": "קלט לא תקין: {detail}",
+      "en": "Invalid input: {detail}",
+      "ar": "مدخلات غير صالحة: {detail}",
+      "ru": "Неверные данные: {detail}",
+      "am": "ልክ ያልሆነ ግብዓት: {detail}"
+    },
+    "shell.submit.blocked.municipal_review_needed": {
+      "he": "המצב מול העירייה אינו ודאי. בדוק באפליקציית העירייה; לא בוצעה שליחה חוזרת. {detail}",
+      "en": "The status with the municipality is uncertain. Check in the municipality's app; nothing was sent again. {detail}",
+      "ar": "حالة البلاغ لدى البلدية غير مؤكدة. تحقق في تطبيق البلدية؛ لم تتم إعادة الإرسال. {detail}",
+      "ru": "Статус в муниципалитете неясен. Проверьте в приложении муниципалитета; повторная отправка не выполнялась. {detail}",
+      "am": "ከማዘጋጃ ቤቱ ጋር ያለው ሁኔታ እርግጠኛ አይደለም። በማዘጋጃ ቤቱ መተግበሪያ ውስጥ ያረጋግጡ፤ እንደገና አልተላከም። {detail}"
+    },
+    "shell.submit.blocked.municipal_api_failure": {
+      "he": "העירייה ענתה: {detail}",
+      "en": "The municipality replied: {detail}",
+      "ar": "ردّت البلدية: {detail}",
+      "ru": "Ответ муниципалитета: {detail}",
+      "am": "ማዘጋጃ ቤቱ መለሰ: {detail}"
+    },
+    "shell.submit.blocked.local_failure": {
+      "he": "שגיאה מקומית, לא בוצעה שליחה ({detail})",
+      "en": "Local error, nothing was sent ({detail})",
+      "ar": "خطأ محلي، لم يتم الإرسال ({detail})",
+      "ru": "Локальная ошибка, ничего не отправлено ({detail})",
+      "am": "የአካባቢ ስህተት፣ ምንም አልተላከም ({detail})"
+    },
+    "shell.submit.blocked.lookup_not_installed": {
+      "he": "קובץ הכתובות הפרטי לא מותקן במכשיר",
+      "en": "The private address file is not installed on this device",
+      "ar": "ملف العناوين الخاص غير مثبت على الجهاز",
+      "ru": "Частный файл адресов не установлен на устройстве",
+      "am": "የግል አድራሻ ፋይሉ በመሣሪያው ላይ አልተጫነም"
+    },
+    "shell.submit.blocked.lookup_mismatch": {
+      "he": "קובץ הכתובות במכשיר מיושן או שונה. התקן את העותק העדכני",
+      "en": "The address file on this device is outdated or modified. Install the current copy",
+      "ar": "ملف العناوين على الجهاز قديم أو معدل. ثبّت النسخة الحالية",
+      "ru": "Файл адресов на устройстве устарел или изменён. Установите актуальную копию",
+      "am": "በመሣሪያው ላይ ያለው የአድራሻ ፋይል ያረጀ ወይም የተቀየረ ነው። ወቅታዊውን ቅጂ ይጫኑ"
+    },
+    "shell.submit.draft_not_saved": {
+      "he": "הטיוטה לא נשמרה. שמור לפני שליחה.",
+      "en": "The draft was not saved. Save before sending.",
+      "ar": "لم تُحفظ المسودة. احفظ قبل الإرسال.",
+      "ru": "Черновик не сохранён. Сохраните перед отправкой.",
+      "am": "ረቂቁ አልተቀመጠም። ከመላክ በፊት ያስቀምጡ።"
+    },
+    "shell.submit.no_device_lock": {
+      "he": "הגדר נעילת מסך",
+      "en": "Set a screen lock",
+      "ar": "اضبط قفل الشاشة",
+      "ru": "Задайте блокировку экрана",
+      "am": "የማያ ገጽ መቆለፊያ ያዘጋጁ"
+    },
+    "shell.submit.sending": {
+      "he": "שולח לעירייה...",
+      "en": "Sending to the municipality...",
+      "ar": "جارٍ الإرسال إلى البلدية...",
+      "ru": "Отправка в муниципалитет...",
+      "am": "ወደ ማዘጋጃ ቤቱ በመላክ ላይ..."
+    },
+    "shell.unlock.submit_title": {
+      "he": "שליחת דיווח לעירייה",
+      "en": "Send report to the municipality",
+      "ar": "إرسال البلاغ إلى البلدية",
+      "ru": "Отправка обращения в муниципалитет",
+      "am": "ሪፖርት ወደ ማዘጋጃ ቤት መላክ"
+    },
+    "shell.unlock.submit_subtitle": {
+      "he": "אימות נעילת המכשיר מאשר שליחת הדיווח לעיריית ירושלים",
+      "en": "Confirming the device lock authorises sending the report to the Jerusalem Municipality",
+      "ar": "تأكيد قفل الجهاز يأذن بإرسال البلاغ إلى بلدية القدس",
+      "ru": "Подтверждение блокировки устройства разрешает отправку обращения в муниципалитет Иерусалима",
+      "am": "የመሣሪያ መቆለፊያ ማረጋገጫ ሪፖርቱን ወደ እየሩሳሌም ማዘጋጃ ቤት መላክን ይፈቅዳል"
+    },
+    "shell.unlock.settings_title": {
+      "he": "הגדרות פרטיות",
+      "en": "Privacy settings",
+      "ar": "إعدادات الخصوصية",
+      "ru": "Настройки конфиденциальности",
+      "am": "የግላዊነት ቅንብሮች"
+    },
+    "shell.unlock.settings_subtitle": {
+      "he": "אמת את נעילת המכשיר כדי לגשת לפרטים",
+      "en": "Confirm the device lock to access your details",
+      "ar": "أكّد قفل الجهاز للوصول إلى البيانات",
+      "ru": "Подтвердите блокировку устройства, чтобы открыть данные",
+      "am": "ዝርዝሮቹን ለማግኘት የመሣሪያውን መቆለፊያ ያረጋግጡ"
+    },
+    "settings.privacy.mlkit_note": {
+      "he": "Google ML Kit: התמונות והלוחיות נשארות במכשיר; נתוני שימוש וביצועים נשלחים ל-Google. ה-SDK עשוי לפנות לשרתיה לעדכונים.",
+      "en": "Google ML Kit: photos and plates stay on the device; usage and performance data is sent to Google. The SDK may contact Google's servers for updates.",
+      "ar": "Google ML Kit: تبقى الصور واللوحات على الجهاز؛ تُرسل بيانات الاستخدام والأداء إلى Google. قد تتصل حزمة SDK بخوادمها للحصول على التحديثات.",
+      "ru": "Google ML Kit: фото и номера остаются на устройстве; данные об использовании и производительности отправляются в Google. SDK может обращаться к её серверам за обновлениями.",
+      "am": "Google ML Kit፦ ፎቶዎቹና ሰሌዳዎቹ በመሣሪያው ላይ ይቆያሉ፤ የአጠቃቀምና የአፈጻጸም መረጃ ወደ Google ይላካል። SDK ለዝማኔዎች አገልጋዮቹን ሊያገኝ ይችላል።"
+    },
+    "settings.privacy.title": {
+      "he": "הגדרות פרטיות",
+      "en": "Privacy settings",
+      "ar": "إعدادات الخصوصية",
+      "ru": "Настройки конфиденциальности",
+      "am": "የግላዊነት ቅንብሮች"
+    },
+    "settings.ocr.title": {
+      "he": "זיהוי לוחית מהצילום",
+      "en": "Plate recognition from the photo",
+      "ar": "التعرّف على اللوحة من الصورة",
+      "ru": "Распознавание номера по фото",
+      "am": "ከፎቶ ሰሌዳ መለየት"
+    },
+    "settings.ocr.mlkit": {
+      "he": "Google ML Kit - מדויק יותר (מומלץ)",
+      "en": "Google ML Kit - more accurate (recommended)",
+      "ar": "Google ML Kit - أدق (موصى به)",
+      "ru": "Google ML Kit - точнее (рекомендуется)",
+      "am": "Google ML Kit - የበለጠ ትክክለኛ (የሚመከር)"
+    },
+    "settings.ocr.tesseract": {
+      "he": "Tesseract - במכשיר בלבד, פחות מדויק",
+      "en": "Tesseract - on the device only, less accurate",
+      "ar": "Tesseract - على الجهاز فقط، أقل دقة",
+      "ru": "Tesseract - только на устройстве, менее точно",
+      "am": "Tesseract - በመሣሪያው ላይ ብቻ፣ ያነሰ ትክክለኛ"
+    },
+    "settings.ocr.note": {
+      "he": "בחירה זו משפיעה רק על הצעת הלוחית. התוצאה היא הצעה בלבד ותמיד דורשת אישור שלך.",
+      "en": "This choice only affects the plate suggestion. A result is a suggestion only and always needs your approval.",
+      "ar": "هذا الاختيار يؤثر على اقتراح اللوحة فقط. النتيجة اقتراح فقط وتحتاج دائمًا إلى موافقتك.",
+      "ru": "Этот выбор влияет только на предложение номера. Результат - только вариант и всегда требует вашего подтверждения.",
+      "am": "ይህ ምርጫ የሰሌዳ ጥቆማውን ብቻ ይነካል። ውጤቱ ጥቆማ ብቻ ነው፤ ሁልጊዜም የእርስዎን ማረጋገጫ ይፈልጋል።"
+    },
+    "settings.privacy.description": {
+      "he": "כל מדווח מזין את פרטיו שלו. הפרטים מוצפנים במכשיר, ללא גיבוי. אין שליחה או בדיקת התחברות ממסך זה. פרטי הגישה העירוניים מוזנים ידנית ונשמרים מוצפנים במכשיר בלבד.",
+      "en": "Each reporter enters their own details. The details are encrypted on the device, with no backup. Nothing is sent and no sign-in is checked from this screen. Municipal access details are entered manually and stored encrypted on the device only.",
+      "ar": "يُدخل كل مُبلّغ بياناته بنفسه. تُشفَّر البيانات على الجهاز دون نسخ احتياطي. لا إرسال ولا فحص لتسجيل الدخول من هذه الشاشة. تُدخل بيانات الوصول البلدية يدويًا وتُحفظ مشفّرة على الجهاز فقط.",
+      "ru": "Каждый заявитель вводит свои данные сам. Данные шифруются на устройстве, без резервного копирования. С этого экрана ничего не отправляется и вход не проверяется. Муниципальные данные доступа вводятся вручную и хранятся в зашифрованном виде только на устройстве.",
+      "am": "እያንዳንዱ ሪፖርት አድራጊ የራሱን መረጃ ያስገባል። መረጃው በመሣሪያው ላይ ይመሰጠራል፣ ምትኬ የለም። ከዚህ ገጽ መላክም ሆነ የመግቢያ ፍተሻ የለም። የማዘጋጃ ቤት የመዳረሻ መረጃ በእጅ ይገባል እና በመሣሪያው ላይ ብቻ ተመስጥሮ ይቀመጣል።"
+    },
+    "settings.field.first_name": {
+      "he": "שם פרטי",
+      "en": "First name",
+      "ar": "الاسم الأول",
+      "ru": "Имя",
+      "am": "የመጀመሪያ ስም"
+    },
+    "settings.field.last_name": {
+      "he": "שם משפחה",
+      "en": "Last name",
+      "ar": "اسم العائلة",
+      "ru": "Фамилия",
+      "am": "የአባት ስም"
+    },
+    "settings.field.id_number": {
+      "he": "מספר זהות",
+      "en": "ID number",
+      "ar": "رقم الهوية",
+      "ru": "Номер удостоверения личности",
+      "am": "የመታወቂያ ቁጥር"
+    },
+    "settings.field.phone": {
+      "he": "טלפון",
+      "en": "Phone",
+      "ar": "الهاتف",
+      "ru": "Телефон",
+      "am": "ስልክ"
+    },
+    "settings.field.email": {
+      "he": "אימייל",
+      "en": "Email",
+      "ar": "البريد الإلكتروني",
+      "ru": "Эл. почта",
+      "am": "ኢሜይል"
+    },
+    "settings.api.title": {
+      "he": "גישת API עירונית (הזנה ידנית)",
+      "en": "Municipal API access (manual entry)",
+      "ar": "وصول API البلدي (إدخال يدوي)",
+      "ru": "Муниципальный доступ к API (ручной ввод)",
+      "am": "የማዘጋጃ ቤት API መዳረሻ (በእጅ ማስገባት)"
+    },
+    "settings.api.description": {
+      "he": "המפתחות מוזנים ידנית ונשמרים מוצפנים במכשיר בלבד, ללא גיבוי. הם אינם חלק מהאפליקציה ואינם נשלחים למקום אחר. שליחה חיה אינה זמינה ותופעל רק באישור נפרד.",
+      "en": "The keys are entered manually and stored encrypted on the device only, with no backup. They are not part of the app and are not sent anywhere else. Live sending is not available and will only be enabled with separate approval.",
+      "ar": "تُدخل المفاتيح يدويًا وتُحفظ مشفّرة على الجهاز فقط دون نسخ احتياطي. ليست جزءًا من التطبيق ولا تُرسل إلى أي مكان آخر. الإرسال المباشر غير متاح ولن يُفعَّل إلا بموافقة منفصلة.",
+      "ru": "Ключи вводятся вручную и хранятся в зашифрованном виде только на устройстве, без резервного копирования. Они не входят в приложение и никуда больше не отправляются. Отправка в реальном времени недоступна и будет включена только с отдельного разрешения.",
+      "am": "ቁልፎቹ በእጅ ይገባሉ እና በመሣሪያው ላይ ብቻ ተመስጥረው ይቀመጣሉ፣ ምትኬ የለም። የመተግበሪያው አካል አይደሉም፣ ወደ ሌላ ቦታም አይላኩም። ቀጥታ መላክ አይገኝም፣ የሚነቃውም በተለየ ፈቃድ ብቻ ነው።"
+    },
+    "settings.field.subscription_key": {
+      "he": "מפתח מנוי",
+      "en": "Subscription key",
+      "ar": "مفتاح الاشتراك",
+      "ru": "Ключ подписки",
+      "am": "የደንበኝነት ቁልፍ"
+    },
+    "settings.field.api_username": {
+      "he": "שם משתמש API",
+      "en": "API username",
+      "ar": "اسم مستخدم API",
+      "ru": "Имя пользователя API",
+      "am": "የAPI የተጠቃሚ ስም"
+    },
+    "settings.field.api_password": {
+      "he": "סיסמת API",
+      "en": "API password",
+      "ar": "كلمة مرور API",
+      "ru": "Пароль API",
+      "am": "የAPI የይለፍ ቃል"
+    },
+    "settings.save.button": {
+      "he": "אמת זהות ושמור מוצפן",
+      "en": "Verify identity and save encrypted",
+      "ar": "تحقّق من الهوية واحفظ مشفّرًا",
+      "ru": "Подтвердить личность и сохранить в зашифрованном виде",
+      "am": "ማንነትን አረጋግጥና ተመስጥሮ አስቀምጥ"
+    },
+    "settings.save.done": {
+      "he": "נשמר מוצפן, הפרטים הוסרו מהמסך",
+      "en": "Saved encrypted; the details were removed from the screen",
+      "ar": "تم الحفظ مشفّرًا، وأُزيلت البيانات من الشاشة",
+      "ru": "Сохранено в зашифрованном виде, данные убраны с экрана",
+      "am": "ተመስጥሮ ተቀምጧል፣ መረጃው ከገጹ ተወግዷል"
+    },
+    "settings.back": {
+      "he": "חזור",
+      "en": "Back",
+      "ar": "رجوع",
+      "ru": "Назад",
+      "am": "ተመለስ"
+    },
+    "settings.version": {
+      "he": "גרסה {version}",
+      "en": "Version {version}",
+      "ar": "الإصدار {version}",
+      "ru": "Версия {version}",
+      "am": "ስሪት {version}"
+    },
+    "settings.language.title": {
+      "he": "שפה",
+      "en": "Language",
+      "ar": "اللغة",
+      "ru": "Язык",
+      "am": "ቋንቋ"
+    },
+    "settings.language.system_default": {
+      "he": "ברירת המחדל של המערכת",
+      "en": "System default",
+      "ar": "افتراضي النظام",
+      "ru": "Как в системе",
+      "am": "የሥርዓቱ ነባሪ"
+    },
+    "licenses.screen.title": {
+      "he": "רישיונות וצד שלישי",
+      "en": "Licenses & third parties",
+      "ar": "التراخيص والجهات الخارجية",
+      "ru": "Лицензии и сторонние компоненты",
+      "am": "ፍቃዶች እና የሶስተኛ ወገን"
+    },
+    "licenses.screen.intro": {
+      "he": "האפליקציה משתמשת בנתונים פתוחים ובספריות צד שלישי. הקרדיטים והרישיונות להלן.",
+      "en": "The app uses open data and third-party libraries. Attributions and licences below.",
+      "ar": "يستخدم التطبيق بيانات مفتوحة ومكتبات خارجية. الإسنادات والتراخيص أدناه.",
+      "ru": "Приложение использует открытые данные и сторонние библиотеки. Атрибуция и лицензии ниже.",
+      "am": "መተግበሪያው ክፍት ውሂብ እና የሶስተኛ ወገን ላይብረሪዎችን ይጠቀማል። ክሬዲቶች እና ፍቃዶች ከዚህ በታች።"
+    },
+    "licenses.osm.title": {
+      "he": "© OpenStreetMap contributors (ODbL 1.0)",
+      "en": "© OpenStreetMap contributors (ODbL 1.0)",
+      "ar": "© OpenStreetMap contributors (ODbL 1.0)",
+      "ru": "© OpenStreetMap contributors (ODbL 1.0)",
+      "am": "© OpenStreetMap contributors (ODbL 1.0)"
+    },
+    "licenses.osm.body": {
+      "he": "נקודות הכתובות מבוססות על נתוני OpenStreetMap, © תורמי OpenStreetMap, רישיון ODbL 1.0: openstreetmap.org/copyright — מסד הנתונים הנגזר של הכתובות מופץ ברישיון ODbL 1.0 וניתן לשחזור מדויק בעזרת מחולל הקוד הפתוח במאגר האפליקציה והקלטים המקובעים המתועדים בו, כל עוד יחס הגבול 1381350 של OpenStreetMap (והאזור שהשרת גוזר ממנו) לא השתנה.",
+      "en": "Address points are based on OpenStreetMap data, © OpenStreetMap contributors, ODbL 1.0: openstreetmap.org/copyright - the derivative address database is distributed under ODbL 1.0 and can be reproduced exactly with the open-source generator in the app's repository and its documented pinned inputs, as long as the OpenStreetMap boundary relation 1381350 (and the area the server derives from it) is unchanged.",
+      "ar": "تستند نقاط العناوين إلى بيانات OpenStreetMap، © مساهمو OpenStreetMap، رخصة ODbL 1.0: openstreetmap.org/copyright - قاعدة العناوين المشتقة موزعة بموجب ODbL 1.0 ويمكن إعادة إنتاجها بدقة عبر المولّد المفتوح المصدر في مستودع التطبيق ومدخلاته المثبتة الموثقة، ما دامت علاقة الحدود 1381350 في OpenStreetMap (والمنطقة التي يشتقها الخادم منها) دون تغيير.",
+      "ru": "Адресные точки основаны на данных OpenStreetMap, © участники OpenStreetMap, лицензия ODbL 1.0: openstreetmap.org/copyright - производная база адресов распространяется по лицензии ODbL 1.0 и может быть точно воспроизведена генератором с открытым кодом из репозитория приложения и его задокументированными зафиксированными входными данными, пока граничное отношение OpenStreetMap 1381350 (и область, которую сервер строит на его основе) остаётся неизменным.",
+      "am": "የአድራሻ ነጥቦች በOpenStreetMap ውሂብ ላይ የተመሰረቱ ናቸው፣ © የOpenStreetMap አበርካቾች፣ ODbL 1.0 ፍቃድ: openstreetmap.org/copyright - የተገኘው የአድራሻ ዳታቤዝ በODbL 1.0 ሥር ይሰራጫል እና በመተግበሪያው ማከማቻ ውስጥ ባለው ክፍት ምንጭ አመንጭ እና በተመዘገቡ ተቆልፈው በሚገኙ ግቤቶች በትክክል መድገም ይቻላል፣ የOpenStreetMap የወሰን ግንኙነት 1381350 (እና አገልጋዩ ከእሱ የሚያመነጨው ክልል) እስካልተቀየረ ድረስ።"
+    },
+    "licenses.registry.title": {
+      "he": "רשימת רחובות ישראל (data.gov.il)",
+      "en": "Israel national street registry (data.gov.il)",
+      "ar": "سجل الشوارع الوطني الإسرائيلي (data.gov.il)",
+      "ru": "Национальный реестр улиц Израиля (data.gov.il)",
+      "am": "የእስራኤል ብሔራዊ መንገዶች መዝገብ (data.gov.il)"
+    },
+    "licenses.registry.body": {
+      "he": "קודי הרחובות ושמותיהם מבוססים על רשימת הרחובות הלאומית של רשות האוכלוסין וההגירה, פורטל הנתונים הממשלתי data.gov.il, לפי רישיון השימוש של האתר ובציון המקור.",
+      "en": "Street codes and names are based on the national street list of the Population and Immigration Authority, published on the government open-data portal data.gov.il, used under the site's licence with source attribution.",
+      "ar": "تستند رموز الشوارع وأسماؤها إلى قائمة الشوارع الوطنية الصادرة عن سلطة السكان والهجرة، المنشورة على بوابة البيانات الحكومية data.gov.il، وتُستخدم وفق رخصة الموقع مع ذكر المصدر.",
+      "ru": "Коды и названия улиц основаны на национальном списке улиц Управления населения и иммиграции, опубликованном на портале открытых данных data.gov.il, и используются по лицензии сайта с указанием источника.",
+      "am": "የመንገድ ኮዶች እና ስሞች በሕዝብ እና በስደት ባለሥልጣን ብሔራዊ መንገዶች ዝርዝር ላይ የተመሰረቱ ናቸው፣ በመንግሥት ክፍት ውሂብ ፖርታል data.gov.il ላይ የታተመ፣ በጣቢያው ፍቃድ ሥር ምንጭ በመጥቀስ ይዋላል።"
+    },
+    "licenses.mlkit.title": {
+      "he": "Google ML Kit Text Recognition",
+      "en": "Google ML Kit Text Recognition",
+      "ar": "Google ML Kit Text Recognition",
+      "ru": "Google ML Kit Text Recognition",
+      "am": "Google ML Kit Text Recognition"
+    },
+    "licenses.mlkit.body": {
+      "he": "זיהוי טקסט בתמונות באמצעות Google ML Kit, בכפוף לתנאי השירות של ML Kit (הכוללים את תנאי השימוש של Google APIs): developers.google.com/ml-kit/terms",
+      "en": "On-image text recognition by Google ML Kit, subject to the ML Kit Terms of Service (which incorporate the Google APIs Terms of Service): developers.google.com/ml-kit/terms",
+      "ar": "التعرف على النص في الصور بواسطة Google ML Kit، وفقًا لشروط خدمة ML Kit (التي تتضمن شروط استخدام Google APIs): developers.google.com/ml-kit/terms",
+      "ru": "Распознавание текста на изображениях с помощью Google ML Kit в соответствии с условиями использования ML Kit (включающими условия использования Google APIs): developers.google.com/ml-kit/terms",
+      "am": "በምስሎች ላይ ያለውን ጽሑፍ መለየት በGoogle ML Kit፣ በML Kit የአገልግሎት ውሎች ሥር (የGoogle APIs የአገልግሎት ውሎችን ያካትታሉ): developers.google.com/ml-kit/terms"
+    },
+    "licenses.apache.title": {
+      "he": "Apache-2.0 libraries",
+      "en": "Apache-2.0 libraries",
+      "ar": "Apache-2.0 libraries",
+      "ru": "Apache-2.0 libraries",
+      "am": "Apache-2.0 libraries"
+    },
+    "licenses.apache.body": {
+      "he": "AndroidX, Kotlin, Compose, CameraX, Room, OkHttp, Tink, kotlinx-coroutines ו-tesseract4android מופצים ברישיון Apache 2.0.",
+      "en": "AndroidX, Kotlin, Compose, CameraX, Room, OkHttp, Tink, kotlinx-coroutines and tesseract4android are distributed under the Apache License 2.0.",
+      "ar": "تُوزع مكتبات AndroidX وKotlin وCompose وCameraX وRoom وOkHttp وTink وkotlinx-coroutines وtesseract4android بموجب رخصة Apache 2.0.",
+      "ru": "AndroidX, Kotlin, Compose, CameraX, Room, OkHttp, Tink, kotlinx-coroutines и tesseract4android распространяются по лицензии Apache 2.0.",
+      "am": "AndroidX, Kotlin, Compose, CameraX, Room, OkHttp, Tink, kotlinx-coroutines እና tesseract4android በApache License 2.0 ሥር ይሰራጫሉ።"
+    },
+    "licenses.tesseract.title": {
+      "he": "Tesseract OCR",
+      "en": "Tesseract OCR",
+      "ar": "Tesseract OCR",
+      "ru": "Tesseract OCR",
+      "am": "Tesseract OCR"
+    },
+    "licenses.tesseract.body": {
+      "he": "Tesseract - רישיון Apache 2.0; Leptonica - רישיון בסגנון BSD; libjpeg - רישיון IJG; libpng - רישיון ההתייחסות של libpng. הטקסטים המלאים להלן.",
+      "en": "Tesseract - Apache License 2.0; Leptonica - BSD-style licence; libjpeg - IJG licence; libpng - libpng reference licence. Full texts below.",
+      "ar": "Tesseract - رخصة Apache 2.0؛ Leptonica - رخصة بنمط BSD؛ libjpeg - رخصة IJG؛ libpng - الرخصة المرجعية لـlibpng. النصوص الكاملة أدناه.",
+      "ru": "Tesseract - лицензия Apache 2.0; Leptonica - лицензия в стиле BSD; libjpeg - лицензия IJG; libpng - референс-лицензия libpng. Полные тексты ниже.",
+      "am": "Tesseract - Apache 2.0 ፍቃድ፤ Leptonica - BSD-ዓይነት ፍቃድ፤ libjpeg - IJG ፍቃድ፤ libpng - የlibpng ማጣቀሻ ፍቃድ። ሙሉ ጽሑፎች ከዚህ በታች።"
+    },
+    "licenses.texts.title": {
+      "he": "טקסטים מלאים של רישיונות",
+      "en": "Full licence texts",
+      "ar": "النصوص الكاملة للتراخيص",
+      "ru": "Полные тексты лицензий",
+      "am": "ሙሉ የፍቃድ ጽሑፎች"
+    },
+    "licenses.back.label": {
+      "he": "חזור",
+      "en": "Back",
+      "ar": "رجوع",
+      "ru": "Назад",
+      "am": "ተመለስ"
+    },
+    "review.title": {
+      "he": "בדיקת הדיווח",
+      "en": "Report review",
+      "ar": "مراجعة البلاغ",
+      "ru": "Проверка обращения",
+      "am": "የሪፖርት ግምገማ"
+    },
+    "review.edit.start": {
+      "he": "ערוך",
+      "en": "Edit",
+      "ar": "تعديل",
+      "ru": "Изменить",
+      "am": "አርትዕ"
+    },
+    "review.edit.done": {
+      "he": "סיום עריכה",
+      "en": "Done editing",
+      "ar": "إنهاء التعديل",
+      "ru": "Завершить редактирование",
+      "am": "አርትዖት ጨርስ"
+    },
+    "review.image_description": {
+      "he": "צילום ראיה",
+      "en": "Evidence photo",
+      "ar": "صورة الدليل",
+      "ru": "Фото доказательства",
+      "am": "የማስረጃ ፎቶ"
+    },
+    "review.category_note": {
+      "he": "זיהוי קטגוריה אוטומטי עדיין בפיתוח. בחר קטגוריה לבדיקה.",
+      "en": "Automatic category detection is still in development. Choose a category to review.",
+      "ar": "التعرّف التلقائي على الفئة لا يزال قيد التطوير. اختر فئة للمراجعة.",
+      "ru": "Автоматическое определение категории ещё в разработке. Выберите категорию для проверки.",
+      "am": "ራስ-ሰር የምድብ ለይቶ ማወቅ ገና በመገንባት ላይ ነው። ለግምገማ ምድብ ይምረጡ።"
+    },
+    "review.suggestion_hint": {
+      "he": "הצעה: {category} ({percent}% ביטחון)",
+      "en": "Suggestion: {category} ({percent}% confidence)",
+      "ar": "اقتراح: {category} (ثقة {percent}%)",
+      "ru": "Предложение: {category} (уверенность {percent}%)",
+      "am": "ጥቆማ፡ {category} ({percent}% እምነት)"
+    },
+    "review.suggestion_hint_plain": {
+      "he": "הצעה: {category}",
+      "en": "Suggestion: {category}",
+      "ar": "اقتراح: {category}",
+      "ru": "Предложение: {category}",
+      "am": "ጥቆማ፡ {category}"
+    },
+    "review.suggestion_change": {
+      "he": "שנה קטגוריה",
+      "en": "Change category",
+      "ar": "تغيير الفئة",
+      "ru": "Изменить категорию",
+      "am": "ምድብ ቀይር"
+    },
+    "review.suggestion_low": {
+      "he": "הצעה ראשונית בלבד, בדוק ובחר",
+      "en": "Preliminary suggestion only, check and choose",
+      "ar": "اقتراح أولي فقط، تحقّق ثم اختر",
+      "ru": "Только предварительное предложение, проверьте и выберите",
+      "am": "የመጀመሪያ ጥቆማ ብቻ ነው፣ ፈትሸው ይምረጡ"
+    },
+    "review.plate": {
+      "he": "לוחית: {plate}",
+      "en": "Plate: {plate}",
+      "ar": "اللوحة: {plate}",
+      "ru": "Номер: {plate}",
+      "am": "ሰሌዳ: {plate}"
+    },
+    "review.plate_not_confirmed": {
+      "he": "לא אושרה",
+      "en": "not confirmed",
+      "ar": "لم تُؤكَّد",
+      "ru": "не подтверждён",
+      "am": "አልተረጋገጠም"
+    },
+    "review.ocr.analyzing": {
+      "he": "מנתח את הצילום במכשיר...",
+      "en": "Analyzing the photo on the device...",
+      "ar": "جارٍ تحليل الصورة على الجهاز...",
+      "ru": "Анализ фото на устройстве...",
+      "am": "ፎቶውን በመሣሪያው ላይ በመተንተን ላይ..."
+    },
+    "review.ocr.no_plate": {
+      "he": "לא זוהתה לוחית; ניתן לערוך",
+      "en": "No plate detected; you can edit",
+      "ar": "لم يتم التعرّف على لوحة؛ يمكنك التعديل",
+      "ru": "Номер не распознан; можно изменить",
+      "am": "ምንም ሰሌዳ አልተገኘም፤ ማረም ይችላሉ"
+    },
+    "review.ocr.suggestions_found": {
+      "he": "נמצאו הצעות. בדוק כל ספרה בצילום",
+      "en": "Suggestions found. Check every digit against the photo",
+      "ar": "تم العثور على اقتراحات. تحقّق من كل رقم في الصورة",
+      "ru": "Найдены варианты. Сверьте каждую цифру с фото",
+      "am": "ጥቆማዎች ተገኝተዋል። እያንዳንዱን አሃዝ ከፎቶው ጋር ያረጋግጡ"
+    },
+    "review.plate_suggestion": {
+      "he": "הצעה בלבד: {plate}",
+      "en": "Suggestion only: {plate}",
+      "ar": "اقتراح فقط: {plate}",
+      "ru": "Только вариант: {plate}",
+      "am": "ጥቆማ ብቻ: {plate}"
+    },
+    "review.address": {
+      "he": "כתובת: {address}",
+      "en": "Address: {address}",
+      "ar": "العنوان: {address}",
+      "ru": "Адрес: {address}",
+      "am": "አድራሻ: {address}"
+    },
+    "review.address_missing": {
+      "he": "נדרשת השלמה בעריכה",
+      "en": "needs completing in edit mode",
+      "ar": "يجب إكماله في وضع التعديل",
+      "ru": "нужно заполнить при редактировании",
+      "am": "በአርትዖት መሟላት አለበት"
+    },
+    "review.time": {
+      "he": "זמן: {time}",
+      "en": "Time: {time}",
+      "ar": "الوقت: {time}",
+      "ru": "Время: {time}",
+      "am": "ሰዓት: {time}"
+    },
+    "review.text_missing": {
+      "he": "תיאור הדיווח נדרש בעריכה",
+      "en": "The report description is needed in edit mode",
+      "ar": "وصف البلاغ مطلوب في وضع التعديل",
+      "ru": "Описание обращения нужно заполнить при редактировании",
+      "am": "የሪፖርቱ መግለጫ በአርትዖት ያስፈልጋል"
+    },
+    "review.unresolved": {
+      "he": "דרוש בירור: {items}",
+      "en": "Needs checking: {items}",
+      "ar": "يحتاج إلى توضيح: {items}",
+      "ru": "Требует уточнения: {items}",
+      "am": "ማጣራት ያስፈልጋል: {items}"
+    },
+    "review.edit.original_time_title": {
+      "he": "זמן הראיה המקורי",
+      "en": "Original evidence time",
+      "ar": "وقت الدليل الأصلي",
+      "ru": "Исходное время доказательства",
+      "am": "የማስረጃው የመጀመሪያ ሰዓት"
+    },
+    "review.edit.gps": {
+      "he": "GPS: {status}",
+      "en": "GPS: {status}",
+      "ar": "GPS: {status}",
+      "ru": "GPS: {status}",
+      "am": "GPS: {status}"
+    },
+    "review.edit.gps_missing": {
+      "he": "חסר",
+      "en": "missing",
+      "ar": "مفقود",
+      "ru": "нет",
+      "am": "የለም"
+    },
+    "review.edit.gps_read": {
+      "he": "נקרא מהראיה",
+      "en": "read from the evidence",
+      "ar": "مقروء من الدليل",
+      "ru": "прочитан из доказательства",
+      "am": "ከማስረጃው ተነቧል"
+    },
+    "review.edit.privacy_note": {
+      "he": "התמונות והלוחיות מעובדות במכשיר ואינן נשלחות ל-Google. ML Kit שולח ל-Google נתוני שימוש וביצועים ועשוי לפנות לשרתיה לעדכונים. תוצאה היא הצעה בלבד.",
+      "en": "Photos and plates are processed on the device and are not sent to Google. ML Kit sends usage and performance data to Google and may contact its servers for updates. A result is a suggestion only.",
+      "ar": "تُعالَج الصور واللوحات على الجهاز ولا تُرسل إلى Google. يرسل ML Kit بيانات الاستخدام والأداء إلى Google وقد يتصل بخوادمها للحصول على التحديثات. النتيجة اقتراح فقط.",
+      "ru": "Фото и номера обрабатываются на устройстве и не отправляются в Google. ML Kit отправляет в Google данные об использовании и производительности и может обращаться к её серверам за обновлениями. Результат — только вариант.",
+      "am": "ፎቶዎቹና ሰሌዳዎቹ በመሣሪያው ላይ ይሠራሉ፤ ወደ Google አይላኩም። ML Kit የአጠቃቀምና የአፈጻጸም መረጃ ወደ Google ይልካል፤ ለዝማኔዎችም አገልጋዮቹን ሊያገኝ ይችላል። ውጤቱ ጥቆማ ብቻ ነው።"
+    },
+    "review.edit.recognizing": {
+      "he": "מזהה במכשיר...",
+      "en": "Recognizing on the device...",
+      "ar": "جارٍ التعرّف على الجهاز...",
+      "ru": "Распознавание на устройстве...",
+      "am": "በመሣሪያው ላይ በመለየት ላይ..."
+    },
+    "review.edit.suggest_plate": {
+      "he": "הצע לוחית מתוך הצילום",
+      "en": "Suggest a plate from the photo",
+      "ar": "اقترح لوحة من الصورة",
+      "ru": "Предложить номер по фото",
+      "am": "ከፎቶው ሰሌዳ ጠቁም"
+    },
+    "review.edit.plate_field": {
+      "he": "מספר לוחית (ספרות בלבד)",
+      "en": "Plate number (digits only)",
+      "ar": "رقم اللوحة (أرقام فقط)",
+      "ru": "Номер автомобиля (только цифры)",
+      "am": "የሰሌዳ ቁጥር (አሃዞች ብቻ)"
+    },
+    "review.plate_class.title": {
+      "he": "סוג הלוחית",
+      "en": "Plate type",
+      "ar": "نوع اللوحة",
+      "ru": "Тип номера",
+      "am": "የሰሌዳ ዓይነት"
+    },
+    "review.plate_class.regular": {
+      "he": "רגילה",
+      "en": "Regular",
+      "ar": "عادية",
+      "ru": "Обычный",
+      "am": "መደበኛ"
+    },
+    "review.plate_class.police": {
+      "he": "משטרה",
+      "en": "Police",
+      "ar": "شرطة",
+      "ru": "Полиция",
+      "am": "ፖሊስ"
+    },
+    "review.plate_class.cd": {
+      "he": "דיפלומטית (CD)",
+      "en": "Diplomatic (CD)",
+      "ar": "دبلوماسية (CD)",
+      "ru": "Дипломатический (CD)",
+      "am": "ዲፕሎማቲክ (CD)"
+    },
+    "review.plate_class.cc": {
+      "he": "קונסולרית (CC)",
+      "en": "Consular (CC)",
+      "ar": "قنصلية (CC)",
+      "ru": "Консульский (CC)",
+      "am": "የቆንስላ (CC)"
+    },
+    "review.edit.address_field": {
+      "he": "רחוב ומספר בית שאישרת",
+      "en": "Street and house number you confirmed",
+      "ar": "الشارع ورقم المنزل اللذان أكدتهما",
+      "ru": "Улица и номер дома, которые вы подтвердили",
+      "am": "ያረጋገጡት መንገድና የቤት ቁጥር"
+    },
+    "review.edit.geocode_note": {
+      "he": "חיפוש כתובת שולח קואורדינטות בלבד לספק המיקום של המכשיר. מספרי בית הם הצעות בלבד.",
+      "en": "An address search sends only coordinates to the device's location provider. House numbers are suggestions only.",
+      "ar": "يرسل البحث عن العنوان الإحداثيات فقط إلى مزوّد الموقع في الجهاز. أرقام المنازل اقتراحات فقط.",
+      "ru": "Поиск адреса передаёт поставщику геоданных устройства только координаты. Номера домов — только варианты.",
+      "am": "የአድራሻ ፍለጋ መጋጠሚያዎችን ብቻ ለመሣሪያው የአካባቢ አቅራቢ ይልካል። የቤት ቁጥሮች ጥቆማዎች ብቻ ናቸው።"
+    },
+    "review.edit.geocode_button": {
+      "he": "חפש הצעות כתובת לפי המיקום",
+      "en": "Find address suggestions from the location",
+      "ar": "ابحث عن اقتراحات عناوين حسب الموقع",
+      "ru": "Найти варианты адреса по местоположению",
+      "am": "በአካባቢው መሠረት የአድራሻ ጥቆማዎችን ፈልግ"
+    },
+    "review.geocode.no_suggestions": {
+      "he": "אין הצעות, הזן כתובת שבדקת",
+      "en": "No suggestions; enter an address you checked",
+      "ar": "لا توجد اقتراحات؛ أدخل عنوانًا تحققت منه",
+      "ru": "Вариантов нет; введите проверенный вами адрес",
+      "am": "ምንም ጥቆማ የለም፤ ያረጋገጡትን አድራሻ ያስገቡ"
+    },
+    "review.geocode.check_house_number": {
+      "he": "בדוק ואשר את מספר הבית בעצמך",
+      "en": "Check and confirm the house number yourself",
+      "ar": "تحقّق من رقم المنزل وأكّده بنفسك",
+      "ru": "Проверьте и подтвердите номер дома сами",
+      "am": "የቤት ቁጥሩን ራስዎ ያረጋግጡ"
+    },
+    "review.address_suggestion": {
+      "he": "הצעה בלבד: {address}",
+      "en": "Suggestion only: {address}",
+      "ar": "اقتراح فقط: {address}",
+      "ru": "Только вариант: {address}",
+      "am": "ጥቆማ ብቻ: {address}"
+    },
+    "review.edit.text_field": {
+      "he": "הטקסט המדויק לבדיקה",
+      "en": "The exact text to review",
+      "ar": "النص الدقيق للمراجعة",
+      "ru": "Точный текст для проверки",
+      "am": "ለግምገማ ትክክለኛው ጽሑፍ"
+    },
+    "review.edit.time_field": {
+      "he": "זמן הצילום (24 שעות)",
+      "en": "Photo time (24 hours)",
+      "ar": "وقت الصورة المؤكد (24 ساعة)",
+      "ru": "Подтверждённое время снимка (24 часа)",
+      "am": "የተረጋገጠ የፎቶ ሰዓት (24 ሰዓት)"
+    },
+    "review.edit.latitude_field": {
+      "he": "קו רוחב",
+      "en": "Latitude",
+      "ar": "خط العرض",
+      "ru": "Широта",
+      "am": "ኬክሮስ"
+    },
+    "review.edit.longitude_field": {
+      "he": "קו אורך",
+      "en": "Longitude",
+      "ar": "خط الطول",
+      "ru": "Долгота",
+      "am": "ኬንትሮስ"
+    },
+    "review.edit.confirm_button": {
+      "he": "אשר זמן, מיקום וכתובת שבדקת",
+      "en": "Confirm the time, location and address you checked",
+      "ar": "أكّد الوقت والموقع والعنوان الذي تحققت منه",
+      "ru": "Подтвердить проверенные время, место и адрес",
+      "am": "ያረጋገጡትን ሰዓት፣ ቦታና አድራሻ አረጋግጥ"
+    },
+    "review.approve_button": {
+      "he": "אשר את התוכן לבדיקה",
+      "en": "Approve the content for review",
+      "ar": "وافق على المحتوى للمراجعة",
+      "ru": "Одобрить содержание для проверки",
+      "am": "ይዘቱን ለግምገማ አጽድቅ"
+    },
+    "review.approved": {
+      "he": "התוכן אושר מקומית, לא נשלח",
+      "en": "Content approved on this device, not sent",
+      "ar": "تمت الموافقة على المحتوى على الجهاز، لم يُرسل",
+      "ru": "Содержание одобрено на устройстве, не отправлено",
+      "am": "ይዘቱ በመሣሪያው ላይ ጸድቋል፣ አልተላከም"
+    },
+    "review.not_approved": {
+      "he": "התוכן לא אושר",
+      "en": "Content not approved",
+      "ar": "لم تتم الموافقة على المحتوى",
+      "ru": "Содержание не одобрено",
+      "am": "ይዘቱ አልጸደቀም"
+    },
+    "review.save_draft": {
+      "he": "שמור טיוטה",
+      "en": "Save draft",
+      "ar": "حفظ المسودة",
+      "ru": "Сохранить черновик",
+      "am": "ረቂቅ አስቀምጥ"
+    },
+    "review.outgoing_preview": {
+      "he": "בדוק תמונה נפרדת ללא נתוני צילום",
+      "en": "Check a separate photo without capture data",
+      "ar": "تحقّق من صورة منفصلة بدون بيانات التصوير",
+      "ru": "Проверить отдельное фото без данных съёмки",
+      "am": "ያለ ቀረጻ መረጃ የተለየ ፎቶ ይመልከቱ"
+    },
+    "review.submit.button": {
+      "he": "שלח לעירייה",
+      "en": "Send to the municipality",
+      "ar": "إرسال إلى البلدية",
+      "ru": "Отправить в муниципалитет",
+      "am": "ወደ ማዘጋጃ ቤቱ ላክ"
+    },
+    "review.submit.sending": {
+      "he": "שולח לעירייה...",
+      "en": "Sending to the municipality...",
+      "ar": "جارٍ الإرسال إلى البلدية...",
+      "ru": "Отправка в муниципалитет...",
+      "am": "ወደ ማዘጋጃ ቤቱ በመላክ ላይ..."
+    },
+    "review.submit.missing_credentials": {
+      "he": "לא ניתן לשלוח - יש להגדיר בהגדרות את הערכים:",
+      "en": "Cannot send - set these values in Settings:",
+      "ar": "لا يمكن الإرسال - اضبط هذه القيم في الإعدادات:",
+      "ru": "Нельзя отправить - задайте эти значения в настройках:",
+      "am": "መላክ አይቻልም - እነዚህን እሴቶች በቅንብሮች ውስጥ ያስገቡ:"
+    },
+    "review.submit.no_device_lock": {
+      "he": "הגדר נעילת מסך",
+      "en": "Set a screen lock",
+      "ar": "اضبط قفل الشاشة",
+      "ru": "Задайте блокировку экрана",
+      "am": "የማያ ገጽ መቆለፊያ ያዘጋጁ"
+    },
+    "review.submit.disabled_button": {
+      "he": "שלח",
+      "en": "Send",
+      "ar": "إرسال",
+      "ru": "Отправить",
+      "am": "ላክ"
+    },
+    "review.submit.unavailable": {
+      "he": "שליחה אינה זמינה בגרסת הבדיקה",
+      "en": "Sending is not available in the test build",
+      "ar": "الإرسال غير متاح في نسخة الاختبار",
+      "ru": "Отправка недоступна в тестовой версии",
+      "am": "መላክ በሙከራ ስሪቱ ውስጥ አይገኝም"
+    },
+    "review.back": {
+      "he": "חזור",
+      "en": "Back",
+      "ar": "رجوع",
+      "ru": "Назад",
+      "am": "ተመለስ"
+    },
+    "review.warning.missing_gps": {
+      "he": "GPS חסר",
+      "en": "GPS missing",
+      "ar": "لا يوجد GPS",
+      "ru": "Нет GPS",
+      "am": "GPS የለም"
+    },
+    "review.warning.missing_time": {
+      "he": "זמן חסר",
+      "en": "Time missing",
+      "ar": "الوقت مفقود",
+      "ru": "Нет времени съёмки",
+      "am": "ሰዓት የለም"
+    },
+    "review.warning.timezone_needs_confirmation": {
+      "he": "אזור זמן דורש אישור",
+      "en": "Time zone needs confirmation",
+      "ar": "المنطقة الزمنية تحتاج إلى تأكيد",
+      "ru": "Часовой пояс требует подтверждения",
+      "am": "የሰዓት ክልሉ ማረጋገጫ ያስፈልገዋል"
+    },
+    "review.warning.address_needs_confirmation": {
+      "he": "כתובת ומספר בית דורשים אישור",
+      "en": "Address and house number need confirmation",
+      "ar": "العنوان ورقم المنزل يحتاجان إلى تأكيد",
+      "ru": "Адрес и номер дома требуют подтверждения",
+      "am": "አድራሻውና የቤት ቁጥሩ ማረጋገጫ ያስፈልጋቸዋል"
+    },
+    "review.warning.suggested_address_needs_confirmation": {
+      "he": "כתובת דורשת אישור",
+      "en": "Address needs confirmation",
+      "ar": "العنوان يحتاج إلى تأكيد",
+      "ru": "Адрес требует подтверждения",
+      "am": "አድራሻው ማረጋገጫ ያስፈልገዋል"
+    },
+    "review.warning.time_needs_confirmation": {
+      "he": "זמן דורש אישור",
+      "en": "Time needs confirmation",
+      "ar": "الوقت يحتاج إلى تأكيد",
+      "ru": "Время требует подтверждения",
+      "am": "ሰዓቱ ማረጋገጫ ያስፈልገዋል"
+    },
+    "review.warning.location_needs_confirmation": {
+      "he": "מיקום דורש אישור",
+      "en": "Location needs confirmation",
+      "ar": "الموقع يحتاج إلى تأكيد",
+      "ru": "Местоположение требует подтверждения",
+      "am": "ቦታው ማረጋገጫ ያስፈልገዋል"
+    },
+    "capture.title": {
+      "he": "צילום ראיה מקורית",
+      "en": "Original evidence photo",
+      "ar": "تصوير الدليل الأصلي",
+      "ru": "Съёмка исходного доказательства",
+      "am": "የመጀመሪያ ማስረጃ ፎቶ"
+    },
+    "capture.camera_unavailable": {
+      "he": "המצלמה אינה זמינה",
+      "en": "The camera is not available",
+      "ar": "الكاميرا غير متاحة",
+      "ru": "Камера недоступна",
+      "am": "ካሜራው አይገኝም"
+    },
+    "capture.failed": {
+      "he": "הצילום נכשל, לא נשמרה ראיה",
+      "en": "The photo failed; no evidence was saved",
+      "ar": "فشل التصوير، لم يُحفظ أي دليل",
+      "ru": "Съёмка не удалась, доказательство не сохранено",
+      "am": "ፎቶ ማንሳቱ አልተሳካም፤ ምንም ማስረጃ አልተቀመጠም"
+    },
+    "capture.saving": {
+      "he": "שומר...",
+      "en": "Saving...",
+      "ar": "جارٍ الحفظ...",
+      "ru": "Сохранение...",
+      "am": "በማስቀመጥ ላይ..."
+    },
+    "capture.shutter": {
+      "he": "צלם",
+      "en": "Take photo",
+      "ar": "التقط",
+      "ru": "Снять",
+      "am": "አንሳ"
+    },
+    "capture.back": {
+      "he": "חזור",
+      "en": "Back",
+      "ar": "رجوع",
+      "ru": "Назад",
+      "am": "ተመለስ"
+    },
+    "reports.title": {
+      "he": "הדיווחים שלי",
+      "en": "My reports",
+      "ar": "بلاغاتي",
+      "ru": "Мои обращения",
+      "am": "የእኔ ሪፖርቶች"
+    },
+    "reports.pending.title": {
+      "he": "טיוטות שלא אושרו",
+      "en": "Unapproved drafts",
+      "ar": "مسودات لم تتم الموافقة عليها",
+      "ru": "Неодобренные черновики",
+      "am": "ያልጸደቁ ረቂቆች"
+    },
+    "reports.pending.empty": {
+      "he": "אין טיוטות ממתינות",
+      "en": "No pending drafts",
+      "ar": "لا توجد مسودات معلّقة",
+      "ru": "Нет ожидающих черновиков",
+      "am": "በመጠባበቅ ላይ ያሉ ረቂቆች የሉም"
+    },
+    "reports.pending.open": {
+      "he": "פתח טיוטה {id}",
+      "en": "Open draft {id}",
+      "ar": "فتح المسودة {id}",
+      "ru": "Открыть черновик {id}",
+      "am": "ረቂቅ {id} ክፈት"
+    },
+    "reports.approved.title": {
+      "he": "אושרו וממתינים לשליחה",
+      "en": "Approved and waiting to be sent",
+      "ar": "تمت الموافقة عليها وبانتظار الإرسال",
+      "ru": "Одобрены и ждут отправки",
+      "am": "ጸድቀው ለመላክ በመጠባበቅ ላይ"
+    },
+    "reports.approved.empty": {
+      "he": "אין דיווחים שאושרו וממתינים לשליחה",
+      "en": "No approved reports waiting to be sent",
+      "ar": "لا توجد بلاغات معتمدة بانتظار الإرسال",
+      "ru": "Нет одобренных обращений, ожидающих отправки",
+      "am": "ጸድቀው ለመላክ የሚጠብቁ ሪፖርቶች የሉም"
+    },
+    "reports.approved.open": {
+      "he": "פתח דיווח {id}",
+      "en": "Open report {id}",
+      "ar": "فتح البلاغ {id}",
+      "ru": "Открыть обращение {id}",
+      "am": "ሪፖርት {id} ክፈት"
+    },
+    "reports.drafts.title": {
+      "he": "טיוטות",
+      "en": "Drafts",
+      "ar": "مسودات",
+      "ru": "Черновики",
+      "am": "ረቂቆች"
+    },
+    "reports.drafts.empty": {
+      "he": "אין טיוטות",
+      "en": "No drafts",
+      "ar": "لا مسودات",
+      "ru": "Нет черновиков",
+      "am": "ረቂቆች የሉም"
+    },
+    "reports.drafts.open": {
+      "he": "פתח טיוטה {id}",
+      "en": "Open draft {id}",
+      "ar": "فتح المسودة {id}",
+      "ru": "Открыть черновик {id}",
+      "am": "ረቂቅ {id} ክፈት"
+    },
+    "reports.ready.title": {
+      "he": "מוכנים לשליחה",
+      "en": "Ready to send",
+      "ar": "جاهزة للإرسال",
+      "ru": "Готовы к отправке",
+      "am": "ለመላክ ዝግጁ"
+    },
+    "reports.ready.empty": {
+      "he": "אין דיווחים מוכנים לשליחה",
+      "en": "No reports ready to send",
+      "ar": "لا بلاغات جاهزة للإرسال",
+      "ru": "Нет готовых к отправке",
+      "am": "ለመላክ ዝግጁ የሆኑ ሪፖርቶች የሉም"
+    },
+    "reports.ready.open": {
+      "he": "פתח דיווח {id}",
+      "en": "Open report {id}",
+      "ar": "فتح البلاغ {id}",
+      "ru": "Открыть обращение {id}",
+      "am": "ሪፖርት {id} ክፈት"
+    },
+    "reports.history.title": {
+      "he": "היסטוריית דיווחים",
+      "en": "Report history",
+      "ar": "سجل البلاغات",
+      "ru": "История обращений",
+      "am": "የሪፖርቶች ታሪክ"
+    },
+    "reports.history.empty": {
+      "he": "אין דיווחים שנשלחו עדיין. שליחה חיה תופעל רק באישור נפרד, וסטטוס יגיע מדואר העירייה בלבד.",
+      "en": "No reports have been sent yet. Live sending is turned on only with a separate approval, and status comes only from the municipality's email.",
+      "ar": "لم تُرسل أي بلاغات بعد. لن يُفعَّل الإرسال المباشر إلا بموافقة منفصلة، وتأتي الحالة من بريد البلدية فقط.",
+      "ru": "Отправленных обращений пока нет. Отправка включается только по отдельному разрешению, а статус приходит только из почты муниципалитета.",
+      "am": "እስካሁን የተላኩ ሪፖርቶች የሉም። ቀጥታ መላክ የሚበራው በተለየ ፈቃድ ብቻ ነው፤ ሁኔታውም የሚመጣው ከማዘጋጃ ቤቱ ኢሜይል ብቻ ነው።"
+    },
+    "category.sidewalk_parking": {
+      "he": "חניה על המדרכה",
+      "en": "Parking on the sidewalk",
+      "ar": "الوقوف على الرصيف",
+      "ru": "Парковка на тротуаре",
+      "am": "በእግረኛ መንገድ ላይ ማቆም"
+    },
+    "category.broken_sign": {
+      "he": "תמרור שבור",
+      "en": "Broken traffic sign",
+      "ar": "إشارة مرور مكسورة",
+      "ru": "Сломанный дорожный знак",
+      "am": "የተሰበረ የትራፊክ ምልክት"
+    },
+    "category.faded_crosswalk": {
+      "he": "מעבר חציה דהוי",
+      "en": "Faded crosswalk",
+      "ar": "ممر مشاة باهت",
+      "ru": "Выцветший пешеходный переход",
+      "am": "የደበዘዘ የእግረኛ መሻገሪያ"
+    },
+    "category.bollard_request": {
+      "he": "בקשה להתקנת עמוד חסימה",
+      "en": "Request a bollard",
+      "ar": "طلب تركيب عمود لمنع المرور",
+      "ru": "Запрос на установку ограничительного столбика",
+      "am": "የመከለያ ምሰሶ ለመትከል ጥያቄ"
+    },
+    "category.needs_correction": {
+      "he": "נדרש תיקון קטגוריה",
+      "en": "Category needs correcting",
+      "ar": "يجب تصحيح الفئة",
+      "ru": "Нужно исправить категорию",
+      "am": "ምድቡ መታረም አለበት"
+    },
+    "presentation.time.unknown_zone": {
+      "he": "אזור זמן לא ידוע",
+      "en": "time zone unknown",
+      "ar": "المنطقة الزمنية غير معروفة",
+      "ru": "часовой пояс неизвестен",
+      "am": "የሰዓት ሰቅ አይታወቅም"
+    },
+    "presentation.time.missing": {
+      "he": "חסר",
+      "en": "missing",
+      "ar": "مفقود",
+      "ru": "отсутствует",
+      "am": "የለም"
+    },
+    "firstrun.title": {
+      "he": "ברוכים הבאים לדיווח ל-106 עיריית ירושלים",
+      "en": "Welcome to Jerusalem 106 reporting",
+      "ar": "مرحبًا بك في البلاغ إلى 106 بلدية القدس",
+      "ru": "Добро пожаловать в обращения в 106 мэрии Иерусалима",
+      "am": "እንኳን ደህና መጡ ወደ ሪፖርት 106 የኢየሩሳሌም ከተማ"
+    },
+    "firstrun.intro": {
+      "he": "הדיווחים והפרטים שלכם נשמרים במכשיר ונשלחים לעירייה רק כשאתם מאשרים ושולחים דיווח.",
+      "en": "Reports and your details stay on your device and are sent to the municipality only when you approve and send a report.",
+      "ar": "تبقى البلاغات وبياناتك على جهازك وتُرسل إلى البلدية فقط عندما توافق على بلاغ وترسله.",
+      "ru": "Отчёты и ваши данные хранятся на устройстве и отправляются в муниципалитет только когда вы подтверждаете и отправляете отчёт.",
+      "am": "ሪፖርቶች እና መረጃዎ በስልክዎ ላይ ይቆያሉ፤ ሪፖርት ሲያጸድቁ እና ሲልኩ ብቻ ለከተማ አስተዳደር ይላካሉ።"
+    },
+    "firstrun.step_capture": {
+      "he": "1. מצלמים את המפגע במקום.",
+      "en": "1. Photograph the problem where it is.",
+      "ar": "1. صوّر المشكلة في مكانها.",
+      "ru": "1. Сфотографируйте проблему на месте.",
+      "am": "1. ችግሩን በቦታው ላይ ይቅረጹ።"
+    },
+    "firstrun.step_review": {
+      "he": "2. בודקים את הטקסט ואת הכתובת לפני השליחה.",
+      "en": "2. Review the text and address before sending.",
+      "ar": "2. راجع النص والعنوان قبل الإرسال.",
+      "ru": "2. Проверьте текст и адрес перед отправкой.",
+      "am": "2. ከመላክዎ በፊት ጽሑፉን እና አድራሻውን ይገምግሙ።"
+    },
+    "firstrun.step_send": {
+      "he": "3. שולחים לעירייה ומקבלים מספר תיק.",
+      "en": "3. Send to the municipality and get a case number.",
+      "ar": "3. أرسل إلى البلدية واحصل على رقم ملف.",
+      "ru": "3. Отправьте в муниципалитет и получите номер обращения.",
+      "am": "3. ለከተማ አስተዳደር ይላኩ እና የጉዳይ ቁጥር ይቀበሉ።"
+    },
+    "firstrun.settings_note": {
+      "he": "לפני השליחה הראשונה ממלאים את פרטי המדווח במסך ההגדרות (נעול בביטול נעילת המכשיר).",
+      "en": "Before the first send, fill in your reporter details in Settings (protected by your device lock).",
+      "ar": "قبل الإرسال الأول، املأ بيانات المُبلّغ في الإعدادات (محمية بقفل جهازك).",
+      "ru": "Перед первой отправкой заполните данные заявителя в Настройках (защищены блокировкой устройства).",
+      "am": "ከመጀመሪያው መላክዎ በፊት የሪፖርተር መረጃዎን በቅንብሮች ይሙሉ (በስልክ መቆለፊያ የተጠበቀ)።"
+    },
+    "firstrun.start": {
+      "he": "מתחילים",
+      "en": "Get started",
+      "ar": "ابدأ",
+      "ru": "Начать",
+      "am": "ይጀምሩ"
+    },
+    "review.geocode.loading": {
+      "he": "מחפש רחוב ומספר בית לפי מיקום התמונה…",
+      "en": "Finding street and house number from the photo location…",
+      "ar": "جارٍ البحث عن الشارع ورقم المنزل من موقع الصورة…",
+      "ru": "Поиск улицы и номера дома по месту снимка…",
+      "am": "ከፎቶው አካባቢ የጎዳና እና የቤት ቁጥር በመፈለግ ላይ…"
+    },
+    "review.location.hide_advanced": {
+      "he": "הסתר תיקון מיקום מתקדם",
+      "en": "Hide advanced location correction",
+      "ar": "إخفاء التصحيح المتقدم للموقع",
+      "ru": "Скрыть расширенное исправление",
+      "am": "የላቀ የአካባቢ እርማትን ደብቅ"
+    },
+    "review.location.advanced_note": {
+      "he": "רק אם המיקום חסר או שגוי: הזן קואורדינטות שבדקת. מיקום התמונה המקורי נשמר בנפרד.",
+      "en": "Only if the location is missing or wrong: enter coordinates you checked. The original photo location stays separate.",
+      "ar": "فقط إذا كان الموقع مفقودًا أو خاطئًا: أدخل إحداثيات تحققت منها. يبقى موقع الصورة الأصلي منفصلاً.",
+      "ru": "Только если место отсутствует или неверно: введите проверенные координаты. Исходное место снимка сохраняется отдельно.",
+      "am": "አካባቢው ከጎደለ ወይም ከተሳሳተ ብቻ፦ ያረጋገጡትን መጋጠሚያ ያስገቡ። የመጀመሪያው የፎቶ አካባቢ ለብቻው ይቀመጣል።"
+    },
+    "review.location.lookup_title": {
+      "he": "למצוא רחוב ומספר בית?",
+      "en": "Find street and house number?",
+      "ar": "البحث عن الشارع ورقم المنزل؟",
+      "ru": "Найти улицу и номер дома?",
+      "am": "ጎዳና እና የቤት ቁጥር ይፈለግ?"
+    },
+    "review.location.lookup_yes": {
+      "he": "כן, חפש כתובת",
+      "en": "Yes, find address",
+      "ar": "نعم، ابحث عن العنوان",
+      "ru": "Да, найти адрес",
+      "am": "አዎ፣ አድራሻ ፈልግ"
+    },
+    "review.location.lookup_later": {
+      "he": "לא עכשיו",
+      "en": "Not now",
+      "ar": "ليس الآن",
+      "ru": "Не сейчас",
+      "am": "አሁን አይደለም"
+    },
+    "review.location.missing": {
+      "he": "חסר מיקום מאושר; יש להשלים מיקום לפני אישור הדיווח.",
+      "en": "Confirmed location is missing. Enter it before approving the report.",
+      "ar": "الموقع المؤكد مفقود. أدخله قبل اعتماد البلاغ.",
+      "ru": "Нет подтверждённого места. Укажите его перед одобрением обращения.",
+      "am": "የተረጋገጠ አካባቢ የለም። ሪፖርቱን ከማጽደቅ በፊት ያስገቡ።"
+    },
+    "setup.title": {
+      "he": "הגדרות בסיסיות",
+      "en": "Basic setup",
+      "ar": "الإعدادات الأساسية",
+      "ru": "Основные настройки",
+      "am": "መሠረታዊ ቅንብሮች"
+    },
+    "setup.description": {
+      "he": "בחרו שפה ומלאו את פרטי המדווח. אפשר להשלים אחר כך בהגדרות; צילום וייבוא תמונות זמינים גם ללא מילוי הפרטים. שמירה דורשת ביטול נעילת המכשיר.",
+      "en": "Choose a language and enter reporter details. You can finish later in Settings; taking and importing photos works without these details. Saving requires unlocking your device.",
+      "ar": "اختر لغة وأدخل بيانات المُبلّغ. يمكنك إكمالها لاحقًا في الإعدادات؛ يمكن التقاط الصور واستيرادها دون هذه البيانات. يتطلب الحفظ فتح قفل الجهاز.",
+      "ru": "Выберите язык и заполните данные заявителя. Можно закончить позже в Настройках; снимать и импортировать фото можно и без этих данных. Для сохранения разблокируйте устройство.",
+      "am": "ቋንቋ ይምረጡ እና የሪፖርተር መረጃ ያስገቡ። በኋላ በቅንብሮች ማጠናቀቅ ይችላሉ፤ ያለዚህ መረጃ ፎቶ ማንሳት እና ማስመጣት ይቻላል። ለማስቀመጥ ስልኩን ይክፈቱ።"
+    },
+    "setup.save_continue": {
+      "he": "שמור והמשך",
+      "en": "Save and continue",
+      "ar": "احفظ وتابع",
+      "ru": "Сохранить и продолжить",
+      "am": "አስቀምጥ እና ቀጥል"
+    },
+    "setup.later": {
+      "he": "אחר כך",
+      "en": "Later",
+      "ar": "لاحقًا",
+      "ru": "Позже",
+      "am": "በኋላ"
+    },
+    "settings.id.invalid": {
+      "he": "מספר תעודת הזהות אינו תקין. בדוק את הספרות וספרת הביקורת.",
+      "en": "Invalid ID number. Check the digits and check digit.",
+      "ar": "رقم الهوية غير صالح. تحقق من الأرقام ورقم التحقق.",
+      "ru": "Неверный номер удостоверения. Проверьте цифры и контрольную цифру.",
+      "am": "የመታወቂያ ቁጥር ልክ አይደለም። ቁጥሮቹን ያረጋግጡ።"
+    },
+    "settings.phone.invalid": {
+      "he": "הזן מספר בינלאומי עם + וקוד מדינה, או מספר נייד ישראלי שמתחיל ב-05.",
+      "en": "Enter an international number with + and country code, or an Israeli mobile starting with 05.",
+      "ar": "أدخل رقمًا دوليًا مع + ورمز البلد، أو رقمًا إسرائيليًا يبدأ بـ05.",
+      "ru": "Введите международный номер с + и кодом страны или израильский мобильный с 05.",
+      "am": "በ+ እና በአገር ኮድ ዓለም አቀፍ ቁጥር ወይም በ05 የሚጀምር የእስራኤል ሞባይል ያስገቡ።"
+    },
+    "settings.email.invalid": {
+      "he": "כתובת האימייל אינה תקינה. בדוק את הכתובת.",
+      "en": "Invalid email address. Check the address.",
+      "ar": "عنوان البريد الإلكتروني غير صالح. تحقق من العنوان.",
+      "ru": "Неверный адрес электронной почты. Проверьте адрес.",
+      "am": "የኢሜይል አድራሻው ልክ አይደለም። አድራሻውን ያረጋግጡ።"
+    },
+    "settings.api.advanced": {
+      "he": "חיבור 106 מתקדם",
+      "en": "Advanced 106 connection",
+      "ar": "اتصال 106 متقدم",
+      "ru": "Расширенное подключение 106",
+      "am": "የላቀ 106 ግንኙነት"
+    },
+    "settings.passport.mode": {
+      "he": "אין לי תעודת זהות",
+      "en": "I don't have an ID card",
+      "ar": "بدون هوية إسرائيلية",
+      "ru": "Без израильского удостоверения",
+      "am": "የእስራኤል መታወቂያ የለም"
+    },
+    "settings.passport.number": {
+      "he": "מספר דרכון",
+      "en": "Passport number",
+      "ar": "رقم جواز السفر",
+      "ru": "Номер паспорта",
+      "am": "የፓስፖርት ቁጥር"
+    },
+    "settings.passport.invalid": {
+      "he": "מספר הדרכון אינו תקין. בדוק את המספר.",
+      "en": "Invalid passport number. Check the number.",
+      "ar": "رقم جواز السفر غير صالح. تحقق من الرقم.",
+      "ru": "Неверный номер паспорта. Проверьте номер.",
+      "am": "የፓስፖርት ቁጥር ልክ አይደለም። ቁጥሩን ያረጋግጡ።"
+    },
+    "settings.passport.required": {
+      "he": "הזן מספר דרכון כדי לשמור, או בטל את הסימון \"אין לי תעודת זהות\".",
+      "en": "Enter a passport number to save, or uncheck \"I don't have an ID card\".",
+      "ar": "أدخل رقم جواز السفر للحفظ، أو ألغِ تحديد \"بدون هوية إسرائيلية\".",
+      "ru": "Введите номер паспорта для сохранения или снимите отметку \"Без израильского удостоверения\".",
+      "am": "ለማስቀመጥ የፓስፖርት ቁጥር ያስገቡ፣ ወይም \"የእስራኤል መታወቂያ የለም\" ምልክቱን ያስወግዱ።"
+    },
+    "settings.save.missing_fields": {
+      "he": "חסרים או לא תקינים:",
+      "en": "Missing or invalid:",
+      "ar": "حقول ناقصة أو غير صالحة:",
+      "ru": "Не заполнены или неверны:",
+      "am": "የጎደሉ ወይም ትክክል ያልሆኑ:"
+    },
+    "settings.save.no_device_lock": {
+      "he": "הגדר נעילת מסך",
+      "en": "Set a screen lock",
+      "ar": "اضبط قفل الشاشة",
+      "ru": "Задайте блокировку экрана",
+      "am": "የማያ ገጽ መቆለፊያ ያዘጋጁ"
+    },
+    "shell.passport.review_required": {
+      "he": "נדרש גילוי על פרטי הקשר ומספרי מצייני המקום בנוסח הדיווח. בדוק את הנוסח המלא ושמור מחדש לפני שליחה. אם פרטי הקשר חסרים או אינם תקינים, תקן אותם בהגדרות.",
+      "en": "Contact and placeholder details must appear in the report. Check the full text and save again before sending. If contact details are missing or invalid, fix them in Settings.",
+      "ar": "يجب توضيح بيانات الاتصال والأرقام البديلة في البلاغ. راجع النص الكامل واحفظه مجددًا قبل الإرسال. صحح بيانات الاتصال الناقصة أو غير الصالحة في الإعدادات.",
+      "ru": "Сведения для связи и пояснение о номерах-заполнителях должны быть в тексте отчёта. Проверьте полный текст и сохраните заново перед отправкой. Исправьте отсутствующие или неверные данные в Настройках.",
+      "am": "የእውቂያና የቦታ ያዥ ዝርዝሮች በሪፖርቱ መኖር አለባቸው። ሙሉ ጽሑፉን ፈትሽተው ከመላክ በፊት እንደገና ያስቀምጡ። የጎደሉ ወይም የተሳሳቱ ዝርዝሮችን በቅንብሮች ያስተካክሉ።"
+    },
+    "settings.phone.international": {
+      "he": "מספר שאינו נייד ישראלי: המספר שלך יופיע בנוסח הדיווח; בשדה העירייה יישלח מספר מציין מקום לאחר אישורך.",
+      "en": "For a non-Israeli-mobile number, your number appears in the report text; the city phone field uses a placeholder after your approval.",
+      "ar": "للرقم غير المحمول الإسرائيلي، يظهر رقمك في نص البلاغ ويُرسل رقم بديل في حقل البلدية بعد موافقتك.",
+      "ru": "Для номера не израильского мобильного ваш номер будет в тексте отчёта, а в поле города после вашего подтверждения будет заполнитель.",
+      "am": "ቁጥሩ የእስራኤል ሞባይል ካልሆነ፣ በሪፖርቱ ጽሑፍ ይታያል፤ ካረጋገጡ በኋላ የማዘጋጃ ቤቱ መስክ የቦታ ያዥ ቁጥር ይጠቀማል።"
+    },
+    "review.location.missing_plain": {
+      "he": "לא נמצא מיקום בתמונה. אפשר לבחור כתובת מדויקת בירושלים ולאשר אותה בנפרד.",
+      "en": "The photo has no location. Look up and confirm an exact Jerusalem address separately.",
+      "ar": "لا يوجد موقع في الصورة. ابحث عن عنوان دقيق في القدس وأكده بشكل منفصل.",
+      "ru": "В фото нет местоположения. Найдите точный адрес в Иерусалиме и подтвердите его отдельно.",
+      "am": "ፎቶው አካባቢ የለውም። ትክክለኛ የኢየሩሳሌም አድራሻ ፈልጉና ለይታችሁ አረጋግጡ።"
+    },
+    "review.location.street": {
+      "he": "רחוב בירושלים",
+      "en": "Jerusalem street",
+      "ar": "شارع في القدس",
+      "ru": "Улица в Иерусалиме",
+      "am": "በኢየሩሳሌም ያለ መንገድ"
+    },
+    "review.location.house": {
+      "he": "מספר בית",
+      "en": "House number",
+      "ar": "رقم المبنى",
+      "ru": "Номер дома",
+      "am": "የቤት ቁጥር"
+    },
+    "review.location.offline_note": {
+      "he": "החיפוש משתמש במאגר הכתובות שהותקן במכשיר. אין שימוש במיקום המכשיר ואין שינוי בתמונה.",
+      "en": "Search uses the address data installed on this device. It does not use device location or change the photo.",
+      "ar": "يستخدم البحث بيانات العناوين المثبتة على الجهاز، دون استخدام موقع الجهاز أو تغيير الصورة.",
+      "ru": "Поиск использует адресные данные на устройстве. Местоположение устройства не используется, фото не меняется.",
+      "am": "ፍለጋው በመሣሪያው ላይ ያለውን የአድራሻ መረጃ ይጠቀማል። የመሣሪያውን አካባቢ አይጠቀምም፣ ፎቶውንም አይቀይርም።"
+    },
+    "review.location.find_address": {
+      "he": "חפש כתובת מדויקת",
+      "en": "Find exact address",
+      "ar": "ابحث عن عنوان دقيق",
+      "ru": "Найти точный адрес",
+      "am": "ትክክለኛ አድራሻ ፈልግ"
+    },
+    "review.location.cross_street": {
+      "he": "צומת עם רחוב (לא חובה)",
+      "en": "Crossing street (optional)",
+      "ar": "الشارع المتقاطع (اختياري)",
+      "ru": "Пересекающая улица (необязательно)",
+      "am": "የሚያቋርጥ መንገድ (አማራጭ)"
+    },
+    "review.location.find_crossing": {
+      "he": "מצא כתובת קרובה לצומת",
+      "en": "Find address near the crossing",
+      "ar": "ابحث عن عنوان قريب من التقاطع",
+      "ru": "Найти адрес рядом с перекрёстком",
+      "am": "ከመስቀለኛው አጠገብ ያለ አድራሻ ፈልግ"
+    },
+    "review.location.crossing_result": {
+      "he": "קרוב לכתובת: {address}",
+      "en": "Near address: {address}",
+      "ar": "قريب من العنوان: {address}",
+      "ru": "Рядом с адресом: {address}",
+      "am": "ወደ አድራሻው ቅርብ: {address}"
+    },
+    "review.location.crossing_note": {
+      "he": "המיקום בצומת. הכתובת שנבחרה היא הקרובה לצומת.",
+      "en": "The location is at the crossing. The chosen address is the one closest to the crossing.",
+      "ar": "الموقع عند التقاطع. العنوان المختار هو الأقرب إلى التقاطع.",
+      "ru": "Место находится на перекрёстке. Выбран ближайший к нему адрес.",
+      "am": "ቦታው በመስቀለኛው ላይ ነው። የተመረጠው አድራሻ ወደ መስቀለኛው በጣም ቅርብ የሆነው ነው።"
+    },
+    "review.location.intersection_line": {
+      "he": "המקום בצומת הרחובות {street_a} ו-{street_b}. הכתובת שצוינה היא הקרובה לצומת.",
+      "en": "המקום בצומת הרחובות {street_a} ו-{street_b}. הכתובת שצוינה היא הקרובה לצומת.",
+      "ar": "המקום בצומת הרחובות {street_a} ו-{street_b}. הכתובת שצוינה היא הקרובה לצומת.",
+      "ru": "המקום בצומת הרחובות {street_a} ו-{street_b}. הכתובת שצוינה היא הקרובה לצומת.",
+      "am": "המקום בצומת הרחובות {street_a} ו-{street_b}. הכתובת שצוינה היא הקרובה לצומת."
+    },
+    "review.location.lookup_failed": {
+      "he": "לא נמצאה כתובת יחידה, או שמאגר הכתובות אינו מותקן. בדוק רחוב ומספר בית. אין לנחש מיקום.",
+      "en": "No unique address was found, or address data is not installed. Check street and house number. Do not guess a location.",
+      "ar": "لم يُعثر على عنوان واحد، أو بيانات العناوين غير مثبتة. تحقق من الشارع ورقم المبنى. لا تخمن الموقع.",
+      "ru": "Не найден однозначный адрес, либо адресные данные не установлены. Проверьте улицу и номер дома. Не угадывайте местоположение.",
+      "am": "አንድ ግልጽ አድራሻ አልተገኘም ወይም መረጃው አልተጫነም። መንገዱንና ቁጥሩን ያረጋግጡ። አካባቢን አይገምቱ።"
+    },
+    "review.location.gps_button": {
+      "he": "השתמש במיקום הנוכחי שלי",
+      "en": "Use my current location",
+      "ar": "استخدم موقعي الحالي",
+      "ru": "Использовать моё текущее местоположение",
+      "am": "የአሁኑን አካባቢዬን ተጠቀም"
+    },
+    "review.location.gps_loading": {
+      "he": "מאתר מיקום...",
+      "en": "Finding your location...",
+      "ar": "جارٍ تحديد موقعك...",
+      "ru": "Определяю местоположение...",
+      "am": "አካባቢዎን በመፈለግ ላይ..."
+    },
+    "review.location.gps_denied": {
+      "he": "אין הרשאת מיקום. אפשר להזין רחוב ומספר בית",
+      "en": "No location permission. You can enter a street and house number",
+      "ar": "لا يوجد إذن للموقع. يمكنك إدخال الشارع ورقم المبنى",
+      "ru": "Нет разрешения на местоположение. Можно ввести улицу и номер дома",
+      "am": "የአካባቢ ፈቃድ የለም። መንገድና የቤት ቁጥር ማስገባት ይችላሉ"
+    },
+    "review.location.gps_failed": {
+      "he": "לא הצלחתי לקבל מיקום. נסה שוב או הזן רחוב ומספר בית",
+      "en": "Could not get a location. Try again or enter a street and house number",
+      "ar": "تعذر الحصول على الموقع. حاول مرة أخرى أو أدخل الشارع ورقم المبنى",
+      "ru": "Не удалось получить местоположение. Повторите или введите улицу и номер дома",
+      "am": "አካባቢ ማግኘት አልተቻለም። እንደገና ይሞክሩ ወይም መንገድና የቤት ቁጥር ያስገቡ"
+    },
+    "review.location.gps_done": {
+      "he": "המיקום נלקח ממכשירך. בדוק את הכתובת לפני השליחה",
+      "en": "Location taken from your phone. Check the address before sending",
+      "ar": "تم أخذ الموقع من هاتفك. تحقق من العنوان قبل الإرسال",
+      "ru": "Местоположение взято с вашего телефона. Проверьте адрес перед отправкой",
+      "am": "አካባቢው ከስልክዎ ተወስዷል። ከመላክዎ በፊት አድራሻውን ያረጋግጡ"
+    },
+    "review.location.confirm_note": {
+      "he": "אשר רק אם זו כתובת האירוע שבדקת. המיקום יישמר כאישור שלך, בנפרד מנתוני התמונה המקוריים.",
+      "en": "Confirm only if you checked this is the incident address. The location is saved as your confirmation, separate from original photo metadata.",
+      "ar": "أكد فقط إذا تحققت أن هذا عنوان الواقعة. يُحفظ الموقع كتأكيد منك، منفصلاً عن بيانات الصورة الأصلية.",
+      "ru": "Подтверждайте, только если проверили адрес события. Место сохраняется как ваше подтверждение отдельно от исходных данных фото.",
+      "am": "ይህ የክስተቱ አድራሻ መሆኑን ካረጋገጡ ብቻ ያጽድቁ። አካባቢው ከመጀመሪያው ፎቶ መረጃ ተለይቶ ይቀመጣል።"
+    },
+    "review.location.confirm_address": {
+      "he": "אשר את כתובת האירוע",
+      "en": "Confirm incident address",
+      "ar": "أكد عنوان الواقعة",
+      "ru": "Подтвердить адрес события",
+      "am": "የክስተቱን አድራሻ አረጋግጥ"
+    },
+    "topics.title": {
+      "he": "בחירת נושא עירוני",
+      "en": "Choose a city topic",
+      "ar": "اختيار موضوع بلدي",
+      "ru": "Выбор городской темы",
+      "am": "የከተማ ርዕስ ይምረጡ"
+    },
+    "topics.search": {
+      "he": "חפש נושא, תיאור או מספר",
+      "en": "Search topic, description or code",
+      "ar": "ابحث عن موضوع أو وصف أو رمز",
+      "ru": "Поиск темы, описания или кода",
+      "am": "ርዕስ፣ መግለጫ ወይም ኮድ ይፈልጉ"
+    },
+    "topics.results": {
+      "he": "{count} תוצאות",
+      "en": "{count} results",
+      "ar": "{count} نتائج",
+      "ru": "Результатов: {count}",
+      "am": "{count} ውጤቶች"
+    },
+    "topics.close": {
+      "he": "סגור",
+      "en": "Close",
+      "ar": "إغلاق",
+      "ru": "Закрыть",
+      "am": "ዝጋ"
+    },
+    "topics.choose": {
+      "he": "בחר נושא מהעירייה",
+      "en": "Choose a city topic",
+      "ar": "اختر موضوعًا من البلدية",
+      "ru": "Выберите тему муниципалитета",
+      "am": "የከተማ ርዕስ ይምረጡ"
+    },
+    "topics.loading": {
+      "he": "טוען רשימת נושאים מהעירייה",
+      "en": "Loading city topics",
+      "ar": "جارٍ تحميل مواضيع البلدية",
+      "ru": "Загрузка тем муниципалитета",
+      "am": "የከተማ ርዕሶችን በመጫን ላይ"
+    },
+    "topics.removed": {
+      "he": "הנושא הוסר מהקטלוג העירוני - בחר נושא מחדש",
+      "en": "This topic was removed from the city catalog. Choose another.",
+      "ar": "أُزيل هذا الموضوع من دليل البلدية. اختر موضوعًا آخر.",
+      "ru": "Тема удалена из каталога. Выберите другую.",
+      "am": "ርዕሱ ከከተማው ዝርዝር ተወግዷል። ሌላ ይምረጡ።"
+    },
+    "topics.connection_needed": {
+      "he": "נדרשים פרטי גישה וחיבור לעירייה לטעינה ראשונה של הרשימה",
+      "en": "City credentials and connection are needed for the first catalog download.",
+      "ar": "يلزم إدخال بيانات البلدية والاتصال بها لتنزيل القائمة لأول مرة.",
+      "ru": "Для первой загрузки списка нужны данные входа и связь с муниципалитетом.",
+      "am": "የመጀመሪያውን ዝርዝር ለማውረድ የከተማ መግቢያ መረጃ እና ግንኙነት ያስፈልጋሉ።"
+    },
+    "topics.unavailable": {
+      "he": "הרשימה אינה זמינה. נסה לפתוח שוב כשיש חיבור לעירייה",
+      "en": "Catalog unavailable. Open again when connected to the city.",
+      "ar": "القائمة غير متاحة. افتحها مجددًا عند الاتصال بالبلدية.",
+      "ru": "Список недоступен. Откройте снова при наличии связи.",
+      "am": "ዝርዝሩ አይገኝም። ግንኙነት ሲኖር እንደገና ይክፈቱ።"
+    },
+    "topics.updated": {
+      "he": "נבדק לאחרונה: {date}",
+      "en": "Last checked: {date}",
+      "ar": "آخر تحقق: {date}",
+      "ru": "Последняя проверка: {date}",
+      "am": "ለመጨረሻ ጊዜ የተረጋገጠው፦ {date}"
+    },
+    "topics.stale": {
+      "he": "הרשימה השמורה ישנה מ-90 ימים. אפשר להמשיך, אך ייתכן שהנושאים השתנו",
+      "en": "The saved list is over 90 days old. You can continue, but topics may have changed.",
+      "ar": "القائمة المحفوظة أقدم من 90 يومًا. يمكنك المتابعة، لكن المواضيع قد تكون تغيرت.",
+      "ru": "Списку более 90 дней. Можно продолжить, но темы могли измениться.",
+      "am": "የተቀመጠው ዝርዝር ከ90 ቀናት በላይ ቆይቷል። መቀጠል ይችላሉ፣ ርዕሶቹ ግን ሊለወጡ ይችላሉ።"
+    },
+    "topics.connect_title": {
+      "he": "פתיחת רשימת נושאים עירונית",
+      "en": "Open city topics",
+      "ar": "فتح مواضيع البلدية",
+      "ru": "Открыть городские темы",
+      "am": "የከተማ ርዕሶችን ክፈት"
+    },
+    "settings.appearance.title": {
+      "he": "מראה",
+      "en": "Appearance",
+      "ar": "المظهر",
+      "ru": "Оформление",
+      "am": "ገጽታ"
+    },
+    "settings.appearance.dynamic": {
+      "he": "צבעים דינמיים מהטפט",
+      "en": "Dynamic wallpaper colors",
+      "ar": "ألوان ديناميكية من الخلفية",
+      "ru": "Динамические цвета обоев",
+      "am": "ከጀርባ ምስል የሚመጡ ተለዋዋጭ ቀለሞች"
+    },
+    "settings.appearance.dynamic_note": {
+      "he": "ברירת המחדל היא פלטת ירושלים. צבעי הטפט יופעלו רק בבחירה שלך, עם בדיקת ניגודיות לקריאות.",
+      "en": "Jerusalem colors are the default. Wallpaper colors are opt-in and checked for readable contrast.",
+      "ar": "ألوان القدس هي الافتراضية. ألوان الخلفية اختيارية مع فحص التباين للقراءة.",
+      "ru": "По умолчанию используются цвета Иерусалима. Цвета обоев включаются по желанию с проверкой контрастности.",
+      "am": "የኢየሩሳሌም ቀለሞች ነባሪ ናቸው። የጀርባ ምስል ቀለሞች በምርጫ ከንባብ ንፅፅር ፍተሻ ጋር ይበራሉ።"
+    },
+    "settings.appearance.needs_android12": {
+      "he": "צבעים דינמיים דורשים Android 12 ומעלה. פלטת ירושלים נשארת פעילה.",
+      "en": "Dynamic colors need Android 12 or later. Jerusalem colors stay active.",
+      "ar": "تتطلب الألوان الديناميكية Android 12 أو أحدث. تبقى ألوان القدس مفعلة.",
+      "ru": "Для динамических цветов нужен Android 12 или новее. Цвета Иерусалима остаются активными.",
+      "am": "ተለዋዋጭ ቀለሞች Android 12 ወይም ከዚያ በላይ ይፈልጋሉ። የኢየሩሳሌም ቀለሞች ይቀጥላሉ።"
+    },
+    "registry.tag.wheelchair_icon": {
+      "he": "תג חניה לנכה בכיסא גלגלים",
+      "en": "Wheelchair disability parking tag",
+      "ar": "بطاقة وقوف لذوي الإعاقة على كرسي متحرك",
+      "ru": "Парковочный знак для человека на инвалидной коляске",
+      "am": "የዊልቸር ተጠቃሚ የአካል ጉዳተኛ ማቆሚያ ፈቃድ"
+    },
+    "registry.tag.triangle_icon": {
+      "he": "תג חניה לנכה, סמל משולש",
+      "en": "Disability parking tag, triangle symbol",
+      "ar": "بطاقة وقوف لذوي الإعاقة، رمز مثلث",
+      "ru": "Парковочный знак для человека с инвалидностью, треугольник",
+      "am": "የአካል ጉዳተኛ ማቆሚያ ፈቃድ፣ የሶስት ማዕዘን ምልክት"
+    },
+    "topics.updated_unknown": {
+      "he": "מועד הבדיקה האחרון אינו ידוע",
+      "en": "Last check date is unknown",
+      "ar": "تاريخ آخر فحص غير معروف",
+      "ru": "Дата последней проверки неизвестна",
+      "am": "የመጨረሻው ማረጋገጫ ቀን አይታወቅም"
+    },
+    "review.unsaved.title": {
+      "he": "יש שינויים שלא נשמרו",
+      "en": "Unsaved changes",
+      "ar": "تغييرات غير محفوظة",
+      "ru": "Несохранённые изменения",
+      "am": "ያልተቀመጡ ለውጦች"
+    },
+    "review.unsaved.note": {
+      "he": "חזרה כעת תבטל את השינויים מאז השמירה האחרונה. הטיוטה השמורה לא תימחק.",
+      "en": "Going back now discards changes since the last save. The saved draft will not be deleted.",
+      "ar": "ستؤدي العودة الآن إلى إلغاء التغييرات منذ آخر حفظ. لن تُحذف المسودة المحفوظة.",
+      "ru": "При возврате изменения после последнего сохранения будут отменены. Сохранённый черновик не удалится.",
+      "am": "አሁን መመለስ ከመጨረሻው ማስቀመጥ በኋላ ያሉትን ለውጦች ይሰርዛል። የተቀመጠው ረቂቅ አይጠፋም።"
+    },
+    "review.unsaved.discard": {
+      "he": "בטל שינויים וחזור",
+      "en": "Discard changes and go back",
+      "ar": "إلغاء التغييرات والعودة",
+      "ru": "Отменить изменения и вернуться",
+      "am": "ለውጦችን ሰርዝ እና ተመለስ"
+    },
+    "review.unsaved.keep": {
+      "he": "המשך לערוך",
+      "en": "Keep editing",
+      "ar": "متابعة التحرير",
+      "ru": "Продолжить редактирование",
+      "am": "ማርትዕ ቀጥል"
+    },
+    "registry.unavailable": {
+      "he": "המאגר לא זמין",
+      "en": "Registry unavailable",
+      "ar": "السجل غير متاح",
+      "ru": "Реестр недоступен",
+      "am": "መዝገቡ አይገኝም"
+    },
+    "registry.licence.inactive_record": {
+      "he": "רישום הרכב במאגר אינו פעיל. התאריך המוצג הוא תאריך הרישיון בלבד.",
+      "en": "The vehicle record in this registry is not active. The date shown is the licence date only.",
+      "ar": "سجل المركبة في هذا السجل غير نشط. التاريخ المعروض هو تاريخ الترخيص فقط.",
+      "ru": "Запись о транспортном средстве в этом реестре неактивна. Показанная дата - только дата лицензии.",
+      "am": "በዚህ መዝገብ ውስጥ የተሽከርካሪው መዝገብ ንቁ አይደለም። የሚታየው ቀን የፈቃዱ ቀን ብቻ ነው።"
+    },
+    "registry.rate_limited": {
+      "he": "הבדיקות קרובות מדי זו לזו. השמירה וההגשה אינן נעצרות.",
+      "en": "Checks are too close together. Save and send are not delayed.",
+      "ar": "الفحوصات متقاربة جدًا. الحفظ والإرسال لا يتوقفان.",
+      "ru": "Проверки идут слишком часто. Сохранение и отправка не задерживаются.",
+      "am": "ፍተሻዎቹ በጣም ተቀራራቢ ናቸው። ማስቀመጥና መላክ አይዘገዩም።"
+    },
+    "registry.loading": {
+      "he": "בודק במאגר...",
+      "en": "Checking registry...",
+      "ar": "جار فحص السجل...",
+      "ru": "Проверка реестра...",
+      "am": "መዝገቡን በመፈተሽ ላይ..."
+    },
+    "registry.tag.pending": {
+      "he": "בודק תג חניה לנכה...",
+      "en": "Checking disability parking tag...",
+      "ar": "جارٍ التحقق من بطاقة ركن ذوي الإعاقة...",
+      "ru": "Проверяю карту парковки для инвалидов...",
+      "am": "የአካል ጉዳተኛ የመኪና ማቆሚያ ካርድ በመፈተሽ ላይ..."
+    },
+    "registry.tag.unknown": {
+      "he": "נמצא תג, הסוג לא ידוע",
+      "en": "Tag found, type unknown",
+      "ar": "تم العثور على بطاقة، النوع غير معروف",
+      "ru": "Разрешение найдено, тип неизвестен",
+      "am": "ፈቃድ ተገኝቷል፣ ዓይነቱ አይታወቅም"
+    },
+    "registry.tag.not_found": {
+      "he": "לא נמצא רישום תג במאגר",
+      "en": "No tag record found in this registry",
+      "ar": "لم يتم العثور على بطاقة في السجل",
+      "ru": "Запись разрешения не найдена",
+      "am": "የፈቃድ መዝገብ አልተገኘም"
+    },
+    "registry.licence.expired": {
+      "he": "רישיון הרכב פג תוקף לפי המאגר",
+      "en": "Vehicle licence expired according to registry",
+      "ar": "رخصة المركبة منتهية حسب السجل",
+      "ru": "По данным реестра срок лицензии истёк",
+      "am": "በመዝገቡ መሠረት የመኪናው ፈቃድ አልፎበታል"
+    },
+    "registry.licence.valid": {
+      "he": "רישיון הרכב בתוקף לפי המאגר",
+      "en": "Vehicle licence in date according to registry",
+      "ar": "رخصة المركبة سارية حسب السجل",
+      "ru": "По данным реестра лицензия действительна",
+      "am": "በመዝገቡ መሠረት የመኪናው ፈቃድ የጸና ነው"
+    },
+    "registry.licence.unknown": {
+      "he": "תוקף רישיון הרכב לא ידוע",
+      "en": "Vehicle licence date unknown",
+      "ar": "تاريخ رخصة المركبة غير معروف",
+      "ru": "Срок лицензии неизвестен",
+      "am": "የመኪናው ፈቃድ ቀን አይታወቅም"
+    },
+    "registry.licence.not_found": {
+      "he": "לא נמצא רישום רכב במאגר",
+      "en": "No vehicle record found in this registry",
+      "ar": "لم يتم العثور على المركبة في السجل",
+      "ru": "Запись автомобиля не найдена",
+      "am": "የመኪናው መዝገብ አልተገኘም"
+    },
+    "registry.source": {
+      "he": "מקור: data.gov.il, נבדק ב-{time}",
+      "en": "Source: data.gov.il, checked at {time}",
+      "ar": "المصدر: data.gov.il، تم الفحص في {time}",
+      "ru": "Источник: data.gov.il, проверено в {time}",
+      "am": "ምንጭ፦ data.gov.il፣ በ{time} ተፈትሿል"
+    },
+    "registry.informational": {
+      "he": "מידע בלבד. תג אינו אישור לחניה במקום זה. הבדיקה אינה מעכבת שמירה או הגשה.",
+      "en": "Information only. A tag does not permit parking here. This check does not delay save or send.",
+      "ar": "للمعلومات فقط. البطاقة لا تجيز الوقوف هنا. الفحص لا يؤخر الحفظ أو الإرسال.",
+      "ru": "Только информация. Разрешение не даёт права парковаться здесь. Проверка не задерживает сохранение или отправку.",
+      "am": "ለመረጃ ብቻ። ፈቃዱ እዚህ ለማቆም አይፈቅድም። ምርመራው ማስቀመጥን ወይም መላክን አያዘገይም።"
+    },
+    "registry.plate_text_required": {
+      "he": "מספר הרכב חייב להופיע בתיאור המוצג לפני השליחה.",
+      "en": "The plate must appear in the shown description before sending.",
+      "ar": "يجب أن يظهر رقم المركبة في الوصف قبل الإرسال.",
+      "ru": "Номер должен быть в показанном описании перед отправкой.",
+      "am": "ከመላክ በፊት የሰሌዳው ቁጥር በሚታየው መግለጫ ውስጥ መኖር አለበት።"
+    },
+    "registry.insert_plate": {
+      "he": "הוסף את המספר לתיאור המוצג",
+      "en": "Insert plate in shown description",
+      "ar": "أضف الرقم إلى الوصف المعروض",
+      "ru": "Добавить номер в показанное описание",
+      "am": "ቁጥሩን በሚታየው መግለጫ ውስጥ አስገባ"
+    },
+    "registry.plate_text": {
+      "he": "רכב מספר {plate}",
+      "en": "רכב מספר {plate}",
+      "ar": "רכב מספר {plate}",
+      "ru": "רכב מספר {plate}",
+      "am": "רכב מספר {plate}"
+    },
+    "plate_categories.title": {
+      "he": "קטגוריות עם מספר רכב",
+      "en": "Categories with a plate field",
+      "ar": "فئات مع حقل رقم المركبة",
+      "ru": "Категории с полем номера",
+      "am": "የሰሌዳ ቁጥር ያላቸው ምድቦች"
+    },
+    "plate_categories.description": {
+      "he": "אפשר להוסיף שדה מספר רכב לקטגוריות. נדרשת רשימה חדשה מהעירייה בכל כניסה. הסרת סימון מבטלת רק את התוספת שלך.",
+      "en": "Add a plate field to categories. Each visit needs a fresh city list. Clearing a check only removes your extra setting.",
+      "ar": "أضف حقل رقم المركبة للفئات. كل زيارة تتطلب قائمة جديدة من البلدية. إلغاء التحديد يزيل إضافتك فقط.",
+      "ru": "Добавьте поле номера в категории. При каждом входе нужен свежий список города. Снятие отметки убирает только вашу добавку.",
+      "am": "ለምድቦች የሰሌዳ ቁጥር መስክ ያክሉ። በእያንዳንዱ ግቤት ከከተማው አዲስ ዝርዝር ያስፈልጋል። ምልክቱን ማጥፋት የእርስዎን ጭማሪ ብቻ ያስወግዳል።"
+    },
+    "plate_categories.network_required": {
+      "he": "נדרש חיבור לאינטרנט",
+      "en": "Internet connection required",
+      "ar": "يلزم اتصال بالإنترنت",
+      "ru": "Требуется подключение к интернету",
+      "am": "የበይነመረብ ግንኙነት ያስፈልጋል"
+    },
+    "plate_categories.failed": {
+      "he": "רענון הקטגוריות נכשל. אין אפשרות לערוך רשימה ישנה.",
+      "en": "Category refresh failed. An old list cannot be edited.",
+      "ar": "فشل تحديث الفئات. لا يمكن تعديل قائمة قديمة.",
+      "ru": "Обновление категорий не удалось. Старый список нельзя редактировать.",
+      "am": "የምድብ ዝርዝር ማደስ አልተሳካም። የቆየ ዝርዝር ማስተካከል አይቻልም።"
+    },
+    "plate_categories.retry": {
+      "he": "נסה לרענן שוב",
+      "en": "Retry refresh",
+      "ar": "أعد محاولة التحديث",
+      "ru": "Повторить обновление",
+      "am": "ማደስን እንደገና ሞክር"
+    },
+    "plate_categories.loading": {
+      "he": "מושך קטגוריות עדכניות מהעירייה...",
+      "en": "Fetching fresh city categories...",
+      "ar": "جار جلب فئات جديدة من البلدية...",
+      "ru": "Загрузка свежих категорий города...",
+      "am": "ከከተማው አዲስ ምድቦችን በማምጣት ላይ..."
+    },
+    "plate_categories.search": {
+      "he": "חיפוש קטגוריה או קוד",
+      "en": "Search category or code",
+      "ar": "ابحث عن فئة أو رمز",
+      "ru": "Поиск категории или кода",
+      "am": "ምድብ ወይም ኮድ ፈልግ"
+    },
+    "plate_categories.required": {
+      "he": "מספר רכב נדרש לקטגוריה זו",
+      "en": "A plate is required for this category",
+      "ar": "رقم المركبة مطلوب لهذه الفئة",
+      "ru": "Для этой категории требуется номер",
+      "am": "ለዚህ ምድብ የሰሌዳ ቁጥር ያስፈልጋል"
+    },
+    "plate_categories.enable_hint": {
+      "he": "אפשר להוסיף שדה מספר רכב בהגדרות המתקדמות.",
+      "en": "A plate field can be enabled in advanced settings.",
+      "ar": "يمكن تفعيل حقل رقم المركبة في الإعدادات المتقدمة.",
+      "ru": "Поле номера можно включить в дополнительных настройках.",
+      "am": "የሰሌዳ ቁጥር መስክን በላቁ ቅንብሮች ማንቃት ይቻላል።"
+    },
+    "registry.licence.expires_soon": {
+      "he": "רישיון הרכב יפוג בעוד {days} ימים",
+      "en": "Vehicle licence expires in {days} days",
+      "ar": "تنتهي رخصة المركبة خلال {days} أيام",
+      "ru": "Срок лицензии автомобиля истекает через {days} дн.",
+      "am": "የተሽከርካሪው ፈቃድ በ{days} ቀናት ያበቃል"
+    },
+    "registry.cached": {
+      "he": "מידע שמור מלפני {minutes} דקות. בודק עדכון מהמאגר; אם אינו זמין, זהו גיבוי בלבד.",
+      "en": "Cached information from {minutes} minutes ago. Checking live data; if unavailable, this is a fallback only.",
+      "ar": "معلومات مخزنة منذ {minutes} دقيقة. جارٍ التحقق من البيانات الحالية؛ عند تعذرها فهذه نسخة احتياطية فقط.",
+      "ru": "Данные из кэша: {minutes} мин. назад. Проверяем актуальные данные; при недоступности это только резервная копия.",
+      "am": "ከ{minutes} ደቂቃ በፊት የተቀመጠ መረጃ። ወቅታዊ መረጃ በመፈተሽ ላይ፤ ካልተገኘ ይህ ምትክ ብቻ ነው።"
+    },
+    "settings.assistant.title": {
+      "he": "כניסה מעוזר חכם",
+      "en": "Assistant entry",
+      "ar": "الدخول من المساعد",
+      "ru": "Вход через помощника",
+      "am": "ከረዳት መግቢያ"
+    },
+    "settings.assistant.enable": {
+      "he": "אפשר לעוזר לפתוח דיווח חדש",
+      "en": "Allow an assistant to open a new report",
+      "ar": "السماح للمساعد بفتح بلاغ جديد",
+      "ru": "Разрешить помощнику открыть новый отчёт",
+      "am": "ረዳት አዲስ ሪፖርት እንዲከፍት ፍቀድ"
+    },
+    "settings.assistant.note": {
+      "he": "החיבור משתמש בחבילה ניסיונית (AppFunctions RC). העוזר יכול לפתוח את מסך הצילום בלבד. בדיקת הדיווח ואישור השליחה נשארים באפליקציה. הזמינות תלויה בתמיכת העוזר והמכשיר; פעולה ב-Gemini עדיין לא אומתה.",
+      "en": "This connection uses an experimental package (AppFunctions RC). The assistant can only open the camera flow. Review and send confirmation stay in the app. Availability depends on assistant and device support; Gemini operation is not yet verified.",
+      "ar": "يستخدم هذا الاتصال حزمة تجريبية (AppFunctions RC). يمكن للمساعد فتح مسار التصوير فقط. تبقى المراجعة وتأكيد الإرسال داخل التطبيق. يعتمد التوفر على دعم المساعد والجهاز؛ لم يتم التحقق من العمل مع Gemini بعد.",
+      "ru": "Подключение использует экспериментальный пакет (AppFunctions RC). Помощник может только открыть съёмку. Проверка отчёта и подтверждение отправки остаются в приложении. Доступность зависит от помощника и устройства; работа с Gemini пока не проверена.",
+      "am": "ይህ ግንኙነት የሙከራ ጥቅል (AppFunctions RC) ይጠቀማል። ረዳቱ የካሜራ ሂደቱን ብቻ ሊከፍት ይችላል። ግምገማ እና የመላክ ማረጋገጫ በመተግበሪያው ውስጥ ይቀራሉ። መገኘቱ በረዳት እና በመሣሪያ ድጋፍ ይወሰናል፤ ከGemini ጋር መስራቱ ገና አልተረጋገጠም።"
+    },
+    "settings.assistant.unsupported": {
+      "he": "נדרש Android 16 ומעלה.",
+      "en": "Android 16 or later is required.",
+      "ar": "يتطلب Android 16 أو أحدث.",
+      "ru": "Требуется Android 16 или новее.",
+      "am": "Android 16 ወይም ከዚያ በላይ ያስፈልጋል።"
+    },
+    "settings.assistant.failed": {
+      "he": "לא ניתן לעדכן את החיבור לעוזר כרגע. אפשר לנסות שוב.",
+      "en": "Could not update assistant access now. Try again.",
+      "ar": "تعذر تحديث وصول المساعد الآن. حاول مرة أخرى.",
+      "ru": "Сейчас не удалось обновить доступ помощника. Повторите попытку.",
+      "am": "የረዳት መዳረሻን አሁን ማዘመን አልተቻለም። እንደገና ይሞክሩ።"
+    },
+    "review.suggest.sidewalk": {
+      "he": "הצעה ניסיונית: נראה כמו חניה על מדרכה",
+      "en": "Experimental suggestion: looks like sidewalk parking",
+      "ar": "اقتراح تجريبي: يبدو أنه وقوف على الرصيف",
+      "ru": "Экспериментальная подсказка: похоже на парковку на тротуаре",
+      "am": "የሙከራ ጥቆማ፡ በእግረኛ መንገድ ላይ መኪና ማቆም ይመስላል"
+    }
+  }
+}

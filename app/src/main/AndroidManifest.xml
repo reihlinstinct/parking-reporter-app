@@ -1,0 +1,47 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <application android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="false" android:fullBackupContent="@xml/backup_rules" android:dataExtractionRules="@xml/data_extraction_rules" android:usesCleartextTraffic="false" android:label="דיווח 106 ירושלים" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:supportsRtl="true">
+        <activity android:name="il.sidewalks.reporter.MainActivity" android:exported="true" android:launchMode="singleTask" android:windowSoftInputMode="adjustResize">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="il.sidewalks.reporter" android:host="report" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity>
+        <service
+            android:name="il.sidewalks.reporter.ReportTileService"
+            android:exported="true"
+            android:label="@string/tile_new_report"
+            android:icon="@drawable/ic_tile_report"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <!-- Disabled on older Android releases before the API36 base service exists. -->
+        <service android:name="io.github.reihlinstinct.reporter.assistant.ReportAppFunctionService" tools:targetApi="36"
+            android:enabled="@bool/appfunctions_supported" android:exported="true"
+            android:permission="android.permission.BIND_APP_FUNCTION_SERVICE">
+            <property android:name="android.app.appfunctions.schema" android:value="app_functions_schema.xsd" />
+            <property android:name="android.app.appfunctions" android:value="report_app_functions-v1.xml" />
+            <property android:name="android.app.appfunctions.v2" android:value="report_app_functions.xml" />
+            <intent-filter><action android:name="android.app.appfunctions.AppFunctionService" /></intent-filter>
+        </service>
+        <property android:name="android.app.appfunctions.app_metadata"
+            android:resource="@xml/app_metadata" />
+    </application>
+</manifest>

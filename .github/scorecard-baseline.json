@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "findings": [
+    {
+      "path": ".github/workflows/manual-gpg-signing.yml",
+      "rule": "job-write",
+      "scope": "signing-test",
+      "evidence": "contents: write",
+      "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
+      "reason": "Manual signing-test job pushes one isolated signed empty branch; contents: write is now scoped to that job only, top level is contents: read (#73)."
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "rule": "job-write",
+      "scope": "release",
+      "evidence": "contents: write",
+      "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/71",
+      "reason": "Retained release-job contents: write; unused while RELEASE_PAT is set because pushes and release publication use that PAT. Narrowing is a separate owner-approved change. Top level remains contents: read; see docs/WRITE_GRANTS.md."
+    },
+    {
+      "path": ".github/workflows/scorecard.yml",
+      "rule": "job-write",
+      "scope": "analysis",
+      "evidence": "security-events: write",
+      "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
+      "reason": "Approved job-scoped SARIF upload to GitHub code scanning; no code or secrets write."
+    },
+    {
+      "path": ".github/workflows/scorecard.yml",
+      "rule": "job-write",
+      "scope": "analysis",
+      "evidence": "id-token: write",
+      "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
+      "reason": "OIDC token for OpenSSF publish_results badge publishing; pre-existing; job-scoped; reviewed."
+    },
+    {
+      "path": ".github/workflows/wiki-sync.yml",
+      "rule": "job-write",
+      "scope": "sync",
+      "evidence": "contents: write",
+      "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/71",
+      "reason": "sync job only (push to main on docs/wiki/** or dispatch): pushes top-level docs/wiki/*.md to this repo's own .wiki.git, no PAT; top level stays contents: read; see docs/WRITE_GRANTS.md."
+    },
+    {
+      "path": ".github/workflows/gemini-review.yml",
+      "rule": "job-write",
+      "scope": "gemini-review",
+      "evidence": "pull-requests: write",
+      "issue": "https://github.com/reihlinstinct/gemini-pr-review/issues/1",
+      "reason": "Owner-approved event-driven Gemini PR review; COMMENT-only advisory reviews, idempotent per head SHA. Tracked in reihlinstinct/gemini-pr-review#1."
+    },
+    {
+      "path": ".github/workflows/emulator-weekly.yml",
+      "rule": "job-write",
+      "scope": "report-failure",
+      "evidence": "issues: write",
+      "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/297",
+      "reason": "Owner-approved 2026-11-11 (#297): the weekly API-matrix failure reporter opens one deduped issue; job-scoped, top level stays contents: read, no PAT, runs only on schedule/dispatch from main."
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "rule": "job-write",
+      "scope": "analyze",
+      "evidence": "security-events: write",
+      "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/395",
+      "reason": "CodeQL advanced setup (#395) needs security-events: write to upload results. Job-scoped, top level stays read-all, runs only on schedule and workflow_dispatch from main, no PAT. Replaces Default setup. Order: Default setup is turned off first (owner-approved), because code scanning rejects advanced-workflow uploads while Default setup is on; this workflow is then dispatched once, and Default setup is turned back on if that run fails."
+    }
+  ]
+}

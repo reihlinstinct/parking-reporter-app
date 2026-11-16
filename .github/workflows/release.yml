@@ -1,0 +1,126 @@
+name: Release
+
+# Release cadence (owner decision, 12 Nov 2026): SemVer is still computed from the commit subjects
+# (fix=PATCH, feat=MINOR, breaking=MAJOR), but a merge no longer releases by itself. A release happens when
+#  - the merged PR carries the "release" label (push to main, label looked up through the commit's PR),
+#  - once a day, only if a feat/fix/perf/revert/breaking commit landed since the last release,
+#  - or on demand (workflow_dispatch).
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Automated semantic release
+    if: "!startsWith(github.event.head_commit.message, 'chore(release):')"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          # The owner PAT is needed only for the two pushes below, so checkout
+          # stores no credential at all; the push URLs carry it explicitly and
+          # it never lands in .git/config.
+          persist-credentials: false
+      - name: Decide whether to release
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          SHA: ${{ github.sha }}
+          REF: ${{ github.ref }}
+        run: |
+          # The release pushes to protected main with the owner PAT, so it may only ever run from main.
+          # A manual run from any other ref must not reach the push step.
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "Release runs only from refs/heads/main (got ${REF}); skipping."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          case "$EVENT" in
+            push)
+              # A failed lookup must fail the run, not read as "no label".
+              labels="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/pulls" --jq '.[].labels[].name')" || {
+                echo "::error::Could not read the merged PR labels; not releasing."
+                exit 1
+              }
+              if printf '%s\n' "$labels" | grep -qx release; then
+                echo "go=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "No release label on the merged PR; skipping."
+                echo "go=false" >> "$GITHUB_OUTPUT"
+              fi ;;
+            schedule)
+              echo "go=true" >> "$GITHUB_OUTPUT"
+              echo "require_feat_or_fix=1" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "go=true" >> "$GITHUB_OUTPUT" ;;
+          esac
+      - name: Prepare release
+        id: prepare
+        if: steps.gate.outputs.go == 'true'
+        env:
+          RELEASE_NOTES_PATH: ${{ runner.temp }}/release_notes.md
+          RELEASE_REQUIRE_FEAT_OR_FIX: ${{ steps.gate.outputs.require_feat_or_fix }}
+        run: python3 scripts/release.py
+      - name: Commit, tag and publish release
+        if: steps.prepare.outputs.released == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT || github.token }}
+          RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
+          NEW_VERSION: ${{ steps.prepare.outputs.new_version }}
+          NOTES: ${{ steps.prepare.outputs.notes_path }}
+        run: |
+          if git ls-remote --tags origin "refs/tags/v${NEW_VERSION}" | grep -q .; then
+            echo "v${NEW_VERSION} already released by another run; skipping."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md app/build.gradle.kts
+          git commit -m "chore(release): v${NEW_VERSION}"
+          # Documented bypass: the release commit lands on protected main through
+          # the owner's admin push path ("Do not allow bypassing the above
+          # settings" is intentionally off on the rule), so it does not pass the 8
+          # required PR checks first. The PAT push still triggers the normal push
+          # workflows on the release commit, so main's head is validated after it
+          # lands; the token appears only in these three URLs, never in .git/config.
+          git fetch "https://x-access-token:${RELEASE_PAT}@github.com/${GITHUB_REPOSITORY}.git" main
+          git rebase FETCH_HEAD
+          git tag "v${NEW_VERSION}"
+          git push "https://x-access-token:${RELEASE_PAT}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
+          git push "https://x-access-token:${RELEASE_PAT}@github.com/${GITHUB_REPOSITORY}.git" "v${NEW_VERSION}"
+          gh release create "v${NEW_VERSION}" --title "v${NEW_VERSION}" --notes-file "$NOTES"
+
+  summary:
+    permissions:
+      contents: read
+    name: Run summary
+    if: always()
+    needs: [release]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Write run summary
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/ci/run_summary.py

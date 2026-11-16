@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Feature names the assistant matches. They reuse the approved tile label, so each locale
+         resolves from res/values-<code> and no new wording exists. -->
+    <string-array name="new_report_feature_names">
+        <item>@string/tile_new_report</item>
+    </string-array>
+</resources>

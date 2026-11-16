@@ -1,0 +1,140 @@
+package io.github.reihlinstinct.reporter.core
+
+import io.github.reihlinstinct.reporter.ledger.DraftCodec
+import io.github.reihlinstinct.reporter.ui.PlateEntry
+import org.junit.Assert.*
+import org.junit.Test
+
+/** Synthetic strings only. The formats are the user-picked classes of docs/PLATE_CLASSES.md, not claims about real plates. */
+class PlateClassTest {
+    private val mem = "\u05DE"
+    private fun draft(plate: String = "", plateClass: PlateClass = PlateClass.REGULAR, text: String = "reviewed") = ReviewDraft(
+        Evidence("class-test", "a".repeat(64), "2026-01-01T12:00:00+02:00", 31.0, 35.0),
+        plate, "street 1", "municipal:1144", text, emptySet(), plateClass = plateClass)
+
+    @Test fun regularKeepsTheSevenOrEightDigitRule() {
+        assertTrue(PlateClasses.ready("1234567", PlateClass.REGULAR))
+        assertTrue(PlateClasses.ready("12345678", PlateClass.REGULAR))
+        assertFalse(PlateClasses.ready("123456", PlateClass.REGULAR))
+        assertFalse(PlateClasses.ready("12-345-67", PlateClass.REGULAR))
+    }
+    @Test fun otherClassesNeedDigitsOnlyWithNoCountRule() {
+        assertTrue(PlateClasses.ready("123456", PlateClass.POLICE))
+        assertTrue(PlateClasses.ready("12-34-56", PlateClass.POLICE))
+        assertTrue(PlateClasses.ready("1", PlateClass.DIPLOMATIC_CD))
+        assertTrue(PlateClasses.ready("123", PlateClass.CONSULAR_CC))
+        assertFalse(PlateClasses.ready("", PlateClass.POLICE))
+        assertFalse(PlateClasses.ready("-12", PlateClass.POLICE))
+        assertFalse(PlateClasses.ready("12-", PlateClass.POLICE))
+        assertFalse(PlateClasses.ready("12--34", PlateClass.POLICE))
+        assertFalse(PlateClasses.ready("12-34", PlateClass.DIPLOMATIC_CD))
+        assertFalse(PlateClasses.ready("12x", PlateClass.CONSULAR_CC))
+    }
+    @Test fun shownTextCarriesTheClassMarker() {
+        assertEquals("1234567", PlateClasses.text("1234567", PlateClass.REGULAR))
+        assertEquals("11-22-33 $mem", PlateClasses.text("11-22-33", PlateClass.POLICE))
+        assertEquals("CD 123", PlateClasses.text("123", PlateClass.DIPLOMATIC_CD))
+        assertEquals("CC 123", PlateClasses.text("123", PlateClass.CONSULAR_CC))
+    }
+    @Test fun aSevenDigitSpecialPlateIsNeverTreatedAsRegular() {
+        val police = draft("1234567", PlateClass.POLICE, "x 1234567 y")
+        assertFalse("the marker must be in the text", PlatePolicy.descriptionContainsPlate(police))
+        val withMarker = police.copy(exactHebrewText = "x 1234567 $mem y")
+        assertTrue(PlatePolicy.descriptionContainsPlate(withMarker))
+        assertFalse(PlateClasses.ready(withMarker.plate, PlateClass.REGULAR) && withMarker.plateClass == PlateClass.REGULAR)
+        assertNotEquals(draft("1234567").digest(), police.digest())
+    }
+    @Test fun descriptionCheckForEachClass() {
+        assertTrue(PlatePolicy.descriptionContainsPlate(draft("123", PlateClass.DIPLOMATIC_CD, "a CD 123 b")))
+        assertFalse(PlatePolicy.descriptionContainsPlate(draft("123", PlateClass.DIPLOMATIC_CD, "a CC 123 b")))
+        assertFalse(PlatePolicy.descriptionContainsPlate(draft("123", PlateClass.DIPLOMATIC_CD, "a CD 1234 b")))
+        assertTrue(PlatePolicy.descriptionContainsPlate(draft("1234567", PlateClass.REGULAR, "a 1234567 b")))
+    }
+    @Test fun readinessUsesTheClass() {
+        val ready = draft("123", PlateClass.CONSULAR_CC).copy(confirmedLatitude = 31.0, confirmedLongitude = 35.0)
+        assertTrue(ready.isReady())
+        assertFalse(ready.copy(plateClass = PlateClass.REGULAR).isReady())
+    }
+    @Test fun regularDigestIsUnchangedByTheNewField() {
+        val regular = draft("1234567")
+        assertEquals(regular.digest(), regular.copy(plateClass = PlateClass.REGULAR).digest())
+    }
+    @Test fun editingToAPlatelessTopicResetsTheClass() {
+        val police = draft("123", PlateClass.POLICE)
+        assertEquals(PlateClass.REGULAR, police.edit(plateRequirement = false).plateClass)
+        assertEquals("", police.edit(plateRequirement = false).plate)
+        assertEquals(PlateClass.POLICE, police.edit(plateRequirement = true).plateClass)
+    }
+    @Test fun ledgerRoundTripKeepsTheClassAndRegularStaysByteCompatible() {
+        val police = draft("12-34", PlateClass.POLICE)
+        assertEquals(police, DraftCodec.decode(DraftCodec.encode(police)))
+        assertFalse(DraftCodec.encode(draft("1234567")).contains("plateClass"))
+        assertEquals(PlateClass.REGULAR, DraftCodec.decode(DraftCodec.encode(draft("1234567"))).plateClass)
+        assertThrows(IllegalArgumentException::class.java) { PlateClass.fromCode("military") }
+    }
+    @Test fun policeEntryKeepsHyphensAndRejectsLettersOthersKeepDigits() {
+        assertEquals("12-34", PlateEntry.acceptFor(PlateClass.POLICE, "", "12 - 34"))
+        assertEquals("12-34", PlateEntry.acceptFor(PlateClass.POLICE, "12-34", "12-34x"))
+        assertEquals("1234", PlateEntry.acceptFor(PlateClass.DIPLOMATIC_CD, "", "12-34"))
+        assertEquals("123", PlateEntry.acceptFor(PlateClass.REGULAR, "", "1-2-3"))
+        assertEquals(12, PlateEntry.acceptFor(PlateClass.POLICE, "", "1234567890123456").length)
+    }
+    @Test fun ocrPrefillNeverOverridesANonRegularClass() {
+        val police = draft("", PlateClass.POLICE)
+        assertEquals(police, PlateEntry.prefill(police, listOf("1234567"), ""))
+    }
+    @Test fun policeMarkerInsideAWordDoesNotCount() {
+        val word = draft("123456", PlateClass.POLICE, "x 123456 $mem\u05E7\u05D5\u05DD y")
+        assertFalse(PlatePolicy.descriptionContainsPlate(word))
+        assertTrue(PlatePolicy.descriptionContainsPlate(word.copy(exactHebrewText = "x 123456 $mem, y")))
+    }
+    @Test fun changingTheTypeRemovesTheOldPlateLineOnly() {
+        val text = "plate: 11-22-33 $mem\nother line"
+        assertEquals("other line", PlateClasses.withoutPlateLines(text, "11-22-33", PlateClass.POLICE))
+        assertEquals(text, PlateClasses.withoutPlateLines(text, "", PlateClass.POLICE))
+        assertEquals(text, PlateClasses.withoutPlateLines(text, "11-22-33", PlateClass.DIPLOMATIC_CD))
+    }
+    @Test fun policeLeftBoundaryRejectsAHyphenOrDigitBefore() {
+        // Issue #417: "1-12-34 mem" must not count as "12-34 mem".
+        assertFalse(PlateClasses.mentions("1-12-34 $mem", "12-34", PlateClass.POLICE))
+        assertFalse(PlateClasses.mentions("9912-34 $mem", "12-34", PlateClass.POLICE))
+        assertTrue(PlateClasses.mentions("plate 12-34 $mem here", "12-34", PlateClass.POLICE))
+        assertTrue(PlateClasses.mentions("12-34 $mem", "12-34", PlateClass.POLICE))
+        assertFalse(PlateClasses.mentions("1\u05BE12-34 $mem", "12-34", PlateClass.POLICE))
+        assertFalse(PlateClasses.mentions("1\u201312-34 $mem", "12-34", PlateClass.POLICE))
+        assertFalse(PlateClasses.mentions("1\u201412-34 $mem", "12-34", PlateClass.POLICE))
+        assertFalse(PlateClasses.mentions("1\u221212-34 $mem", "12-34", PlateClass.POLICE))
+        assertTrue("a Hebrew prefix letter glued to the number still matches", PlateClasses.mentions("\u05D1" + "12-34 $mem", "12-34", PlateClass.POLICE))
+        assertTrue("a Hebrew prefix letter glued to a regular plate still matches", PlateClasses.mentions("\u05D1" + "1234567", "1234567", PlateClass.REGULAR))
+        assertFalse(PlatePolicy.descriptionContainsPlate(draft("12-34", PlateClass.POLICE, "x 1-12-34 $mem y")))
+    }
+    @Test fun diplomaticRightBoundaryRejectsALongerSpacedOrHyphenatedNumber() {
+        assertTrue(PlateClasses.mentions("plate CD 11 here", "11", PlateClass.DIPLOMATIC_CD))
+        assertTrue(PlateClasses.mentions("plate CD 11", "11", PlateClass.DIPLOMATIC_CD))
+        assertFalse(PlateClasses.mentions("CD 11 222 33", "11", PlateClass.DIPLOMATIC_CD))
+        assertFalse(PlateClasses.mentions("CD 123-45", "123", PlateClass.DIPLOMATIC_CD))
+        assertFalse(PlateClasses.mentions("CD 1234", "123", PlateClass.DIPLOMATIC_CD))
+        assertFalse("two spaces", PlateClasses.mentions("CD 11  222", "11", PlateClass.DIPLOMATIC_CD))
+        assertFalse("no-break space", PlateClasses.mentions("CD 11\u00A022", "11", PlateClass.DIPLOMATIC_CD))
+        assertFalse("en dash", PlateClasses.mentions("CD 11\u201322", "11", PlateClass.DIPLOMATIC_CD))
+        assertFalse("space then dash", PlateClasses.mentions("CC 77 - 88", "77", PlateClass.CONSULAR_CC))
+        assertFalse("minus sign", PlateClasses.mentions("CD 11\u221222", "11", PlateClass.DIPLOMATIC_CD))
+        assertFalse("maqaf", PlateClasses.mentions("CD 11\u05BE22", "11", PlateClass.DIPLOMATIC_CD))
+        assertFalse("narrow no-break space", PlateClasses.mentions("CD 11\u202F22", "11", PlateClass.DIPLOMATIC_CD))
+        assertFalse("figure space", PlateClasses.mentions("CC 77\u200788", "77", PlateClass.CONSULAR_CC))
+        assertTrue("a dash run not followed by a digit still matches", PlateClasses.mentions("CD 11 - text", "11", PlateClass.DIPLOMATIC_CD))
+        assertTrue("a tab then text still matches", PlateClasses.mentions("CD 11\ttext", "11", PlateClass.DIPLOMATIC_CD))
+        assertFalse("a tab then a digit is a longer number", PlateClasses.mentions("CD 11\t22", "11", PlateClass.DIPLOMATIC_CD))
+        assertTrue("a digit on the next line is another line", PlateClasses.mentions("CD 11\n22", "11", PlateClass.DIPLOMATIC_CD))
+        assertTrue(PlateClasses.mentions("CC 77.", "77", PlateClass.CONSULAR_CC))
+        assertFalse(PlateClasses.mentions("CC 77 88", "77", PlateClass.CONSULAR_CC))
+        assertEquals("CD 11 222 33", PlateClasses.withoutPlateLines("CD 11 222 33", "11", PlateClass.DIPLOMATIC_CD))
+    }
+    @Test fun changingTheTypeKeepsALineThatOnlyContainsTheNumberInsideAnotherToken() {
+        val longer = "other 1-11-22-33 $mem remains"
+        val text = "plate: 11-22-33 $mem\n$longer"
+        assertEquals(longer, PlateClasses.withoutPlateLines(text, "11-22-33", PlateClass.POLICE))
+        val cd = "CD 1234 kept\nCD 123 removed"
+        assertEquals("CD 1234 kept", PlateClasses.withoutPlateLines(cd, "123", PlateClass.DIPLOMATIC_CD))
+    }
+}
