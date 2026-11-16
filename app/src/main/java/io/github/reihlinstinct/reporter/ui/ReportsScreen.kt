@@ -1,5 +1,6 @@
 package io.github.reihlinstinct.reporter.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -28,7 +29,7 @@ internal fun reportsOpenReadyText(strings: Strings, stableId: String): String =
  * draft with a ready digest is "ready to send"; anything else is a draft.
  */
 @Composable
-fun ReportsScreen(records: List<ReportRecord>, open: (ReportRecord) -> Unit, sentIdentifiers: List<String> = emptyList(), sentStableIds: Set<String> = emptySet()) {
+fun ReportsScreen(records: List<ReportRecord>, open: (ReportRecord) -> Unit, sentIdentifiers: List<String> = emptyList(), sentStableIds: Set<String> = emptySet(), onOpenSent: ((Int) -> Unit)? = null) {
     // A report the city already accepted lives in the history only, never in drafts or ready to send.
     val pending = pendingReports(records, sentStableIds)
     val drafts = pending.filter { it.reviewedDigest == null }
@@ -50,7 +51,33 @@ fun ReportsScreen(records: List<ReportRecord>, open: (ReportRecord) -> Unit, sen
         Text(s.t("reports.history.title"), style = MaterialTheme.typography.titleMedium)
         if (sentIdentifiers.isEmpty()) Text(s.t("reports.history.empty"), style = MaterialTheme.typography.bodySmall)
         // Sent reports: the identifier as the city returned it (case number, else WebCaseIdInCRM), nothing added.
-        sentIdentifiers.forEach { id -> Text(id, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.testTag("history-identifier")) }
+        sentIdentifiers.forEachIndexed { index, id ->
+            val tagged = Modifier.testTag("history-identifier")
+            Text(id, style = MaterialTheme.typography.bodyLarge, modifier = if (onOpenSent == null) tagged else tagged.fillMaxWidth().clickable { onOpenSent(index) }.padding(vertical = 8.dp))
+        }
+    }
+    }
+}
+
+/** Details of one sent report: identifier, sent date, category, address. Rows without a known value are left out. */
+@Composable
+internal fun SentReportDetailScreen(detail: SentReportDetail, onBack: () -> Unit) {
+    ProvideStringsIfMissing {
+    val s = LocalStrings.current
+    Column(Modifier.fillMaxSize().systemBarsPadding().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(s.t("reports.detail.title"), style = MaterialTheme.typography.headlineMedium)
+        @Composable fun row(labelKey: String, value: String?, tag: String) {
+            if (value == null) return
+            Column(Modifier.testTag(tag)) {
+                Text(s.t(labelKey), style = MaterialTheme.typography.bodySmall)
+                Text(value, style = MaterialTheme.typography.bodyLarge)
+            }
+        }
+        row("reports.detail.case", detail.identifier, "detail-case")
+        row("reports.detail.sent", detail.sentOn, "detail-sent")
+        row("reports.detail.category", detail.category, "detail-category")
+        row("reports.detail.address", detail.address, "detail-address")
+        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text(s.t("reports.detail.back")) }
     }
     }
 }
