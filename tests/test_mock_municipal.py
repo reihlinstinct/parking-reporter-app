@@ -29,7 +29,7 @@ class MockMunicipalTest(unittest.TestCase):
     def ctl(self, what, payload=None):
         if what == "stats":
             return json.load(urllib.request.urlopen(f"http://127.0.0.1:{self.port}/__mock/stats"))
-        data = json.dumps(payload or {}).encode()
+        data = json.dumps({} if payload is None else payload).encode()
         urllib.request.urlopen(urllib.request.Request(
             f"http://127.0.0.1:{self.port}/__mock/{what}", data=data, method="POST"))
 
@@ -47,7 +47,7 @@ class MockMunicipalTest(unittest.TestCase):
         s, b = self.post("Login", {"UserName": "u", "Password": "p"})
         self.assertEqual((s, json.loads(b)["Success"]), (200, True))
         s, b = self.post("CreateCase", {"Token": "t", "x": 1})
-        self.assertTrue(json.loads(b)["WebCaseIdInCRM"].startswith("0000-"))
+        self.assertTrue(json.loads(b)["CaseNumberInCRM"].startswith("0000-"))
 
     def test_missing_key_is_401(self):
         self.assertEqual(self.post("Login", {}, key="")[0], 401)
@@ -67,6 +67,50 @@ class MockMunicipalTest(unittest.TestCase):
         self.assertTrue(json.loads(self.post("CreateCase", {"a": 1})[1])["Success"])
         self.assertFalse(json.loads(self.post("CreateCase", {"a": 1})[1])["Success"])
         self.assertTrue(json.loads(self.post("CreateCase", {"a": 2})[1])["Success"])
+
+    def test_catalog_schema_matches_client(self):
+        req = urllib.request.Request(f"http://127.0.0.1:{self.port}{PREFIX}GetSubjectCategories?token=mock-token",
+                                     headers={"Ocp-Apim-Subscription-Key": "k"})
+        with urllib.request.urlopen(req) as r:
+            tree = json.load(r)
+        self.assertEqual(tree[0]["categoryName"], "בדיקה")
+        self.assertTrue(all(isinstance(n["subjectCode"], str) for n in tree[0]["children"]))
+        self.assertEqual(self.post("GetSubjectCategories", {})[0], 405)
+
+    def test_error_modes_and_malformed_body(self):
+        for mode, status in [("server_error", 500), ("failure", 200), ("bad_json", 200)]:
+            self.ctl("scenario", {"mode": mode})
+            code, body = self.post("CreateCase", {})
+            self.assertEqual(code, status)
+            if mode == "bad_json":
+                with self.assertRaises(ValueError):
+                    json.loads(body)
+            else:
+                self.assertFalse(json.loads(body)["Success"])
+        self.ctl("reset")
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=3)
+        c.request("POST", PREFIX + "Login", b"not json", {"Ocp-Apim-Subscription-Key": "k"})
+        self.assertEqual(c.getresponse().status, 400)
+        c.close()
+
+    def test_invalid_control_is_rejected(self):
+        for payload in [{"mode": "unknown"}, {"delay": -1}, {"count": -1}, {"mode": []}, {"endpoint": []}, []]:
+            with self.assertRaises(urllib.error.HTTPError) as caught:
+                self.ctl("scenario", payload)
+            self.assertEqual(caught.exception.code, 400)
+
+    def test_redirect_is_only_local_and_slow_is_configurable(self):
+        self.ctl("scenario", {"mode": "redirect"})
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=3)
+        c.request("POST", PREFIX + "Login", b"{}", {"Ocp-Apim-Subscription-Key": "k"})
+        r = c.getresponse()
+        self.assertEqual((r.status, r.getheader("Location")), (302, "http://127.0.0.1:1/never"))
+        r.read(); c.close()
+        self.ctl("scenario", {"mode": "slow", "delay": 0.05})
+        import time
+        start = time.monotonic()
+        self.assertEqual(self.post("Login", {})[0], 200)
+        self.assertGreaterEqual(time.monotonic() - start, 0.04)
 
     def test_drop_closes_connection(self):
         self.ctl("scenario", {"mode": "drop"})

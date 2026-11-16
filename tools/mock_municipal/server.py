@@ -4,7 +4,7 @@
 Mimics the submission path the app uses (see MunicipalClient.kt): POST Login,
 createupdatecontact, CreateCase, AddFileToCase and GET GetSubjectCategories under
 /CRMCityConnect/api/jerusalem/. All data is synthetic. Nothing is persisted:
-photos are counted and hashed, never stored. It never talks to the real city.
+request bodies are not persisted; case payloads are hashed for duplicate detection. It never talks to the real city.
 
 Behaviour that is NOT known from the real API is marked "assumed" below; the
 mock only needs to be a stable stand-in, not a replica.
@@ -37,10 +37,22 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PREFIX = "/CRMCityConnect/api/jerusalem/"
 ENDPOINTS = {"Login", "createupdatecontact", "CreateCase", "AddFileToCase", "GetSubjectCategories"}
-CATEGORIES = [  # synthetic stand-in catalog
-    {"SubjectId": 1, "SubjectName": "חניה", "SubSubjects": [{"SubjectId": 11, "SubjectName": "חניה על מדרכה"}]},
-    {"SubjectId": 2, "SubjectName": "תחזוקה", "SubSubjects": [{"SubjectId": 21, "SubjectName": "מפגע בדיקה"}]},
+# Field names match CityTopicCache.flatten; labels/codes are synthetic, not a city snapshot.
+CATEGORIES = [
+    {"categoryName": "בדיקה", "children": [
+        {"subjectCode": "900001", "categoryName": "מפגע סינתטי", "children": []},
+        {"subjectCode": "900002", "categoryName": "בדיקה נוספת", "children": []},
+    ]},
 ]
+MODES = {"ok", "rate_limit", "server_error", "slow", "bad_json", "bad_success", "failure", "duplicate", "redirect", "drop"}
+MAX_BODY = 16 * 1024 * 1024
+
+
+class BadRequest(Exception):
+    def __init__(self, code=400):
+        self.code = code
+
+
 LOCK = threading.Lock()
 STATE = {}
 
@@ -68,6 +80,8 @@ def scenario_for(endpoint):
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
+    timeout = 5
+
     def log_message(self, *args):  # quiet
         pass
 
@@ -82,7 +96,14 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _body(self):
-        n = int(self.headers.get("Content-Length") or 0)
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            raise BadRequest()
+        if self.headers.get("Transfer-Encoding") or n < 0:
+            raise BadRequest()
+        if n > MAX_BODY:
+            raise BadRequest(413)
         return self.rfile.read(n) if n else b""
 
     def _control(self, method, path):
@@ -90,15 +111,24 @@ class Handler(BaseHTTPRequestHandler):
             with LOCK:
                 return self._send(200, {"requests": dict(STATE["stats"]), "mode": STATE["mode"]})
         if path == "/__mock/reset" and method == "POST":
+            self._body()
             reset(); return self._send(200, {"ok": True})
         if path == "/__mock/scenario" and method == "POST":
             try:
                 req = json.loads(self._body() or b"{}")
             except ValueError:
                 return self._send(400, {"error": "bad json"})
+            if not isinstance(req, dict):
+                raise BadRequest()
+            mode, endpoint, count = req.get("mode", "ok"), req.get("endpoint"), req.get("count")
+            delay = req.get("delay", 3.0)
+            if (not isinstance(mode, str) or mode not in MODES
+                    or (endpoint is not None and (not isinstance(endpoint, str) or endpoint not in ENDPOINTS))
+                    or (count is not None and (type(count) is not int or not 1 <= count <= 100000))
+                    or type(delay) not in (int, float) or not 0 <= delay <= 60):
+                raise BadRequest()
             with LOCK:
-                STATE.update(mode=req.get("mode", "ok"), endpoint=req.get("endpoint"),
-                             count=req.get("count"), delay=float(req.get("delay", STATE["delay"])))
+                STATE.update(mode=mode, endpoint=endpoint, count=count, delay=delay)
             return self._send(200, {"ok": True})
         return self._send(404, {"error": "unknown control path"})
 
@@ -109,6 +139,8 @@ class Handler(BaseHTTPRequestHandler):
         if not path.startswith(PREFIX) or path[len(PREFIX):] not in ENDPOINTS:
             return self._send(404, {"Success": False})
         endpoint = path[len(PREFIX):]
+        if (method == "GET") != (endpoint == "GetSubjectCategories"):
+            return self._send(405, {"Success": False})
         raw = self._body() if method == "POST" else b""
         with LOCK:
             STATE["stats"][endpoint] = STATE["stats"].get(endpoint, 0) + 1
@@ -155,20 +187,36 @@ class Handler(BaseHTTPRequestHandler):
                 n = STATE["next_case"]; STATE["next_case"] += 1
                 STATE["seen_cases"][key] = n
             return self._send(200, {"Success": True, "CaseIdInCRM": "mock-case-%d" % n,
-                                    "WebCaseIdInCRM": "0000-%07d" % n})
+                                    "WebCaseIdInCRM": "mock-web-%d" % n,
+                                    "CaseNumberInCRM": "0000-%07d" % n})
         if endpoint == "AddFileToCase":
-            size = len(body.get("fileContent", ""))
+            content = body.get("fileContent", "")
+            if not isinstance(content, str):
+                raise BadRequest()
+            size = len(content)
             return self._send(200, {"Success": True, "ReceivedBase64Chars": size})
         self._send(404, {"Success": False})
 
+    def _safe_handle(self, method):
+        try:
+            self._handle(method)
+        except BadRequest as e:
+            self.close_connection = True
+            self._send(e.code, {"Success": False, "Message": "Invalid mock request"})
+        except (BrokenPipeError, ConnectionResetError):
+            # Expected when exercising timeouts; never log request content.
+            self.close_connection = True
+
     def do_GET(self):
-        self._handle("GET")
+        self._safe_handle("GET")
 
     def do_POST(self):
-        self._handle("POST")
+        self._safe_handle("POST")
 
 
 def make_server(port=0, scenario="ok", delay=3.0):
+    if scenario not in MODES or not 0 <= delay <= 60:
+        raise ValueError("Invalid startup scenario or delay")
     reset(scenario, delay)
     return ThreadingHTTPServer(("127.0.0.1", port), Handler)
 
