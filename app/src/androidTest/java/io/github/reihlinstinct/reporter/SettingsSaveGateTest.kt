@@ -80,8 +80,10 @@ class SettingsSaveGateTest {
             compose.waitUntil(5_000) {
                 missingReason.performScrollTo().isDisplayed()
             }
-        } catch (failure: Exception) {
+        } catch (failure: Throwable) {
             runCatching { screenshot("settings-save-missing-fields-failed.png") }
+            runCatching { missingReason.assertIsDisplayed() }.exceptionOrNull()
+                ?.takeIf { it !== failure }?.let(failure::addSuppressed)
             throw failure
         }
         missingReason.assertIsDisplayed()
