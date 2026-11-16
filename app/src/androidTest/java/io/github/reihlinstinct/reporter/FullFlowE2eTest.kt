@@ -21,8 +21,8 @@ import java.io.File
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.runBlocking
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertArrayEquals
@@ -224,13 +224,13 @@ class FullFlowE2eTest {
             municipalSubscriptionKey = "synthetic-key",
             municipalUsername = "synthetic-user",
             municipalPassword = "synthetic-pass")
-        MockWebServer().use { server ->
-            server.enqueue(MockResponse().setBody("""{"Success":true,"Token":"synthetic-token"}"""))
-            server.enqueue(MockResponse().setBody("""{"Success":true,"ContactIdInCRM":"synthetic-contact-id"}"""))
-            server.enqueue(MockResponse().setBody(
-                """{"Success":true,"CaseIdInCRM":"synthetic-case-id","WebCaseIdInCRM":"synthetic-webcase-id","CaseNumberInCRM":"2000-0000000"}"""))
-            server.enqueue(MockResponse().setBody("""{"Success":true}"""))
-            server.start()
+        MockWebServer().apply { start() }.use { server ->
+            server.enqueue(MockResponse.Builder().body("""{"Success":true,"Token":"synthetic-token"}""").build())
+            server.enqueue(MockResponse.Builder().body("""{"Success":true,"ContactIdInCRM":"synthetic-contact-id"}""").build())
+            server.enqueue(MockResponse.Builder().body(
+                """{"Success":true,"CaseIdInCRM":"synthetic-case-id","WebCaseIdInCRM":"synthetic-webcase-id","CaseNumberInCRM":"2000-0000000"}""").build())
+            server.enqueue(MockResponse.Builder().body("""{"Success":true}""").build())
+
             try {
                 launchFlow(settings) { s ->
                     OkHttpMunicipalClient.forTesting(server.url("/"),
@@ -254,18 +254,18 @@ class FullFlowE2eTest {
                 val contact = requireNotNull(server.takeRequest(5, TimeUnit.SECONDS)) { "contact never reached the stub" }
                 val create = requireNotNull(server.takeRequest(5, TimeUnit.SECONDS)) { "CreateCase never reached the stub" }
                 val attach = requireNotNull(server.takeRequest(5, TimeUnit.SECONDS)) { "AddFileToCase never reached the stub" }
-                assertEquals("/Login", login.path)
-                assertEquals("/createupdatecontact", contact.path)
-                assertEquals("/CreateCase", create.path)
-                assertEquals("/AddFileToCase", attach.path)
-                assertEquals("synthetic-user", JSONObject(login.body.readUtf8()).getString("UserName"))
-                val createBody = JSONObject(create.body.readUtf8())
+                assertEquals("/Login", login.target)
+                assertEquals("/createupdatecontact", contact.target)
+                assertEquals("/CreateCase", create.target)
+                assertEquals("/AddFileToCase", attach.target)
+                assertEquals("synthetic-user", JSONObject(login.body!!.utf8()).getString("UserName"))
+                val createBody = JSONObject(create.body!!.utf8())
                 assertEquals(text, createBody.getString("CaseDescription"))
                 assertEquals("900001", createBody.getString("CaseStreetCode"))
                 assertEquals("1", createBody.getString("CaseHouseNumber"))
                 assertEquals(expectedCode, createBody.getString("CaseSubjectCode"))
                 assertEquals("000000018", createBody.getJSONObject("contact").getString("ContactIdNumber"))
-                val attachBody = JSONObject(attach.body.readUtf8())
+                val attachBody = JSONObject(attach.body!!.utf8())
                 val jpeg = java.util.Base64.getDecoder().decode(attachBody.getString("fileContent"))
                 assertTrue("attached file must be an outgoing JPEG",
                     jpeg.size > 2 && jpeg[0] == 0xFF.toByte() && jpeg[1] == 0xD8.toByte())
@@ -359,8 +359,8 @@ class FullFlowE2eTest {
             municipalSubscriptionKey = "synthetic-key",
             municipalUsername = "synthetic-user",
             municipalPassword = "synthetic-pass")
-        MockWebServer().use { server ->
-            server.start()
+        MockWebServer().apply { start() }.use { server ->
+
             try {
                 launchFlow(settings) { s ->
                     OkHttpMunicipalClient.forTesting(server.url("/"),
@@ -411,13 +411,13 @@ class FullFlowE2eTest {
             municipalSubscriptionKey = "synthetic-key",
             municipalUsername = "synthetic-user",
             municipalPassword = "synthetic-pass")
-        MockWebServer().use { server ->
-            server.enqueue(MockResponse().setBody("""{"Success":true,"Token":"synthetic-token"}"""))
-            server.enqueue(MockResponse().setBody("""{"Success":true,"ContactIdInCRM":"synthetic-contact-id"}"""))
-            server.enqueue(MockResponse().setBody(
-                """{"Success":true,"CaseIdInCRM":"synthetic-case-id","WebCaseIdInCRM":"synthetic-webcase-id","CaseNumberInCRM":"2000-0000000"}"""))
-            server.enqueue(MockResponse().setBody("""{"Success":true}"""))
-            server.start()
+        MockWebServer().apply { start() }.use { server ->
+            server.enqueue(MockResponse.Builder().body("""{"Success":true,"Token":"synthetic-token"}""").build())
+            server.enqueue(MockResponse.Builder().body("""{"Success":true,"ContactIdInCRM":"synthetic-contact-id"}""").build())
+            server.enqueue(MockResponse.Builder().body(
+                """{"Success":true,"CaseIdInCRM":"synthetic-case-id","WebCaseIdInCRM":"synthetic-webcase-id","CaseNumberInCRM":"2000-0000000"}""").build())
+            server.enqueue(MockResponse.Builder().body("""{"Success":true}""").build())
+
             try {
                 launchFlow(settings) { s ->
                     OkHttpMunicipalClient.forTesting(server.url("/"),
@@ -463,8 +463,8 @@ class FullFlowE2eTest {
             municipalSubscriptionKey = "synthetic-key",
             municipalUsername = "synthetic-user",
             municipalPassword = "synthetic-pass")
-        MockWebServer().use { server ->
-            server.start()
+        MockWebServer().apply { start() }.use { server ->
+
             try {
                 launchFlow(settings) { s ->
                     OkHttpMunicipalClient.forTesting(server.url("/"),
