@@ -1,6 +1,6 @@
 name: Weekly emulator matrix
 
-# Issue #297: per-PR checks run API 30 + 36. This weekly job runs
+# Issue #297: per-PR checks run API 29, 30 + 36 (29 added in #471). This weekly job runs
 # API 29, 33, 34, 35, 36 and 37.0 on main. API 26 is not covered:
 # its emulator image failed on CI and the owner accepted dropping it.
 # API 29 and 37.0 remain known-unstable weekly probes, not proven green.
