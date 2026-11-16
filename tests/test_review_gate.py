@@ -54,7 +54,10 @@ class ReviewGateTest(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         workflow = (root / '.github/workflows/review-gate.yml').read_text()
         self.assertNotIn('pull_request.head', workflow)
-        self.assertIn('github.event.pull_request.base.sha', workflow)
+        self.assertNotIn('actions/checkout', workflow)
+        embedded = workflow.split("python3 - <<'PYCODE'\n", 1)[1].rsplit('          PYCODE', 1)[0]
+        source = '\n'.join(line[10:] for line in embedded.splitlines()) + '\n'
+        self.assertEqual(source, (root / 'scripts/ci/review_gate.py').read_text())
         self.assertNotIn('pull_request:', workflow)
         notifier = (root / '.github/workflows/review-notification.yml').read_text()
         self.assertIn('permissions: {}', notifier)
