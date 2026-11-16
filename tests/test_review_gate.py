@@ -74,6 +74,21 @@ class ReviewGateTest(unittest.TestCase):
                      '~~~python\nVerdict: PASS\n~~~~', '```\nx\n```python\nVerdict: PASS']:
             self.assertFalse(evaluate(HEAD, [review(body=body)])[0])
 
+    def test_status_response_uses_real_github_contract_without_sha_field(self):
+        client = gate.Client('owner/repo', 'synthetic-token')
+        result = {'url': client.base + '/statuses/' + HEAD,
+                  'context': gate.CONTEXT, 'state': 'pending', 'id': 123}
+        client.api = lambda path, data: result
+        client.status(HEAD, 'pending', 'synthetic')
+        for field, wrong in [('url', client.base + '/statuses/' + 'b' * 40),
+                             ('context', 'unrelated'), ('state', 'success')]:
+            with self.subTest(field=field):
+                original = result[field]
+                result[field] = wrong
+                with self.assertRaises(RuntimeError):
+                    client.status(HEAD, 'pending', 'synthetic')
+                result[field] = original
+
     def test_writer_always_uses_current_head_not_event_sha(self):
         client = Fake()
         gate.update(client, 123)
