@@ -2,9 +2,11 @@ name: Rotating emulator slices
 
 # Wider than the PR checks (API 29/30/36) and the weekly probe, without one
 # huge run: each week runs one of four slices, so every API/device/screen
-# combination below is covered once a month. "all" (manual dispatch) runs the
-# whole maximum on demand. Public repo: Linux minutes are free.
-# Axes: API 33-36 x pixel_2 / 7.6in Foldable / small screen (720x1280, 320dpi).
+# combination listed in the slices below is covered once every four weeks.
+# "all" (manual dispatch) runs those eight combinations at once. It is not the
+# full 4 x 3 grid: 33 small, 34 Foldable, 35 small and 36 pixel_2 are not run.
+# Public repo: Linux minutes are free.
+# Devices: pixel_2, 7.6in Foldable, small screen (pixel_2 with 720x1280, 320dpi).
 # Font-scale stress stays in display-weekly.yml.
 # No issue-writing job on purpose: that needs an owner-approved scorecard
 # baseline entry. A red scheduled run is the signal until the owner decides.
@@ -51,7 +53,9 @@ jobs:
           elif choice == "all":
               picked = [c for s in slices for c in s]
           else:
-              week = datetime.date.today().isocalendar()[1]
+              # Days since year 1 divided by 7 never repeats across ISO year ends
+              # (week 53 then week 1 would have run one slice twice in a row).
+              week = datetime.date.today().toordinal() // 7
               picked = slices[week % 4]
           include = [{"api": a, "profile": p, "size": s, "label": f"api{a}-{p.split()[0].replace('.', '')}-{s or 'default'}"} for a, p, s in picked]
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:

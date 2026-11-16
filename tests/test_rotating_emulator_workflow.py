@@ -17,7 +17,9 @@ class RotatingEmulatorWorkflowTest(unittest.TestCase):
         self.assertEqual(len(combos), 8)
         self.assertEqual(len(set(combos)), 8)
         self.assertEqual({c[0] for c in combos}, {'33', '34', '35', '36'})
+        self.assertIn('toordinal() // 7', TEXT)
         self.assertIn('slices[week % 4]', TEXT)
+        self.assertNotIn('isocalendar', TEXT)
 
     def test_no_write_permission_beyond_contents_read(self):
         self.assertNotIn('issues: write', TEXT)
