@@ -366,12 +366,12 @@
       "ru": "Отправлено в муниципалитет. Номер обращения: {case_number}",
       "am": "ለማዘጋጃ ቤቱ ተልኳል። የጉዳይ ቁጥር: {case_number}"
     },
-    "shell.submit.case_number_received": {
-      "he": "התקבל בעירייה",
-      "en": "received by the municipality",
-      "ar": "استلمته البلدية",
-      "ru": "принято муниципалитетом",
-      "am": "በማዘጋጃ ቤቱ ተቀብሏል"
+    "shell.submit.sent_unassigned": {
+      "he": "נשלח לעירייה. המספר טרם הוקצה",
+      "en": "Sent to the municipality. The case number has not been assigned yet",
+      "ar": "أُرسل إلى البلدية. لم يُخصَّص رقم البلاغ بعد",
+      "ru": "Отправлено в муниципалитет. Номер обращения ещё не присвоен",
+      "am": "ለማዘጋጃ ቤቱ ተልኳል። የጉዳይ ቁጥሩ እስካሁን አልተመደበም"
     },
     "shell.submit.already_sent": {
       "he": "הדיווח כבר נשלח. מספר קריאה: {case_number}",
@@ -463,13 +463,6 @@
       "ar": "اضبط قفل الشاشة",
       "ru": "Задайте блокировку экрана",
       "am": "የማያ ገጽ መቆለፊያ ያዘጋጁ"
-    },
-    "shell.submit.sent_plain": {
-      "he": "הדיווח הוגש בהצלחה",
-      "en": "Report submitted successfully",
-      "ar": "تم تقديم البلاغ بنجاح",
-      "ru": "Обращение успешно отправлено",
-      "am": "ሪፖርቱ በተሳካ ሁኔታ ገብቷል"
     },
     "shell.submit.sending": {
       "he": "שולח לעירייה...",

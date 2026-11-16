@@ -106,7 +106,7 @@ fun AppShell(
     val rotated = remember { ReviewRotationState.takeShell() }
     var page by remember { mutableStateOf(if (rotated != null) "review" else "home") }
     var profile by remember { mutableStateOf<ReporterSettings?>(null) }
-    // Debug-only server receipt line for the success screen; always null in release.
+    // Server receipt line for the success screen (case number in every build, extra references in debug).
     var submittedReceipt by remember { mutableStateOf<String?>(null) }
     var draft by remember { mutableStateOf<ReviewDraft?>(rotated?.draft) }
     var original by remember { mutableStateOf<File?>(rotated?.original) }
@@ -298,15 +298,10 @@ fun AppShell(
                 submissionNote = municipalOutcomeText(strings, outcome)
                 if (outcome is SubmissionCoordinator.Outcome.Submitted ||
                     outcome is SubmissionCoordinator.Outcome.AlreadySubmitted) {
-                    if (outcome is SubmissionCoordinator.Outcome.Submitted) {
-                        // The server receipt is debug-only everywhere: the shell status slot and
-                        // the review note get the plain title in release.
-                        submissionNote = submittedVisibleText(BuildConfig.DEBUG, submissionNote, strings.t("shell.submit.sent_plain"))
-                    }
                     status = submissionNote
                     topicSnapshot = topicRepository.snapshot()
                     if (outcome is SubmissionCoordinator.Outcome.Submitted) {
-                        submittedReceipt = if (BuildConfig.DEBUG) municipalOutcomeText(strings, outcome) else null
+                        submittedReceipt = submittedReceiptText(strings, outcome, BuildConfig.DEBUG)
                         page = "submitted"
                     }
                 }
@@ -745,14 +740,21 @@ internal fun missingCredentialsSuffix(strings: Strings, missingFields: List<Stri
     return ": " + labels.joinToString(", ") { strings.t(it) }
 }
 
-/** Debug builds show the server receipt text; release builds show only [neutral]. */
-internal fun submittedVisibleText(debug: Boolean, receiptText: String, neutral: String): String =
-    if (debug) receiptText else neutral
+/**
+ * The line under the success screen: the case number exactly as the city's CreateCase response returned it
+ * (CaseNumberInCRM), in every build. When the response carries none, an honest "not assigned yet" line:
+ * a number is never invented. Debug builds add the other returned references verbatim.
+ */
+internal fun submittedReceiptText(strings: Strings, outcome: SubmissionCoordinator.Outcome.Submitted, debug: Boolean): String {
+    val line = municipalOutcomeText(strings, outcome)
+    if (!debug) return line
+    return line + "\nCaseIdInCRM: " + (outcome.caseId ?: "-") + "\nWebCaseIdInCRM: " + (outcome.webCaseId ?: "-")
+}
 
 internal fun municipalOutcomeText(strings: Strings, outcome: SubmissionCoordinator.Outcome): String = when (outcome) {
     is SubmissionCoordinator.Outcome.Submitted ->
-        strings.t("shell.submit.sent",
-            mapOf("case_number" to (outcome.caseNumber ?: strings.t("shell.submit.case_number_received"))))
+        if (outcome.caseNumber == null) strings.t("shell.submit.sent_unassigned")
+        else strings.t("shell.submit.sent", mapOf("case_number" to outcome.caseNumber))
     is SubmissionCoordinator.Outcome.AlreadySubmitted ->
         strings.t("shell.submit.already_sent", mapOf("case_number" to (outcome.caseNumber ?: "")))
     is SubmissionCoordinator.Outcome.Blocked -> when (outcome.reason) {
