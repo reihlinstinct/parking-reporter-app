@@ -63,7 +63,7 @@
       ]
     },
     {
-      "pattern": "spec/prpkg2/**",
+      "pattern": "docs/prpkg2-spec/**",
       "checks": [
         "python-smoke"
       ]

@@ -1,4 +1,4 @@
-"""PRPKG2 contract: the schema files and golden values under spec/prpkg2 against docs/PRPKG2.md rules.
+"""PRPKG2 contract: the schema files and golden values under docs/prpkg2-spec against docs/PRPKG2.md rules.
 
 Python stdlib only. Everything is synthetic. The Kotlin code stays the reference; this test re-derives the
 golden values from the documented rules, so a drift in the values, the schema or the layout fails here.
@@ -10,7 +10,7 @@ import struct
 import unittest
 from pathlib import Path
 
-SPEC = Path(__file__).parents[1] / "spec" / "prpkg2"
+SPEC = Path(__file__).parents[1] / "docs" / "prpkg2-spec"
 GOLDEN = json.loads((SPEC / "golden.json").read_text(encoding="utf-8"))
 REPORT_SCHEMA = json.loads((SPEC / "report.schema.json").read_text(encoding="utf-8"))
 HEADER_SCHEMA = json.loads((SPEC / "header.schema.json").read_text(encoding="utf-8"))

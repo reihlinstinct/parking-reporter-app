@@ -126,7 +126,7 @@ How these were checked (2026-11-08, `main` at `51d6d88`): recomputed independent
 
 ## Machine-readable files
 
-Under `spec/prpkg2/`:
+Under `docs/prpkg2-spec/`:
 
 - `report.schema.json` and `header.schema.json`: JSON Schema (2020-12) for the report and the header. They describe structure only; the receiver also checks the known category code, the ISO-8601 time, `id` equal to the manifest package, and canonical form.
 - `golden.json`: the synthetic golden values from the table above (photo, digests, header, `plain`), with the inputs needed to rebuild them.
@@ -135,11 +135,11 @@ Under `spec/prpkg2/`:
 
 ## Version policy
 
-- The container magic `PRPKG2` is the format version. Any change that makes an existing valid package invalid, or an old receiver misread a new package (new key, different layout, other digest rule, other canonical rules), is a new format: the magic becomes `PRPKG3` and the schema files move to `spec/prpkg3/`.
+- The container magic `PRPKG2` is the format version. Any change that makes an existing valid package invalid, or an old receiver misread a new package (new key, different layout, other digest rule, other canonical rules), is a new format: the magic becomes `PRPKG3` and the schema files move to `docs/prpkg3-spec/`.
 - The report `schema` number and the transport `schema` number change only together with, or inside, a magic change.
 - This document's own version (currently 1, draft) goes up by one for any edit that changes what it states. Editorial fixes do not bump it.
 - `PRPKG2` stays readable by the receiver for as long as the receiver supports it; that is stated here when a `PRPKG3` exists.
 
 ## Not yet done for issue #10
 
-Publication at a stable public URL (GitHub Pages is not enabled on this repository and stays off until the owner decides otherwise), and a Kotlin test that reads `spec/prpkg2/golden.json` so the sync check also covers the Kotlin side.
+Publication at a stable public URL (GitHub Pages is not enabled on this repository and stays off until the owner decides otherwise), and a Kotlin test that reads `docs/prpkg2-spec/golden.json` so the sync check also covers the Kotlin side.
