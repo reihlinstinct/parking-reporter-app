@@ -232,9 +232,11 @@ class LiveEmulatorSubmissionTest {
                     File(context.filesDir, "live-e2e-case-number.txt").writeText(caseNumber ?: "")
                     marker("SUBMITTED case=" + if (caseNumber != null) "present" else "unparsed")
                     // The recording also shows the report-history tab with the sent report's identifier.
-                    seedSyntheticHistory(context)
-                    marker("HISTORY_SEEDED")
-                    driver.showHistoryAfterSubmission()
+                    // Best effort: a failure here must never turn a confirmed submission red.
+                    runCatching { seedSyntheticHistory(context) }
+                        .onSuccess { marker("HISTORY_SEEDED") }
+                        .onFailure { marker("HISTORY_SEED_SKIPPED " + it.javaClass.simpleName) }
+                    runCatching { driver.showHistoryAfterSubmission() }
                     cleanOwnedPhoto(context, hash)
                     cleaned = true
                     marker("DONE")
