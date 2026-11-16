@@ -81,6 +81,26 @@ class OfflineReceiverTest {
         assertThrows(RuntimeException::class.java) { f.open(complete = done.replaceFirst("{", "{\"count\":" + f.upload.count + ",")) }
         assertThrows(IllegalArgumentException::class.java) { f.open(complete = " " + done) }
     }
+    @Test fun malformedUtf8HeaderIsAlwaysTheTypedRejection() {
+        // Valid outer transport and fake crypto let malformed UTF-8 reach the strict decoder.
+        // Standalone continuation byte, truncated multi-byte sequence, overlong encoding.
+        for (header in listOf(byteArrayOf(0x80.toByte()), byteArrayOf(0xc3.toByte()),
+                byteArrayOf(0xc0.toByte(), 0xaf.toByte()))) {
+            val plain = java.nio.ByteBuffer.allocate(10 + header.size + 4)
+                .put("PRPKG2".toByteArray(Charsets.US_ASCII)).putInt(header.size).put(header)
+                .put(byteArrayOf(-1, -40, -1, -39)).array()
+            val signed = java.nio.ByteBuffer.allocate(4 + 8 + plain.size)
+                .putInt(8).put(ByteArray(8) { 1 }).put(plain).array()
+            val upload = SealedUpload("synthetic-id", "test-receiver", "test-device", "unused", signed)
+            val error = assertThrows(IllegalArgumentException::class.java) {
+                OfflineReceiver.open(upload.manifest(), (0 until upload.count).map { upload.chunk(it, 7) },
+                    upload.completion(7), 7, "test-receiver", "test-device",
+                    HybridDecrypt { ciphertext, _ -> ciphertext }, PublicKeyVerify { _, _ -> })
+            }
+            assertEquals("Malformed package UTF-8", error.message)
+        }
+    }
+
     @Test fun malformedJsonIsAlwaysTheTypedRejection() {
         val f = Fixture(); val chunks = (0 until f.upload.count).map { f.upload.chunk(it, 7) }; val done = f.upload.completion(7)
         val bad = listOf("{", "[]", "null", "{\"schema\":\"2\"}", "{\"schema\":2}", "{\"schema\":2,\"package\":5}", "",
