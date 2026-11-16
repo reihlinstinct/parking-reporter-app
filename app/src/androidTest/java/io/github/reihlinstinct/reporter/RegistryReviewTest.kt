@@ -28,6 +28,11 @@ class RegistryReviewTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set(io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(InstrumentationRegistry.getInstrumentation().targetContext))
     }
+    // Every test starts from the default language (above); put it back after the English test too.
+    @org.junit.After fun resetLanguage() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set(io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(context))
+    }
     private fun draft(plate: String = "1234567") = ReviewDraft(Evidence("registry-synthetic", "a".repeat(64), null, 31.0, 35.0),
         plate, "רחוב בדיקה 12", "municipal:1145", "רכב $plate חונה על המדרכה", emptySet())
     private fun snapshot(type: DisabilityTagType) = RegistrySnapshot(DisabilityLookupResult.Found(type),
