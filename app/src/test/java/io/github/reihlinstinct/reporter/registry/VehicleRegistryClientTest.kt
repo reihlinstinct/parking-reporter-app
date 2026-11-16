@@ -1,9 +1,9 @@
 package io.github.reihlinstinct.reporter.registry
 
 import okhttp3.OkHttpClient
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import okhttp3.mockwebserver.SocketPolicy
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
+import mockwebserver3.SocketEffect
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -30,7 +30,7 @@ class VehicleRegistryClientTest {
     private fun fixture(name: String): String =
         requireNotNull(javaClass.classLoader?.getResource("registry/$name")) { "missing fixture $name" }.readText()
 
-    private fun json(name: String) = MockResponse().setHeader("Content-Type", "application/json").setBody(fixture(name))
+    private fun json(name: String) = MockResponse.Builder().setHeader("Content-Type", "application/json").body(fixture(name)).build()
 
     private fun client(
         server: MockWebServer,
@@ -52,7 +52,7 @@ class VehicleRegistryClientTest {
     )
 
     @Test fun foundMapsRegistryFields() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             server.enqueue(json("found.json"))
             val result = client(server).lookup(plate)
             assertTrue(result is VehicleLookupResult.Found)
@@ -70,7 +70,7 @@ class VehicleRegistryClientTest {
     }
 
     @Test fun foundWithNullOrBadFieldsKeepsThemUnknown() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             server.enqueue(json("found_null_dates.json"))
             val record = (client(server).lookup("12345678") as VehicleLookupResult.Found).record
             assertNull(record.licenceValidUntil)
@@ -83,15 +83,15 @@ class VehicleRegistryClientTest {
     }
 
     @Test fun emptyRecordsMapToNotFound() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             server.enqueue(json("not_found.json"))
             assertEquals(VehicleLookupResult.NotFound, client(server).lookup(plate))
         }
     }
 
     @Test fun http500IsHttpError() {
-        MockWebServer().use { server ->
-            server.enqueue(MockResponse().setResponseCode(500).setBody("synthetic server detail"))
+        MockWebServer().apply { start() }.use { server ->
+            server.enqueue(MockResponse.Builder().code(500).body("synthetic server detail").build())
             val result = client(server).lookup(plate)
             assertEquals(VehicleLookupResult.Error(LookupErrorKind.HTTP, 500), result)
             assertFalse(result.toString().contains("synthetic server detail"))
@@ -99,8 +99,8 @@ class VehicleRegistryClientTest {
     }
 
     @Test fun redirectIsNotFollowed() {
-        MockWebServer().use { server ->
-            server.enqueue(MockResponse().setResponseCode(307).addHeader("Location", server.url("/elsewhere")))
+        MockWebServer().apply { start() }.use { server ->
+            server.enqueue(MockResponse.Builder().code(307).addHeader("Location", server.url("/elsewhere")).build())
             assertEquals(VehicleLookupResult.Error(LookupErrorKind.HTTP, 307), client(server).lookup(plate))
             assertEquals(1, server.requestCount)
         }
@@ -108,8 +108,8 @@ class VehicleRegistryClientTest {
 
     @Test fun malformedOrOversizedBodyIsMalformedResponse() {
         for (body in listOf("not-json", "{\"success\":true}", "{\"success\":true,\"result\":{}}", "[]", "x".repeat(70_000))) {
-            MockWebServer().use { server ->
-                server.enqueue(MockResponse().setBody(body))
+            MockWebServer().apply { start() }.use { server ->
+                server.enqueue(MockResponse.Builder().body(body).build())
                 assertEquals(VehicleLookupResult.Error(LookupErrorKind.MALFORMED_RESPONSE), client(server).lookup(plate))
             }
         }
@@ -117,37 +117,37 @@ class VehicleRegistryClientTest {
 
     @Test fun ckanSuccessFalseIsApiFailure() {
         for (body in listOf(fixture("ckan_failure.json"), "{\"success\":\"true\",\"result\":{\"records\":[]}}", "{\"result\":{\"records\":[]}}")) {
-            MockWebServer().use { server ->
-                server.enqueue(MockResponse().setBody(body))
+            MockWebServer().apply { start() }.use { server ->
+                server.enqueue(MockResponse.Builder().body(body).build())
                 assertEquals(VehicleLookupResult.Error(LookupErrorKind.API_FAILURE), client(server).lookup(plate))
             }
         }
     }
 
     @Test fun recordForAnotherPlateIsRejected() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             server.enqueue(json("other_plate.json"))
             assertEquals(VehicleLookupResult.Error(LookupErrorKind.MALFORMED_RESPONSE), client(server).lookup(plate))
         }
     }
 
     @Test fun closedServerIsNetworkErrorWithoutRetry() {
-        val server = MockWebServer()
-        server.start()
+        val server = MockWebServer().apply { start() }
+
         val registry = client(server)
         server.close()
         assertEquals(VehicleLookupResult.Error(LookupErrorKind.NETWORK), registry.lookup(plate))
     }
 
     @Test fun disconnectAndTimeoutAreNetworkErrorsWithoutRetry() {
-        MockWebServer().use { server ->
-            server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START))
+        MockWebServer().apply { start() }.use { server ->
+            server.enqueue(MockResponse.Builder().onRequestStart(SocketEffect.CloseSocket()).build())
             server.enqueue(json("found.json"))
             assertEquals(VehicleLookupResult.Error(LookupErrorKind.NETWORK), client(server).lookup(plate))
             assertEquals(1, server.requestCount)
         }
-        MockWebServer().use { server ->
-            server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE))
+        MockWebServer().apply { start() }.use { server ->
+            server.enqueue(MockResponse.Builder().onResponseStart(SocketEffect.Stall).build())
             val quick = VehicleRegistryClient.safeClient().newBuilder().readTimeout(200, TimeUnit.MILLISECONDS).build()
             assertEquals(VehicleLookupResult.Error(LookupErrorKind.NETWORK), client(server, http = quick).lookup(plate))
             assertEquals(1, server.requestCount)
@@ -155,9 +155,9 @@ class VehicleRegistryClientTest {
     }
 
     @Test fun connectionFailureIsNotRetried() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             server.enqueue(json("not_found.json"))
-            server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AFTER_REQUEST))
+            server.enqueue(MockResponse.Builder().onResponseStart(SocketEffect.CloseSocket()).build())
             server.enqueue(json("found.json"))
             val registry = client(server)
             assertEquals(VehicleLookupResult.NotFound, registry.lookup("7654321"))
@@ -172,7 +172,7 @@ class VehicleRegistryClientTest {
     }
 
     @Test fun invalidPlateMakesNoRequest() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             val registry = client(server)
             val invalid = listOf("", "   ", "123456", "123456789", "12a4567", "0123456", "1234567x", "١٢٣٤٥٦٧", "12_34567", "+1234567")
             for (raw in invalid) {
@@ -209,16 +209,16 @@ class VehicleRegistryClientTest {
     }
 
     @Test fun apiKeyHeaderSentOnlyWhenSet() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             server.enqueue(json("not_found.json"))
             client(server).lookup(plate)
-            assertNull(server.takeRequest().getHeader(VehicleRegistryClient.API_KEY_HEADER))
+            assertNull(server.takeRequest().headers[VehicleRegistryClient.API_KEY_HEADER])
         }
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             server.enqueue(json("not_found.json"))
             val seenUrls = mutableListOf<String>()
             assertEquals(VehicleLookupResult.NotFound, keyedClientRoutedTo(server, "synthetic-api-key", seenUrls).lookup(plate))
-            assertEquals("synthetic-api-key", server.takeRequest().getHeader(VehicleRegistryClient.API_KEY_HEADER))
+            assertEquals("synthetic-api-key", server.takeRequest().headers[VehicleRegistryClient.API_KEY_HEADER])
             assertEquals(1, seenUrls.size)
             assertTrue(seenUrls.single(), seenUrls.single().startsWith("$TEST_HTTPS_BASE_URL/api/3/action/datastore_search?"))
         }
@@ -229,7 +229,7 @@ class VehicleRegistryClientTest {
             val error = runCatching { VehicleRegistryConfig(resourceId, baseUrl = baseUrl, apiKey = "synthetic-api-key") }.exceptionOrNull()
             assertTrue(baseUrl, error is IllegalArgumentException)
         }
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             val error = runCatching { client(server, apiKey = "synthetic-api-key") }.exceptionOrNull()
             assertTrue(error is IllegalArgumentException)
             assertEquals(0, server.requestCount)
@@ -254,11 +254,11 @@ class VehicleRegistryClientTest {
 
     @Test fun nullKeyWithHttpBaseUrlIsStillAccepted() {
         assertNull(VehicleRegistryConfig(resourceId, baseUrl = "http://registry.invalid").apiKey)
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             assertTrue(server.url("/").isHttps.not())
             server.enqueue(json("not_found.json"))
             assertEquals(VehicleLookupResult.NotFound, client(server, apiKey = null).lookup(plate))
-            assertNull(server.takeRequest().getHeader(VehicleRegistryClient.API_KEY_HEADER))
+            assertNull(server.takeRequest().headers[VehicleRegistryClient.API_KEY_HEADER])
         }
     }
 
@@ -275,14 +275,14 @@ class VehicleRegistryClientTest {
     }
 
     @Test fun onlyGetToDatastoreSearchWithExpectedQuery() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             server.enqueue(json("found.json"))
             client(server).lookup("123-45-67")
             assertEquals(1, server.requestCount)
             val request = server.takeRequest()
             assertEquals("GET", request.method)
             assertEquals(0L, request.bodySize)
-            val url = requireNotNull(request.requestUrl)
+            val url = requireNotNull(request.url)
             assertEquals(VehicleRegistryClient.SEARCH_PATH, url.encodedPath)
             assertEquals(setOf("resource_id", "filters", "fields", "limit"), url.queryParameterNames)
             assertEquals(resourceId, url.queryParameter("resource_id"))
@@ -295,7 +295,7 @@ class VehicleRegistryClientTest {
     }
 
     @Test fun cacheHitMakesNoSecondRequest() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             server.enqueue(json("found.json"))
             server.enqueue(json("found.json"))
             val clock = FakeClock()
@@ -310,9 +310,9 @@ class VehicleRegistryClientTest {
     }
 
     @Test fun notFoundIsCachedButErrorsAreNot() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             server.enqueue(json("not_found.json"))
-            server.enqueue(MockResponse().setResponseCode(500))
+            server.enqueue(MockResponse.Builder().code(500).build())
             server.enqueue(json("found.json"))
             val registry = client(server)
             assertEquals(VehicleLookupResult.NotFound, registry.lookup(plate))
@@ -325,7 +325,7 @@ class VehicleRegistryClientTest {
     }
 
     @Test fun ttlExpiryRefetches() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             server.enqueue(json("not_found.json"))
             server.enqueue(json("found.json"))
             val clock = FakeClock()
@@ -338,7 +338,7 @@ class VehicleRegistryClientTest {
     }
 
     @Test fun rateLimiterDeniesWithinIntervalAndAllowsAfter() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             repeat(3) { server.enqueue(json("not_found.json")) }
             val clock = FakeClock()
             val registry = client(server, clock, interval = 1_000L)
@@ -370,15 +370,15 @@ class VehicleRegistryClientTest {
 
     @Test fun plateNeverAppearsInResultsErrorsOrToString() {
         val outcomes = mutableListOf<Any>()
-        for (response in listOf(json("found.json"), json("not_found.json"), MockResponse().setResponseCode(500), MockResponse().setBody("not-json"))) {
-            MockWebServer().use { server ->
+        for (response in listOf(json("found.json"), json("not_found.json"), MockResponse.Builder().code(500).build(), MockResponse.Builder().body("not-json").build())) {
+            MockWebServer().apply { start() }.use { server ->
                 server.enqueue(response)
                 outcomes += client(server).lookup(plate)
             }
         }
         val throwing = VehicleRegistryClient.safeClient().newBuilder()
             .addInterceptor { throw IOException("synthetic failure for $plate") }.build()
-        MockWebServer().use { server -> outcomes += client(server, http = throwing).lookup(plate) }
+        MockWebServer().apply { start() }.use { server -> outcomes += client(server, http = throwing).lookup(plate) }
         outcomes += requireNotNull(PlateNumber.parse(plate))
         outcomes += VehicleRegistryConfig(resourceId, apiKey = "synthetic-api-key")
         for (outcome in outcomes) {
@@ -393,11 +393,11 @@ class VehicleRegistryClientTest {
     }
 
     @Test fun activeRecordIsNotMarkedInactive() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             val client = VehicleRegistryClient(VehicleRegistryConfig(
                 VehicleRegistryConfig.KNOWN_VEHICLE_RESOURCE_ID, baseUrl = server.url("/").toString(),
                 minRequestIntervalMillis = 0, cacheTtlMillis = 0))
-            server.enqueue(MockResponse().setBody("""{"success":true,"result":{"records":[{"mispar_rechev":1912929,"tokef_dt":"2027-05-27"}]}}"""))
+            server.enqueue(MockResponse.Builder().body("""{"success":true,"result":{"records":[{"mispar_rechev":1912929,"tokef_dt":"2027-05-27"}]}}""").build())
             val record = (client.lookup("1912929") as VehicleLookupResult.Found).record
             assertFalse(record.inactive)
             assertEquals(1, server.requestCount)
@@ -409,19 +409,19 @@ class VehicleRegistryClientTest {
         assertNull(config.apiKey)
     }
     @Test fun emptyActiveFallsBackToInactiveRecordedExpiredCarButErrorsDont() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             val client = VehicleRegistryClient(VehicleRegistryConfig(
                 VehicleRegistryConfig.KNOWN_VEHICLE_RESOURCE_ID, baseUrl = server.url("/").toString(),
                 minRequestIntervalMillis = 0, cacheTtlMillis = 0))
-            server.enqueue(MockResponse().setBody("""{"success":true,"result":{"records":[]}}"""))
-            server.enqueue(MockResponse().setBody("""{"success":true,"result":{"records":[{"mispar_rechev":1912929,"tokef_dt":"2024-05-27","mivchan_acharon_dt":"2023-11-22","kinuy_mishari":"ALMERA","shnat_yitzur":1998}]}}"""))
+            server.enqueue(MockResponse.Builder().body("""{"success":true,"result":{"records":[]}}""").build())
+            server.enqueue(MockResponse.Builder().body("""{"success":true,"result":{"records":[{"mispar_rechev":1912929,"tokef_dt":"2024-05-27","mivchan_acharon_dt":"2023-11-22","kinuy_mishari":"ALMERA","shnat_yitzur":1998}]}}""").build())
             val record = (client.lookup("1912929") as VehicleLookupResult.Found).record
             assertEquals(LocalDate.of(2024,5,27), record.licenceValidUntil)
             assertEquals(LicenceStatus.EXPIRED, record.licenceStatus(LocalDate.of(2026,11,12)))
             assertTrue(record.inactive)
-            assertEquals(VehicleRegistryConfig.KNOWN_VEHICLE_RESOURCE_ID, server.takeRequest().requestUrl!!.queryParameter("resource_id"))
-            assertEquals(VehicleRegistryClient.INACTIVE_VEHICLE_RESOURCE_ID, server.takeRequest().requestUrl!!.queryParameter("resource_id"))
-            server.enqueue(MockResponse().setResponseCode(503))
+            assertEquals(VehicleRegistryConfig.KNOWN_VEHICLE_RESOURCE_ID, server.takeRequest().url.queryParameter("resource_id"))
+            assertEquals(VehicleRegistryClient.INACTIVE_VEHICLE_RESOURCE_ID, server.takeRequest().url.queryParameter("resource_id"))
+            server.enqueue(MockResponse.Builder().code(503).build())
             assertTrue(client.lookup("1912929") is VehicleLookupResult.Error)
             assertEquals(3, server.requestCount)
         }

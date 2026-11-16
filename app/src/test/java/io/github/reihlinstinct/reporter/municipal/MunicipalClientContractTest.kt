@@ -1,8 +1,8 @@
 package io.github.reihlinstinct.reporter.municipal
 
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import okhttp3.mockwebserver.SocketPolicy
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
+import mockwebserver3.SocketEffect
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -48,14 +48,14 @@ class MunicipalClientContractTest {
     )
 
     @Test fun catalogUsesReadOnlyGetAndRefusesRedirectsWithoutLeakingToken() {
-        MockWebServer().use { server ->
-            server.enqueue(MockResponse().setBody("""[{"categoryName":"parent","children":[{"categoryName":"topic","subjectCode":"5164"}]}]"""))
+        MockWebServer().apply { start() }.use { server ->
+            server.enqueue(MockResponse.Builder().body("""[{"categoryName":"parent","children":[{"categoryName":"topic","subjectCode":"5164"}]}]""").build())
             val rows = client(server).subjectCategories("synthetic-token")
             assertEquals("5164", rows.single().code)
             val request = server.takeRequest()
             assertEquals("GET", request.method)
-            assertEquals("synthetic-token", request.requestUrl!!.queryParameter("token"))
-            server.enqueue(MockResponse().setResponseCode(302).addHeader("Location", "https://example.invalid/"))
+            assertEquals("synthetic-token", request.url.queryParameter("token"))
+            server.enqueue(MockResponse.Builder().code(302).addHeader("Location", "https://example.invalid/").build())
             val failure = assertThrows(MunicipalApiException::class.java) { client(server).subjectCategories("synthetic-secret-token") }
             assertFalse(failure.message!!.contains("synthetic-secret-token"))
             assertEquals(2, server.requestCount)
@@ -64,15 +64,15 @@ class MunicipalClientContractTest {
 
     @Test
     fun happyPathSendsByteIdenticalGoldenBodies() {
-        MockWebServer().use { server ->
-            server.enqueue(MockResponse().setBody("""{"Success":true,"Token":"synthetic-token"}"""))
-            server.enqueue(MockResponse().setBody("""{"Success":true,"ContactIdInCRM":"synthetic-contact-id"}"""))
+        MockWebServer().apply { start() }.use { server ->
+            server.enqueue(MockResponse.Builder().body("""{"Success":true,"Token":"synthetic-token"}""").build())
+            server.enqueue(MockResponse.Builder().body("""{"Success":true,"ContactIdInCRM":"synthetic-contact-id"}""").build())
             server.enqueue(
-                MockResponse().setBody(
+                MockResponse.Builder().body(
                     """{"Success":true,"CaseIdInCRM":"synthetic-case-id","WebCaseIdInCRM":"synthetic-webcase-id","CaseNumberInCRM":"2000-0000000"}"""
-                )
+                ).build()
             )
-            server.enqueue(MockResponse().setBody("""{"Success":true}"""))
+            server.enqueue(MockResponse.Builder().body("""{"Success":true}""").build())
             val api = client(server)
 
             val token = api.login()
@@ -98,14 +98,14 @@ class MunicipalClientContractTest {
             for (i in endpoints.indices) {
                 val request = server.takeRequest()
                 assertEquals("POST", request.method)
-                assertEquals("/CRMCityConnect/api/jerusalem/" + endpoints[i], request.path)
+                assertEquals("/CRMCityConnect/api/jerusalem/" + endpoints[i], request.target)
                 assertEquals("text/plain; charset=utf-8", request.headers["Content-Type"])
                 assertEquals("App 106", request.headers["User-Agent"])
                 assertEquals("synthetic-key", request.headers["Ocp-Apim-Subscription-Key"])
                 assertArrayEquals(
                     endpoints[i] + " body must be byte-identical to the helper's golden",
                     resource(goldens[i]),
-                    request.body.readByteArray(),
+                    request.body!!.toByteArray(),
                 )
             }
         }
@@ -118,8 +118,8 @@ class MunicipalClientContractTest {
             """{"Success":"true","Token":"synthetic-token"}""",
             """{"Token":"synthetic-token"}""",
         )) {
-            MockWebServer().use { server ->
-                server.enqueue(MockResponse().setBody(body))
+            MockWebServer().apply { start() }.use { server ->
+                server.enqueue(MockResponse.Builder().body(body).build())
                 assertThrows(MunicipalApiException::class.java) { client(server).login() }
             }
         }
@@ -127,8 +127,8 @@ class MunicipalClientContractTest {
 
     @Test
     fun httpErrorCarriesEndpointAndCodeOnly() {
-        MockWebServer().use { server ->
-            server.enqueue(MockResponse().setResponseCode(500).setBody("synthetic-secret-in-body"))
+        MockWebServer().apply { start() }.use { server ->
+            server.enqueue(MockResponse.Builder().code(500).body("synthetic-secret-in-body").build())
             val error = assertThrows(MunicipalApiException::class.java) { client(server).login() }
             assertEquals("Login: HTTP 500.", error.message)
             assertFalse(error.message!!.contains("synthetic-secret-in-body"))
@@ -137,9 +137,9 @@ class MunicipalClientContractTest {
 
     @Test
     fun redirectIsRefusedNotFollowed() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             server.enqueue(
-                MockResponse().setResponseCode(307).addHeader("Location", server.url("/elsewhere"))
+                MockResponse.Builder().code(307).addHeader("Location", server.url("/elsewhere")).build()
             )
             assertThrows(MunicipalApiException::class.java) { client(server).login() }
             assertEquals(1, server.requestCount)
@@ -149,8 +149,8 @@ class MunicipalClientContractTest {
     @Test
     fun malformedAndNonObjectResponsesAreRejected() {
         for (body in listOf("not-json", """["Success"]""", "")) {
-            MockWebServer().use { server ->
-                server.enqueue(MockResponse().setBody(body))
+            MockWebServer().apply { start() }.use { server ->
+                server.enqueue(MockResponse.Builder().body(body).build())
                 assertThrows(MunicipalApiException::class.java) { client(server).login() }
             }
         }
@@ -158,17 +158,17 @@ class MunicipalClientContractTest {
 
     @Test
     fun oversizedResponseIsRejected() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             val big = ByteArray(16 * 1024 * 1024 + 1) { 'x'.code.toByte() }
-            server.enqueue(MockResponse().setBody(okio.Buffer().write(big)))
+            server.enqueue(MockResponse.Builder().body(okio.Buffer().write(big)).build())
             assertThrows(MunicipalApiException::class.java) { client(server).login() }
         }
     }
 
     @Test
     fun missingTokenIsRejected() {
-        MockWebServer().use { server ->
-            server.enqueue(MockResponse().setBody("""{"Success":true}"""))
+        MockWebServer().apply { start() }.use { server ->
+            server.enqueue(MockResponse.Builder().body("""{"Success":true}""").build())
             val error = assertThrows(MunicipalApiException::class.java) { client(server).login() }
             assertEquals("Login returned no token.", error.message)
         }
@@ -176,7 +176,7 @@ class MunicipalClientContractTest {
 
     @Test
     fun emptyCredentialsFailBeforeAnyNetwork() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             assertThrows(MunicipalInputException::class.java) {
                 OkHttpMunicipalClient.forTesting(server.url("/"), "", "synthetic-user", "synthetic-password")
             }
@@ -192,20 +192,20 @@ class MunicipalClientContractTest {
 
     @Test
     fun oversizedButValidJsonIsRejected() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             // Valid JSON whose size alone exceeds the 16 MB cap must still be refused.
             val padded = "{}".toByteArray() + ByteArray(16 * 1024 * 1024) { ' '.code.toByte() }
-            server.enqueue(MockResponse().setBody(okio.Buffer().write(padded)))
+            server.enqueue(MockResponse.Builder().body(okio.Buffer().write(padded)).build())
             assertThrows(MunicipalApiException::class.java) { client(server).login() }
         }
     }
 
     @Test
     fun droppedConnectionIsNotRetried() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             // The connection dies before the request is read; with connection
             // retries disabled the attempt must happen exactly once.
-            server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START))
+            server.enqueue(MockResponse.Builder().onRequestStart(SocketEffect.CloseSocket()).build())
             assertThrows(MunicipalApiException::class.java) {
                 client(server).upsertContact("synthetic-token", LinkedHashMap())
             }
@@ -215,7 +215,7 @@ class MunicipalClientContractTest {
 
     @Test
     fun disconnectFollowedBySuccessIsNotSilentlyRetried() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             // OkHttp only retries silently when a pooled connection that has
             // already carried a response fails; a failure on a fresh connection
             // is never retried, whatever the setting. So one successful call
@@ -224,9 +224,9 @@ class MunicipalClientContractTest {
             // retry would open a new connection, consume the success and return
             // normally; with retryOnConnectionFailure(false) the call fails
             // after exactly one attempt and the success stays unused.
-            server.enqueue(MockResponse().setBody("""{"Success":true,"Token":"synthetic-token"}"""))
-            server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AFTER_REQUEST))
-            server.enqueue(MockResponse().setBody("""{"Success":true,"ContactIdInCRM":"synthetic-contact-id"}"""))
+            server.enqueue(MockResponse.Builder().body("""{"Success":true,"Token":"synthetic-token"}""").build())
+            server.enqueue(MockResponse.Builder().onResponseStart(SocketEffect.CloseSocket()).build())
+            server.enqueue(MockResponse.Builder().body("""{"Success":true,"ContactIdInCRM":"synthetic-contact-id"}""").build())
             val api = client(server)
             assertEquals("synthetic-token", api.login())
             val before = server.requestCount
@@ -235,7 +235,7 @@ class MunicipalClientContractTest {
             }
             assertEquals("the dropped request must be attempted exactly once", 1, server.requestCount - before)
             server.takeRequest()
-            assertEquals(1, server.takeRequest().sequenceNumber)
+            assertEquals(1, server.takeRequest().exchangeIndex)
         }
     }
 
@@ -259,10 +259,10 @@ class MunicipalClientContractTest {
 
     @Test
     fun oversizedSuccessfulJsonIsRejectedByTheCap() {
-        MockWebServer().use { server ->
+        MockWebServer().apply { start() }.use { server ->
             // Valid JSON that would be a successful login if parsed: only the
             // 16 MB read cap can refuse it.
-            server.enqueue(MockResponse().setBody(successBodyOfSize(16L * 1024 * 1024 + 1)))
+            server.enqueue(MockResponse.Builder().body(successBodyOfSize(16L * 1024 * 1024 + 1)).build())
             val error = assertThrows(MunicipalApiException::class.java) { client(server).login() }
             assertEquals("Login: municipality did not confirm success.", error.message)
             assertEquals(1, server.requestCount)
@@ -271,8 +271,8 @@ class MunicipalClientContractTest {
 
     @Test
     fun successfulJsonExactlyAtTheCapIsAccepted() {
-        MockWebServer().use { server ->
-            server.enqueue(MockResponse().setBody(successBodyOfSize(16L * 1024 * 1024)))
+        MockWebServer().apply { start() }.use { server ->
+            server.enqueue(MockResponse.Builder().body(successBodyOfSize(16L * 1024 * 1024)).build())
             assertEquals("synthetic-token", client(server).login())
         }
     }
@@ -280,9 +280,9 @@ class MunicipalClientContractTest {
     @Test
     fun networkFailureMapsToApiException() {
         // A shut-down server refuses connections immediately.
-        val dead = MockWebServer()
+        val dead = MockWebServer().apply { start() }
         val deadUrl = dead.url("/")
-        dead.shutdown()
+        dead.close()
         val api = OkHttpMunicipalClient.forTesting(
             deadUrl, "synthetic-key", "synthetic-user", "synthetic-password",
         )
@@ -291,8 +291,8 @@ class MunicipalClientContractTest {
 
     @Test
     fun contactAndCreateResponsesReturnRawFields() {
-        MockWebServer().use { server ->
-            server.enqueue(MockResponse().setBody("""{"Success":true,"ContactIdInCRM":"synthetic-contact-id","Extra":7}"""))
+        MockWebServer().apply { start() }.use { server ->
+            server.enqueue(MockResponse.Builder().body("""{"Success":true,"ContactIdInCRM":"synthetic-contact-id","Extra":7}""").build())
             val response = client(server).upsertContact("synthetic-token", MunicipalPayloads.buildContact(reporter))
             assertEquals("synthetic-contact-id", response["ContactIdInCRM"])
             assertEquals(7, response["Extra"])
@@ -301,8 +301,8 @@ class MunicipalClientContractTest {
 
     @Test
     fun errorMessagesNeverContainCredentials() {
-        MockWebServer().use { server ->
-            server.enqueue(MockResponse().setResponseCode(401))
+        MockWebServer().apply { start() }.use { server ->
+            server.enqueue(MockResponse.Builder().code(401).build())
             val error = assertThrows(MunicipalApiException::class.java) { client(server).login() }
             assertTrue(error.message!!.startsWith("Login: HTTP"))
             for (secret in listOf("synthetic-key", "synthetic-user", "synthetic-password")) {

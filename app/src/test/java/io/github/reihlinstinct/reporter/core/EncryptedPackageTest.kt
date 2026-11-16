@@ -107,8 +107,8 @@ class EncryptedPackageTest {
     }
     @Test fun githubPortRedirectsAndFailuresNeverRetry() {
         for (code in listOf(307, 403, 429, 500)) {
-            okhttp3.mockwebserver.MockWebServer().use { server ->
-                server.enqueue(okhttp3.mockwebserver.MockResponse().setResponseCode(code).addHeader("Location", server.url("/elsewhere")))
+            mockwebserver3.MockWebServer().apply { start() }.use { server ->
+                server.enqueue(mockwebserver3.MockResponse.Builder().code(code).addHeader("Location", server.url("/elsewhere")).build())
                 val port = GitHubIntakePort({ "synthetic-token" }, server.url("/issues").toString())
                 assertThrows(IllegalArgumentException::class.java) { port.create("package-synthetic", "{}") }
                 assertEquals(1, server.requestCount)
@@ -116,15 +116,15 @@ class EncryptedPackageTest {
         }
     }
     @Test fun githubPortUsesIssueThenCommentsWithoutPlainReport() {
-        okhttp3.mockwebserver.MockWebServer().use { server ->
-            server.enqueue(okhttp3.mockwebserver.MockResponse().setResponseCode(201).setBody("{\"number\":7}"))
-            server.enqueue(okhttp3.mockwebserver.MockResponse().setResponseCode(201).setBody("{}"))
+        mockwebserver3.MockWebServer().apply { start() }.use { server ->
+            server.enqueue(mockwebserver3.MockResponse.Builder().code(201).body("{\"number\":7}").build())
+            server.enqueue(mockwebserver3.MockResponse.Builder().code(201).body("{}").build())
             val port = GitHubIntakePort({ "synthetic-token" }, server.url("/issues").toString())
             assertEquals(7L, port.create("package-synthetic", "ciphertext-manifest"))
             port.comment(7, "ciphertext-chunk")
-            val first = server.takeRequest(); assertEquals("/issues", first.path)
-            assertEquals("Bearer synthetic-token", first.getHeader("Authorization"))
-            assertEquals("/issues/7/comments", server.takeRequest().path)
+            val first = server.takeRequest(); assertEquals("/issues", first.target)
+            assertEquals("Bearer synthetic-token", first.headers["Authorization"])
+            assertEquals("/issues/7/comments", server.takeRequest().target)
         }
     }
     private class MemoryJournal : UploadJournal {

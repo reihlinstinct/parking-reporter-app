@@ -85,7 +85,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:5.5.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     testImplementation("junit:junit:4.13.2")
-    testImplementation("com.squareup.okhttp3:mockwebserver:5.5.1")
+    testImplementation("com.squareup.okhttp3:mockwebserver3:5.5.1")
     testImplementation("org.json:json:20260814")
     androidTestImplementation(platform("androidx.compose:compose-bom:2026.09.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
@@ -95,6 +95,6 @@ dependencies {
     // (API 37). 3.7.0 uses getSystemService instead (androidx.test release
     // notes), unbreaking every compose test on the API 37 emulator.
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
-    androidTestImplementation("com.squareup.okhttp3:mockwebserver:5.5.1")
+    androidTestImplementation("com.squareup.okhttp3:mockwebserver3:5.5.1")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
