@@ -101,7 +101,9 @@ class ReviewUnsavedBackTest {
         val bitmap = android.graphics.Bitmap.createBitmap(16, 16, android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap()
         compose.setContent { AppTheme { ReviewScreen(initial, bitmap, {}, { exits++ },
             plateRecognizer = { calls.incrementAndGet(); listOf("1234567") }) } }
-        compose.waitUntil(5_000) { calls.get() == 1 }
+        compose.waitUntil(5_000) {
+            compose.onAllNodesWithTag("review-plate").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.waitForIdle()
         compose.onNodeWithText("ערוך").performClick()
         compose.onNodeWithText("מספר לוחית (ספרות בלבד)").performScrollTo().assertTextContains("1234567")
