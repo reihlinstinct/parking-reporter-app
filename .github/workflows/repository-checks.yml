@@ -66,6 +66,8 @@ jobs:
         run: python3 -m unittest discover -s tests -p 'test_architecture_docs.py' -v
       - name: Encrypted live input bundle regression tests
         run: python3 -m unittest discover -s tests -p 'test_live_bundle.py' -v
+      - name: PRPKG2 contract schema and golden values
+        run: python3 -m unittest discover -s tests -p 'test_prpkg2_spec.py' -v
       - name: Disability tag vector parity and contrast tests
         run: python3 -m unittest discover -s tests -p 'test_disability_tag_vectors.py' -v
       - name: Live emulator API and predownload regression tests
