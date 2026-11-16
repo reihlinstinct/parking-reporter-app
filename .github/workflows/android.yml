@@ -75,7 +75,7 @@ jobs:
         run: sh gradlew --no-daemon jacocoDebugUnitTestReport
       - name: Unit test summary
         if: always()
-        run: python3 scripts/test_summary.py --title 'Unit tests (debug)' --junit app/build/test-results/testDebugUnitTest --jacoco app/build/reports/jacoco
+        run: python3 scripts/test_summary.py --title 'Unit tests (debug)' --junit app/build/test-results/testDebugUnitTest --jacoco app/build/reports/jacoco --require-jacoco
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
