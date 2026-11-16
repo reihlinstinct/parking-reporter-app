@@ -1,0 +1,12 @@
+name: Review notification
+# This workflow has no privilege and checks out nothing. Its completion merely
+# wakes the default-branch Review gate; its output is never trusted as a verdict.
+on:
+  pull_request_review:
+    types: [submitted, dismissed, edited]
+permissions: {}
+jobs:
+  notify:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo 'Review state changed; trusted-base verifier will read it live.'

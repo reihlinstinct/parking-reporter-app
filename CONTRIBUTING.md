@@ -36,6 +36,12 @@ Run the Gradle commands in README.md for Android build, lint, unit tests and emu
 
 CI never calls the municipal API on its own: no workflow that runs on push, pull request or schedule holds municipal credentials or contacts the municipality. The one exception is `.github/workflows/city-readonly-checks.yml` ("City read-only checks"). It has only a `workflow_dispatch` trigger, and its job runs only in this repository, on `main`, when the repository owner dispatches it. It runs in the `city-readonly-checks` environment, which waits for a required reviewer's approval, and the municipal credentials reach only its last step, as Actions secrets at run time. That step runs `scripts/city_readonly_check.py`, which is read-only: it logs in, reads the subject-category catalog (`GetSubjectCategories`) and compares its fingerprint with the documented one. It never submits, amends or lists cases, and it never prints the credentials, the session token or the raw catalog.
 
+## Merge gate and auto-merge
+
+Merge only with green CI and a genuine independent PASS at the exact head, after requesting `@claude` at each new head. The trusted-base review status writer never checks out PR code and re-reads live heads and review states. Dismissed, stale, self-authored and untrusted reviews do not count.
+
+**Auto-merge stays disabled.** The shared GitHub Actions status identity can be impersonated by another same-repo workflow with write permission. This status is a review aid, not proof against that threat. A separately authenticated check source or an enforced trusted workflow is needed before automatic merging can replace manual validation. Do not change required checks or enable auto-merge without the owner's separate approval after proof.
+
 ## Issues: labels, milestones and order
 
 The same scheme is used in every public repo. Do not add parallel label schemes.

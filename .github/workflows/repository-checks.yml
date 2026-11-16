@@ -62,6 +62,8 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_test_summary.py' -v
           python3 -m unittest discover -s tests -p 'test_upgrade*.py' -v
           python3 -m unittest discover -s tests -p 'test_namespace_upgrade_workflow.py' -v
+      - name: Independent review verifier regression tests
+        run: python3 -m unittest discover -s tests -p 'test_review_gate.py' -v
       - name: Architecture documentation source-map checks
         run: python3 -m unittest discover -s tests -p 'test_architecture_docs.py' -v
       - name: Encrypted live input bundle regression tests
