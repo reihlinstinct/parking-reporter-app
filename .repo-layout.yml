@@ -54,6 +54,11 @@
       "allow_paths": [
         "docs/assets/disability_tag_triangle.svg",
         "docs/assets/disability_tag_wheelchair.svg",
+        "docs/assets/guide/category-chosen.png",
+        "docs/assets/guide/category-picker.png",
+        "docs/assets/guide/home.png",
+        "docs/assets/guide/review.png",
+        "docs/assets/guide/settings.png",
         "docs/prpkg2-spec/golden.json",
         "docs/prpkg2-spec/header.schema.json",
         "docs/prpkg2-spec/report.schema.json"
