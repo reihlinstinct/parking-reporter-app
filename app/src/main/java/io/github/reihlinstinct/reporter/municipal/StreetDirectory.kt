@@ -44,6 +44,44 @@ class StreetDirectory private constructor(
         return ConfirmableAddress("${resolved.streetName} ${resolved.house}", point.latitude, point.longitude)
     }
 
+    /** Nearest numbered address to the crossing of two streets; [streetNameA]/[streetNameB] are the crossing streets. */
+    data class IntersectionAddress(
+        val address: String, val latitude: Double, val longitude: Double,
+        val streetNameA: String, val streetNameB: String,
+    )
+
+    /**
+     * Offline lookup for a spot at the crossing of two streets (the city form only takes a street and
+     * house number). The crossing is estimated from where the two streets' own address points come
+     * closest; the result is the nearest numbered address of either street to that estimate. Refuses
+     * unknown or ambiguous names, streets that do not meet, and streets that meet in several places.
+     */
+    fun findIntersectionAddress(streetA: String, streetB: String): IntersectionAddress {
+        val codeA = aliases[normalize(streetA)]?.singleOrNull()
+        val codeB = aliases[normalize(streetB)]?.singleOrNull()
+        if (codeA == null || codeB == null || codeA == codeB) {
+            throw MunicipalInputException("Street name has no unique municipal match. Use the exact Hebrew street names.")
+        }
+        val pointsA = points.filter { it.code == codeA }
+        val pointsB = points.filter { it.code == codeB }
+        val near = ArrayList<Pair<Point, Point>>()
+        for (a in pointsA) for (b in pointsB) {
+            if (hypot(a.x - b.x, a.y - b.y) <= INTERSECTION_PAIR_MAX_M) near.add(a to b)
+        }
+        val best = near.minByOrNull { (a, b) -> hypot(a.x - b.x, a.y - b.y) }
+            ?: throw MunicipalInputException("These streets do not meet in the address data. Check the street names.")
+        fun mid(pair: Pair<Point, Point>) = (pair.first.x + pair.second.x) / 2 to (pair.first.y + pair.second.y) / 2
+        val (mx, my) = mid(best)
+        if (near.any { val (x, y) = mid(it); hypot(x - mx, y - my) > INTERSECTION_SINGLE_AREA_M }) {
+            throw MunicipalInputException("These streets meet in more than one place. Confirm an exact address.")
+        }
+        // The midpoint is equally far from both points of the closest pair, so no other address is nearer;
+        // pick between the two deterministically (lower street code) so the order of the names never matters.
+        val nearest = listOf(best.first, best.second).minByOrNull { it.code!!.toLongOrNull() ?: Long.MAX_VALUE }!!
+        return IntersectionAddress("${streets[nearest.code!!]} ${nearest.house}", nearest.latitude, nearest.longitude,
+            streets[codeA]!!, streets[codeB]!!)
+    }
+
     /**
      * Points of a street. Exact-coded points always win. Tail-named points (see [Point.tailCode])
      * are a fallback: used alone when the street has no exact point, otherwise only when within
@@ -160,6 +198,8 @@ class StreetDirectory private constructor(
 
     companion object {
         private const val TAIL_MAX_DISTANCE_M = 300.0
+        private const val INTERSECTION_PAIR_MAX_M = 60.0
+        private const val INTERSECTION_SINGLE_AREA_M = 150.0
         private val HEBREW_FINALS = mapOf('ך' to 'כ', 'ם' to 'מ', 'ן' to 'נ', 'ף' to 'פ', 'ץ' to 'צ')
 
         private fun words(text: String): List<String> =

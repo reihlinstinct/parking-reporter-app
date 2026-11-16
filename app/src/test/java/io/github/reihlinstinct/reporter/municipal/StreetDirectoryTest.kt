@@ -186,4 +186,40 @@ class StreetDirectoryTest {
         val e = refused { tailFixture().resolve("גנרל פייר קניג", "33", 31.80 to 35.25) }
         assertTrue(e.message!!.contains("200 m"))
     }
+
+    private fun crossing(extra: String = "") = StreetDirectory.load("""
+        {"version": 1,
+         "streets": [
+           {"StreetCode": "11", "StreetName": "רחוב אלף"},
+           {"StreetCode": "12", "StreetName": "רחוב בית"},
+           {"StreetCode": "13", "StreetName": "רחוב רחוק"}
+         ],
+         "addresses": [
+           [31.7700, 35.2100, "10", "רחוב אלף"],
+           [31.7700, 35.2108, "12", "רחוב אלף"],
+           [31.7704, 35.2107, "1", "רחוב בית"],
+           [31.7712, 35.2107, "3", "רחוב בית"],
+           [31.7800, 35.2200, "5", "רחוב רחוק"]$extra
+         ]}
+    """.trimIndent())
+
+    @Test fun intersectionFindsNearestNumberedAddressAndNamesBothStreets() {
+        val r = crossing().findIntersectionAddress("רחוב אלף", "רחוב בית")
+        assertEquals("רחוב אלף", r.streetNameA)
+        assertEquals("רחוב בית", r.streetNameB)
+        assertEquals("רחוב אלף 12", r.address)
+        assertEquals(31.7700, r.latitude, 0.0)
+        assertEquals(35.2108, r.longitude, 0.0)
+        assertEquals("רחוב אלף 12", crossing().findIntersectionAddress("רחוב בית", "רחוב אלף").address)
+    }
+
+    @Test fun intersectionRefusesUnknownSameDistantAndRepeatedCrossings() {
+        for ((a, b) in listOf("רחוב אלף" to "רחוב אלף", "רחוב אלף" to "אין כזה", "רחוב אלף" to "רחוב רחוק")) {
+            try { crossing().findIntersectionAddress(a, b); org.junit.Assert.fail("must refuse $a/$b") }
+            catch (_: MunicipalInputException) { }
+        }
+        val twice = crossing(""", [31.7700, 35.2200, "30", "רחוב אלף"], [31.7704, 35.2199, "20", "רחוב בית"]""")
+        try { twice.findIntersectionAddress("רחוב אלף", "רחוב בית"); org.junit.Assert.fail("must refuse") }
+        catch (_: MunicipalInputException) { }
+    }
 }
