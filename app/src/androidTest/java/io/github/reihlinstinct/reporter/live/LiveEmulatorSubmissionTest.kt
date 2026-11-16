@@ -160,9 +160,8 @@ class LiveEmulatorSubmissionTest {
         marker("PHOTO_CLAIMED")
 
         // Owner request 2026-11-16: the recording shows earlier submissions in the history tab. They are synthetic
-        // (fixed fake identifiers, no real data), seeded before the app opens and removed again in finally.
-        seedSyntheticHistory(context)
-        marker("HISTORY_SEEDED")
+        // (fixed fake identifiers, no real data). They are seeded only after the send is confirmed, because the
+        // pre-tap guard requires an empty submissions directory (#264), and removed again in finally.
         val driver = FlowDriver(compose)
         val signal = mutableStateOf(EntrySignal(1, EntryIntents.Request.SharedPhoto(sharedUri.toString())))
         compose.setContent {
@@ -233,6 +232,8 @@ class LiveEmulatorSubmissionTest {
                     File(context.filesDir, "live-e2e-case-number.txt").writeText(caseNumber ?: "")
                     marker("SUBMITTED case=" + if (caseNumber != null) "present" else "unparsed")
                     // The recording also shows the report-history tab with the sent report's identifier.
+                    seedSyntheticHistory(context)
+                    marker("HISTORY_SEEDED")
                     driver.showHistoryAfterSubmission()
                     cleanOwnedPhoto(context, hash)
                     cleaned = true
@@ -323,10 +324,11 @@ class LiveEmulatorSubmissionTest {
         }
     }
 
-    private val syntheticHistory = listOf("0001" to "2611-0000001", "0002" to "2611-0000002", "0003" to "2611-0000003")
+    private val syntheticHistory = listOf("0001" to "0000-0000001", "0002" to "0000-0000002", "0003" to "0000-0000003")
 
     /** Synthetic sent reports for the history tab: ledger row plus a "complete" state with a fake case number. */
     private fun seedSyntheticHistory(context: Context) {
+        runCatching { removeSyntheticHistory(context) } // idempotent: clear leftovers of a killed run first
         val db = Room.databaseBuilder(context, ReportDatabase::class.java, "report-ledger.db").build()
         try {
             val dir = File(context.noBackupFilesDir, "submissions").also { it.mkdirs() }
