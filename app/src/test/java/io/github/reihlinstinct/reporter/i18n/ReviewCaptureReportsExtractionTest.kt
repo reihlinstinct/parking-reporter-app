@@ -50,6 +50,8 @@ class ReviewCaptureReportsExtractionTest {
         "review.category_note" to "זיהוי קטגוריה אוטומטי עדיין בפיתוח. בחר קטגוריה לבדיקה.",
         // Owner-approved wording, 2026-11-16 (#105/#109 slice 2). The other languages are machine drafts.
         "review.suggestion_hint" to "הצעה: {category} ({percent}% ביטחון)",
+        // Derived from the approved hint by dropping the percent, per the owner's "תסתיר" (2026-11-16).
+        "review.suggestion_hint_plain" to "הצעה: {category}",
         "review.suggestion_change" to "שנה קטגוריה",
         "review.suggestion_low" to "הצעה ראשונית בלבד, בדוק ובחר",
         "review.plate_not_confirmed" to "לא אושרה",

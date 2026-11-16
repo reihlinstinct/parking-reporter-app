@@ -779,6 +779,13 @@
       "ru": "Предложение: {category} (уверенность {percent}%)",
       "am": "ጥቆማ፡ {category} ({percent}% እምነት)"
     },
+    "review.suggestion_hint_plain": {
+      "he": "הצעה: {category}",
+      "en": "Suggestion: {category}",
+      "ar": "اقتراح: {category}",
+      "ru": "Предложение: {category}",
+      "am": "ጥቆማ፡ {category}"
+    },
     "review.suggestion_change": {
       "he": "שנה קטגוריה",
       "en": "Change category",

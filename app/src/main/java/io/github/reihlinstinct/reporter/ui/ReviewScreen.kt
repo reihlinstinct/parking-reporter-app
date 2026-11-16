@@ -328,7 +328,11 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 draft = policy(io.github.reihlinstinct.reporter.core.TemplateSession.withSubject(draft, "municipal:" + suggestionTopic.code, textTyped))
                 if (!draft.needsPlate()) plates = emptyList()
                 topicSelected?.invoke(suggestionTopic.code)
-            }) { Text(s.t("review.suggestion_hint", mapOf("category" to suggestionTopic.name, "percent" to suggestionPercent))) }
+            }) {
+                // The stub's confidence is a constant, not an estimate for this photo, so the percent stays hidden until a real model computes one.
+                if (SHOW_SUGGESTION_PERCENT) Text(s.t("review.suggestion_hint", mapOf("category" to suggestionTopic.name, "percent" to suggestionPercent)))
+                else Text(s.t("review.suggestion_hint_plain", mapOf("category" to suggestionTopic.name)))
+            }
             TextButton(onClick = { openTopics?.invoke(); categoryMenu = true }) { Text(s.t("review.suggestion_change")) }
             if (suggestionPercent < 50) Text(s.t("review.suggestion_low"), style = MaterialTheme.typography.bodySmall)
         }
@@ -519,3 +523,6 @@ internal tailrec fun Context.findActivity(): Activity? = when (this) {
     is ContextWrapper -> baseContext.findActivity()
     else -> null
 }
+
+/** Flip to true only when the suggester computes a real confidence (owner: hide the stub percent, 2026-11-16). */
+private const val SHOW_SUGGESTION_PERCENT = false
