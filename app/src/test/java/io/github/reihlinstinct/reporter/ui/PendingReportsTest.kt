@@ -1,8 +1,8 @@
 package io.github.reihlinstinct.reporter.ui
 
 import io.github.reihlinstinct.reporter.ledger.ReportRecord
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 class PendingReportsTest {
     private fun record(id: String, digest: String?) = ReportRecord(id, "sha", "path", 1L, "{}", digest)
