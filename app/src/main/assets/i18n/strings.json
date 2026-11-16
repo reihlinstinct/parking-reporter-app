@@ -772,6 +772,27 @@
       "ru": "Автоматическое определение категории ещё в разработке. Выберите категорию для проверки.",
       "am": "ራስ-ሰር የምድብ ለይቶ ማወቅ ገና በመገንባት ላይ ነው። ለግምገማ ምድብ ይምረጡ።"
     },
+    "review.suggestion_hint": {
+      "he": "הצעה: {category} ({percent}% ביטחון)",
+      "en": "Suggestion: {category} ({percent}% confidence)",
+      "ar": "اقتراح: {category} (ثقة {percent}%)",
+      "ru": "Предложение: {category} (уверенность {percent}%)",
+      "am": "ጥቆማ፡ {category} ({percent}% እምነት)"
+    },
+    "review.suggestion_change": {
+      "he": "שנה קטגוריה",
+      "en": "Change category",
+      "ar": "تغيير الفئة",
+      "ru": "Изменить категорию",
+      "am": "ምድብ ቀይር"
+    },
+    "review.suggestion_low": {
+      "he": "הצעה ראשונית בלבד, בדוק ובחר",
+      "en": "Preliminary suggestion only, check and choose",
+      "ar": "اقتراح أولي فقط، تحقّق ثم اختر",
+      "ru": "Только предварительное предложение, проверьте и выберите",
+      "am": "የመጀመሪያ ጥቆማ ብቻ ነው፣ ፈትሸው ይምረጡ"
+    },
     "review.plate": {
       "he": "לוחית: {plate}",
       "en": "Plate: {plate}",

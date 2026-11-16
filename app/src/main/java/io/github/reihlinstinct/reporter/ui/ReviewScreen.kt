@@ -313,6 +313,25 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 topicSelected?.invoke(topic.code); categoryMenu = false
             })
         Text(s.t("review.category_note"), style = MaterialTheme.typography.bodySmall)
+        // Issues #105/#109: a hint, never a decision. Tapping it is the user's explicit choice; nothing is selected or sent for them.
+        val suggestionHint = topicSnapshot?.let { snapshot ->
+            io.github.reihlinstinct.reporter.core.CategorySuggestions.visible(
+                io.github.reihlinstinct.reporter.core.CategorySuggestions.safely(
+                    io.github.reihlinstinct.reporter.core.StubCategorySuggester(),
+                    io.github.reihlinstinct.reporter.core.SuggestionInput(snapshot.topics, recentTopics)),
+                snapshot.topics, selectedCode).firstOrNull()
+        }
+        val suggestionTopic = suggestionHint?.let { hint -> topicSnapshot?.topics?.firstOrNull { it.code == hint.code } }
+        val suggestionPercent = suggestionHint?.let { io.github.reihlinstinct.reporter.core.CategorySuggestions.percent(it) }
+        if (suggestionTopic != null && suggestionPercent != null && selectedCode == null && canBrowseTopics) {
+            TextButton(onClick = {
+                draft = policy(io.github.reihlinstinct.reporter.core.TemplateSession.withSubject(draft, "municipal:" + suggestionTopic.code, textTyped))
+                if (!draft.needsPlate()) plates = emptyList()
+                topicSelected?.invoke(suggestionTopic.code)
+            }) { Text(s.t("review.suggestion_hint", mapOf("category" to suggestionTopic.name, "percent" to suggestionPercent))) }
+            TextButton(onClick = { openTopics?.invoke(); categoryMenu = true }) { Text(s.t("review.suggestion_change")) }
+            if (suggestionPercent < 50) Text(s.t("review.suggestion_low"), style = MaterialTheme.typography.bodySmall)
+        }
         // Issue #158: experimental, advisory only. Silent unless the private model is on the phone and scores high.
         val sidewalkCode = io.github.reihlinstinct.reporter.recognition.SidewalkSuggestion.SIDEWALK_SUBJECT_CODE
         val sidewalkTopicAvailable = topicSnapshot?.topics.orEmpty().any { it.code == sidewalkCode }

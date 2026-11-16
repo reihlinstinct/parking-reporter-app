@@ -48,6 +48,10 @@ class ReviewCaptureReportsExtractionTest {
         "review.edit.done" to "סיום עריכה",
         "review.image_description" to "צילום ראיה",
         "review.category_note" to "זיהוי קטגוריה אוטומטי עדיין בפיתוח. בחר קטגוריה לבדיקה.",
+        // Owner-approved wording, 2026-11-16 (#105/#109 slice 2). The other languages are machine drafts.
+        "review.suggestion_hint" to "הצעה: {category} ({percent}% ביטחון)",
+        "review.suggestion_change" to "שנה קטגוריה",
+        "review.suggestion_low" to "הצעה ראשונית בלבד, בדוק ובחר",
         "review.plate_not_confirmed" to "לא אושרה",
         "review.ocr.analyzing" to "מנתח את הצילום במכשיר...",
         "review.ocr.no_plate" to "לא זוהתה לוחית; ניתן לערוך",
