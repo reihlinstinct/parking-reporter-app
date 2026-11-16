@@ -9,6 +9,10 @@ spec.loader.exec_module(gate)
 HEAD = 'a' * 40
 
 
+def evaluate(head, reviews, author='reihlinstinct'):
+    return gate.evaluate(head, reviews, author)
+
+
 def review(**changes):
     r = dict(id=1, user={'login': 'reihl', 'type': 'User'}, commit_id=HEAD,
              state='COMMENTED', body='**Verdict: PASS** (minors only).')
@@ -18,21 +22,34 @@ def review(**changes):
 
 class ReviewGateTest(unittest.TestCase):
     def test_exact_head_and_latest_dismissal(self):
-        self.assertTrue(gate.evaluate(HEAD, [review()])[0])
-        self.assertFalse(gate.evaluate('b' * 40, [review()])[0])
-        self.assertFalse(gate.evaluate(HEAD, [review(state='DISMISSED')])[0])
-        self.assertFalse(gate.evaluate(HEAD, [review(), review(id=2, state='DISMISSED')])[0])
-        self.assertFalse(gate.evaluate(HEAD, [review(body='Review edited, no verdict')])[0])
+        self.assertTrue(evaluate(HEAD, [review()])[0])
+        self.assertFalse(evaluate('b' * 40, [review()])[0])
+        self.assertFalse(evaluate(HEAD, [review(state='DISMISSED')])[0])
+        self.assertFalse(evaluate(HEAD, [review(), review(id=2, state='DISMISSED')])[0])
+        self.assertFalse(evaluate(HEAD, [review(body='Review edited, no verdict')])[0])
 
     def test_untrusted_review_and_quoted_verdict_rejected(self):
         for user in ['reihlinstinct', 'github-actions[bot]', 'attacker']:
-            self.assertFalse(gate.evaluate(HEAD, [review(user={'login': user})])[0])
+            self.assertFalse(evaluate(HEAD, [review(user={'login': user})])[0])
         for body in ['Instinct task agent (not independent)\nVerdict: PASS', '> Verdict: PASS', 'No Verdict: PASS', 'Verdict: PASSING']:
-            self.assertFalse(gate.evaluate(HEAD, [review(body=body)])[0])
+            self.assertFalse(evaluate(HEAD, [review(body=body)])[0])
 
     def test_other_trusted_reviewer_blocks(self):
-        self.assertFalse(gate.evaluate(HEAD, [review(), review(id=2, user={'login': 'reihl-poke'}, state='CHANGES_REQUESTED')])[0])
-        self.assertFalse(gate.evaluate(HEAD, [review(), review(id=2, body='**Verdict: FAIL**')])[0])
+        self.assertFalse(evaluate(HEAD, [review(), review(id=2, user={'login': 'reihl-poke'}, state='CHANGES_REQUESTED')])[0])
+        self.assertFalse(evaluate(HEAD, [review(), review(id=2, body='**Verdict: FAIL**')])[0])
+
+    def test_commented_changes_requested_blocks_other_pass(self):
+        block = review(body='**Verdict: CHANGES REQUESTED**')
+        passed = review(id=2, user={'login': 'reihl-poke'}, body='**Verdict: PASS**')
+        self.assertFalse(evaluate(HEAD, [block, passed])[0])
+
+    def test_author_cannot_self_review_in_comment(self):
+        self.assertFalse(evaluate(HEAD, [review()], author='reihl')[0])
+        self.assertTrue(evaluate(HEAD, [review()], author='reihl-poke')[0])
+
+    def test_fenced_verdict_is_not_review(self):
+        self.assertFalse(evaluate(HEAD, [review(body='Example:\n```\nVerdict: PASS\n```')])[0])
+        self.assertFalse(evaluate(HEAD, [review(body='Example:\n~~~\nVerdict: PASS\n~~~')])[0])
 
     def test_writer_always_uses_current_head_not_event_sha(self):
         client = Fake()
@@ -73,7 +90,7 @@ class Fake:
 
     def api(self, path):
         self.reads += 1
-        return {'state': 'open', 'base': {'ref': 'main'}, 'head': {'sha': 'b' * 40 if self.move and self.reads > 1 else HEAD}}
+        return {'state': 'open', 'user': {'login': 'reihlinstinct'}, 'base': {'ref': 'main'}, 'head': {'sha': 'b' * 40 if self.move and self.reads > 1 else HEAD}}
 
     def pages(self, path):
         self.review_reads += 1
