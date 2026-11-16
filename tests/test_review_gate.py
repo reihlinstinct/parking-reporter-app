@@ -62,14 +62,16 @@ class ReviewGateTest(unittest.TestCase):
 
     def test_block_markdown_variants_fail_closed(self):
         for body in ['- **Verdict:** CHANGES REQUESTED', '**Verdict**: CHANGES REQUESTED',
-                     'Verdict - CHANGES REQUESTED', 'Verdict: UNKNOWN', 'Verdict: FAIL']:
+                     'Verdict - CHANGES REQUESTED', 'Verdict: UNKNOWN', 'Verdict: FAIL',
+                     'Summary\n- Findings\n    - **Verdict:** CHANGES REQUESTED',
+                     '\t**Verdict:** CHANGES REQUESTED', '> Verdict: BLOCK']:
             self.assertFalse(evaluate(HEAD, [review(body=body),
                 review(id=2, user={'login': 'reihl-poke'})])[0])
         self.assertTrue(evaluate(HEAD, [review(body='**Verdict:** PASS')])[0])
 
     def test_non_prose_verdicts_never_pass(self):
         for body in ['```\nVerdict: PASS', '    Verdict: PASS', '<!--\nVerdict: PASS\n-->',
-                     '~~~python\nVerdict: PASS\n~~~~']:
+                     '~~~python\nVerdict: PASS\n~~~~', '```\nx\n```python\nVerdict: PASS']:
             self.assertFalse(evaluate(HEAD, [review(body=body)])[0])
 
     def test_writer_always_uses_current_head_not_event_sha(self):
