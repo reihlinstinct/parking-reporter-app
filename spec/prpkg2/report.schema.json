@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "prpkg2-report-schema-1",
+  "title": "PRPKG2 report (schema 1)",
+  "description": "The canonical report inside a PRPKG2 header, as docs/PRPKG2.md describes it. Structural rules only: the receiver also checks that subject is a known category code, that time parses as an ISO-8601 offset date-time, that id equals the manifest package, and that the text is canonical JSON. If the Kotlin code and this file disagree, the code wins and this file is the bug.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "original_sha256", "outgoing_sha256", "review_digest", "plate", "address", "subject", "exact_text", "time", "latitude", "longitude", "reporter"],
+  "properties": {
+    "schema": {"const": 1},
+    "id": {"type": "string", "minLength": 1, "maxLength": 4000},
+    "original_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "outgoing_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "review_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "plate": {"type": "string", "maxLength": 8},
+    "address": {"type": "string", "minLength": 1, "maxLength": 4000},
+    "subject": {"type": "string", "minLength": 1, "maxLength": 4000},
+    "exact_text": {"type": "string", "minLength": 1, "maxLength": 4000},
+    "time": {"type": "string", "minLength": 1, "maxLength": 4000},
+    "latitude": {"type": "number", "minimum": -90, "maximum": 90},
+    "longitude": {"type": "number", "minimum": -180, "maximum": 180},
+    "reporter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["first", "last", "phone", "id", "email"],
+      "properties": {
+        "first": {"type": "string", "minLength": 1, "maxLength": 256},
+        "last": {"type": "string", "minLength": 1, "maxLength": 256},
+        "phone": {"type": "string", "minLength": 1, "maxLength": 256},
+        "id": {"type": "string", "minLength": 1, "maxLength": 256},
+        "email": {"type": "string", "minLength": 1, "maxLength": 256}
+      }
+    }
+  }
+}

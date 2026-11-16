@@ -1,6 +1,6 @@
 # PRPKG2 public contract
 
-Contract document version: 1 (draft). It describes the PRPKG2 wire format exactly as implemented on `main` at `51d6d88` (release v0.9.0). It does not change the format. If the code and this page disagree, the code wins and this page is the bug.
+Contract document version: 1 (draft; schema files and policy added 2026-11-16). It describes the PRPKG2 wire format exactly as implemented on `main` at `51d6d88` (release v0.9.0). It does not change the format. If the code and this page disagree, the code wins and this page is the bug.
 
 Status: development preview. Everything here is synthetic. No live transport, receiver deployment or municipal filing exists (see [encrypted intake](ENCRYPTED_INTAKE_PROTOCOL.md) and [offline receiver](OFFLINE_RECEIVER.md)).
 
@@ -124,6 +124,22 @@ How these were checked (2026-11-08, `main` at `51d6d88`): recomputed independent
 - The Python `scripts/synthetic_intake_prototype.py` is an earlier, incompatible format, not PRPKG2.
 - Passing validation authenticates an enrolled key and an exact package. It does not prove the photo, the report or the reporter (see [offline receiver](OFFLINE_RECEIVER.md)).
 
+## Machine-readable files
+
+Under `spec/prpkg2/`:
+
+- `report.schema.json` and `header.schema.json`: JSON Schema (2020-12) for the report and the header. They describe structure only; the receiver also checks the known category code, the ISO-8601 time, `id` equal to the manifest package, and canonical form.
+- `golden.json`: the synthetic golden values from the table above (photo, digests, header, `plain`), with the inputs needed to rebuild them.
+
+`tests/test_prpkg2_spec.py` (run in repository-checks, Python stdlib only) re-derives every golden value from the rules on this page, validates the golden report against the schemas and checks that 13 malformed reports and 3 malformed headers are rejected. The Kotlin code stays the reference: if it changes a rule or a value, this page, these files and that test must change in the same pull request. There is not yet a Kotlin test that reads `golden.json`; that is the remaining gap for a full sync guarantee.
+
+## Version policy
+
+- The container magic `PRPKG2` is the format version. Any change that makes an existing valid package invalid, or an old receiver misread a new package (new key, different layout, other digest rule, other canonical rules), is a new format: the magic becomes `PRPKG3` and the schema files move to `spec/prpkg3/`.
+- The report `schema` number and the transport `schema` number change only together with, or inside, a magic change.
+- This document's own version (currently 1, draft) goes up by one for any edit that changes what it states. Editorial fixes do not bump it.
+- `PRPKG2` stays readable by the receiver for as long as the receiver supports it; that is stated here when a `PRPKG3` exists.
+
 ## Not yet done for issue #10
 
-This page is the prose contract only. Still open: JSON Schema files and the malformed cases they reject, golden vectors with constant synthetic keys committed as tests, a CI check that the spec and the Kotlin code stay in sync, publication at a stable public URL (GitHub Pages is not enabled on this repository), and the version policy (when PRPKG3 is cut, and how it maps to a document version).
+Publication at a stable public URL (GitHub Pages is not enabled on this repository and stays off until the owner decides otherwise), and a Kotlin test that reads `spec/prpkg2/golden.json` so the sync check also covers the Kotlin side.

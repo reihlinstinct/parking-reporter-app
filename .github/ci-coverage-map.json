@@ -61,6 +61,18 @@
         "build",
         "emulator"
       ]
+    },
+    {
+      "pattern": "spec/prpkg2/**",
+      "checks": [
+        "python-smoke"
+      ]
+    },
+    {
+      "pattern": "docs/PRPKG2.md",
+      "checks": [
+        "python-smoke"
+      ]
     }
   ]
 }

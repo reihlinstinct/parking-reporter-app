@@ -1,0 +1,14 @@
+{
+  "description": "Synthetic golden values for the PRPKG2 contract (docs/PRPKG2.md, Golden vectors). Source fixture: EncryptedPackageTest.kt. Ciphertext and signature are randomised and are not golden.",
+  "photo": {"prefix_hex": "ffd8", "fill_hex": "04", "fill_length": 68000, "suffix_hex": "ffd9", "length": 68004, "sha256": "b20448614e74a31a87213a9b4894f5cdf20280457f20e08ad865557959e9c64d"},
+  "review_digest": "030ecd1036917a3b8291bd49d2d2fae556bd239e511aa0ad787ea8bbf54b7e69",
+  "approval_digest": "ccf6f0f7655c212ae128b06d1774072c0e6e84e747037355bafa835398eb797c",
+  "canonical_report_bytes": 600,
+  "header_bytes": 696,
+  "header_sha256": "9b7b93cbaaee4ff6c9cf755d1f6dae139ffd550530a82137de5c1d46684346f8",
+  "plain_bytes": 68710,
+  "plain_sha256": "a499832fd7ca80123d47142a4b812f5c24a460294add20cf0543c5bc9ec5154a",
+  "canonical_report": "{\"address\":\"רחוב בדיקה 1\",\"exact_text\":\"דיווח בדיקה\",\"id\":\"synthetic-id\",\"latitude\":31.0,\"longitude\":35.0,\"original_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"outgoing_sha256\":\"b20448614e74a31a87213a9b4894f5cdf20280457f20e08ad865557959e9c64d\",\"plate\":\"1234567\",\"reporter\":{\"email\":\"synthetic@example.invalid\",\"first\":\"synthetic-first\",\"id\":\"000000000\",\"last\":\"synthetic-last\",\"phone\":\"0000000\"},\"review_digest\":\"030ecd1036917a3b8291bd49d2d2fae556bd239e511aa0ad787ea8bbf54b7e69\",\"schema\":1,\"subject\":\"sidewalk_parking\",\"time\":\"2026-01-01T12:00:00Z\"}",
+  "review_fields": {"evidence_id": "synthetic-id", "original_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "capture_time": "2026-01-01T12:00:00Z", "latitude": 31.0, "longitude": 35.0, "plate": "1234567", "address": "רחוב בדיקה 1", "subject": "sidewalk_parking", "exact_text": "דיווח בדיקה", "confirmed_time": "2026-01-01T12:00:00Z", "confirmed_latitude": 31.0, "confirmed_longitude": 35.0, "unresolved": []},
+  "canonical_object_vector": {"input": {"b": "שלום", "a": 1}, "output": "{\"a\":1,\"b\":\"שלום\"}"}
+}
