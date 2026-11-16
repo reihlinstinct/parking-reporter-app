@@ -3,11 +3,11 @@
   "findings": [
     {
       "path": ".github/workflows/manual-gpg-signing.yml",
-      "rule": "top-level-write",
-      "scope": "workflow",
+      "rule": "job-write",
+      "scope": "signing-test",
       "evidence": "contents: write",
       "issue": "https://github.com/reihlinstinct/parking-reporter-app/issues/73",
-      "reason": "Pre-existing workflow-level write in the manual signing-test workflow; tracked for job-level scoping in this issue."
+      "reason": "Manual signing-test job pushes one isolated signed empty branch; contents: write is now scoped to that job only, top level is contents: read (#73)."
     },
     {
       "path": ".github/workflows/release.yml",
