@@ -53,7 +53,10 @@
       ],
       "allow_paths": [
         "docs/assets/disability_tag_triangle.svg",
-        "docs/assets/disability_tag_wheelchair.svg"
+        "docs/assets/disability_tag_wheelchair.svg",
+        "docs/prpkg2-spec/golden.json",
+        "docs/prpkg2-spec/header.schema.json",
+        "docs/prpkg2-spec/report.schema.json"
       ]
     },
     "gradle": {
