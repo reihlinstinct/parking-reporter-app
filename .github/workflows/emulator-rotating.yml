@@ -6,6 +6,8 @@ name: Rotating emulator slices
 # whole maximum on demand. Public repo: Linux minutes are free.
 # Axes: API 33-36 x pixel_2 / 7.6in Foldable / small screen (720x1280, 320dpi).
 # Font-scale stress stays in display-weekly.yml.
+# No issue-writing job on purpose: that needs an owner-approved scorecard
+# baseline entry. A red scheduled run is the signal until the owner decides.
 
 on:
   schedule:
@@ -107,26 +109,3 @@ jobs:
           name: rotating-emulator-results-${{ matrix.label }}
           path: app/build/reports/androidTests/
           retention-days: 14
-
-  report-failure:
-    needs: emulator
-    if: failure()
-    runs-on: ubuntu-24.04
-    permissions:
-      issues: write
-    steps:
-      - name: Open one issue per failing run
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          RUN_SHA: ${{ github.sha }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          count=$(gh issue list --state open --search "Rotating emulator slice failed in:title" --json number --jq 'length')
-          if [ "$count" -gt 0 ]; then
-            echo "an open rotating-slice issue already exists; not opening another"
-            exit 0
-          fi
-          gh issue create --label ci --label "area: ci" \
-            --title "Rotating emulator slice failed ($(date -u +%Y-%m-%d))" \
-            --body "A rotating emulator slice failed on main at $RUN_SHA. See $RUN_URL - each failing job name carries its API level, device profile and screen size; its artifact has the instrumentation log and logcat."

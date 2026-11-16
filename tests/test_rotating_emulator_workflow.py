@@ -19,8 +19,9 @@ class RotatingEmulatorWorkflowTest(unittest.TestCase):
         self.assertEqual({c[0] for c in combos}, {'33', '34', '35', '36'})
         self.assertIn('slices[week % 4]', TEXT)
 
-    def test_failures_dedupe_to_one_issue(self):
-        self.assertIn('Rotating emulator slice failed in:title', TEXT)
+    def test_no_write_permission_beyond_contents_read(self):
+        self.assertNotIn('issues: write', TEXT)
+        self.assertNotIn('report-failure', TEXT)
 
 
 if __name__ == '__main__':
