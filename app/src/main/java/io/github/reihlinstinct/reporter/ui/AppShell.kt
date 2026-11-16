@@ -105,6 +105,8 @@ fun AppShell(
     val rotated = remember { ReviewRotationState.takeShell() }
     var page by remember { mutableStateOf(if (rotated != null) "review" else "home") }
     var profile by remember { mutableStateOf<ReporterSettings?>(null) }
+    // Debug-only server receipt line for the success screen; always null in release.
+    var submittedReceipt by remember { mutableStateOf<String?>(null) }
     var draft by remember { mutableStateOf<ReviewDraft?>(rotated?.draft) }
     var original by remember { mutableStateOf<File?>(rotated?.original) }
     var revision by remember { mutableLongStateOf(rotated?.revision ?: 0L) }
@@ -297,6 +299,10 @@ fun AppShell(
                     outcome is SubmissionCoordinator.Outcome.AlreadySubmitted) {
                     status = submissionNote
                     topicSnapshot = topicRepository.snapshot()
+                    if (outcome is SubmissionCoordinator.Outcome.Submitted) {
+                        submittedReceipt = if (BuildConfig.DEBUG) submissionNote else null
+                        page = "submitted"
+                    }
                 }
                 submitting = false
             }
@@ -543,6 +549,7 @@ fun AppShell(
     when (page) {
         "camera" -> CaptureScreen(onCaptured = { file -> val hint = pendingCategory; pendingCategory = null; startReview(file, categoryHint = hint) }, onCancel = { pendingCategory = null; page = "home" })
         "reports" -> ReportsScreen(records, open = { openRecord(it) })
+        "submitted" -> SubmittedScreen(submittedReceipt, onDone = { submittedReceipt = null; page = "reports" })
         "review" -> draft?.let { value ->
             val preview by produceState<Pair<io.github.reihlinstinct.reporter.evidence.OutgoingImage, androidx.compose.ui.graphics.ImageBitmap>?>(null, original) {
                 this.value = withContext(Dispatchers.IO) {
