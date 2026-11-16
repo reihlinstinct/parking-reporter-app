@@ -114,3 +114,16 @@ internal fun withIntersectionLine(text: String, line: String): String = when {
     text.isBlank() -> line
     else -> text.trimEnd() + "\n" + line
 }
+
+/**
+ * Removes a crossing line written by [intersectionDescriptionLine] (any two streets), so a new address
+ * replaces it instead of leaving a stale or doubled line. Other lines are untouched.
+ */
+internal fun withoutIntersectionLine(strings: Strings, text: String): String {
+    val template = strings.catalog.t(strings.catalog.defaultLanguage!!.code, "review.location.intersection_line")
+    val parts = template.split(Regex("\\{street_a\\}|\\{street_b\\}"))
+    if (parts.size != 3) return text
+    val line = Regex(Regex.escape(parts[0]) + ".+?" + Regex.escape(parts[1]) + ".+?" + Regex.escape(parts[2]))
+    if (text.lines().none { line.matches(it.trim()) }) return text
+    return text.lines().filterNot { line.matches(it.trim()) }.joinToString("\n").trimEnd()
+}

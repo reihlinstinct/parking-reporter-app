@@ -24,4 +24,16 @@ class IntersectionLineTest {
         val once = withIntersectionLine("טקסט קיים", approved)
         assertEquals(once, withIntersectionLine(once, approved))
     }
+
+    @Test fun anOldCrossingLineIsRemovedAndReplacedNeverDoubled() {
+        val he = Strings(catalog, I18nTestFiles.defaultCode())
+        val first = intersectionDescriptionLine(he, "רחוב אלף", "רחוב בית")
+        val second = intersectionDescriptionLine(he, "רחוב גימל", "רחוב דלת")
+        val text = "טקסט קיים\n$first"
+        assertEquals("טקסט קיים", withoutIntersectionLine(he, text))
+        assertEquals("טקסט קיים\n$second", withIntersectionLine(withoutIntersectionLine(he, text), second))
+        assertEquals("טקסט קיים", withoutIntersectionLine(he, "טקסט קיים"))
+        assertEquals("", withoutIntersectionLine(he, first))
+        assertEquals("שורה אחת\nשורה שתיים", withoutIntersectionLine(he, "שורה אחת\n$first\nשורה שתיים"))
+    }
 }

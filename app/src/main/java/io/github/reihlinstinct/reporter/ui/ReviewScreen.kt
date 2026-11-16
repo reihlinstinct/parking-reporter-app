@@ -476,7 +476,9 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                         latitude = result.latitude.toString(); longitude = result.longitude.toString()
                         addressBaseline = result.address; pendingAddressWarnings = emptySet()
                         val line = intersectionDescriptionLine(s, result.streetNameA, result.streetNameB)
-                        draft = draft.edit(address = result.address, text = withIntersectionLine(draft.exactHebrewText, line)).copy(confirmedLatitude = result.latitude,
+                        // The line is now part of the text the user reviews: keep it across a later category change, and replace an older crossing line.
+                        textTyped = true
+                        draft = draft.edit(address = result.address, text = withIntersectionLine(withoutIntersectionLine(s, draft.exactHebrewText), line)).copy(confirmedLatitude = result.latitude,
                             confirmedLongitude = result.longitude,
                             unresolved = draft.unresolved - ReviewWarning.MISSING_GPS.code - ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code)
                         crossingResult = null
@@ -505,7 +507,10 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 Button(onClick = {
                     latitude = result.latitude.toString(); longitude = result.longitude.toString()
                     addressBaseline = result.address; pendingAddressWarnings = emptySet()
-                    draft = draft.edit(address = result.address).copy(confirmedLatitude = result.latitude,
+                    // An exact address replaces an earlier crossing line: that line no longer describes the spot.
+                    val withoutLine = withoutIntersectionLine(s, draft.exactHebrewText)
+                    if (withoutLine != draft.exactHebrewText) textTyped = true
+                    draft = draft.edit(address = result.address, text = withoutLine).copy(confirmedLatitude = result.latitude,
                         confirmedLongitude = result.longitude,
                         unresolved = draft.unresolved - ReviewWarning.MISSING_GPS.code - ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code)
                     manualResult = null
