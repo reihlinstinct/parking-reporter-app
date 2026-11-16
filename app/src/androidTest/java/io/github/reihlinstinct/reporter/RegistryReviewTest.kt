@@ -211,4 +211,30 @@ class RegistryReviewTest {
         screenshot("registry-tag-unavailable-valid-licence.png")
     }
 
+    // Issue #403: the inactive-record line shows only for a record from the inactive resource, in he and en. Test-only, no wording change.
+    private fun inactiveLookup(inactive: Boolean): RegistryLookup = { _, _ -> RegistrySnapshot(DisabilityLookupResult.NotFound,
+        VehicleLookupResult.Found(VehicleRecord(PlateNumber.parse("1234567")!!, LocalDate.of(2030, 1, 1), null, null, null, null, null, inactive = inactive)),
+        Instant.parse("2026-11-12T09:00:00Z")) }
+
+    @Test fun inactiveRecordLineShowsInHebrew() {
+        compose.setContent { AppTheme { Surface(Modifier.fillMaxSize()) { RegistryStatus("1234567", inactiveLookup(true)) } } }
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("רישום הרכב במאגר אינו פעיל", substring = true).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("רישום הרכב במאגר אינו פעיל", substring = true).assertExists()
+    }
+
+    @Test fun activeRecordHasNoInactiveLineInHebrew() {
+        compose.setContent { AppTheme { Surface(Modifier.fillMaxSize()) { RegistryStatus("1234567", inactiveLookup(false)) } } }
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("רישיון הרכב בתוקף לפי המאגר").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("רישום הרכב במאגר אינו פעיל", substring = true).assertDoesNotExist()
+    }
+
+    @Test fun inactiveRecordLineShowsInEnglishOnlyWhenInactive() {
+        io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(InstrumentationRegistry.getInstrumentation().targetContext).set("en")
+        var inactive by mutableStateOf(true)
+        compose.setContent { AppTheme { Surface(Modifier.fillMaxSize()) { RegistryStatus("1234567", remember(inactive) { inactiveLookup(inactive) }) } } }
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("The vehicle record in this registry is not active", substring = true).fetchSemanticsNodes().isNotEmpty() }
+        compose.runOnIdle { inactive = false }
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("The vehicle record in this registry is not active", substring = true).fetchSemanticsNodes().isEmpty() }
+    }
+
 }
