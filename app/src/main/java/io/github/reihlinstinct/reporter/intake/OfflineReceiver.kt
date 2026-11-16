@@ -59,6 +59,8 @@ object OfflineReceiver {
             openChecked(manifestText, chunks, completionText, expectedIssue, expectedReceiver, expectedDevice, decryptor, enrolledVerifier)
         } catch (e: org.json.JSONException) {
             throw IllegalArgumentException("Malformed package JSON")
+        } catch (e: java.nio.charset.CharacterCodingException) {
+            throw IllegalArgumentException("Malformed package UTF-8")
         }
 
     private fun openChecked(manifestText: String, chunks: List<String>, completionText: String, expectedIssue: Long,

@@ -1,8 +1,8 @@
 package io.github.reihlinstinct.reporter
 
 import io.github.reihlinstinct.reporter.registry.*
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -12,9 +12,9 @@ class RegistryMalformedResponseTest {
         assertFalse(RuntimeException::class.java.isAssignableFrom(org.json.JSONException::class.java))
         for (body in listOf("not json", "{}", "{\"success\":true}",
             "{\"success\":true,\"result\":{}}", "{\"success\":true,\"result\":{\"records\":[42]}}")) {
-            MockWebServer().use { server ->
-                server.enqueue(MockResponse().setBody(body))
-                server.enqueue(MockResponse().setBody(body))
+            MockWebServer().apply { start() }.use { server ->
+                server.enqueue(MockResponse.Builder().body(body).build())
+                server.enqueue(MockResponse.Builder().body(body).build())
                 val disability = DisabilityRegistryClient(server.url("/").toString())
                 val vehicle = VehicleRegistryClient(VehicleRegistryConfig(
                     VehicleRegistryConfig.KNOWN_VEHICLE_RESOURCE_ID, baseUrl = server.url("/").toString()))

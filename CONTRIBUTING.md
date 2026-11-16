@@ -88,3 +88,7 @@ Lessons from past independent reviews. Run through this list before asking for a
 
 **Housekeeping**
 - Keep the PR body in sync with the code after every fix (numbers, caps, flow descriptions); a stale body is a review finding.
+
+## Coverage floor
+
+The unit-test job fails when JaCoCo line coverage drops below the floor set in `.github/workflows/android.yml` (`--min-line-coverage`, currently 50). It is a ratchet: it only moves up, in steps, by a pull request that also shows the measured value. The number counts unit tests only and leaves out generated code (R, BuildConfig, Room `*_Impl`, Compose `ComposableSingletons`, the KSP appfunctions registry); hand-written code is never excluded. The owner chose this approach on 2026-11-16 (issue #44).

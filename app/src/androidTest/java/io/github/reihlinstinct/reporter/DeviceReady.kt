@@ -1,5 +1,6 @@
 package io.github.reihlinstinct.reporter
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.KeyguardManager
 import android.content.Context
 import android.os.ParcelFileDescriptor
@@ -39,6 +40,29 @@ object DeviceReady {
         }
     }
 
+    /** Readiness, not a timed guess: SystemUI must expose a visible PIN input before typing.
+     * The API 36 failure in #452 dropped the swipe and all input events while waking up.
+     * Only the ID/visibility are read, never the input contents or a window dump.
+     */
+    private fun pinEntryVisible(): Boolean {
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        val info = automation.serviceInfo
+        info.flags = info.flags or AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
+        automation.serviceInfo = info
+        val root = automation.rootInActiveWindow ?: return false
+        try {
+            if (root.packageName?.toString() != "com.android.systemui") return false
+            val entries = root.findAccessibilityNodeInfosByViewId("com.android.systemui:id/pinEntry")
+            return try {
+                entries.any { it.isVisibleToUser && it.isEnabled }
+            } finally {
+                entries.forEach { it.recycle() }
+            }
+        } finally {
+            root.recycle()
+        }
+    }
+
     /** True when the device is ready within [timeoutMs]; [pin] is tried only if a plain dismiss does not clear the keyguard. */
     fun ensureReady(context: Context, pin: String?, timeoutMs: Long = 45_000): Boolean {
         require(pin == null || pin.matches(Regex("[0-9]{4,16}"))) { "pin must be digits" }
@@ -53,11 +77,18 @@ object DeviceReady {
                 shell("wm dismiss-keyguard")
                 Thread.sleep(POLL_MS)
                 if (keyguardLocked(context) && pin != null && !pinTried) {
-                    shell("input swipe 540 1600 540 600 200")
-                    Thread.sleep(POLL_MS)
-                    shell("input text $pin")
-                    shell("input keyevent 66")
-                    pinTried = true
+                    if (pinEntryVisible()) {
+                        // A second observation after a poll avoids typing into an appearing bouncer.
+                        Thread.sleep(POLL_MS)
+                        if (pinEntryVisible()) {
+                            shell("input text $pin")
+                            shell("input keyevent 66")
+                            pinTried = true // never submit a second PIN attempt
+                        }
+                    } else {
+                        val display = context.resources.displayMetrics
+                        shell("input swipe ${display.widthPixels / 2} ${display.heightPixels * 4 / 5} ${display.widthPixels / 2} ${display.heightPixels / 3} 200")
+                    }
                 }
             } else {
                 // Require a short quiet stretch so a dialog that appears right after unlock is caught too.

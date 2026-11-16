@@ -36,7 +36,10 @@ tasks.register<JacocoReport>("jacocoDebugUnitTestReport") {
     reports {
         xml.required.set(true)
     }
-    val generatedFilters = listOf("**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*")
+    // Generated code is not production logic: R/BuildConfig, Room DAO implementations (*_Impl), Compose
+    // ComposableSingletons and the KSP appfunctions registry. Hand-written code is never excluded (issue #44).
+    val generatedFilters = listOf("**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*",
+        "**/*_Impl.class", "**/*_Impl$*.class", "**/ComposableSingletons*.class", "**/appfunctions_aggregated_deps/**")
     // The Kotlin output folder differs between plugin versions; take every debug class folder that exists (issue #44: the report was empty).
     classDirectories.setFrom(fileTree(layout.buildDirectory) {
         include("tmp/kotlin-classes/debug/**/*.class", "intermediates/built_in_kotlinc/debug/**/*.class", "intermediates/javac/debug/**/*.class")
@@ -82,7 +85,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:5.5.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     testImplementation("junit:junit:4.13.2")
-    testImplementation("com.squareup.okhttp3:mockwebserver:5.5.1")
+    testImplementation("com.squareup.okhttp3:mockwebserver3:5.5.1")
     testImplementation("org.json:json:20260814")
     androidTestImplementation(platform("androidx.compose:compose-bom:2026.09.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
@@ -92,6 +95,6 @@ dependencies {
     // (API 37). 3.7.0 uses getSystemService instead (androidx.test release
     // notes), unbreaking every compose test on the API 37 emulator.
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
-    androidTestImplementation("com.squareup.okhttp3:mockwebserver:5.5.1")
+    androidTestImplementation("com.squareup.okhttp3:mockwebserver3:5.5.1")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
