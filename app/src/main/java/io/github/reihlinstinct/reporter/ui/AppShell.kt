@@ -105,6 +105,8 @@ fun AppShell(
     val rotated = remember { ReviewRotationState.takeShell() }
     var page by remember { mutableStateOf(if (rotated != null) "review" else "home") }
     var profile by remember { mutableStateOf<ReporterSettings?>(null) }
+    // Debug-only server receipt line for the success screen; always null in release.
+    var submittedReceipt by remember { mutableStateOf<String?>(null) }
     var draft by remember { mutableStateOf<ReviewDraft?>(rotated?.draft) }
     var original by remember { mutableStateOf<File?>(rotated?.original) }
     var revision by remember { mutableLongStateOf(rotated?.revision ?: 0L) }
@@ -295,8 +297,17 @@ fun AppShell(
                 submissionNote = municipalOutcomeText(strings, outcome)
                 if (outcome is SubmissionCoordinator.Outcome.Submitted ||
                     outcome is SubmissionCoordinator.Outcome.AlreadySubmitted) {
+                    if (outcome is SubmissionCoordinator.Outcome.Submitted) {
+                        // The server receipt is debug-only everywhere: the shell status slot and
+                        // the review note get the plain title in release.
+                        submissionNote = submittedVisibleText(BuildConfig.DEBUG, submissionNote, strings.t("shell.submit.sent_plain"))
+                    }
                     status = submissionNote
                     topicSnapshot = topicRepository.snapshot()
+                    if (outcome is SubmissionCoordinator.Outcome.Submitted) {
+                        submittedReceipt = if (BuildConfig.DEBUG) municipalOutcomeText(strings, outcome) else null
+                        page = "submitted"
+                    }
                 }
                 submitting = false
             }
@@ -543,6 +554,7 @@ fun AppShell(
     when (page) {
         "camera" -> CaptureScreen(onCaptured = { file -> val hint = pendingCategory; pendingCategory = null; startReview(file, categoryHint = hint) }, onCancel = { pendingCategory = null; page = "home" })
         "reports" -> ReportsScreen(records, open = { openRecord(it) })
+        "submitted" -> SubmittedScreen(submittedReceipt, onDone = { submittedReceipt = null; page = "reports" })
         "review" -> draft?.let { value ->
             val preview by produceState<Pair<io.github.reihlinstinct.reporter.evidence.OutgoingImage, androidx.compose.ui.graphics.ImageBitmap>?>(null, original) {
                 this.value = withContext(Dispatchers.IO) {
@@ -717,6 +729,10 @@ internal fun missingCredentialsSuffix(strings: Strings, missingFields: List<Stri
     if (labels.isEmpty()) return ""
     return ": " + labels.joinToString(", ") { strings.t(it) }
 }
+
+/** Debug builds show the server receipt text; release builds show only [neutral]. */
+internal fun submittedVisibleText(debug: Boolean, receiptText: String, neutral: String): String =
+    if (debug) receiptText else neutral
 
 internal fun municipalOutcomeText(strings: Strings, outcome: SubmissionCoordinator.Outcome): String = when (outcome) {
     is SubmissionCoordinator.Outcome.Submitted ->
