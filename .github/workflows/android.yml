@@ -110,9 +110,11 @@ jobs:
       fail-fast: false
       matrix:
         # Issue #297: preserve API 30 coverage and add stable API 36.
+        # #471: API 29 joined the PR matrix after the weekly run found the
+        # keyboard covering bottom actions there (Linux minutes are free on this public repo).
         # Weekly probes cover 29/33/34/35/36/37.0. API 26 is deliberately
         # uncovered after its CI image failures; minSdk remains 26.
-        api: ["30", "36"]
+        api: ["29", "30", "36"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:

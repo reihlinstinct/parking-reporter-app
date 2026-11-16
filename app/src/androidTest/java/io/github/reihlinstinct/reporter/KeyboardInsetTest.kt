@@ -23,7 +23,13 @@ class KeyboardInsetTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Before fun productionEdgeToEdgeAndRealIme() {
-        compose.activityRule.scenario.onActivity { it.enableEdgeToEdge() }
+        compose.activityRule.scenario.onActivity {
+            it.enableEdgeToEdge()
+            // Mirrors android:windowSoftInputMode="adjustResize" on the production
+            // MainActivity (pinned by tests/test_manifest_ime.py). Before API 30
+            // the system only reports the keyboard inset in this mode (#471).
+            it.window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        }
         InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(
             "settings put secure show_ime_with_hard_keyboard 1").close()
     }
