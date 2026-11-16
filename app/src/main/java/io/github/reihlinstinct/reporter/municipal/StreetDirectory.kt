@@ -6,8 +6,11 @@ import kotlin.math.hypot
 /**
  * Jerusalem street/address resolution, a faithful port of the helper
  * pipeline's api106.Addresses (helper 0.6.0, pinned 51dd5c0): same guards,
- * same distances, same error semantics, so an address the app accepts is an
- * address the pipeline would have accepted. Data is the pipeline's own
+ * same distances, same error semantics, so an address the pipeline accepts is
+ * an address the app accepts. One deliberate divergence (#483): explicit
+ * street+house lookups also use address points whose short name is the tail of
+ * exactly one street name (exact points win; tail points are a bounded
+ * fallback); the helper has no such rule. Data is the pipeline's own
  * version-1 lookup file (streets + address points), bundled as an asset.
  */
 class StreetDirectory private constructor(
@@ -33,7 +36,7 @@ class StreetDirectory private constructor(
     /** Offline explicit address lookup, never device location or nearest-house guessing. */
     fun findConfirmedAddress(street: String, house: String): ConfirmableAddress {
         val resolved = resolve(street, house, null)
-        val matches = points.filter { it.onStreet(resolved.streetCode) && normalize(it.house) == normalize(resolved.house) }
+        val matches = housePointsFor(resolved.streetCode, resolved.house)
         require(matches.isNotEmpty())
         val point = matches.first()
         if (matches.any { hypot(it.x - point.x, it.y - point.y) > 1.0 })
@@ -41,7 +44,25 @@ class StreetDirectory private constructor(
         return ConfirmableAddress("${resolved.streetName} ${resolved.house}", point.latitude, point.longitude)
     }
 
-    private fun Point.onStreet(streetCode: String): Boolean = code == streetCode || (code == null && tailCode == streetCode)
+    /**
+     * Points of a street. Exact-coded points always win. Tail-named points (see [Point.tailCode])
+     * are a fallback: used alone when the street has no exact point, otherwise only when within
+     * [TAIL_MAX_DISTANCE_M] of the street's exact points.
+     */
+    private fun streetPointsFor(streetCode: String): List<Point> {
+        val exact = points.filter { it.code == streetCode }
+        val tails = points.filter { it.code == null && it.tailCode == streetCode }
+        if (exact.isEmpty()) return tails
+        return exact + tails.filter { t -> exact.any { e -> hypot(t.x - e.x, t.y - e.y) <= TAIL_MAX_DISTANCE_M } }
+    }
+
+    /** Exact street+house points when any exist (behavior unchanged), else the bounded tail fallback. */
+    private fun housePointsFor(streetCode: String, house: String): List<Point> {
+        val wanted = normalize(house)
+        val exact = points.filter { it.code == streetCode && normalize(it.house) == wanted }
+        if (exact.isNotEmpty()) return exact
+        return streetPointsFor(streetCode).filter { it.code == null && normalize(it.house) == wanted }
+    }
 
     private fun normalize(text: String): String {
         val folded = Normalizer.normalize(text, Normalizer.Form.NFKC)
@@ -76,7 +97,7 @@ class StreetDirectory private constructor(
             if (!HOUSE_NUMBER.matches(resolvedHouse) || resolvedHouse.length > HOUSE_NUMBER_MAX_LENGTH) {
                 throw MunicipalInputException("Invalid house number.")
             }
-            val housePoints = points.filter { it.onStreet(code) && normalize(it.house) == normalize(resolvedHouse) }
+            val housePoints = housePointsFor(code, resolvedHouse)
             if (gpsXy != null) {
                 x = gpsXy.first; y = gpsXy.second
                 if (housePoints.isNotEmpty() &&
@@ -85,7 +106,7 @@ class StreetDirectory private constructor(
                         "The supplied address is more than 200 m from the photo GPS. Check the address.")
                 }
                 if (housePoints.isEmpty()) {
-                    val streetPoints = points.filter { it.onStreet(code) }
+                    val streetPoints = streetPointsFor(code)
                     if (streetPoints.isNotEmpty() &&
                         streetPoints.minOf { p -> hypot(p.x - x, p.y - y) } > 200) {
                         throw MunicipalInputException(
@@ -138,6 +159,7 @@ class StreetDirectory private constructor(
     }
 
     companion object {
+        private const val TAIL_MAX_DISTANCE_M = 300.0
         private val HEBREW_FINALS = mapOf('ך' to 'כ', 'ם' to 'מ', 'ן' to 'נ', 'ף' to 'פ', 'ץ' to 'צ')
 
         private fun words(text: String): List<String> =
