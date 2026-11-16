@@ -51,8 +51,59 @@ def validate(value, schema, path="$"):
     return problems
 
 
+def quote(text):
+    """org.json JSONObject.quote (20260814), as docs/PRPKG2.md describes it."""
+    out = ['"']
+    prev = ""
+    for ch in text:
+        if ch in '"\\':
+            out.append("\\" + ch)
+        elif ch == "/":
+            out.append("\\/" if prev == "<" else "/")
+        elif ch in "\b\t\n\f\r":
+            out.append({"\b": "\\b", "\t": "\\t", "\n": "\\n", "\f": "\\f", "\r": "\\r"}[ch])
+        elif ch < " " or "\u0080" <= ch < "\u00a0" or "\u2000" <= ch < "\u2100":
+            out.append("\\u%04x" % ord(ch))
+        else:
+            out.append(ch)
+        prev = ch
+    out.append('"')
+    return "".join(out)
+
+
+def java_double(x):
+    """Java Double.toString for the values used here (shortest digits; JDK 19+)."""
+    x = float(x)
+    if x == 0:
+        return "0.0"
+    if 1e-3 <= abs(x) < 1e7:
+        return repr(x)
+    mant, exp = ("%r" % x).replace("e", "E").split("E") if "e" in repr(x) else (None, None)
+    if mant is None:
+        digits = repr(x).replace(".0", "").lstrip("-").rstrip("0") or "0"
+        sign = "-" if x < 0 else ""
+        e = len(repr(abs(x)).split(".")[0]) - 1
+        d = repr(abs(x)).replace(".", "").lstrip("0").rstrip("0") or "0"
+        return "%s%s.%sE%d" % (sign, d[0], d[1:] or "0", e)
+    if "." not in mant:
+        mant += ".0"
+    return "%sE%d" % (mant, int(exp))
+
+
 def canonical(value):
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    if isinstance(value, dict):
+        return "{" + ",".join(quote(k) + ":" + canonical(value[k]) for k in sorted(value)) + "}"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return "null"
+    if isinstance(value, str):
+        return quote(value)
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        return java_double(value)
+    raise ValueError("Unsupported canonical value")
 
 
 def sha256(data):
@@ -71,7 +122,7 @@ class GoldenValuesTest(unittest.TestCase):
 
     def test_canonical_report_is_canonical_and_matches_approval_digest(self):
         text = GOLDEN["canonical_report"]
-        self.assertEqual(canonical(json.loads(text)), text)
+        self.assertEqual(canonical(json.loads(text, parse_float=float)), text)
         self.assertEqual(len(text.encode("utf-8")), GOLDEN["canonical_report_bytes"])
         self.assertEqual(sha256(text.encode("utf-8")), GOLDEN["approval_digest"])
 
@@ -96,6 +147,12 @@ class GoldenValuesTest(unittest.TestCase):
         plain = b"PRPKG2" + struct.pack(">i", len(header)) + header + photo()
         self.assertEqual(len(plain), GOLDEN["plain_bytes"])
         self.assertEqual(sha256(plain), GOLDEN["plain_sha256"])
+
+    def test_escaping_and_number_vectors(self):
+        e = GOLDEN["escaping_vector"]
+        self.assertEqual(quote(e["input"]), e["output"])
+        for n in GOLDEN["number_vectors"]:
+            self.assertEqual(java_double(n["input"]), n["output"], n["input"])
 
     def test_canonical_object_vector(self):
         v = GOLDEN["canonical_object_vector"]

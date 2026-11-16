@@ -131,7 +131,7 @@ Under `docs/prpkg2-spec/`:
 - `report.schema.json` and `header.schema.json`: JSON Schema (2020-12) for the report and the header. They describe structure only; the receiver also checks the known category code, the ISO-8601 time, `id` equal to the manifest package, and canonical form.
 - `golden.json`: the synthetic golden values from the table above (photo, digests, header, `plain`), with the inputs needed to rebuild them.
 
-`tests/test_prpkg2_spec.py` (run in repository-checks, Python stdlib only) re-derives every golden value from the rules on this page, validates the golden report against the schemas and checks that 13 malformed reports and 3 malformed headers are rejected. The Kotlin code stays the reference: if it changes a rule or a value, this page, these files and that test must change in the same pull request. There is not yet a Kotlin test that reads `golden.json`; that is the remaining gap for a full sync guarantee.
+The test implements the org.json `quote` rules and Java `Double.toString` (JDK 19+ shortest-digit form) for the golden values; `golden.json` also holds the escaping vector and number vectors above, so a port can check its own canonicalisation against them. `tests/test_prpkg2_spec.py` (run in repository-checks, Python stdlib only) re-derives every golden value from the rules on this page, validates the golden report against the schemas and checks that 13 malformed reports and 3 malformed headers are rejected. The Kotlin code stays the reference: if it changes a rule or a value, this page, these files and that test must change in the same pull request. There is not yet a Kotlin test that reads `golden.json`; that is the remaining gap for a full sync guarantee.
 
 ## Version policy
 
