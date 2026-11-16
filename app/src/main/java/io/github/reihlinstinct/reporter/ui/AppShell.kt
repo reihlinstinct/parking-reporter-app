@@ -626,6 +626,9 @@ fun AppShell(
             ReviewScreen(value, image, ::saveDraft, manualAddressLookup = { street, house ->
                 val directory = streetsDirectory ?: (streetDirectoryLoader?.invoke() ?: loadStreetDirectory(context)).also { streetsDirectory = it }
                 directory.findConfirmedAddress(street, house)
+            }, crossingLookup = { a, b ->
+                val directory = streetsDirectory ?: (streetDirectoryLoader?.invoke() ?: loadStreetDirectory(context)).also { streetsDirectory = it }
+                directory.findIntersectionAddress(a, b)
             }, onBack = { page = "home" },
                 onSubmit = { shown -> submitReport(shown, outgoing.takeIf { image != null }) },
                 submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, noDeviceCredential = noDeviceCredential,

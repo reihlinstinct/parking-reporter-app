@@ -43,7 +43,7 @@ import io.github.reihlinstinct.reporter.i18n.LocalStrings
 import io.github.reihlinstinct.reporter.i18n.ProvideStringsIfMissing
 
 @Composable
-fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft) -> Unit, onBack: () -> Unit, onSubmit: ((ReviewDraft) -> Unit)? = null, submitting: Boolean = false, submissionNote: String = "", missingCredentialKeys: List<String> = emptyList(), noDeviceCredential: Boolean = false, addressLookup: (suspend (Double, Double) -> List<io.github.reihlinstinct.reporter.evidence.AddressSuggestion>)? = null, plateRecognizer: (suspend () -> List<String>)? = null, manualAddressLookup: (suspend (String, String) -> io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress)? = null,
+fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft) -> Unit, onBack: () -> Unit, onSubmit: ((ReviewDraft) -> Unit)? = null, submitting: Boolean = false, submissionNote: String = "", missingCredentialKeys: List<String> = emptyList(), noDeviceCredential: Boolean = false, addressLookup: (suspend (Double, Double) -> List<io.github.reihlinstinct.reporter.evidence.AddressSuggestion>)? = null, plateRecognizer: (suspend () -> List<String>)? = null, manualAddressLookup: (suspend (String, String) -> io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress)? = null, crossingLookup: (suspend (String, String) -> io.github.reihlinstinct.reporter.municipal.StreetDirectory.IntersectionAddress)? = null,
     topicSnapshot: io.github.reihlinstinct.reporter.core.CityTopicCache.Snapshot? = null,
     topicsAvailable: Boolean = false, topicsLoading: Boolean = false,
     openTopics: (() -> Unit)? = null, topicSelected: ((String) -> Unit)? = null,
@@ -97,6 +97,9 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var manualHouse by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualHouse.orEmpty()) }
     var manualResult by remember(initial.evidence.stableId) { mutableStateOf<io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress?>(restored?.manualResult) }
     var manualBusy by remember { mutableStateOf(false) }
+    // Optional crossing street: with a street and no house number the lookup finds the nearest numbered address.
+    var manualCross by remember(initial.evidence.stableId) { mutableStateOf("") }
+    var crossingResult by remember(initial.evidence.stableId) { mutableStateOf<io.github.reihlinstinct.reporter.municipal.StreetDirectory.IntersectionAddress?>(null) }
     var manualError by remember { mutableStateOf(false) }
     // Tab review (#266): address warnings clear only when the field value
     // actually CHANGES from the value that carried the warning - a keystroke
@@ -444,9 +447,44 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 else locationPermission.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION))
             }, modifier = Modifier.fillMaxWidth().testTag("use_current_location")) { Text(s.t("review.location.gps_button")) }
             if (freshCapture && gpsBusy) Text(s.t("review.location.gps_loading"))
-            OutlinedTextField(manualStreet, { manualStreet = it; manualResult = null; manualGeneration++ }, label = { Text(s.t("review.location.street")) }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(manualHouse, { manualHouse = it; manualResult = null; manualGeneration++ }, label = { Text(s.t("review.location.house")) }, modifier = Modifier.fillMaxWidth(),
+            OutlinedTextField(manualStreet, { manualStreet = it; manualResult = null; crossingResult = null; manualGeneration++ }, label = { Text(s.t("review.location.street")) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(manualHouse, { manualHouse = it; manualResult = null; crossingResult = null; manualGeneration++ }, label = { Text(s.t("review.location.house")) }, modifier = Modifier.fillMaxWidth(),
                 singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }))
+            if (crossingLookup != null) {
+                OutlinedTextField(manualCross, { manualCross = it; crossingResult = null; manualGeneration++ }, label = { Text(s.t("review.location.cross_street")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                if (manualCross.isNotBlank() && manualHouse.isBlank()) {
+                    Button(enabled = !manualBusy && manualStreet.isNotBlank(), onClick = {
+                        val generation = manualGeneration
+                        val a = manualStreet
+                        val b = manualCross
+                        manualBusy = true; manualError = false; manualResult = null; crossingResult = null
+                        scope.launch {
+                            try {
+                                val result = withContext(Dispatchers.IO) { crossingLookup.invoke(a, b) }
+                                if (generation == manualGeneration) crossingResult = result
+                            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                            catch (_: Exception) { if (generation == manualGeneration) manualError = true }
+                            finally { manualBusy = false }
+                        }
+                    }, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.location.find_crossing")) }
+                }
+                crossingResult?.let { result ->
+                    Text(s.t("review.location.crossing_result", mapOf("address" to result.address)))
+                    Text(s.t("review.location.crossing_note"), style = MaterialTheme.typography.bodySmall)
+                    Text(s.t("review.location.confirm_note"))
+                    Button(onClick = {
+                        latitude = result.latitude.toString(); longitude = result.longitude.toString()
+                        addressBaseline = result.address; pendingAddressWarnings = emptySet()
+                        val line = intersectionDescriptionLine(s, result.streetNameA, result.streetNameB)
+                        // The line is now part of the text the user reviews: keep it across a later category change, and replace an older crossing line.
+                        textTyped = true
+                        draft = draft.edit(address = result.address, text = withIntersectionLine(withoutIntersectionLine(s, draft.exactHebrewText), line)).copy(confirmedLatitude = result.latitude,
+                            confirmedLongitude = result.longitude,
+                            unresolved = draft.unresolved - ReviewWarning.MISSING_GPS.code - ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code)
+                        crossingResult = null
+                    }, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.location.confirm_address")) }
+                }
+            }
             Text(s.t("review.location.offline_note"), style = MaterialTheme.typography.bodySmall)
             Button(enabled = !manualBusy && manualAddressLookup != null && manualStreet.isNotBlank() && manualHouse.isNotBlank(), onClick = {
                 val generation = manualGeneration
@@ -469,7 +507,10 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 Button(onClick = {
                     latitude = result.latitude.toString(); longitude = result.longitude.toString()
                     addressBaseline = result.address; pendingAddressWarnings = emptySet()
-                    draft = draft.edit(address = result.address).copy(confirmedLatitude = result.latitude,
+                    // An exact address replaces an earlier crossing line: that line no longer describes the spot.
+                    val withoutLine = withoutIntersectionLine(s, draft.exactHebrewText)
+                    if (withoutLine != draft.exactHebrewText) textTyped = true
+                    draft = draft.edit(address = result.address, text = withoutLine).copy(confirmedLatitude = result.latitude,
                         confirmedLongitude = result.longitude,
                         unresolved = draft.unresolved - ReviewWarning.MISSING_GPS.code - ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.ADDRESS_NEEDS_CONFIRMATION.code - ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code)
                     manualResult = null

@@ -1640,6 +1640,41 @@
       "ru": "Найти точный адрес",
       "am": "ትክክለኛ አድራሻ ፈልግ"
     },
+    "review.location.cross_street": {
+      "he": "צומת עם רחוב (לא חובה)",
+      "en": "Crossing street (optional)",
+      "ar": "الشارع المتقاطع (اختياري)",
+      "ru": "Пересекающая улица (необязательно)",
+      "am": "የሚያቋርጥ መንገድ (አማራጭ)"
+    },
+    "review.location.find_crossing": {
+      "he": "מצא כתובת קרובה לצומת",
+      "en": "Find address near the crossing",
+      "ar": "ابحث عن عنوان قريب من التقاطع",
+      "ru": "Найти адрес рядом с перекрёстком",
+      "am": "ከመስቀለኛው አጠገብ ያለ አድራሻ ፈልግ"
+    },
+    "review.location.crossing_result": {
+      "he": "קרוב לכתובת: {address}",
+      "en": "Near address: {address}",
+      "ar": "قريب من العنوان: {address}",
+      "ru": "Рядом с адресом: {address}",
+      "am": "ወደ አድራሻው ቅርብ: {address}"
+    },
+    "review.location.crossing_note": {
+      "he": "המיקום בצומת. הכתובת שנבחרה היא הקרובה לצומת.",
+      "en": "The location is at the crossing. The chosen address is the one closest to the crossing.",
+      "ar": "الموقع عند التقاطع. العنوان المختار هو الأقرب إلى التقاطع.",
+      "ru": "Место находится на перекрёстке. Выбран ближайший к нему адрес.",
+      "am": "ቦታው በመስቀለኛው ላይ ነው። የተመረጠው አድራሻ ወደ መስቀለኛው በጣም ቅርብ የሆነው ነው።"
+    },
+    "review.location.intersection_line": {
+      "he": "המקום בצומת הרחובות {street_a} ו-{street_b}. הכתובת שצוינה היא הקרובה לצומת.",
+      "en": "המקום בצומת הרחובות {street_a} ו-{street_b}. הכתובת שצוינה היא הקרובה לצומת.",
+      "ar": "המקום בצומת הרחובות {street_a} ו-{street_b}. הכתובת שצוינה היא הקרובה לצומת.",
+      "ru": "המקום בצומת הרחובות {street_a} ו-{street_b}. הכתובת שצוינה היא הקרובה לצומת.",
+      "am": "המקום בצומת הרחובות {street_a} ו-{street_b}. הכתובת שצוינה היא הקרובה לצומת."
+    },
     "review.location.lookup_failed": {
       "he": "לא נמצאה כתובת יחידה, או שמאגר הכתובות אינו מותקן. בדוק רחוב ומספר בית. אין לנחש מיקום.",
       "en": "No unique address was found, or address data is not installed. Check street and house number. Do not guess a location.",
