@@ -72,22 +72,21 @@ def quote(text):
 
 
 def java_double(x):
-    """Java Double.toString for the values used here (shortest digits; JDK 19+)."""
+    """Java Double.toString: plain decimal for 1e-3 <= |x| < 1e7, else computerized scientific notation.
+
+    Digits are the shortest round-trip digits (JDK 19+; older JDKs can print an extra digit for some values).
+    """
+    from decimal import Decimal
+
     x = float(x)
     if x == 0:
         return "0.0"
     if 1e-3 <= abs(x) < 1e7:
         return repr(x)
-    mant, exp = ("%r" % x).replace("e", "E").split("E") if "e" in repr(x) else (None, None)
-    if mant is None:
-        digits = repr(x).replace(".0", "").lstrip("-").rstrip("0") or "0"
-        sign = "-" if x < 0 else ""
-        e = len(repr(abs(x)).split(".")[0]) - 1
-        d = repr(abs(x)).replace(".", "").lstrip("0").rstrip("0") or "0"
-        return "%s%s.%sE%d" % (sign, d[0], d[1:] or "0", e)
-    if "." not in mant:
-        mant += ".0"
-    return "%sE%d" % (mant, int(exp))
+    sign, digits, exp = Decimal(repr(abs(x))).as_tuple()
+    text = "".join(map(str, digits)).rstrip("0") or "0"
+    point = len(digits) + exp - 1
+    return ("-" if x < 0 else "") + text[0] + "." + (text[1:] or "0") + "E" + str(point)
 
 
 def canonical(value):
