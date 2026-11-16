@@ -49,6 +49,17 @@ class MockMunicipalTest(unittest.TestCase):
         s, b = self.post("CreateCase", {"Token": "t", "x": 1})
         self.assertTrue(json.loads(b)["CaseNumberInCRM"].startswith("0000-"))
 
+    def test_every_post_endpoint_rejects_non_object_json_without_side_effects(self):
+        for endpoint in ["Login", "createupdatecontact", "CreateCase", "AddFileToCase"]:
+            for body in [[], [1], None, True, 7, "synthetic"]:
+                with self.subTest(endpoint=endpoint, body=body):
+                    status, payload = self.post(endpoint, body)
+                    self.assertEqual(status, 400)
+                    self.assertIs(json.loads(payload)["Success"], False)
+        # Rejected arrays must not mint tokens or consume case identifiers.
+        self.assertEqual(json.loads(self.post("Login", {})[1])["Token"], "mock-token-1")
+        self.assertEqual(json.loads(self.post("CreateCase", {})[1])["CaseIdInCRM"], "mock-case-1")
+
     def test_missing_key_is_401(self):
         self.assertEqual(self.post("Login", {}, key="")[0], 401)
 
