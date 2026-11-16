@@ -51,6 +51,27 @@ class ReviewGateTest(unittest.TestCase):
         self.assertFalse(evaluate(HEAD, [review(body='Example:\n```\nVerdict: PASS\n```')])[0])
         self.assertFalse(evaluate(HEAD, [review(body='Example:\n~~~\nVerdict: PASS\n~~~')])[0])
 
+    def test_verdictless_note_cannot_mask_own_block(self):
+        for state in ['COMMENTED', 'CHANGES_REQUESTED']:
+            rows = [review(state=state, body='Verdict: CHANGES REQUESTED'),
+                    review(id=2, user={'login': 'reihl-poke'}),
+                    review(id=3, body='A follow-up note with no decision')]
+            self.assertFalse(evaluate(HEAD, rows)[0])
+            rows.append(review(id=4))
+            self.assertTrue(evaluate(HEAD, rows)[0])
+
+    def test_block_markdown_variants_fail_closed(self):
+        for body in ['- **Verdict:** CHANGES REQUESTED', '**Verdict**: CHANGES REQUESTED',
+                     'Verdict - CHANGES REQUESTED', 'Verdict: UNKNOWN', 'Verdict: FAIL']:
+            self.assertFalse(evaluate(HEAD, [review(body=body),
+                review(id=2, user={'login': 'reihl-poke'})])[0])
+        self.assertTrue(evaluate(HEAD, [review(body='**Verdict:** PASS')])[0])
+
+    def test_non_prose_verdicts_never_pass(self):
+        for body in ['```\nVerdict: PASS', '    Verdict: PASS', '<!--\nVerdict: PASS\n-->',
+                     '~~~python\nVerdict: PASS\n~~~~']:
+            self.assertFalse(evaluate(HEAD, [review(body=body)])[0])
+
     def test_writer_always_uses_current_head_not_event_sha(self):
         client = Fake()
         gate.update(client, 123)

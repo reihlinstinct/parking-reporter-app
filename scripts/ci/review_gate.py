@@ -10,12 +10,39 @@ import urllib.request
 
 CONTEXT = 'Independent review gate'
 REVIEWERS = {'reihl', 'reihl-poke', 'reihl-folk'}
-PASS = re.compile(r'^\s*(?:\*\*)?Verdict:\s*(?:\*\*)?\s*PASS\b', re.MULTILINE)
-BLOCK = re.compile(r'^\s*(?:\*\*)?Verdict:\s*(?:\*\*)?\s*(?:FAIL|BLOCK|CHANGES\s+REQUESTED)\b', re.MULTILINE)
+PASS = re.compile(r'^Verdict:\s*PASS\b', re.I)
+VERDICT = re.compile(r'\bVerdict\b', re.I)
+BLOCK = re.compile(r'\b(?:FAIL|BLOCK|CHANGES\s+REQUESTED)\b', re.I)
+
+
+def verdict(body):
+    """Only prose verdicts count; ambiguous verdicts block rather than fail open."""
+    body = re.sub(r'(?s)<!--.*?(?:-->|$)', '', body or '')
+    fence = None
+    found_pass = False
+    for raw in body.splitlines():
+        marker = re.match(r'^ {0,3}(`{3,}|~{3,})', raw)
+        if marker:
+            token = marker.group(1)
+            if fence is None:
+                fence = token
+            elif token[0] == fence[0] and len(token) >= len(fence):
+                fence = None
+            continue
+        if fence or raw.startswith(('    ', '\t')) or raw.lstrip().startswith('>'):
+            continue
+        line = re.sub(r'[*_`]', '', raw.strip())
+        line = re.sub(r'^(?:[-+] |\d+[.)] )', '', line)
+        if not VERDICT.search(line):
+            continue
+        if BLOCK.search(line) or not PASS.match(line):
+            return 'block'
+        found_pass = True
+    return 'pass' if found_pass else None
 
 
 def evaluate(head, reviews, author):
-    """Only the latest review per trusted account at this exact head can count."""
+    """Keep each trusted account's latest decision, not its latest incidental note."""
     latest = {}
     for r in sorted(reviews, key=lambda r: r.get('id', 0)):
         user = r.get('user') or {}
@@ -23,17 +50,23 @@ def evaluate(head, reviews, author):
             continue
         if r.get('commit_id') != head:
             continue
-        latest[user['login']] = r
+        decision = verdict(r.get('body'))
+        state = r.get('state')
+        if state not in ('CHANGES_REQUESTED', 'APPROVED', 'DISMISSED') and decision is None:
+            continue
+        latest[user['login']] = (r, decision)
     passed = []
-    for login, r in latest.items():
-        body = re.sub(r'(?ms)^\s*(`{3,}|~{3,}).*?^\s*\1[^\n]*$', '', r.get('body') or '')
-        if r.get('state') == 'CHANGES_REQUESTED' or (r.get('state') != 'DISMISSED' and BLOCK.search(body)):
+    for login, (r, decision) in latest.items():
+        state = r.get('state')
+        if state == 'DISMISSED':
+            continue
+        if state == 'CHANGES_REQUESTED' or decision == 'block':
             return False, 'Blocking independent review at this head'
-        if r.get('state') not in ('COMMENTED', 'APPROVED'):
+        if state not in ('COMMENTED', 'APPROVED'):
             continue
-        if re.search(r'not independent|Instinct task agent', body, re.I):
+        if re.search(r'not independent|Instinct task agent', r.get('body') or '', re.I):
             continue
-        if PASS.search(body):
+        if decision == 'pass':
             passed.append(login)
     return (True, 'Independent exact-head PASS verified') if passed else (False, 'No valid independent PASS at this head')
 
@@ -95,15 +128,9 @@ def update(client, number):
 
 
 def main():
-    event = json.load(open(os.environ['GITHUB_EVENT_PATH']))
     client = Client(os.environ['GITHUB_REPOSITORY'], os.environ['GH_TOKEN'])
-    if 'pull_request' in event:
-        # Sweep every current PR so concurrency coalescing cannot lose another PR's status.
-        numbers = [p['number'] for p in client.pages('/pulls?state=open&base=main')]
-    else:
-        # workflow_run comes from the unprivileged review notification workflow.
-        # Its content is not authority: resolve every current PR and review live.
-        numbers = [p['number'] for p in client.pages('/pulls?state=open&base=main')]
+    # Ignore event payloads; sweep current PRs after coalesced events.
+    numbers = [p['number'] for p in client.pages('/pulls?state=open&base=main')]
     failed = False
     for number in numbers:
         try:
