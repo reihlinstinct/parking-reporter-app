@@ -500,6 +500,7 @@ fun AppShell(
     }
     BackHandler(enabled = !showFirstRun && page != "home") {
         if (page == "licenses" || page == "plate-categories") page = "settings"
+        else if (page == "sentDetail") page = "reports"
         else { profile = null; page = "home" }
     }
     Scaffold(
