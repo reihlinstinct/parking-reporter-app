@@ -525,7 +525,7 @@ internal class FlowDriver(private val compose: ComposeTestRule) {
             }
             screenshot("live-e2e-history.png")
             Thread.sleep(holdMs)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             println("FLOW_DRIVER history view skipped: ${e.javaClass.simpleName}")
         }
     }
