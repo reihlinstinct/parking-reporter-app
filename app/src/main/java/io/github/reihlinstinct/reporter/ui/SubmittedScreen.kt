@@ -56,10 +56,10 @@ fun SubmittedScreen(receiptText: String?, onDone: () -> Unit) = ProvideStringsIf
             drawLine(onOk, a, b, stroke.width, stroke.cap)
             drawLine(onOk, b, c, stroke.width, stroke.cap)
         }
-        Text(strings.t("shell.submitted.title"), style = MaterialTheme.typography.headlineMedium,
+        Text(strings.t("submitted.screen.title"), style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center, modifier = Modifier.semantics { heading() })
-        Text(strings.t("shell.submitted.body"), style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
-        Button(onClick = onDone, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text(strings.t("shell.submitted.back")) }
+        Text(strings.t("submitted.screen.body"), style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+        Button(onClick = onDone, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text(strings.t("submitted.screen.back")) }
         Spacer(Modifier.heightIn(min = 24.dp))
         if (receiptText != null) {
             Text(receiptText, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center,

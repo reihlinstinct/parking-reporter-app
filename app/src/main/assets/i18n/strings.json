@@ -338,21 +338,21 @@
       "ru": "Локальная проверка не удалась, отправки нет",
       "am": "የአካባቢው ሙከራ አልተሳካም፣ ምንም አይላክም"
     },
-    "shell.submitted.title": {
+    "submitted.screen.title": {
       "he": "הדיווח הוגש בהצלחה",
       "en": "Report submitted successfully",
       "ar": "تم تقديم البلاغ بنجاح",
       "ru": "Обращение успешно отправлено",
       "am": "ሪፖርቱ በተሳካ ሁኔታ ገብቷል"
     },
-    "shell.submitted.body": {
+    "submitted.screen.body": {
       "he": "העירייה קיבלה את הדיווח. תודה שעזרת לשפר את העיר.",
       "en": "The municipality received your report. Thank you for helping improve the city.",
       "ar": "استلمت البلدية بلاغك. شكرًا لمساهمتك في تحسين المدينة.",
       "ru": "Муниципалитет получил ваше обращение. Спасибо, что помогаете улучшать город.",
       "am": "ማዘጋጃ ቤቱ ሪፖርትዎን ተቀብሏል። ከተማዋን ለማሻሻል ስለረዱ እናመሰግናለን።"
     },
-    "shell.submitted.back": {
+    "submitted.screen.back": {
       "he": "חזרה לדיווחים",
       "en": "Back to reports",
       "ar": "العودة إلى البلاغات",
