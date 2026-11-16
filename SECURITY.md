@@ -6,7 +6,11 @@ Pre-release design/scaffolding only. No released app is currently supported. Bef
 
 ## Reporting a vulnerability
 
-Do not open an issue containing credentials, real plates, evidence photos, reporter identities, tokens or exploit details that expose private data. Report privately through the repository's Security tab: choose "Report a vulnerability" (private vulnerability reporting is enabled). If that route is unavailable, contact the repository owner through an already-established private channel with a sanitized summary and ask for a secure transfer method. No response-time promise is made yet.
+Preferred: use the repository's Security tab, choose "Report a vulnerability" (GitHub private vulnerability reporting is enabled). If that is not possible, email reihlinstinct@gmail.com with the subject "Security report: parking-reporter-app". Both channels are monitored by the maintainer.
+
+A report should include: the affected version or commit, what you observed and what you expected, steps to reproduce using synthetic data, and the impact you believe it has. Do not include credentials, real plates, evidence photos, reporter identities, tokens or exploit details that expose private data, and do not open a public issue for a vulnerability.
+
+We acknowledge a vulnerability report within 14 days. We aim to send a first assessment and the planned fix route soon after, and we say so in the report thread if a fix needs longer.
 
 ## Security requirements
 
