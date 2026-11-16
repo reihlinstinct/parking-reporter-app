@@ -1,0 +1,39 @@
+name: ClusterFuzzLite
+on:
+  pull_request:
+    paths:
+      - '.clusterfuzzlite/**'
+      - '.github/workflows/clusterfuzzlite.yml'
+      - 'app/build.gradle.kts'
+      - 'app/src/main/java/io/github/reihlinstinct/reporter/security/SecureSettings.kt'
+      - 'app/src/main/java/io/github/reihlinstinct/reporter/core/**'
+      - 'app/src/main/java/io/github/reihlinstinct/reporter/intake/**'
+      - 'docs/prpkg2-spec/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: clusterfuzzlite-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  fuzz:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Build JVM fuzz target
+        uses: google/clusterfuzzlite/actions/build_fuzzers@52ecc61cb587ee99c26825a112a21abf19c7448c
+        with:
+          language: jvm
+          sanitizer: address
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          keep-unaffected-fuzz-targets: true
+      - name: Fuzz synthetic packages for two minutes
+        uses: google/clusterfuzzlite/actions/run_fuzzers@52ecc61cb587ee99c26825a112a21abf19c7448c
+        with:
+          language: jvm
+          sanitizer: address
+          mode: code-change
+          fuzz-seconds: 120
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          output-sarif: false
