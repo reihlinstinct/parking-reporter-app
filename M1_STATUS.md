@@ -1,8 +1,7 @@
 # Current development preview status
 
 Development preview, not ready for production. This replaces the old M1-only
-snapshot. Status checked on 2026-11-12 against main after registry PR #333 and
-display-coverage PR #324 (release 0.41.1). For later changes, check
+snapshot. Architecture and feature wording rechecked on 2026-11-16; the CI receipts below remain the explicitly dated 2026-11-12 evidence, not new test results. See the [runtime architecture](ARCHITECTURE.md). For later changes, check
 [CHANGELOG.md](CHANGELOG.md), the current source and the exact commit's CI.
 
 ## Implemented on main
@@ -18,8 +17,7 @@ display-coverage PR #324 (release 0.41.1). For later changes, check
   plate. Verified missing tags stay silent; failed lookups say unavailable.
   Expired licence dates are red, 0-13 days remaining are orange and 14 or more
   are normal, calculated from the check date in Jerusalem. Active-record absence
-  can fall back to the public inactive dataset. Registry information never
-  rewrites the report or gates Save/Send. See [registry details](docs/VEHICLE_REGISTRY.md).
+  can fall back to the public inactive dataset. Registry lookups never gate Save/Send. Verified live facts may supply editable description-template sentences; cached, failed or partial lookups do not establish fresh negative facts. See [registry details](docs/VEHICLE_REGISTRY.md).
 - Production submission code and an explicitly opt-in recorded live-emulator
   workflow exist. This is **not** automatic filing permission or production
   enrollment. Regular CI stages no live case and files nothing. A real case
@@ -48,7 +46,7 @@ physical-camera behavior, real-device authentication/Keystore behavior, universa
 accessibility, or end-to-end voice-assistant discovery. Do not infer those from
 compile success or a green emulator run.
 
-## Not shipped by this snapshot
+## Historical follow-ups at the 2026-11-12 snapshot
 
 - PR #320: experimental, opt-in AppFunctions entry. Its package, UI conditions,
   older-Android compatibility and exact-head reviews remain separate gates.
@@ -56,8 +54,9 @@ compile success or a green emulator run.
   every lookup. The merged registry feature alone is not this persistent cache.
 - PR #364: additional editor-test diagnostics/hardening; not a production feature.
 
-For remaining work, use current issues and PRs rather than the old M1-M4 checklist.
-Non-blocking registry wording/theme/parity follow-ups are #365-#369; display
-coverage/discoverability/recovery-summary follow-ups are #370-#372. None makes
+This historical list is not the current feature inventory: assistant entry code and persistent registry-cache fallback now exist on main. Presence in source does not prove end-to-end assistant discovery or field validation. For remaining work, use current issues and PRs rather than this list or the old M1-M4 checklist.
+The snapshot also listed registry wording/theme/parity follow-ups #365-#369 and
+display coverage/discoverability/recovery-summary follow-ups #370-#372; their
+current open/closed state is not asserted here. None makes
 this a production-readiness certification. No reporter secrets or evidence are
 bundled in the public APK.
