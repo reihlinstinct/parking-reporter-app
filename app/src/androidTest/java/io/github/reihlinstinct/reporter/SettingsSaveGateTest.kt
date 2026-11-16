@@ -72,8 +72,19 @@ class SettingsSaveGateTest {
             SettingsScreen(null, save = { _, _, _ -> }, back = {}, basicSetup = true)
         } }
         compose.onNodeWithText("שם פרטי").performTextInput("בדיקה")
-        compose.onNode(hasText("חסרים או לא תקינים", substring = true)).performScrollTo()
-            .assertIsDisplayed()
+        val missingReason = compose.onNode(hasText("חסרים או לא תקינים", substring = true))
+        // API 36 IME/insets may still animate after text input and the first scroll (#409).
+        // Re-evaluate the same visibility requirement against the settled viewport, not a sleep
+        // or an existence-only assertion. Keep failure evidence before rule teardown.
+        try {
+            compose.waitUntil(5_000) {
+                missingReason.performScrollTo().isDisplayed()
+            }
+        } catch (failure: Exception) {
+            runCatching { screenshot("settings-save-missing-fields-failed.png") }
+            throw failure
+        }
+        missingReason.assertIsDisplayed()
             .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion))
         compose.onNodeWithText("שמור והמשך").performScrollTo().assertIsNotEnabled()
         screenshot("settings-save-missing-fields.png")
