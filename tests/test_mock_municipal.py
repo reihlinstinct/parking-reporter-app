@@ -49,6 +49,32 @@ class MockMunicipalTest(unittest.TestCase):
         s, b = self.post("CreateCase", {"Token": "t", "x": 1})
         self.assertTrue(json.loads(b)["CaseNumberInCRM"].startswith("0000-"))
 
+    def test_every_post_endpoint_rejects_non_object_json_without_side_effects(self):
+        for endpoint in ["Login", "createupdatecontact", "CreateCase", "AddFileToCase"]:
+            for body in [[], [1], None, True, 7, "synthetic"]:
+                with self.subTest(endpoint=endpoint, body=body):
+                    status, payload = self.post(endpoint, body)
+                    self.assertEqual(status, 400)
+                    self.assertIs(json.loads(payload)["Success"], False)
+        # Rejected arrays must not mint tokens or consume case identifiers.
+        self.assertEqual(json.loads(self.post("Login", {})[1])["Token"], "mock-token-1")
+        self.assertEqual(json.loads(self.post("CreateCase", {})[1])["CaseIdInCRM"], "mock-case-1")
+
+    def test_deeply_nested_json_returns_400(self):
+        # Exceed the decoder's separate recursion limit on Python 3.12+ too.
+        payload = b"[" * 100_000 + b"]" * 100_000
+        with self.assertRaises(RecursionError):
+            json.loads(payload)
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=3)
+        try:
+            c.request("POST", PREFIX + "CreateCase", payload,
+                      {"Ocp-Apim-Subscription-Key": "k"})
+            response = c.getresponse()
+            self.assertEqual(response.status, 400)
+            self.assertIs(json.loads(response.read())["Success"], False)
+        finally:
+            c.close()
+
     def test_missing_key_is_401(self):
         self.assertEqual(self.post("Login", {}, key="")[0], 401)
 
