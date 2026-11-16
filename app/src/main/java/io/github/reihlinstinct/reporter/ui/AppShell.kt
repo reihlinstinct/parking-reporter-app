@@ -297,10 +297,15 @@ fun AppShell(
                 submissionNote = municipalOutcomeText(strings, outcome)
                 if (outcome is SubmissionCoordinator.Outcome.Submitted ||
                     outcome is SubmissionCoordinator.Outcome.AlreadySubmitted) {
+                    if (outcome is SubmissionCoordinator.Outcome.Submitted) {
+                        // The server receipt is debug-only everywhere: the shell status slot and
+                        // the review note get the plain title in release.
+                        submissionNote = submittedVisibleText(BuildConfig.DEBUG, submissionNote, strings.t("submitted.screen.title"))
+                    }
                     status = submissionNote
                     topicSnapshot = topicRepository.snapshot()
                     if (outcome is SubmissionCoordinator.Outcome.Submitted) {
-                        submittedReceipt = if (BuildConfig.DEBUG) submissionNote else null
+                        submittedReceipt = if (BuildConfig.DEBUG) municipalOutcomeText(strings, outcome) else null
                         page = "submitted"
                     }
                 }
@@ -724,6 +729,10 @@ internal fun missingCredentialsSuffix(strings: Strings, missingFields: List<Stri
     if (labels.isEmpty()) return ""
     return ": " + labels.joinToString(", ") { strings.t(it) }
 }
+
+/** Debug builds show the server receipt text; release builds show only [neutral]. */
+internal fun submittedVisibleText(debug: Boolean, receiptText: String, neutral: String): String =
+    if (debug) receiptText else neutral
 
 internal fun municipalOutcomeText(strings: Strings, outcome: SubmissionCoordinator.Outcome): String = when (outcome) {
     is SubmissionCoordinator.Outcome.Submitted ->
