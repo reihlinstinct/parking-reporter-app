@@ -12,6 +12,7 @@ import io.github.reihlinstinct.reporter.EntrySignal
 import io.github.reihlinstinct.reporter.FlowDriver
 import io.github.reihlinstinct.reporter.FlowFields
 import io.github.reihlinstinct.reporter.ledger.ReportDatabase
+import io.github.reihlinstinct.reporter.ledger.ReportRecord
 import io.github.reihlinstinct.reporter.security.ReporterSettings
 import io.github.reihlinstinct.reporter.ui.AppShell
 import java.io.File
@@ -155,6 +156,10 @@ class LiveEmulatorSubmissionTest {
         }
         marker("PHOTO_CLAIMED")
 
+        // Owner request 2026-11-16: the recording shows earlier submissions in the history tab. They are synthetic
+        // (fixed fake identifiers, no real data), seeded before the app opens and removed again in finally.
+        seedSyntheticHistory(context)
+        marker("HISTORY_SEEDED")
         val driver = FlowDriver(compose)
         val signal = mutableStateOf(EntrySignal(1, EntryIntents.Request.SharedPhoto(sharedUri.toString())))
         compose.setContent {
@@ -311,6 +316,39 @@ class LiveEmulatorSubmissionTest {
             throw t
         } finally {
             if (!cleaned && !preserveState) runCatching { cleanOwnedPhoto(context, hash) }
+            runCatching { removeSyntheticHistory(context) }
+        }
+    }
+
+    private val syntheticHistory = listOf("0001" to "2611-0000001", "0002" to "2611-0000002", "0003" to "2611-0000003")
+
+    /** Synthetic sent reports for the history tab: ledger row plus a "complete" state with a fake case number. */
+    private fun seedSyntheticHistory(context: Context) {
+        val db = Room.databaseBuilder(context, ReportDatabase::class.java, "report-ledger.db").build()
+        try {
+            val dir = File(context.noBackupFilesDir, "submissions").also { it.mkdirs() }
+            syntheticHistory.forEach { (suffix, number) ->
+                val id = "synthetic-history-$suffix"
+                runBlocking { db.reports().reserve(ReportRecord(id, id, "synthetic-none", 1L, "{}", null)) }
+                File(dir, "$id.json").writeText(
+                    JSONObject().put("status", "complete").put("case", JSONObject().put("CaseNumberInCRM", number)).toString())
+            }
+        } finally {
+            db.close()
+        }
+    }
+
+    /** Remove exactly the synthetic history rows and files, so the device ends with no submission records. */
+    private fun removeSyntheticHistory(context: Context) {
+        val db = Room.databaseBuilder(context, ReportDatabase::class.java, "report-ledger.db").build()
+        try {
+            syntheticHistory.forEach { (suffix, _) ->
+                val id = "synthetic-history-$suffix"
+                db.openHelper.writableDatabase.execSQL("DELETE FROM reports WHERE stableId = ?", arrayOf(id))
+                File(context.noBackupFilesDir, "submissions/$id.json").delete()
+            }
+        } finally {
+            db.close()
         }
     }
 
