@@ -27,6 +27,14 @@ class AndroidDesignTest {
         DynamicPaletteStore(context).setEnabled(false)
         io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set(io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(context))
     }
+    /** Espresso.pressBack needs a root with window focus. A shade, keyboard or system dialog left over from an
+     *  earlier test (seen once on API 36, weekly run 43710836441) steals it; clear them through the shell and wait. */
+    private fun waitForWindowFocus() {
+        val ui = InstrumentationRegistry.getInstrumentation().uiAutomation
+        ui.executeShellCommand("cmd statusbar collapse").close()
+        ui.executeShellCommand("am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS").close()
+        compose.waitUntil(15_000) { compose.activity.hasWindowFocus() }
+    }
     @After fun cleanup() { DynamicPaletteStore(context).setEnabled(false) }
     private fun screenshot(name: String) {
         compose.waitForIdle()
@@ -87,6 +95,7 @@ class AndroidDesignTest {
         } }
         compose.onNodeWithText("הגדרות").performClick()
         compose.onNodeWithText("הגדרות פרטיות").assertExists()
+        waitForWindowFocus()
         Espresso.pressBack()
         compose.onNodeWithText("צלם תמונה").assertExists()
         compose.onNodeWithText("הגדרות פרטיות").assertDoesNotExist()
