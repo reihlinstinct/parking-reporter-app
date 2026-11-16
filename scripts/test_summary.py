@@ -197,6 +197,7 @@ def main():
     parser.add_argument('--unittest', action='append', default=[])
     parser.add_argument('--jacoco', action='append', default=[])
     parser.add_argument('--check', action='store_true')
+    parser.add_argument('--min-line-coverage', type=float, default=None, help='fail when the JaCoCo line coverage percentage is below this floor')
     parser.add_argument('--require-jacoco', action='store_true', help='fail when --jacoco is given but the report has no line counters')
     args = parser.parse_args()
     cases = []
@@ -224,6 +225,14 @@ def main():
     if args.require_jacoco and not (coverage and 'LINE' in coverage):
         print('test_summary: JaCoCo report has no line counters, coverage not measured', file=sys.stderr)
         return 1
+    if args.min_line_coverage is not None:
+        line = coverage.get('LINE') if coverage else None
+        if line is None:
+            print('test_summary: no JaCoCo line coverage, cannot check the floor', file=sys.stderr)
+            return 1
+        if line < args.min_line_coverage:
+            print(f'test_summary: line coverage {line:.2f}% is below the floor {args.min_line_coverage:g}%', file=sys.stderr)
+            return 1
     return 0
 
 if __name__ == '__main__':

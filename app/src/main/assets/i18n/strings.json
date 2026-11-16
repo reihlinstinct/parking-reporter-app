@@ -1332,6 +1332,48 @@
       "ru": "Открыть обращение {id}",
       "am": "ሪፖርት {id} ክፈት"
     },
+    "reports.detail.title": {
+      "he": "פרטי דיווח",
+      "en": "Report details",
+      "ar": "تفاصيل البلاغ",
+      "ru": "Сведения об обращении",
+      "am": "የሪፖርት ዝርዝር"
+    },
+    "reports.detail.case": {
+      "he": "מספר פנייה",
+      "en": "Case number",
+      "ar": "رقم الطلب",
+      "ru": "Номер обращения",
+      "am": "የጥያቄ ቁጥር"
+    },
+    "reports.detail.sent": {
+      "he": "נשלח בתאריך",
+      "en": "Sent on",
+      "ar": "أُرسل بتاريخ",
+      "ru": "Отправлено",
+      "am": "የተላከበት ቀን"
+    },
+    "reports.detail.category": {
+      "he": "קטגוריה",
+      "en": "Category",
+      "ar": "الفئة",
+      "ru": "Категория",
+      "am": "ምድብ"
+    },
+    "reports.detail.address": {
+      "he": "כתובת",
+      "en": "Address",
+      "ar": "العنوان",
+      "ru": "Адрес",
+      "am": "አድራሻ"
+    },
+    "reports.detail.back": {
+      "he": "חזרה",
+      "en": "Back",
+      "ar": "رجوع",
+      "ru": "Назад",
+      "am": "ተመለስ"
+    },
     "reports.history.title": {
       "he": "היסטוריית דיווחים",
       "en": "Report history",
