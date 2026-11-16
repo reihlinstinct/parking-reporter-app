@@ -33,6 +33,8 @@ object ReviewRotationState {
         val plates: List<String> = emptyList(),
         val manualResult: io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress? = null,
         val confirmExit: Boolean = false,
+        /** User plate edits survive rotation so automatic OCR cannot undo a deliberate clear. */
+        val plateEdits: Int = 0,
     )
 
     class Shell(val draft: ReviewDraft, val original: File?, val revision: Long)

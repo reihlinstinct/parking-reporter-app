@@ -13,6 +13,18 @@ class ReviewRotationStateTest {
     private fun held(initial: ReviewDraft, edited: ReviewDraft) = ReviewRotationState.Held(
         initial, edited, "31.0", "35.0", "street", "7", "", "", null)
 
+    @Test fun deliberatePlateClearRetainsEditProvenanceAndConsumesItOnce() {
+        val initial = draft("r1", "1234567")
+        ReviewRotationState.hold(ReviewRotationState.Held(initial, initial.copy(plate = ""),
+            "31.0", "35.0", "", "", "", "", null, plateEdits = 2))
+        val restored = ReviewRotationState.take(initial)!!
+        assertEquals("", restored.draft.plate)
+        assertEquals(2, restored.plateEdits)
+        assertNull(ReviewRotationState.take(initial))
+        ReviewRotationState.hold(held(initial, initial))
+        assertEquals(0, ReviewRotationState.take(initial)!!.plateEdits)
+    }
+
     @Test fun sameReportGetsTheHeldStateOnceAfterRotation() {
         val initial = draft("r1")
         val edited = initial.copy(plate = "1234567")

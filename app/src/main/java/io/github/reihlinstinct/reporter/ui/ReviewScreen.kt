@@ -68,7 +68,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // Issue #210: the engine is a Settings-only preference (default Google ML Kit); the review screen has no selector.
     val useGoogle = remember(initial.evidence.stableId) { io.github.reihlinstinct.reporter.recognition.UiPrefsOcrEngineStore.of(context).get() == io.github.reihlinstinct.reporter.recognition.OcrEngine.MLKIT }
     var recognizing by remember { mutableStateOf(false) }
-    var plateEdits by remember { mutableIntStateOf(0) }
+    var plateEdits by remember(initial.evidence.stableId) { mutableIntStateOf(restored?.plateEdits ?: 0) }
     // Status lines hold catalog keys and are translated when shown, so they follow a language switch.
     var ocrStatus by remember { mutableStateOf<String?>(null) }
     var suggestions by remember { mutableStateOf<List<io.github.reihlinstinct.reporter.evidence.AddressSuggestion>>(emptyList()) }
@@ -137,7 +137,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     val holdOnRotation by rememberUpdatedState {
         ReviewRotationState.Held(initial, draft, latitude, longitude, manualStreet, manualHouse,
             savedManualStreet, savedManualHouse, ocrPrefilledPlate, gpsFilled, templateState, textTyped,
-            editing, plates, manualResult, confirmExit)
+            editing, plates, manualResult, confirmExit, plateEdits)
     }
     val rotationActivity = context.findActivity()
     DisposableEffect(initial.evidence.stableId) {
@@ -244,7 +244,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         } finally { recognizing = false }
     }
     LaunchedEffect(initial.evidence.stableId, image) {
-        if (image != null && draft.plate.isEmpty() && draft.needsPlate()) recognize()
+        if (image != null && draft.plate.isEmpty() && draft.needsPlate() && plateEdits == 0) recognize()
     }
     // Issue #424 slice 2b: the suggested description follows the category and the facts. The user's own words are
     // never overwritten (see TemplateSession); the text stays editable and the form still needs the plate in it.

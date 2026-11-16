@@ -1,6 +1,9 @@
 package io.github.reihlinstinct.reporter
 
 import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.asImageBitmap
+import io.github.reihlinstinct.reporter.ui.ReviewRotationState
+import java.util.concurrent.atomic.AtomicInteger
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
@@ -9,12 +12,21 @@ import io.github.reihlinstinct.reporter.core.ReviewDraft
 import io.github.reihlinstinct.reporter.ui.ReviewScreen
 import io.github.reihlinstinct.reporter.ui.theme.AppTheme
 import org.junit.Assert.*
+import org.junit.Before
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import java.io.File
 
 class ReviewUnsavedBackTest {
     @get:Rule val compose = createComposeRule()
+    @Before fun resetAndPinLanguage() {
+        ReviewRotationState.clear()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set(
+            io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(context))
+    }
+    @After fun clearRotationHolder() { ReviewRotationState.clear() }
     private fun draft() = ReviewDraft(Evidence("unsaved-synthetic", "a".repeat(64),
         "2026-01-01T12:00:00+02:00", 31.77, 35.21), "1234567", "רחוב בדיקה 1",
         "sidewalk_parking", "בדיקה", emptySet())
@@ -80,6 +92,53 @@ class ReviewUnsavedBackTest {
         compose.onNodeWithText("חזור").performScrollTo().performClick()
         compose.onNodeWithText("יש שינויים שלא נשמרו").assertDoesNotExist()
         compose.runOnIdle { assertEquals(1, exits) }
+    }
+
+    @Test fun automaticOcrPrefillDoesNotInventUnsavedEdits() {
+        val initial = draft().copy(plate = "")
+        val calls = AtomicInteger()
+        var exits = 0
+        val bitmap = android.graphics.Bitmap.createBitmap(16, 16, android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap()
+        compose.setContent { AppTheme { ReviewScreen(initial, bitmap, {}, { exits++ },
+            plateRecognizer = { calls.incrementAndGet(); listOf("1234567") }) } }
+        compose.waitUntil(5_000) { calls.get() == 1 }
+        compose.waitForIdle()
+        compose.onNodeWithText("ערוך").performClick()
+        compose.onNodeWithText("מספר לוחית (ספרות בלבד)").performScrollTo().assertTextContains("1234567")
+        compose.onNodeWithText("חזור").performScrollTo().performClick()
+        compose.onNodeWithText("יש שינויים שלא נשמרו").assertDoesNotExist()
+        compose.runOnIdle { assertEquals(1, exits) }
+    }
+
+    @Test fun restoredUserClearedPlateDoesNotRestartAutomaticOcr() {
+        val initial = draft()
+        ReviewRotationState.hold(ReviewRotationState.Held(initial, initial.copy(plate = ""),
+            "31.77", "35.21", "", "", "", "", null, editing = true, plateEdits = 1))
+        val calls = AtomicInteger()
+        var saved: ReviewDraft? = null
+        val bitmap = android.graphics.Bitmap.createBitmap(16, 16, android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap()
+        try {
+            compose.setContent { AppTheme { ReviewScreen(initial, bitmap, { saved = it }, {},
+                plateRecognizer = { calls.incrementAndGet(); listOf("1234567") }) } }
+            compose.waitForIdle()
+            compose.onNodeWithText("מספר לוחית (ספרות בלבד)").performScrollTo().assertExists()
+            compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
+            compose.runOnIdle {
+                assertEquals("no automatic recognizer after a user edit", 0, calls.get())
+                assertEquals("", saved!!.plate)
+            }
+        } finally { ReviewRotationState.clear() }
+    }
+
+    @Test fun rawManualAddressInputIsDirtyBeforeLookupOrConfirmation() {
+        var exits = 0
+        compose.setContent { AppTheme { ReviewScreen(draft().copy(confirmedLatitude = null, confirmedLongitude = null), null, {}, { exits++ }) } }
+        // Manual address inputs live outside the edit panel and must count before a lookup succeeds.
+        compose.onNodeWithText("רחוב בירושלים").performScrollTo().performTextReplacement("רחוב סינתטי")
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.onNodeWithText("חזור").performScrollTo().performClick()
+        compose.onNodeWithText("יש שינויים שלא נשמרו").assertIsDisplayed()
+        compose.runOnIdle { assertEquals(0, exits) }
     }
 
     private fun capture(name: String) {
