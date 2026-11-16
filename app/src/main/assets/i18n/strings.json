@@ -464,6 +464,13 @@
       "ru": "Задайте блокировку экрана",
       "am": "የማያ ገጽ መቆለፊያ ያዘጋጁ"
     },
+    "shell.submit.sent_plain": {
+      "he": "הדיווח הוגש בהצלחה",
+      "en": "Report submitted successfully",
+      "ar": "تم تقديم البلاغ بنجاح",
+      "ru": "Обращение успешно отправлено",
+      "am": "ሪፖርቱ በተሳካ ሁኔታ ገብቷል"
+    },
     "shell.submit.sending": {
       "he": "שולח לעירייה...",
       "en": "Sending to the municipality...",

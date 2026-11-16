@@ -300,7 +300,7 @@ fun AppShell(
                     if (outcome is SubmissionCoordinator.Outcome.Submitted) {
                         // The server receipt is debug-only everywhere: the shell status slot and
                         // the review note get the plain title in release.
-                        submissionNote = submittedVisibleText(BuildConfig.DEBUG, submissionNote, strings.t("submitted.screen.title"))
+                        submissionNote = submittedVisibleText(BuildConfig.DEBUG, submissionNote, strings.t("shell.submit.sent_plain"))
                     }
                     status = submissionNote
                     topicSnapshot = topicRepository.snapshot()

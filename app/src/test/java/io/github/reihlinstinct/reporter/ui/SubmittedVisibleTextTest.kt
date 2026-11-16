@@ -22,10 +22,14 @@ class SubmittedVisibleTextTest {
     @Test fun shellNavigationAndDebugGateStayWired() {
         val dir = listOf("src/main/java", "app/src/main/java", "../app/src/main/java").map(::File).first { it.exists() }
         val src = File(dir, "io/github/reihlinstinct/reporter/ui/AppShell.kt").readText()
-        assertTrue(src.contains("\"submitted\" -> SubmittedScreen(submittedReceipt"))
-        assertTrue(src.contains("page = \"submitted\""))
-        assertTrue(src.contains("if (BuildConfig.DEBUG) municipalOutcomeText(strings, outcome) else null"))
-        assertTrue(src.contains("submittedVisibleText(BuildConfig.DEBUG, submissionNote"))
-        assertTrue(src.contains("onDone = { submittedReceipt = null; page = \"reports\" }"))
+        val flat = src.replace(Regex("\\s+"), " ")
+        assertTrue(Regex("\"submitted\" -> SubmittedScreen\\(submittedReceipt").containsMatchIn(flat))
+        assertTrue(Regex("onDone = \\{ submittedReceipt = null; page = \"reports\" \\}").containsMatchIn(flat))
+        assertTrue(Regex("submittedReceipt = if \\(BuildConfig\\.DEBUG\\) municipalOutcomeText\\(strings, outcome\\) else null").containsMatchIn(flat))
+        assertTrue(Regex("submittedVisibleText\\(BuildConfig\\.DEBUG, submissionNote").containsMatchIn(flat))
+        // page = "submitted" is set only inside the Submitted branch, not for AlreadySubmitted.
+        val branch = Regex("if \\(outcome is SubmissionCoordinator\\.Outcome\\.Submitted\\) \\{[^}]*page = \"submitted\"").containsMatchIn(flat)
+        assertTrue(branch)
+        assertEquals(1, Regex("page = \"submitted\"").findAll(flat).count())
     }
 }
