@@ -108,7 +108,6 @@ fun AppShell(
     var profile by remember { mutableStateOf<ReporterSettings?>(null) }
     // Server receipt line for the success screen (case number in every build, extra references in debug).
     var submittedReceipt by remember { mutableStateOf<String?>(null) }
-    var sentDetail by remember { mutableStateOf<SentReportDetail?>(null) }
     var draft by remember { mutableStateOf<ReviewDraft?>(rotated?.draft) }
     var original by remember { mutableStateOf<File?>(rotated?.original) }
     var revision by remember { mutableLongStateOf(rotated?.revision ?: 0L) }
@@ -500,7 +499,6 @@ fun AppShell(
     }
     BackHandler(enabled = !showFirstRun && page != "home") {
         if (page == "licenses" || page == "plate-categories") page = "settings"
-        else if (page == "sentDetail") page = "reports"
         else { profile = null; page = "home" }
     }
     Scaffold(
@@ -564,21 +562,8 @@ fun AppShell(
                     }
                 }
             }
-            ReportsScreen(records, open = { openRecord(it) }, sentIdentifiers = sent.map { it.second }, sentStableIds = sent.map { it.first }.toSet(),
-                onOpenSent = { index ->
-                    val (stableId, identifier) = sent[index]
-                    val record = records.firstOrNull { it.stableId == stableId }
-                    if (record != null) {
-                        val written = File(context.noBackupFilesDir, "submissions/$stableId.json").lastModified()
-                        sentDetail = sentReportDetail(record, identifier, written) { subject ->
-                            io.github.reihlinstinct.reporter.core.ReportCategory.from(subject)?.let { strings.t(it.labelKey) }
-                                ?: io.github.reihlinstinct.reporter.core.TopicIdentity.code(subject)?.let { code -> topicSnapshot?.topics?.firstOrNull { it.code == code }?.name }
-                        }
-                        page = "sentDetail"
-                    }
-                })
+            ReportsScreen(records, open = { openRecord(it) }, sentIdentifiers = sent.map { it.second }, sentStableIds = sent.map { it.first }.toSet())
         }
-        "sentDetail" -> sentDetail?.let { SentReportDetailScreen(it, onBack = { page = "reports" }) }
         "submitted" -> SubmittedScreen(submittedReceipt, onDone = { submittedReceipt = null; page = "reports" })
         "review" -> draft?.let { value ->
             val preview by produceState<Pair<io.github.reihlinstinct.reporter.evidence.OutgoingImage, androidx.compose.ui.graphics.ImageBitmap>?>(null, original) {

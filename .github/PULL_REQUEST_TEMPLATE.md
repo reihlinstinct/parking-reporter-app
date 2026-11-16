@@ -21,7 +21,6 @@ State exactly which checks ran. Scaffolding CI is not Android/unit/e2e evidence.
 - [ ] Synthetic fixtures and mock transport only; no live municipal calls
 - [ ] Unit and functional/e2e tests added for changed app behavior, or explain why not applicable
 - [ ] Docs checked: README, docs/DESIGN.md, ACCESSIBILITY.md, the Hebrew user guide in docs/wiki/ (synced to the GitHub wiki on merge to main) or other docs updated in this PR where behavior, wording or setup changed, or a linked docs issue is named here (CHANGELOG is generated at release, do not edit it)
-- [ ] Architecture/status consistency checked against changed code: ARCHITECTURE.md, docs/DESIGN.md, docs/VEHICLE_REGISTRY.md, M1_STATUS.md and README.md updated only where stale; otherwise state why no update is needed
 - [ ] No generated output or unrelated files
 
 ## Risks and remaining decisions

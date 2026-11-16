@@ -4,8 +4,6 @@ Development preview. Local review is not authorization for network submission.
 
 ## Architecture
 
-See the [current runtime diagrams](../ARCHITECTURE.md) for active paths, inactive encryption work and CI boundaries. The stage names below are historical planning labels, not a claim that each stage is still unimplemented.
-
 Kotlin, Jetpack Compose, CameraX and Room. Preserve original photo bytes under noBackupFilesDir and compute SHA-256. Record manual time/location corrections separately from original metadata. Geocoding is opt-in; address results are suggestions, not proof.
 
 Reporter settings contain first name, last name, phone, ID and email. Keystore AES-GCM, recent device credential authentication and AtomicFile protect storage. No plaintext fallback or backup; the default ML Kit engine (Tesseract is a Settings-only choice) sends disclosed API usage/performance metrics to Google. Municipal API credentials are not part of the build: they are entered manually on the settings screen and stored only inside the same encrypted envelope (never logged, never backed up, omitted when blank, masked with password keyboard options). Live submission stays disabled until separately approved. Sensitive production screens use FLAG_SECURE.
@@ -17,14 +15,14 @@ A revision-checked Room ledger reserves stable report IDs and original hashes. M
 M0: synthetic transport diagnostics, with no configured production endpoint.
 M1: capture, metadata, encrypted settings, local ledger and manual review.
 M2: smaller on-device OCR/model, explicit uncertainty and manual correction. No cloud photo recognition.
-M3: independent public vehicle and disability-registry lookups. Their status does not gate Save/Send; verified live facts can inform editable description templates.
+M3: public vehicle registry validation; mismatches stop review.
 M4: Hebrew report text and approval-digest parity with synthetic golden fixtures.
-M5: guarded direct municipal submission, durable duplicate guards and receipt reconciliation. The encrypted intake remains a separate proposal, not the current Send transport. No automatic retry after an uncertain write.
+M5: separately approved submission through a secure intake, bounded quotas, durable duplicate guards and receipt reconciliation. No automatic retry after an uncertain write.
 M6: optional separate social-export review with every plate masked. Not implemented.
 
 ## Network boundary
 
-The public client contains a pinned municipal endpoint as public configuration, but no bundled municipal credentials. AppShell wires the reviewed draft and previewed outgoing photo through SubmissionCoordinator and the durable SubmissionStateMachine to OkHttpMunicipalClient. Credentials are read from encrypted settings. A local review is not blanket filing permission. Proposed encrypted intake and its offline synthetic diagnostic are separate from this direct path; see the architecture and live E2E gates. The current Room ledger still lacks application-layer encryption; inactive encrypted-ledger components do not change that runtime fact.
+The public client contains no municipal endpoint or secret, and no private repository identifier. Proposed encrypted intake is described separately. Profile, photo and location transfer requires reviewed exact payloads and a validated enrollment/approval path. No live transport is implemented by this preview.
 
 ## Release gates
 
@@ -32,9 +30,9 @@ Camera lifecycle, authenticated Keystore behavior, device storage recovery, sche
 
 ## Photo-first review
 
-The home screen asks for a photo; Settings and saved drafts are secondary. Local OCR runs after capture and suggests plate candidates, never approval. The compact review exposes a small Edit action and category dropdown. Automatic category classification is not implemented: a new report has no selected category and cannot be sent until the user chooses one. The picker uses the city-sourced subject catalog and its plate requirements; generic category suggestions remain advisory stubs, not a trained classifier.
+The home screen asks for a photo; Settings and saved drafts are secondary. Local OCR runs after capture and suggests plate candidates, never approval. The compact review exposes a small Edit action and category dropdown. Automatic category classification is not implemented: a new report has no selected category and cannot be sent until the user chooses one. These are local preview categories, not validated municipal category identifiers.
 
-Broken-sign and faded-crosswalk categories require an empty plate; changing from a vehicle category clears the plate and the saved ready digest. Returning to vehicle parking requires a reviewed plate again. Reporter details remain in Settings. Missing address, time offset, location or description still blocks sending. Geocoding remains opt-in with provider disclosure. Send is disabled until its validation and settings requirements pass; the guarded direct municipal transport exists. Production readiness and physical-device validation are not established by that fact.
+Broken-sign and faded-crosswalk categories require an empty plate; changing from a vehicle category clears the plate and the saved ready digest. Returning to vehicle parking requires a reviewed plate again. Reporter details remain in Settings. Missing address, time offset, location or description still blocks sending. Geocoding remains opt-in with provider disclosure. Send is visibly disabled; production enrollment and transport remain outside this preview.
 
 ## Review address presentation (#204)
 

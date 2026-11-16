@@ -41,7 +41,7 @@ Every workflow ends with a `Run summary` job that writes a summary to the top of
 | M5 | Approved submission, receipt and uncertain-state reconciliation |
 | M6 | Optional separate plate-masked social export |
 
-See the [runtime architecture and diagrams](ARCHITECTURE.md), [design](docs/DESIGN.md), [preview status](M1_STATUS.md), [taxonomy parity](docs/MUNICIPAL_TAXONOMY.md), [security](SECURITY.md), [contributing](CONTRIBUTING.md) and [release checklist](docs/RELEASE_CHECKLIST.md).
+See [design](docs/DESIGN.md), [preview status](M1_STATUS.md), [taxonomy parity](docs/MUNICIPAL_TAXONOMY.md), [security](SECURITY.md), [contributing](CONTRIBUTING.md) and [release checklist](docs/RELEASE_CHECKLIST.md).
 
 ## Safety
 
