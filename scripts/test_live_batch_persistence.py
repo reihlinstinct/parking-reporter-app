@@ -74,5 +74,69 @@ class PersistenceTest(unittest.TestCase):
         with self.assertRaises(InvalidBatch): stale.reserve(dict(self.m, batchId='other'))
         self.assertTrue(stale.poisoned)
 
+    def test_real_hybrid_process_death_keeps_remote_intent_across_both_lanes(self):
+        import json
+        import os
+        import subprocess
+        import sys
+        # The file-backed remote is a local test stand-in. Only encrypted bytes
+        # cross the child-process boundary; no municipal/network operation exists.
+        child = r'''
+import hashlib,json,os,sys
+from pathlib import Path
+from live_batch_hybrid import run_hybrid
+from live_batch_persistence import DurableBatchJournal
+class DiskRemote:
+    def load(self):
+        data=Path(sys.argv[1]).read_bytes()
+        return hashlib.sha256(data).hexdigest(),data
+    def save(self, revision, blob):
+        assert self.load()[0]==revision
+        temporary=Path(sys.argv[1]+'.tmp')
+        with temporary.open('wb') as stream:
+            stream.write(blob);stream.flush();os.fsync(stream.fileno())
+        os.replace(temporary,sys.argv[1])
+        return hashlib.sha256(blob).hexdigest()
+j=DurableBatchJournal(sys.argv[2],DiskRemote(),b'synthetic-test-key-not-real-secret')
+m=json.loads(sys.argv[3]);counter=[0]
+class Port:
+    def preflight(self,reports): pass
+    def boundary(self):
+        counter[0]+=1
+        if counter[0]==int(sys.argv[4]):os._exit(73)
+    def create(self,report):
+        self.boundary();return {'WebCaseIdInCRM':'synthetic-'+report['reportId']}
+    def attach(self,case,report,photo):
+        self.boundary();return True
+run_hybrid(j,m,['ui'],Port(),Port())
+'''
+        manifest = {'schemaVersion':2,'batchId':'hybrid-kill','reports':[
+            dict(reportId='ui',textSha256='1'*64,photos=[dict(sha256='3'*64)]),
+            dict(reportId='direct',textSha256='2'*64,photos=[dict(sha256='4'*64)])]}
+        expected=[('creating','reserved'),('attaching','reserved'),
+                  ('complete','creating'),('complete','attaching')]
+        for boundary,states in enumerate(expected,1):
+            with self.subTest(boundary=boundary):
+                remote=self.p/('remote%d.enc'%boundary)
+                remote.write_bytes(self.remote.blob)
+                result=subprocess.run([sys.executable,'-c',child,str(remote),
+                    str(self.p/('child%d.db'%boundary)),json.dumps(manifest),str(boundary)],
+                    env=dict(os.environ,PYTHONPATH=str(Path(__file__).parent)),capture_output=True,timeout=15)
+                self.assertEqual(result.returncode,73)
+                class ReadOnlyRemote:
+                    def load(inner):return 'synthetic',remote.read_bytes()
+                    def save(inner,*args):raise AssertionError('replay must not save or write')
+                reopened=DurableBatchJournal(self.p/('parent%d.db'%boundary),ReadOnlyRemote(),PASSWORD)
+                try:
+                    self.assertEqual((reopened.state('ui'),reopened.state('direct')),states)
+                    from live_batch_hybrid import run_hybrid
+                    class NoWrites:
+                        def preflight(inner,reports):pass
+                        def create(inner,report):raise AssertionError('must never replay')
+                        def attach(inner,*args):raise AssertionError('must never resend')
+                    with self.assertRaises(InvalidBatch):
+                        run_hybrid(reopened,manifest,['ui'],NoWrites(),NoWrites())
+                finally:reopened.close()
+
 
 if __name__ == '__main__': unittest.main()

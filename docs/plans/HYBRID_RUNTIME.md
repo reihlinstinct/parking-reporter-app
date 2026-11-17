@@ -82,11 +82,14 @@ flowchart TD
    a writer until both converge and the CAS journal owns both lanes.
 6. Cache550consumer integration and cold fallback. Producer is merged, first
    scheduled output not yet verified/benchmarked. No speed savings claimed.
-7. Full mock HTTP server integration, external process-kill tests spanning both
-   adapters, authenticated backup rollback protection beyond CAS, malformed/oversized image decode
+7. Full UI/direct mock HTTP integration, authenticated backup rollback
+   protection beyond CAS, malformed/oversized image decode
    matrix, leak tests on actual encrypted evidence inventory and supervised
    owner-approved live proof. Current controller tests use injected mocks;
-   persistence tests cover save failure and reopening, not full UI process death.
+   persistence tests cover save failure and reopening. A real hybrid controller
+   child-process exit at each of four UI/direct create/attach boundaries proves
+   encrypted file-backed remote intent survives and forbids replay on reopening.
+   This is not a full emulator/UI-adapter process-death proof.
 
 No new workflow pretends these gates are satisfied. Existing single-report route
 remains unchanged. The author guide remains honest about the missing submit step.
