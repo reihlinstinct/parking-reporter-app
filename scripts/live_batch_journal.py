@@ -21,6 +21,11 @@ class BatchJournal:
         finally:
             os.close(fd)
         self.db = sqlite3.connect(path, isolation_level=None, timeout=5)
+        version = self.db.execute('PRAGMA user_version').fetchone()[0]
+        tables = {r[0] for r in self.db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        if version != 1 and (version != 0 or tables):
+            self.db.close()
+            raise InvalidBatch('unsupported journal schema version')
         self.db.execute('PRAGMA foreign_keys=ON')
         self.db.execute('PRAGMA synchronous=FULL')
         self.db.executescript('''
@@ -36,6 +41,7 @@ class BatchJournal:
                 position INTEGER NOT NULL, state TEXT NOT NULL,
                 UNIQUE(report, position));
         ''')
+        self.db.execute('PRAGMA user_version=1')
 
     def close(self):
         self.db.close()
@@ -73,7 +79,9 @@ class BatchJournal:
                     for j, photo in enumerate(report['photos']):
                         self.db.execute('INSERT INTO photos VALUES(?,?,?,?)',
                                         (photo['sha256'], report['reportId'], j, 'reserved'))
-        except sqlite3.IntegrityError:
+        except sqlite3.IntegrityError as error:
+            if 'reports.text_digest' in str(error):
+                raise InvalidBatch('text identity already reserved; reconcile incident first') from None
             raise InvalidBatch('batch or photo identity already reserved') from None
 
     def begin_create(self, report_id):

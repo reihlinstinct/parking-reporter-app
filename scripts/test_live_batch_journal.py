@@ -42,9 +42,24 @@ class JournalTest(unittest.TestCase):
         run_mock_batch(self.journal, self.manifest, Adapter())
         new = dict(batchId='fresh', reports=[dict(reportId='fresh', textSha256='1'*64,
                                                 photos=[dict(sha256='f'*64)])])
-        with self.assertRaises(InvalidBatch):
+        with self.assertRaisesRegex(InvalidBatch, 'text identity already reserved'):
             self.journal.reserve(new)
         self.assertIsNone(self.journal.db.execute("SELECT 1 FROM batches WHERE id='fresh'").fetchone())
+
+    def test_schema_version_refuses_unknown_or_legacy_db(self):
+        import sqlite3
+        for version, legacy in [(2, False), (0, True)]:
+            path = Path(self.tmp.name) / ('schema%d.db' % version)
+            fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
+            os.close(fd)
+            db = sqlite3.connect(path)
+            db.execute('PRAGMA user_version=%d' % version)
+            if legacy:
+                db.execute('CREATE TABLE old_data(id TEXT)')
+            db.close()
+            with self.assertRaisesRegex(InvalidBatch, 'unsupported journal schema version'):
+                BatchJournal(path)
+        self.assertEqual(self.journal.db.execute('PRAGMA user_version').fetchone()[0], 1)
 
     def test_manifest_binding_computed_and_mismatch_rejected(self):
         stored = self.journal.db.execute("SELECT manifest_digest FROM batches WHERE id='batch'").fetchone()[0]
