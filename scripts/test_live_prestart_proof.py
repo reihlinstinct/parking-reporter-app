@@ -60,7 +60,7 @@ class ProofTest(unittest.TestCase):
                         WORKFLOW.index('rm -f files/live-params.json'))
         bundle = next(line for line in WORKFLOW.splitlines() if 'tar czf private-bundle.tgz' in line)
         self.assertNotIn('log.collected', bundle)
-        self.assertLess(WORKFLOW.index('snapshot-live-prestart-proof.sh'),
+        self.assertLess(WORKFLOW.index('capture-live-prestart-proof.sh'),
                         WORKFLOW.index('instrumentation output unavailable;'))
 
 

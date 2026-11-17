@@ -395,7 +395,7 @@ jobs:
             cp "$first" recording.mp4
           fi
           # Capture fixed proof BEFORE fallback text or shredding destroys the raw observations.
-          sh "$GITHUB_WORKSPACE/scripts/snapshot-live-prestart-proof.sh" "$PWD"
+          sh "$GITHUB_WORKSPACE/scripts/capture-live-prestart-proof.sh" "$PWD"
           # A transport failure can leave raw instrumentation empty. Keep a
           # fixed diagnostic rather than discarding every other private file.
           if [ ! -s instrumentation.txt ]; then
@@ -418,7 +418,7 @@ jobs:
           set -euo pipefail
           cd /tmp/live-e2e
           if [ -f staged.ok ] && [ -f failed-before-start.proven ]; then
-            # Snapshot exists only after successful device probes plus raw pre-start checks.
+            # Captured proof exists only after successful device probes plus raw pre-start checks.
             # It survives encryption/shred; missing proof always burns the identity.
             echo 'failed before any submission state existed (device answered, none found); digest stays re-runnable'
           elif [ -f staged.ok ] && [ -f log.collected ] \
