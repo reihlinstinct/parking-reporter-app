@@ -29,8 +29,10 @@ flowchart TD
   reservation/intent/result transaction must be acknowledged remotely before
   returning. Save failure poisons the local instance. Missing/corrupt/oversized
   remote journal blocks; no implicit bootstrap, reset or retry. SQLite FULL sync
-  and consistent backup are used. Current768KiBplain cap is conservative and
-  requires deliberate storage migration before growing beyond it.
+  and consistent backup are used. The original768KiBplain cap
+  was the original format's limit. The bounded V2 compression format now separates
+  an8MiBdecoded SQLite limit from a768KiBcompressed limit; see
+  `JOURNAL_CAPACITY.md`. Actual full-history capacity is still unverified.
 - `live_batch_hybrid.py`: injected UI/direct ports, one or two UI report IDs,
   whole-batch preflight, whole-batch reserve, sequential per-write durable state.
   No adapter fallback/resume/release. Zero-photo CreateCase completes. Mock tests

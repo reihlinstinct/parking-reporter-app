@@ -58,15 +58,15 @@ kind, missing-byte claims, reopen, transactional rollback, conflict refusal,
 schema migration, remote-import refusal, and both-lane write blocking. They do
 not establish real historical coverage or authorize a production seed.
 
-## Capacity is still a blocker
+## Capacity remains bounded, real coverage still unverified
 
-The persistence limit remains 768 KiB of plaintext SQLite. A synthetic 640-source
-history with two text and two photo candidates per source exceeds it. The
-regression proves that every alias remains locally represented and `seal`
-refuses the oversized snapshot before importing cryptography or deriving a key.
-The test blocks cryptography imports to verify this dependency boundary. This deliberately blocks remote seed; it does
-not silently raise the cap, truncate history, or claim that production storage
-can hold the full archive. Storage migration/capacity design remains separate.
+The V2 envelope uses bounded compression: up to8MiBdecoded SQLite and768KiB
+compressed payload, with authenticated decoded length and bounded decompression.
+The synthetic640-source history now round-trips with all sources and aliases
+unchanged, rather than being refused solely by the old768KiBplaintext limit.
+Oversized plaintext or compressed payloads still fail before crypto imports.
+See `JOURNAL_CAPACITY.md` for compatibility and limits. This is synthetic format
+proof, not real-history capacity, completeness, seed approval or activation.
 
 This PR initially targeted the inactive hybrid branch. Its earlier smaller check
 list was not full CI proof because main-target workflows did not run. It is now

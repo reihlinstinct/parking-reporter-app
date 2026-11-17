@@ -5,11 +5,10 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
 
 from live_batch_input import InvalidBatch
 from live_batch_journal import BatchJournal
-from live_batch_persistence import DurableBatchJournal, MAX_PLAIN, seal
+from live_batch_persistence import DurableBatchJournal, LEGACY_MAX_PLAIN, MAX_ENVELOPE, seal, unseal
 
 
 class HeldAliasesTest(unittest.TestCase):
@@ -87,7 +86,7 @@ class HeldAliasesTest(unittest.TestCase):
         with self.assertRaisesRegex(InvalidBatch, 'offline bootstrap'):
             remote.hold_legacy_sources(self.commit, [self.record])
 
-    def test_synthetic_large_history_is_preserved_but_remote_capacity_fails_closed(self):
+    def test_synthetic_large_history_roundtrips_with_every_alias_preserved(self):
         records = []
         sha = lambda value: hashlib.sha256(value.encode()).hexdigest()
         for i in range(640):
@@ -101,8 +100,6 @@ class HeldAliasesTest(unittest.TestCase):
         self.j.hold_legacy_sources(self.commit, records)
         self.assertEqual(self.j.db.execute('SELECT count(*) FROM legacy_sources').fetchone()[0], 640)
         self.assertEqual(self.j.db.execute('SELECT count(*) FROM legacy_aliases').fetchone()[0], 3200)
-        # Seal rejects before importing crypto, deriving a key or remote work.
-        # The answer must not be dropping candidates or quietly raising the cap.
         with tempfile.TemporaryDirectory() as snapshot_dir:
             import sqlite3
             snapshot = Path(snapshot_dir) / 'synthetic-snapshot.db'
@@ -110,16 +107,22 @@ class HeldAliasesTest(unittest.TestCase):
             try: self.j.db.backup(target)
             finally: target.close()
             data = snapshot.read_bytes()
-        self.assertGreater(len(data), MAX_PLAIN)
-        import builtins
-        real_import = builtins.__import__
-        def reject_crypto_import(name, *args, **kwargs):
-            if name == 'cryptography' or name.startswith('cryptography.'):
-                raise AssertionError('capacity refusal must not import cryptography')
-            return real_import(name, *args, **kwargs)
-        with patch('builtins.__import__', side_effect=reject_crypto_import):
-            with self.assertRaisesRegex(InvalidBatch, 'journal capacity exceeded'):
-                seal(data, b'synthetic-capacity-test-password')
+        self.assertGreater(len(data), LEGACY_MAX_PLAIN)
+        blob = seal(data, b'synthetic-capacity-test-password')
+        self.assertLessEqual(len(blob), MAX_ENVELOPE)
+        self.assertEqual(unseal(blob, b'synthetic-capacity-test-password'), data)
+        restored = Path(self.tmp.name) / 'roundtrip.db'
+        restored.write_bytes(unseal(blob, b'synthetic-capacity-test-password'))
+        restored.chmod(0o600)
+        reopened = BatchJournal(restored)
+        try:
+            self.assertEqual(reopened.db.execute('SELECT count(*) FROM legacy_sources').fetchone()[0], 640)
+            self.assertEqual(reopened.db.execute('SELECT count(*) FROM legacy_aliases').fetchone()[0], 3200)
+            self.assertEqual(reopened.db.execute('SELECT * FROM legacy_sources ORDER BY source').fetchall(),
+                             self.j.db.execute('SELECT * FROM legacy_sources ORDER BY source').fetchall())
+            self.assertEqual(reopened.db.execute('SELECT * FROM legacy_aliases ORDER BY kind,digest').fetchall(),
+                             self.j.db.execute('SELECT * FROM legacy_aliases ORDER BY kind,digest').fetchall())
+        finally: reopened.close()
         self.assertEqual(self.j.db.execute('SELECT count(*) FROM legacy_aliases').fetchone()[0], 3200)
 
     def test_invalid_commit_and_empty_identity_refused(self):
