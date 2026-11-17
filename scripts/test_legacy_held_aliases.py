@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from live_batch_input import InvalidBatch
 from live_batch_journal import BatchJournal
@@ -100,7 +101,7 @@ class HeldAliasesTest(unittest.TestCase):
         self.j.hold_legacy_sources(self.commit, records)
         self.assertEqual(self.j.db.execute('SELECT count(*) FROM legacy_sources').fetchone()[0], 640)
         self.assertEqual(self.j.db.execute('SELECT count(*) FROM legacy_aliases').fetchone()[0], 3200)
-        # Seal rejects before deriving a key or attempting any remote operation.
+        # Seal rejects before importing crypto, deriving a key or remote work.
         # The answer must not be dropping candidates or quietly raising the cap.
         with tempfile.TemporaryDirectory() as snapshot_dir:
             import sqlite3
@@ -110,8 +111,15 @@ class HeldAliasesTest(unittest.TestCase):
             finally: target.close()
             data = snapshot.read_bytes()
         self.assertGreater(len(data), MAX_PLAIN)
-        with self.assertRaisesRegex(InvalidBatch, 'journal capacity exceeded'):
-            seal(data, b'synthetic-capacity-test-password')
+        import builtins
+        real_import = builtins.__import__
+        def reject_crypto_import(name, *args, **kwargs):
+            if name == 'cryptography' or name.startswith('cryptography.'):
+                raise AssertionError('capacity refusal must not import cryptography')
+            return real_import(name, *args, **kwargs)
+        with patch('builtins.__import__', side_effect=reject_crypto_import):
+            with self.assertRaisesRegex(InvalidBatch, 'journal capacity exceeded'):
+                seal(data, b'synthetic-capacity-test-password')
         self.assertEqual(self.j.db.execute('SELECT count(*) FROM legacy_aliases').fetchone()[0], 3200)
 
     def test_invalid_commit_and_empty_identity_refused(self):

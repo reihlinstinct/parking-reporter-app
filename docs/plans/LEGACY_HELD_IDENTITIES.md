@@ -32,8 +32,13 @@ class cannot provision or bootstrap the remote journal.
 Each record contains `source`, `sourceSha256`, `status`, `reportIds`,
 `textCandidates`, `photoCandidates`, and `unresolvedReferences`. Candidates contain
 `field` and `sha256`. The call separately pins the 40-character archive commit.
-Report IDs are hashed for lookup while their source values remain in encrypted
-private provenance. This format contains no instruction or live-action field.
+Report IDs are hashed for lookup while their source values remain in private
+provenance. The local SQLite database and its local snapshots are plaintext,
+protected by private filesystem permissions (database mode 0600), not encrypted
+at rest by SQLite. Provenance is encrypted only when the snapshot is passed to
+`seal` for remote storage. Keep local files and temporary directories private;
+never publish or upload the plaintext database. This format contains no
+instruction or live-action field.
 
 ## Still required before any real seed
 
@@ -57,8 +62,9 @@ not establish real historical coverage or authorize a production seed.
 
 The persistence limit remains 768 KiB of plaintext SQLite. A synthetic 640-source
 history with two text and two photo candidates per source exceeds it. The
-regression proves that every alias remains locally represented and encryption
-refuses the oversized snapshot. This deliberately blocks remote seed; it does
+regression proves that every alias remains locally represented and `seal`
+refuses the oversized snapshot before importing cryptography or deriving a key.
+The test blocks cryptography imports to verify this dependency boundary. This deliberately blocks remote seed; it does
 not silently raise the cap, truncate history, or claim that production storage
 can hold the full archive. Storage migration/capacity design remains separate.
 
