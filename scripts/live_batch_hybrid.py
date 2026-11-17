@@ -21,9 +21,9 @@ class BridgeAdapter:
 
     def _stop(self):
         self.poisoned = True
-        if self.process.poll() is None:
-            self.process.kill()
         try:
+            if self.process.poll() is None:
+                self.process.kill()
             self.process.wait(timeout=5)
         except (subprocess.TimeoutExpired, OSError):
             # Remain poisoned; never let cleanup replace the controlled error.
