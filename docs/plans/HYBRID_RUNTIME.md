@@ -106,3 +106,14 @@ bytes remains required and is bound by the generated outerdigest. Input data is
 not source code. No private CI run or paid runner is needed. A preparation-only
 workflow does not satisfy this criterion; no live route is claimed ready until
 both lanes, durable oldidentityjournal and credential/approval boundaries work.
+
+### Inactive workflow gate
+
+The preparation job is hard-disabled in source (`if: false`). Dispatch cannot
+expose its environment secrets while this route is inactive. Activation requires
+a separate reviewed change and verification of required environment reviewers;
+no environment protection/settings were changed here. Preparation also requires
+independent approved outer package, decrypted ZIP and address-directory SHA256
+values. The fetch layer already checked outer approval before this change; the
+entry script now repeats it explicitly and no longer derives inner/directory pins
+from the bytes being checked. A rerun counter is not access control.

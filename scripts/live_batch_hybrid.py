@@ -23,7 +23,11 @@ class BridgeAdapter:
         self.poisoned = True
         if self.process.poll() is None:
             self.process.kill()
-        self.process.wait(timeout=5)
+        try:
+            self.process.wait(timeout=5)
+        except (subprocess.TimeoutExpired, OSError):
+            # Remain poisoned; never let cleanup replace the controlled error.
+            pass
 
     def request(self, operation, **payload):
         need(not self.poisoned and self.process.poll() is None, 'private bridge unavailable')
