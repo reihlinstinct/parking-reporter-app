@@ -52,3 +52,17 @@ The tests use synthetic records only. They cover shared provenance, each identit
 kind, missing-byte claims, reopen, transactional rollback, conflict refusal,
 schema migration, remote-import refusal, and both-lane write blocking. They do
 not establish real historical coverage or authorize a production seed.
+
+## Capacity is still a blocker
+
+The persistence limit remains 768 KiB of plaintext SQLite. A synthetic 640-source
+history with two text and two photo candidates per source exceeds it. The
+regression proves that every alias remains locally represented and encryption
+refuses the oversized snapshot. This deliberately blocks remote seed; it does
+not silently raise the cap, truncate history, or claim that production storage
+can hold the full archive. Storage migration/capacity design remains separate.
+
+This PR initially targets the inactive hybrid branch. Workflows limited to PRs
+targeting main do not run on that stacked base. The smaller check list is not full
+CI proof: after its parent merges, retarget to main and require the normal full
+CI and independent exact-head review before merging this slice.

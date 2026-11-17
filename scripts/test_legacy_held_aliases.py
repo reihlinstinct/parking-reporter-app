@@ -1,5 +1,6 @@
 """Synthetic legacy candidates only. No real archive, credentials or remote seed."""
 import copy
+import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -7,7 +8,7 @@ import unittest
 
 from live_batch_input import InvalidBatch
 from live_batch_journal import BatchJournal
-from live_batch_persistence import DurableBatchJournal
+from live_batch_persistence import DurableBatchJournal, MAX_PLAIN, seal
 
 
 class HeldAliasesTest(unittest.TestCase):
@@ -84,6 +85,34 @@ class HeldAliasesTest(unittest.TestCase):
         remote = object.__new__(DurableBatchJournal)
         with self.assertRaisesRegex(InvalidBatch, 'offline bootstrap'):
             remote.hold_legacy_sources(self.commit, [self.record])
+
+    def test_synthetic_large_history_is_preserved_but_remote_capacity_fails_closed(self):
+        records = []
+        sha = lambda value: hashlib.sha256(value.encode()).hexdigest()
+        for i in range(640):
+            records.append(dict(source=f'reports/synthetic-{i:05}/report.json',
+                                sourceSha256=sha(f'synthetic-source-{i}'), status='uncertain',
+                                reportIds=[f'synthetic-{i}'], unresolvedReferences=[],
+                                textCandidates=[dict(field=f'text-{k}', sha256=sha(f'text-{i}-{k}'))
+                                                for k in range(2)],
+                                photoCandidates=[dict(field=f'photo-{k}', sha256=sha(f'photo-{i}-{k}'))
+                                                 for k in range(2)]))
+        self.j.hold_legacy_sources(self.commit, records)
+        self.assertEqual(self.j.db.execute('SELECT count(*) FROM legacy_sources').fetchone()[0], 640)
+        self.assertEqual(self.j.db.execute('SELECT count(*) FROM legacy_aliases').fetchone()[0], 3200)
+        # Seal rejects before deriving a key or attempting any remote operation.
+        # The answer must not be dropping candidates or quietly raising the cap.
+        with tempfile.TemporaryDirectory() as snapshot_dir:
+            import sqlite3
+            snapshot = Path(snapshot_dir) / 'synthetic-snapshot.db'
+            target = sqlite3.connect(snapshot)
+            try: self.j.db.backup(target)
+            finally: target.close()
+            data = snapshot.read_bytes()
+        self.assertGreater(len(data), MAX_PLAIN)
+        with self.assertRaisesRegex(InvalidBatch, 'journal capacity exceeded'):
+            seal(data, b'synthetic-capacity-test-password')
+        self.assertEqual(self.j.db.execute('SELECT count(*) FROM legacy_aliases').fetchone()[0], 3200)
 
     def test_invalid_commit_and_empty_identity_refused(self):
         for commit in ('main', 'a' * 39, 'A' * 40):
