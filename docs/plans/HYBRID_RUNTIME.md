@@ -120,3 +120,16 @@ independent approved outer package, decrypted ZIP and address-directory SHA256
 values. The fetch layer already checked outer approval before this change; the
 entry script now repeats it explicitly and no longer derives inner/directory pins
 from the bytes being checked. A rerun counter is not access control.
+
+### Encryption parameters and dispatch visibility
+
+Both inactive preparation encryption and decryption explicitly pin PBKDF2 with
+SHA256 and 200000 iterations; they do not rely on an OpenSSL digest default.
+Dispatch input hashes are approval fingerprints, not secrets. On a public
+repository, treat every dispatch input as visible: no text, address, plate,
+credentials, private filenames containing personal data, or decryption keys may
+be entered there. A digest can still correlate a known file; do not represent
+hashes as anonymous or confidential. Actual private bytes remain in the private
+repository and encrypted artifacts. Approval fingerprints do not grant access or
+permission by themselves. This workflow remains hard-disabled; privacy review
+of the final operational input path is still required before activation.
