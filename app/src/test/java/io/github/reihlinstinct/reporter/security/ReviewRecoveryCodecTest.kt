@@ -8,18 +8,18 @@ import java.nio.charset.CharacterCodingException
 
 class ReviewRecoveryCodecTest {
     private fun fixture(plate: String = "1122334", text: String = "שורה ראשונה\nsynthetic second line",
-        rawLat: String = "31.75", lat: Double? = 31.75, gps: Boolean = true,
+        rawPlate: String = "CD 12-", rawLat: String = "31.75", lat: Double? = 31.75, gps: Boolean = true,
         warnings: Set<String> = setOf("address_needs_confirmation"), edits: Int = 3,
         plateClass: String = "regular", rendered: List<ReviewRecoveryCodec.Sentence> = listOf(
             ReviewRecoveryCodec.Sentence("state.synthetic", "synthetic template"))) =
         ReviewRecoveryCodec.Snapshot(plate, plateClass, false, "synthetic address", "synthetic subject", text,
-            warnings, "2026-11-16T12:00:00Z", lat, 35.25, "CD 12-", edits, rawLat, "35.25",
+            warnings, "2026-11-16T12:00:00Z", lat, 35.25, rawPlate, edits, rawLat, "35.25",
             "raw street", "12a", "cross street", "saved street", "11", "7654321", gps,
             true, true, true, "synthetic-tag", rendered, true, "baseline street",
             setOf("suggested_address_needs_confirmation"))
     private inline fun <reified T : Exception> rejects(block: () -> Unit) {
         try { block(); fail("Expected rejection") }
-        catch (e: Exception) { assertTrue("Wrong exception type", e is T) }
+        catch (e: Exception) { assertTrue("Wrong exception type: ${e::class.java.name}", e is T) }
     }
     private fun fields(s: ReviewRecoveryCodec.Snapshot): List<Any?> = listOf(
         s.plate, s.plateClass, s.plateRequired, s.address, s.subject, s.text, s.unresolved,
@@ -39,6 +39,25 @@ class ReviewRecoveryCodecTest {
         assertEquals(3, result.plateEdits)
         assertEquals("7654321", result.ocrPrefilledPlate)
         assertArrayEquals(bytes, ReviewRecoveryCodec.encode(result))
+    }
+    @Test fun rawPlateUsesProducerPredicateForAllAcceptedCharacterClasses() {
+        val raw = "\u200F\u200E\u202A\u202E\u2066\u2069\u2003cd CD cc \u05DE-\u0661\u0662\uFF13\t"
+        assertTrue(io.github.reihlinstinct.reporter.core.PlateDetect.allowed(raw))
+        val result = ReviewRecoveryCodec.decode(ReviewRecoveryCodec.encode(fixture(rawPlate = raw)))
+        assertEquals(raw, result.plateRaw)
+        // Every UTF-16 character accepted by the producer must pass the codec unchanged (within byte bound).
+        for (code in 0..Char.MAX_VALUE.code) {
+            val value = code.toChar().toString()
+            if (io.github.reihlinstinct.reporter.core.PlateDetect.allowed(value)) {
+                assertEquals(value, ReviewRecoveryCodec.decode(ReviewRecoveryCodec.encode(fixture(rawPlate = value))).plateRaw)
+            }
+        }
+        rejects<IllegalArgumentException> { ReviewRecoveryCodec.encode(fixture(rawPlate = "<")) }
+    }
+    @Test fun longRawPlateFailsClosedWithoutTruncatingUserInput() {
+        val exact = "1".repeat(ReviewRecoveryCodec.PLATE_BYTES)
+        assertEquals(exact, ReviewRecoveryCodec.decode(ReviewRecoveryCodec.encode(fixture(rawPlate = exact))).plateRaw)
+        rejects<IllegalArgumentException> { ReviewRecoveryCodec.encode(fixture(rawPlate = exact + "1")) }
     }
     @Test fun incompleteCoordinatesAndEmptyPlateAreNotNormalized() {
         val source = fixture(plate = "", rawLat = "-", lat = null, gps = false)

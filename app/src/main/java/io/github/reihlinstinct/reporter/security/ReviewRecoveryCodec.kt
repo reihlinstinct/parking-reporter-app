@@ -1,5 +1,6 @@
 package io.github.reihlinstinct.reporter.security
 
+import io.github.reihlinstinct.reporter.core.PlateDetect
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
@@ -54,7 +55,7 @@ object ReviewRecoveryCodec {
 
     private fun validate(s: Snapshot) {
         require(s.plateClass in setOf("regular", "police", "cd", "cc")) { "Invalid recovery plate class" }
-        require(s.plateRaw.matches(Regex("[0-9A-Za-z\\u05DE \\t\\u00A0\\u2007\\u202F\\u05BE\\u2010-\\u2015\\u2212-]*"))) { "Invalid recovery raw plate" }
+        require(PlateDetect.allowed(s.plateRaw)) { "Invalid recovery raw plate" }
         require(s.plateEdits >= 0) { "Invalid recovery provenance" }
         require(s.unresolved.all { it in warnings } && s.pendingAddressWarnings.all {
             it == "address_needs_confirmation" || it == "suggested_address_needs_confirmation"
@@ -110,6 +111,8 @@ object ReviewRecoveryCodec {
         return out.toByteArray()
     }
 
+    /** Rejects malformed data with IllegalArgumentException or IOException (including EOF and UTF-8 errors).
+     * A future caller must catch both, discard recovery only, and never log the payload/error message. */
     fun decode(bytes: ByteArray): Snapshot {
         require(bytes.size in 4..ReviewRecoveryEnvelope.MAX_PAYLOAD_BYTES) { "Invalid recovery snapshot size" }
         val input = ByteArrayInputStream(bytes)
