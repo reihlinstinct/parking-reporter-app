@@ -62,6 +62,7 @@ class ReviewRecoveryAtomicSlot(context: Context) : ReviewRecoveryWriter.Slot {
                         if (actual == null || !actual.contentEquals(expected)) throw IOException("Recovery commit unverified")
                     } finally { actual?.fill(0) }
                 } catch (failure: Throwable) {
+                    resolved = true; pending = false
                     // Restore only encrypted prior contents. Failure to restore is material and
                     // propagated, never disguised as a successful backup or deletion.
                     try {
