@@ -102,6 +102,11 @@ class BatchJournal:
         with self.transaction():
             cursor = self.db.execute("UPDATE reports SET state='case_created',case_json=? WHERE id=? AND state='creating'", (payload, report_id))
             need(cursor.rowcount == 1, 'case transition refused')
+            # A confirmed CreateCase with zero planned attachments is complete.
+            # This is transport completion, not a claim of municipal enforcement.
+            pending = self.db.execute('SELECT 1 FROM photos WHERE report=? LIMIT 1', (report_id,)).fetchone()
+            if pending is None:
+                self.db.execute("UPDATE reports SET state='complete' WHERE id=?", (report_id,))
 
     def begin_attachment(self, report_id, photo_digest):
         with self.transaction():

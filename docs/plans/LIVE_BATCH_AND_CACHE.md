@@ -1,14 +1,16 @@
 # No-code live batch intake and clean emulator cache
 
-Issue: #548. Status: isolated, inactive foundation. No live workflow changes.
+Issue: #548. Status: isolated, inactive foundation. No live workflow changes. For current author input and offline-only validation steps see [LIVE_BATCH_INPUT.md](../LIVE_BATCH_INPUT.md).
 
 ## Owner outcome
 
-One private ZIP contains photos, the pinned address directory and one JSON manifest. A protected main-only job accepts a full private data commit SHA, constrained batch path and exact archive SHA256. It uses the existing fixed private repository and redirect-free read credential pattern in `fetch-live-photo.py`; no new credential is created by this foundation. Each report has its own municipal topic, exact text, location, capture time, plate and one or more photos. The job submits reports sequentially using the app UI. No source commit or per-report repository-secret edit is needed.
+One private ZIP contains photos, the pinned address directory and one JSON manifest. A protected main-only job accepts a full private data commit SHA, constrained batch path and exact archive SHA256. It uses the existing fixed private repository and redirect-free read credential pattern in `fetch-live-photo.py`; no new credential is created by this foundation. Each report has its own municipal topic, exact text, location, capture time, plate and one or more photos. Target: each separately arriving package runs independently, with one or two owner-selected reports through the app/emulator and the rest through the production API without GUI. Both lanes must share durable ambiguity state and one live concurrency group. This hybrid integration is not implemented by the intake foundation. No source commit or per-report repository-secret edit is needed.
 
 The manifest is data, not permission. Execution still requires source-grounded owner authority for each report, exact manifest approval binding and the existing protected environment. Unknown topics need separate authority. No arbitrary steps, code, URLs, credentials or shell fields are accepted. Reporter credentials are injected separately from existing approved secrets after all checks.
 
-## Input contract (v1)
+## Legacy input contract (v1)
+
+Version2 author input makes machine-derived fields optional; see the linked input guide. Version1 remains strict for compatibility.
 
 ZIP entries: `manifest.json`, `addresses.json`, and referenced `photos/*.jpg|jpeg|png`. Only stored/deflated regular files; no directories, links, duplicate names, traversal or extras. Caps: 50 reports, 10 photos per report, 512 entries, 100 MiB compressed, 200 MiB expanded and 1 MiB JSON. These are intake ceilings, not claims of municipal upload limits. The live adapter must enforce verified municipal limits before dispatch.
 

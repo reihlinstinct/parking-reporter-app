@@ -60,7 +60,8 @@ def safe_name(name):
 def validate_manifest(m, files, subjects):
     """subjects is an independently verified set of current leaf topic codes."""
     keys(m, ("schemaVersion", "batchId", "reports"))
-    need(type(m["schemaVersion"]) is int and m["schemaVersion"] == 1)
+    need(type(m["schemaVersion"]) is int and m["schemaVersion"] in (1, 2))
+    modern = m["schemaVersion"] == 2
     identifier(m["batchId"])
     reports = m["reports"]
     need(isinstance(reports, list) and 1 <= len(reports) <= 50)
@@ -73,20 +74,21 @@ def validate_manifest(m, files, subjects):
         text(report["text"], 10000)
         digest(report["textSha256"])
         need(hashlib.sha256(report["text"].encode()).hexdigest() == report["textSha256"], "text digest mismatch")
-        need(isinstance(report["plate"], str) and re.fullmatch(r"[0-9]{5,8}", report["plate"]) is not None)
+        need(isinstance(report["plate"], str) and ((modern and report["plate"] == "") or re.fullmatch(r"[0-9]{5,8}", report["plate"]) is not None))
         text(report["address"], 300)
         for field, bound in (("latitude", 90), ("longitude", 180)):
             value = report[field]
             need(type(value) in (int, float) and math.isfinite(value) and -bound <= value <= bound)
-        text(report["capturedAt"], 40)
-        try:
-            captured = dt.datetime.fromisoformat(report["capturedAt"])
-            need(captured.utcoffset() is not None)
-        except (ValueError, TypeError):
-            raise InvalidBatch("invalid capture time") from None
+        if not modern or report["capturedAt"] is not None:
+            text(report["capturedAt"], 40)
+            try:
+                captured = dt.datetime.fromisoformat(report["capturedAt"])
+                need(captured.utcoffset() is not None)
+            except (ValueError, TypeError):
+                raise InvalidBatch("invalid capture time") from None
         need(isinstance(report["subjectCode"], str) and report["subjectCode"] in subjects, "unverified subject code")
         images = report["photos"]
-        need(isinstance(images, list) and 1 <= len(images) <= 10)
+        need(isinstance(images, list) and (0 if modern else 1) <= len(images) <= 10)
         for image in images:
             keys(image, ("path", "sha256"))
             name = safe_name(image["path"])
@@ -103,7 +105,7 @@ def validate_manifest(m, files, subjects):
     return m
 
 
-def validate_zip(path, expected_sha256, subjects, addresses_sha256):
+def validate_zip(path, expected_sha256, subjects, addresses_sha256, *, topic_policy=None):
     """Validate immutable bytes before staging; never extract arbitrary archive paths."""
     digest(expected_sha256)
     digest(addresses_sha256)
@@ -117,6 +119,7 @@ def validate_zip(path, expected_sha256, subjects, addresses_sha256):
             need(1 <= len(entries) <= MAX_ENTRIES, "invalid ZIP entry count")
             need(sum(e.file_size for e in entries) <= MAX_EXPANDED_BYTES, "expanded archive too large")
             files = {}
+            expanded = 0
             for entry in entries:
                 name = safe_name(entry.filename)
                 need(name not in files and not entry.is_dir(), "duplicate or directory ZIP entry")
@@ -126,7 +129,19 @@ def validate_zip(path, expected_sha256, subjects, addresses_sha256):
                 need(entry.compress_type in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED), "unsupported ZIP compression")
                 if name == "manifest.json":
                     need(entry.file_size <= MAX_MANIFEST_BYTES, "manifest too large")
-                files[name] = archive.read(entry)
+                limit = min(MAX_EXPANDED_BYTES - expanded,
+                            MAX_MANIFEST_BYTES if name == "manifest.json" else MAX_EXPANDED_BYTES)
+                data = bytearray()
+                with archive.open(entry) as decoded:
+                    while True:
+                        chunk = decoded.read(min(64 * 1024, limit - len(data) + 1))
+                        if not chunk:
+                            break
+                        data.extend(chunk)
+                        need(len(data) <= limit, "expanded entry too large")
+                expanded += len(data)
+                need(expanded <= MAX_EXPANDED_BYTES, "expanded archive too large")
+                files[name] = bytes(data)
     except (zipfile.BadZipFile, RuntimeError, NotImplementedError, OSError):
         raise InvalidBatch("unreadable ZIP") from None
     need("manifest.json" in files and "addresses.json" in files, "missing manifest or directory")
@@ -136,4 +151,12 @@ def validate_zip(path, expected_sha256, subjects, addresses_sha256):
                               parse_constant=lambda _: (_ for _ in ()).throw(InvalidBatch("invalid JSON number")))
     except (ValueError, UnicodeError):
         raise InvalidBatch("invalid manifest JSON") from None
+    if isinstance(manifest, dict) and manifest.get('schemaVersion', 2) == 2:
+        from live_batch_derive import derive_manifest
+        need(isinstance(topic_policy, dict), 'independent topic policy required')
+        try:
+            directory = json.loads(files['addresses.json'], object_pairs_hook=no_duplicates)
+        except (ValueError, UnicodeError):
+            raise InvalidBatch('invalid address directory') from None
+        manifest = derive_manifest(manifest, files, directory, subjects, topic_policy)
     return validate_manifest(manifest, files, subjects)

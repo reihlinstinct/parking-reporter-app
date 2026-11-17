@@ -42,6 +42,10 @@ jobs:
         run: bash scripts/test-stage-live-files.sh
       - name: Test encrypted live process diagnostics (mock adb only)
         run: python3 scripts/test_live_instrumentation_capture.py
+      - name: Minimal batch manifest derivation tests (offline only)
+        run: |
+          python3 scripts/run_unittest_file.py scripts/test_run_unittest_file.py
+          python3 scripts/run_unittest_file.py scripts/test_live_batch_derive.py
       - name: Test pre-start proof through encryption and shredding
         run: python3 scripts/test_live_prestart_proof.py
       - name: Private live photo staging safety tests
