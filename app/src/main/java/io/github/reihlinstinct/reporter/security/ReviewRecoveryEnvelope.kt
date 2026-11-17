@@ -18,6 +18,8 @@ object ReviewRecoveryEnvelope {
     private const val VERSION: Byte = 1
     private const val NONCE_BYTES = 12
     private const val TAG_BYTES = 16
+    /** Smallest valid envelope: version byte + nonce + tag + at least one payload byte. */
+    internal const val MIN_ENVELOPE_BYTES = 1 + NONCE_BYTES + TAG_BYTES + 1
 
     /** Immutable authenticated identity/retention data; no path or authorization state. */
     class Binding(
@@ -84,7 +86,7 @@ object ReviewRecoveryEnvelope {
     fun open(envelope: ByteArray, key: ByteArray, binding: Binding,
              nowElapsedMs: Long, bootCount: Int?, appVersionCode: Int): ByteArray {
         require(key.size == 32) { "Invalid recovery key" }
-        require(envelope.size in (1 + NONCE_BYTES + TAG_BYTES + 1)..MAX_ENVELOPE_BYTES && envelope[0] == VERSION) {
+        require(envelope.size in MIN_ENVELOPE_BYTES..MAX_ENVELOPE_BYTES && envelope[0] == VERSION) {
             "Invalid recovery envelope"
         }
         require(isFresh(binding, nowElapsedMs, bootCount, appVersionCode)) { "Recovery expired or mismatched" }
