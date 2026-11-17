@@ -23,6 +23,17 @@ import java.util.UUID
  * store; tests use an in-memory one. State JSON uses the helper's shape
  * ({"version": 1, "status": ..., "file_name": ..., "case": {...}}) so
  * cross-tool reconciliation stays possible.
+ *
+ * Multi-photo submissions (one CreateCase plus N AddFileToCase calls, #548)
+ * use [submitPhotos] with state schema version 2:
+ * {"version": 2, "status": ..., "case": {...}, "photos": [
+ *   {"file_name": ..., "sha256": ..., "status": "pending|attaching|attached"}]}.
+ * The report-level states and refusal rules are identical; the photos list
+ * adds per-photo persistence: each photo's outcome is durable on its own, so
+ * an uncertain attachment holds exactly that photo and never endangers the
+ * case or the already-confirmed photos. The two schemas never mix: submit()
+ * refuses a version-2 state and submitPhotos() refuses a version-1 state, so
+ * neither path can corrupt the other's journal.
  */
 interface SubmissionStateStore {
     /** The persisted state map, or null when nothing was persisted yet. */
@@ -46,6 +57,21 @@ sealed class SubmissionResult {
 
     data class Submitted(override val case: Map<String, Any?>) : SubmissionResult()
     data class AlreadySubmitted(override val case: Map<String, Any?>) : SubmissionResult()
+}
+
+/**
+ * One photo of a multi-photo submission (#548): the exact outgoing bytes,
+ * the file name the municipality will see, and the caller-computed SHA-256
+ * hex digest binding the two. The state machine re-computes the digest
+ * before any network call and refuses a mismatch as input, so a mis-paired
+ * name/digest can never reach the city.
+ */
+class SubmissionPhoto(fileName: String, bytes: ByteArray, val sha256: String) {
+    val fileName: String = fileName
+    private val bytes: ByteArray = bytes.copyOf()
+
+    /** A defensive copy of the outgoing bytes; mutating it changes nothing. */
+    fun bytes(): ByteArray = bytes.copyOf()
 }
 
 class SubmissionStateMachine(
@@ -79,6 +105,11 @@ class SubmissionStateMachine(
             "prepared", "creating", "created", "attaching", "complete" -> Unit
             else -> throw MunicipalReviewNeededException(
                 "Unknown saved state; inspect the stored state before continuing."
+            )
+        }
+        if (state["version"] == 2) {
+            throw MunicipalReviewNeededException(
+                "The saved state belongs to a multi-photo submission; continue it with submitPhotos."
             )
         }
         if (state["status"] == "creating") {
@@ -171,5 +202,212 @@ class SubmissionStateMachine(
         }
         completedToken?.let { token -> runCatching { afterSuccessfulSubmission?.invoke(client, token) } }
         return result
+    }
+
+    /**
+     * Multi-photo submission (#548): exactly one CreateCase, then one
+     * AddFileToCase per photo, in list order, against that same case.
+     *
+     * This path is NOT wired into the app's send flow: the single-photo
+     * submit() above remains the live route and behaves exactly as before.
+     * The batch intake controller (issue #548) is the intended caller.
+     *
+     * The v1 refusal rules carry over, with per-photo granularity:
+     * - "creating" still means an uncertain CreateCase: refuse, never resubmit;
+     * - a photo in "attaching" state means its attachment was not confirmed:
+     *   refuse unless retryPhotos=true, and retryPhotos re-attempts only
+     *   photos that were never confirmed ("pending" or "attaching"), in order,
+     *   never the case and never an already "attached" photo;
+     * - "complete" short-circuits to AlreadySubmitted with zero network calls;
+     * - the incoming photo set must equal the saved one (file names and
+     *   digests, in order): a different set is a different report and is
+     *   refused, never merged;
+     * - every photo's state change is persisted before the next network call.
+     *
+     * As in v1, ANY attachment failure marks that photo's result uncertain:
+     * even a connect failure stops the batch for a human check, because only
+     * the municipal app can prove the file never arrived.
+     */
+    @Suppress("UNCHECKED_CAST")
+    fun submitPhotos(
+        store: SubmissionStateStore,
+        contact: LinkedHashMap<String, Any?>,
+        report: LinkedHashMap<String, Any?>,
+        photos: List<SubmissionPhoto>,
+        retryPhotos: Boolean = false,
+        afterSuccessfulSubmission: ((MunicipalClient, String) -> Unit)? = null,
+    ): SubmissionResult {
+        // Input validation happens before any state write or network call:
+        // a bad batch is a caller bug, never a municipal interaction.
+        if (photos.isEmpty()) {
+            throw MunicipalInputException("A multi-photo submission needs at least one photo.")
+        }
+        val seenNames = HashSet<String>()
+        val seenDigests = HashSet<String>()
+        for (photo in photos) {
+            if (photo.bytes().isEmpty()) {
+                throw MunicipalInputException("A photo has no bytes.")
+            }
+            if (photo.fileName.isBlank() || !seenNames.add(photo.fileName)) {
+                throw MunicipalInputException("Photo file names must be non-blank and unique per case.")
+            }
+            if (!PHOTO_DIGEST_PATTERN.matches(photo.sha256)) {
+                throw MunicipalInputException("A photo digest is not a SHA-256 hex string.")
+            }
+            if (!seenDigests.add(photo.sha256)) {
+                throw MunicipalInputException("The same photo bytes appear twice in one case.")
+            }
+            if (io.github.reihlinstinct.reporter.intake.EncryptedPackage.sha256(photo.bytes()) != photo.sha256) {
+                throw MunicipalInputException("Photo bytes do not match their supplied digest.")
+            }
+        }
+        var completedToken: String? = null
+        val result = store.withSubmissionLock {
+        val contact: LinkedHashMap<String, Any?> = LinkedHashMap(contact)
+        val state: MutableMap<String, Any?> = store.read() ?: mutableMapOf<String, Any?>(
+            "version" to 2,
+            "status" to "prepared",
+        )
+        if (state["version"] != 2) {
+            throw MunicipalReviewNeededException(
+                "The saved state belongs to a single-photo submission; continue it with submit."
+            )
+        }
+        when (state["status"] as? String) {
+            "prepared", "creating", "created", "attaching", "complete" -> Unit
+            else -> throw MunicipalReviewNeededException(
+                "Unknown saved state; inspect the stored state before continuing."
+            )
+        }
+        if (state["status"] == "creating") {
+            throw MunicipalReviewNeededException(
+                "A previous case creation has an uncertain result. Check the municipal app; do not delete the state and resubmit."
+            )
+        }
+        if (state["status"] == "complete") {
+            return@withSubmissionLock SubmissionResult.AlreadySubmitted(
+                (state["case"] as? Map<String, Any?>) ?: emptyMap()
+            )
+        }
+        // Bind the saved photo set to the incoming one: the saved journal
+        // describes exactly one report, and a different set is a different
+        // report that must never reuse this case.
+        val savedPhotos = state["photos"] as? List<*>
+        if (savedPhotos == null) {
+            if (state["status"] != "prepared") {
+                throw MunicipalReviewNeededException("Saved state lost its photo journal.")
+            }
+            state["photos"] = photos.map {
+                mutableMapOf<String, Any?>(
+                    "file_name" to it.fileName,
+                    "sha256" to it.sha256,
+                    "status" to "pending",
+                )
+            }
+        } else {
+            if (savedPhotos.size != photos.size) {
+                throw MunicipalReviewNeededException("Photo count differs from the saved submission.")
+            }
+            for ((index, entry) in savedPhotos.withIndex()) {
+                val saved = entry as? Map<String, Any?>
+                    ?: throw MunicipalReviewNeededException("Saved photo journal is unreadable.")
+                if (saved["file_name"] != photos[index].fileName || saved["sha256"] != photos[index].sha256) {
+                    throw MunicipalReviewNeededException("Photo set differs from the saved submission.")
+                }
+                when (saved["status"] as? String) {
+                    "pending", "attaching", "attached" -> Unit
+                    else -> throw MunicipalReviewNeededException(
+                        "Unknown saved photo state; inspect the stored state before continuing."
+                    )
+                }
+            }
+        }
+        if (retryPhotos && state["status"] == "prepared") {
+            throw MunicipalInputException(
+                "No existing municipal case in the saved state. retryPhotos will not create one."
+            )
+        }
+        val journaled = state["photos"] as List<*>
+        if (!retryPhotos && journaled.any { (it as? Map<*, *>)?.get("status") == "attaching" }) {
+            throw MunicipalReviewNeededException(
+                "The report exists but a photo was not confirmed. Use retryPhotos after checking the municipal app."
+            )
+        }
+        if (state["status"] == "prepared") {
+            store.write(state)
+        }
+        val token = client.login()
+        if (state["status"] == "prepared") {
+            contact["Token"] = token
+            val contactResponse = client.upsertContact(token, contact)
+            val contactId = contactResponse["ContactIdInCRM"] as? String
+            if (contactId.isNullOrEmpty()) {
+                throw MunicipalApiException("Contact registration returned no ID.")
+            }
+            contact["ContactIdInCRM"] = contactId
+            state["status"] = "creating"
+            store.write(state)
+            try {
+                val result = client.createCase(token, contact, report)
+                val caseId = result["CaseIdInCRM"] as? String
+                val webCaseId = result["WebCaseIdInCRM"] as? String
+                if (caseId.isNullOrEmpty() || webCaseId.isNullOrEmpty()) {
+                    throw MunicipalApiException("Missing case reference.")
+                }
+                val case = LinkedHashMap<String, Any?>()
+                case["CaseIdInCRM"] = caseId
+                case["WebCaseIdInCRM"] = webCaseId
+                case["CaseNumberInCRM"] = result["CaseNumberInCRM"] as? String
+                state["case"] = case
+                state["status"] = "created"
+                store.write(state)
+            } catch (e: MunicipalReviewNeededException) {
+                throw e
+            } catch (e: Exception) {
+                throw MunicipalReviewNeededException(
+                    "Case creation result is uncertain. No automatic retry. Check the municipal app."
+                )
+            }
+        }
+        val case = state["case"] as? Map<String, Any?>
+            ?: throw MunicipalReviewNeededException("Saved state lost the case reference.")
+        val caseId = case["CaseIdInCRM"] as? String
+        val webCaseId = case["WebCaseIdInCRM"] as? String
+        if (caseId.isNullOrEmpty() || webCaseId.isNullOrEmpty()) {
+            throw MunicipalReviewNeededException("Saved state lost the case reference.")
+        }
+        state["status"] = "attaching"
+        for ((index, entry) in journaled.withIndex()) {
+            val photoState = entry as MutableMap<String, Any?>
+            if (photoState["status"] == "attached") {
+                continue
+            }
+            // Persist the intent BEFORE the call: an interrupted run must
+            // find this photo's outcome uncertain, never silently re-send it.
+            photoState["status"] = "attaching"
+            store.write(state)
+            try {
+                client.attachPhoto(token, caseId, webCaseId, photoState["file_name"] as String, photos[index].bytes())
+            } catch (e: MunicipalReviewNeededException) {
+                throw e
+            } catch (e: Exception) {
+                throw MunicipalReviewNeededException(
+                    "The report exists; a photo attachment was not confirmed. Use retryPhotos after checking the municipal app."
+                )
+            }
+            photoState["status"] = "attached"
+            store.write(state)
+        }
+        state["status"] = "complete"
+        store.write(state)
+        completedToken = token
+        return@withSubmissionLock SubmissionResult.Submitted(case)
+        }
+        completedToken?.let { token -> runCatching { afterSuccessfulSubmission?.invoke(client, token) } }
+        return result
+    }
+
+    private companion object {
+        val PHOTO_DIGEST_PATTERN = Regex("[0-9a-f]{64}")
     }
 }
