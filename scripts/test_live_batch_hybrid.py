@@ -65,7 +65,7 @@ class HybridTest(unittest.TestCase):
     def test_workflow_stays_protected_prepare_only_and_secret_free_public(self):
         root = Path(__file__).resolve().parents[1]
         workflow = (root / '.github/workflows/live-batch-hybrid.yml').read_text()
-        for required in ['workflow_dispatch:', "github.ref == 'refs/heads/main'", 'github.run_attempt == 1',
+        for required in ['workflow_dispatch:', 'if: ${{ false }}',
                          'environment: m0-trial-submit', 'group: live-emulator-e2e', 'cancel-in-progress: false',
                          'persist-credentials: false', 'BATCH_PREPARATION_ONLY_NO_SUBMISSION']:
             self.assertIn(required, workflow)

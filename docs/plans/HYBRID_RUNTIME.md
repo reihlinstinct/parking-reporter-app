@@ -44,11 +44,14 @@ flowchart TD
   I/O has a single absolute write/read deadline; partial output cannot hang a
   line reader and any error kills/poisons the process. Six real subprocess
   tests cover partial replies, no stdin consumption, process death and malformed
-  responses. Photo preflight verifies hashes, format and full ImageIO decode
-  before login, with8192edge/24millionpixel/10MiBlimits before allocation.
+  responses. Two additional mocked process tests cover cleanup timeouts and exit races. Photo preflight verifies hashes, format and full ImageIO decode
+  before login, with8192-edge / 4-million-pixel / 10-MiB limits before allocation.
   These JVM checks do not establish UI-adapter parity.
-- `live-batch-hybrid.yml`: protected main-only first-attempt **preparation-only**
-  dispatch with immutable private ref/path/outerdigest. It builds bridge before
+- `live-batch-hybrid.yml`: hard-disabled **preparation-only** dispatch. Its job
+  cannot start or receive environment secrets. Activation requires separate review
+  and verification of environment reviewer protection. Inputs bind immutable private
+  ref/path, approved outer/inner package and address-directory digests. The inactive
+  job definition builds bridge before
   private input, stages/validates the ZIP, encrypts the effective manifest and
   uploads only encrypted preparation evidence. It receives no city credentials
   and cannot call the controller/bridge or make a municipal write. Missing
@@ -106,6 +109,30 @@ bytes remains required and is bound by the generated outerdigest. Input data is
 not source code. No private CI run or paid runner is needed. A preparation-only
 workflow does not satisfy this criterion; no live route is claimed ready until
 both lanes, durable oldidentityjournal and credential/approval boundaries work.
+
+### Inactive workflow gate
+
+The preparation job is hard-disabled in source (`if: false`). Dispatch cannot
+expose its environment secrets while this route is inactive. Activation requires
+a separate reviewed change and verification of required environment reviewers;
+no environment protection/settings were changed here. Preparation also requires
+independent approved outer package, decrypted ZIP and address-directory SHA256
+values. The fetch layer already checked outer approval before this change; the
+entry script now repeats it explicitly and no longer derives inner/directory pins
+from the bytes being checked. A rerun counter is not access control.
+
+### Encryption parameters and dispatch visibility
+
+Both inactive preparation encryption and decryption explicitly pin PBKDF2 with
+SHA256 and 200000 iterations; they do not rely on an OpenSSL digest default.
+Dispatch input hashes are approval fingerprints, not secrets. On a public
+repository, treat every dispatch input as visible: no text, address, plate,
+credentials, private filenames containing personal data, or decryption keys may
+be entered there. A digest can still correlate a known file; do not represent
+hashes as anonymous or confidential. Actual private bytes remain in the private
+repository and encrypted artifacts. Approval fingerprints do not grant access or
+permission by themselves. This workflow remains hard-disabled; privacy review
+of the final operational input path is still required before activation.
 
 ## UI boundary adapter (inactive slice, #558)
 

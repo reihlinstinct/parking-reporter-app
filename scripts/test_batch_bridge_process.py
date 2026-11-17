@@ -4,6 +4,8 @@ from pathlib import Path
 import sys
 import tempfile
 import time
+import subprocess
+from unittest.mock import Mock
 import unittest
 
 from live_batch_hybrid import BridgeAdapter
@@ -16,6 +18,28 @@ class ProcessTest(unittest.TestCase):
         bridge = BridgeAdapter([sys.executable, '-c', program], dict(os.environ), err, timeout)
         self.addCleanup(bridge.close)
         return bridge
+
+    def test_stop_timeout_keeps_session_poisoned(self):
+        bridge = object.__new__(BridgeAdapter)
+        bridge.poisoned = False
+        bridge.process = Mock()
+        bridge.process.poll.return_value = None
+        bridge.process.wait.side_effect = subprocess.TimeoutExpired('synthetic', 5)
+        bridge._stop()
+        self.assertTrue(bridge.poisoned)
+        bridge.process.kill.assert_called_once_with()
+        bridge.process.wait.assert_called_once_with(timeout=5)
+        with self.assertRaises(InvalidBatch): bridge.request('create')
+
+    def test_stop_process_exit_race_keeps_session_poisoned(self):
+        bridge = object.__new__(BridgeAdapter)
+        bridge.poisoned = False
+        bridge.process = Mock()
+        bridge.process.poll.return_value = None
+        bridge.process.kill.side_effect = ProcessLookupError()
+        bridge._stop()
+        self.assertTrue(bridge.poisoned)
+        with self.assertRaises(InvalidBatch): bridge.request('create')
 
     def test_successful_private_stdio(self):
         b = self.bridge('import sys; sys.stdin.readline(); print(\'{"success":true,"case":{"WebCaseIdInCRM":"synthetic"}}\',flush=True)')

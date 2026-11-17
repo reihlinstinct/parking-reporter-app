@@ -8,6 +8,7 @@ import tempfile
 import subprocess
 import sys
 import unittest
+from unittest import mock
 import zipfile
 
 from live_batch_input import InvalidBatch, validate_zip
@@ -25,12 +26,18 @@ def exif(date=b'2026:11:17 05:28:00\0', offset=b'+02:00\0'):
     return b'\xff\xd8\xff\xe1' + (len(payload) + 2).to_bytes(2, 'big') + payload + b'\xff\xd9'
 
 
+# SYNTHETIC grid anchored at the permitted region boundary, not a real address
+# or Jerusalem location. Production regional validation stays unchanged.
+SYNTHETIC_LAT = 31.0
+SYNTHETIC_LON = 34.0
+
+
 class DeriveTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.directory = {'version': 1, 'streets': [{'StreetCode': '100', 'StreetName': 'synthetic street'}],
-                          'addresses': [[31.7, 35.2, '10', 'synthetic street']]}
+                          'addresses': [[SYNTHETIC_LAT, SYNTHETIC_LON, '10', 'synthetic street']]}
         self.policy = {'9000': {'names': ['synthetic topic'], 'plateRequired': False},
                        '9001': {'names': ['synthetic plate topic'], 'plateRequired': True}}
         self.m = {'reports': [{'text': 'synthetic report', 'address': 'synthetic street 10', 'topic': 'synthetic topic'}]}
@@ -46,38 +53,38 @@ class DeriveTest(unittest.TestCase):
 
     def test_smallest_address_input_has_no_photo_plate_time_hash_or_id(self):
         m = self.read(); r = m['reports'][0]
-        self.assertEqual((r['latitude'], r['longitude']), (31.7, 35.2))
+        self.assertEqual((r['latitude'], r['longitude']), (SYNTHETIC_LAT, SYNTHETIC_LON))
         self.assertEqual(r['photos'], []); self.assertEqual(r['plate'], ''); self.assertIsNone(r['capturedAt'])
         self.assertEqual(len(r['reportId']), 64); self.assertEqual(len(m['batchId']), 64)
         self.assertEqual(m, self.read())
 
     def test_coordinate_only(self):
-        r = self.m['reports'][0]; del r['address']; r.update(latitude=31.7, longitude=35.2)
+        r = self.m['reports'][0]; del r['address']; r.update(latitude=SYNTHETIC_LAT, longitude=SYNTHETIC_LON)
         self.assertEqual(self.read()['reports'][0]['address'], 'synthetic street 10')
 
     def test_coordinate_lookup_normalizes_nfkc_and_final_letters(self):
-        self.directory['streets'][0]['StreetName'] = 'דרך המלך'
-        self.directory['addresses'][0][3] = 'דרכ המלכ'
-        r = self.m['reports'][0]; del r['address']; r.update(latitude=31.7, longitude=35.2)
-        self.assertEqual(self.read()['reports'][0]['address'], 'דרך המלך 10')
+        self.directory['streets'][0]['StreetName'] = 'רחוב סינתטי בדיקך'
+        self.directory['addresses'][0][3] = 'רחוב סינתטי בדיקכ'
+        r = self.m['reports'][0]; del r['address']; r.update(latitude=SYNTHETIC_LAT, longitude=SYNTHETIC_LON)
+        self.assertEqual(self.read()['reports'][0]['address'], 'רחוב סינתטי בדיקך 10')
         self.directory['streets'][0]['StreetName'] = 'ＡＢＣ'
         self.directory['addresses'][0][3] = 'ABC'
         self.assertEqual(self.read()['reports'][0]['address'], 'ＡＢＣ 10')
 
     def test_missing_or_partial_location(self):
         del self.m['reports'][0]['address']
-        for values in [{}, {'latitude': 31.7}, {'latitude': 0, 'longitude': 0}]:
+        for values in [{}, {'latitude': SYNTHETIC_LAT}, {'latitude': 0, 'longitude': 0}]:
             self.m['reports'][0].update(values)
             with self.assertRaises(InvalidBatch): self.read()
 
     def test_ambiguous_or_missing_address(self):
-        for row in [[31.71, 35.21, '10', 'synthetic street'], None]:
+        for row in [[SYNTHETIC_LAT + 0.01, SYNTHETIC_LON + 0.01, '10', 'synthetic street'], None]:
             self.directory['addresses'] = [self.directory['addresses'][0], row] if row else []
             with self.assertRaises(InvalidBatch): self.read()
 
     def test_ambiguous_coordinate_address(self):
-        self.directory['addresses'].append([31.70001, 35.2, '12', 'synthetic street'])
-        r = self.m['reports'][0]; del r['address']; r.update(latitude=31.7, longitude=35.2)
+        self.directory['addresses'].append([SYNTHETIC_LAT + 0.00001, SYNTHETIC_LON, '12', 'synthetic street'])
+        r = self.m['reports'][0]; del r['address']; r.update(latitude=SYNTHETIC_LAT, longitude=SYNTHETIC_LON)
         with self.assertRaises(InvalidBatch): self.read()
 
     def test_optional_hashes_checked_not_trusted(self):
@@ -122,8 +129,12 @@ class DeriveTest(unittest.TestCase):
         self.m['reports'][0]['photos'] = ['photos/a.jpg', 'photos/a.jpg']
         with self.assertRaises(InvalidBatch): self.read()
 
+    def test_explicit_address_rejects_180_meter_offset(self):
+        self.m['reports'][0].update(latitude=SYNTHETIC_LAT + 180 / 111320, longitude=SYNTHETIC_LON)
+        with self.assertRaises(InvalidBatch): self.read()
+
     def test_conflicting_explicit_coordinates(self):
-        self.m['reports'][0].update(latitude=31.9, longitude=35.8)
+        self.m['reports'][0].update(latitude=SYNTHETIC_LAT + 0.2, longitude=SYNTHETIC_LON + 0.6)
         with self.assertRaises(InvalidBatch): self.read()
 
     def test_missing_time_is_optional_even_with_photo(self):
@@ -149,6 +160,39 @@ class DeriveTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertEqual(result.stdout, 'BATCH_INVALID_OR_PREPARATION_BLOCKED\n')
         self.assertEqual(result.stderr, '')
+
+    def test_interrupted_manifest_write_never_publishes_partial_final(self):
+        import validate_live_batch as cli
+        self.read()
+        policy = self.root / 'policy.json'; policy.write_text(json.dumps(self.policy))
+        private = self.root / 'private'; private.mkdir(mode=0o700)
+        out = private / 'effective.json'
+        args = ['validate', '--zip', str(self.root / 'batch.zip'),
+                '--approved-zip-sha256', hashlib.sha256((self.root / 'batch.zip').read_bytes()).hexdigest(),
+                '--approved-addresses-sha256', hashlib.sha256(json.dumps(self.directory).encode()).hexdigest(),
+                '--topic-policy-file', str(policy), '--output', str(out)]
+        def partial_failure(value, stream, **kwargs):
+            stream.write('{')
+            raise OSError('synthetic interrupted write')
+        with mock.patch.object(sys, 'argv', args), mock.patch.object(cli.json, 'dump', side_effect=partial_failure):
+            self.assertEqual(cli.main(), 1)
+        self.assertFalse(out.exists())
+        self.assertEqual(list(private.iterdir()), [])
+        with mock.patch.object(sys, 'argv', args):
+            self.assertEqual(cli.main(), 0)
+        self.assertEqual(out.stat().st_mode & 0o777, 0o600)
+        original = out.read_bytes()
+        with mock.patch.object(sys, 'argv', args):
+            self.assertEqual(cli.main(), 1)
+        self.assertEqual(out.read_bytes(), original)
+        self.assertEqual(list(private.iterdir()), [out])
+        # Atomic publication must not replace or follow an existing symlink.
+        out.unlink(); target = private / 'existing.json'; target.write_text('synthetic existing')
+        out.symlink_to(target)
+        with mock.patch.object(sys, 'argv', args):
+            self.assertEqual(cli.main(), 1)
+        self.assertEqual(target.read_text(), 'synthetic existing')
+        self.assertTrue(out.is_symlink())
 
     def test_no_photo_journal_complete_and_replay_refused(self):
         m = self.read(); j = BatchJournal(self.root / 'journal.db'); self.addCleanup(j.close)

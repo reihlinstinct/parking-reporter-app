@@ -8,8 +8,9 @@ import org.junit.Test
 
 /** Real production HTTP transport against a loopback mock only. */
 class BatchMunicipalHttpTest {
-    private val lookup = """{"version":1,"streets":[{"StreetCode":"1001","StreetName":"synthetic street"}],"addresses":[[31.7683,35.2137,"12","synthetic street"]]}"""
-    private val report = mapOf("text" to "synthetic description", "subjectCode" to "9000", "address" to "synthetic street 12", "latitude" to 31.7683, "longitude" to 35.2137)
+    // Synthetic Null Island point, not a report location or a municipal address.
+    private val lookup = """{"version":1,"streets":[{"StreetCode":"1001","StreetName":"synthetic street"}],"addresses":[[0.0,0.0,"12","synthetic street"]]}"""
+    private val report = mapOf("text" to "synthetic description", "subjectCode" to "9000", "address" to "synthetic street 12", "latitude" to 0.0, "longitude" to 0.0)
     private fun ok(body: String) = MockResponse.Builder().body(body).build()
 
     @Test fun noPhotoUsesOneCreateAndNoAddFileAndPreservesNullNumber() {
