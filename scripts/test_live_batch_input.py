@@ -13,6 +13,22 @@ from live_batch_input import InvalidBatch, validate_zip
 
 
 class BatchInputTest(unittest.TestCase):
+    def test_actual_decoded_bytes_are_capped_even_when_metadata_underreports(self):
+        import io
+        import live_batch_input as module
+        class Archive:
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+            def infolist(self):
+                item = zipfile.ZipInfo('manifest.json')
+                item.file_size = 1
+                return [item]
+            def open(self, entry): return io.BytesIO(b'x' * 129)
+        with patch.object(module.zipfile, 'ZipFile', return_value=Archive()), patch.object(module, 'MAX_MANIFEST_BYTES', 128):
+            self.path.write_bytes(b'synthetic archive')
+            with self.assertRaises(InvalidBatch):
+                validate_zip(self.path, hashlib.sha256(self.path.read_bytes()).hexdigest(), {'9000'}, '0' * 64)
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
