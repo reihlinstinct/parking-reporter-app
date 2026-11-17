@@ -49,6 +49,8 @@ jobs:
           python3 scripts/run_unittest_file.py scripts/test_live_batch_derive.py
       - name: Hybrid partition and write-boundary tests (offline only)
         run: python3 scripts/test_live_batch_hybrid.py
+      - name: UI boundary adapter grant-order tests (fake device only)
+        run: python3 scripts/test_live_batch_ui_adapter.py
       - name: Private bridge subprocess timeout and death tests (synthetic only)
         run: python3 scripts/test_batch_bridge_process.py
       - name: Test pre-start proof through encryption and shredding
