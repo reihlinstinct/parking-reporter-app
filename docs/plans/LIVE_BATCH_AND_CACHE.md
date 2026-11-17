@@ -43,8 +43,9 @@ Benchmark cold path versus restore across image acquisition, APK build, boot, in
 
 ## Delivery slices and proof
 
-- This PR: offline strict ZIP validator, adversarial unit tests, design. Inactive.
-- Next: persistent private reservation/result journal and mock-only sequential controller, including crash injection at every write boundary.
+- This PR: offline strict ZIP validator, private SQLite reservation/result journal and mock-only sequential controller, adversarial tests and crash injection at adapter write boundaries. Inactive.
+- Journal requires one persistent private database shared across batches, backed up only in encrypted form. It commits creating/attaching intent before adapter calls. There is no automatic resume or release operation; unresolved identities remain held. The executor concurrency group is still needed across separate runners. No live adapter or artifact persistence integration exists yet.
+- Next: integrate persistent private journal storage and explicit reconciliation, with process-kill and disk-failure tests beyond the mock exceptions.
 - Next: app/test multi-photo adapter and per-photo state, with unit + emulator tests and server stubs proving one CreateCase plus N attachments.
 - Next: separate protected batch workflow and private artifact intake, with no change to current single-report workflow; full dry-run evidence, no municipal writes.
 - Next: clean snapshot producer/consumer, provenance tests and measured benchmark.

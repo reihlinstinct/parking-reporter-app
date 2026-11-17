@@ -87,7 +87,9 @@ jobs:
       - name: Offline OCR network-isolation behavioral regression tests
         run: /tmp/venv/bin/python -m unittest discover -s tests -p 'test_ocr_network_isolation.py' -v
       - name: Offline live batch ZIP contract tests
-        run: python3 scripts/test_live_batch_input.py -v
+        run: |
+          python3 scripts/test_live_batch_input.py -v
+          python3 scripts/test_live_batch_journal.py -v
       - name: Run synthetic intake smoke tests
         # pipefail: without it a failing or crashing test run still exits 0 through tee.
         run: |
