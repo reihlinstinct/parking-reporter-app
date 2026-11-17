@@ -139,7 +139,11 @@ class LiveE2eSafetyTest {
         // A run that failed before any submission existed leaves no record,
         // but only with device-side proof (no test-start line, empty
         // submissions directory read from the device afterwards).
-        assertTrue(yaml.contains("INSTRUMENTATION_STATUS_CODE"))
+        val proof = repoFile("../scripts/capture-live-prestart-proof.sh", "scripts/capture-live-prestart-proof.sh").readText()
+        assertTrue(proof.contains("INSTRUMENTATION_STATUS_CODE"))
+        assertTrue(yaml.contains("capture-live-prestart-proof.sh"))
+        assertTrue(yaml.indexOf("capture-live-prestart-proof.sh") < yaml.indexOf("shred -u logcat.txt"))
+        assertTrue(proof.contains("submissions.proven-empty") && proof.contains("case.proven-absent"))
         assertTrue(yaml.contains("submissions-count.txt"))
         assertTrue(yaml.contains("failed before any submission state existed"))
         // An ambiguous outcome fails loudly with the check-106-first rule.
