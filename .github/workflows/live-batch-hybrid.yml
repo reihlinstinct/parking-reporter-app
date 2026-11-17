@@ -17,7 +17,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  # Must match the existing UI live route. Never cancel an uncertain writer.
+  # Must match the existing UI live route. Serialize private preparation; no municipal writes in this inactive workflow.
   group: live-emulator-e2e
   cancel-in-progress: false
 jobs:

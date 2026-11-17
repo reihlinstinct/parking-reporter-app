@@ -43,7 +43,9 @@ jobs:
       - name: Test encrypted live process diagnostics (mock adb only)
         run: python3 scripts/test_live_instrumentation_capture.py
       - name: Minimal batch manifest derivation tests (offline only)
-        run: python3 scripts/test_live_batch_derive.py
+        run: |
+          python3 scripts/run_unittest_file.py scripts/test_run_unittest_file.py
+          python3 scripts/run_unittest_file.py scripts/test_live_batch_derive.py
       - name: Hybrid partition and write-boundary tests (offline only)
         run: python3 scripts/test_live_batch_hybrid.py
       - name: Private bridge subprocess timeout and death tests (synthetic only)

@@ -169,3 +169,10 @@ bytes remains required and is bound by the generated outerdigest. Input data is
 not source code. No private CI run or paid runner is needed. A preparation-only
 workflow does not satisfy this criterion; no live route is claimed ready until
 both lanes, durable oldidentityjournal and credential/approval boundaries work.
+
+The offline CLI publishes its effective manifest atomically without replacing an
+existing file or symlink. A failed serialization leaves no partial final file.
+A hard process termination may leave a mode0600temporary file inside the private
+output directory, which is not an accepted effective manifest. A later run can
+still publish the requested final path. The derivation CI step uses
+`scripts/run_unittest_file.py`, which fails on zero tests and import/test errors.

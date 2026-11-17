@@ -8,6 +8,7 @@ import tempfile
 import subprocess
 import sys
 import unittest
+from unittest import mock
 import zipfile
 
 from live_batch_input import InvalidBatch, validate_zip
@@ -149,6 +150,39 @@ class DeriveTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertEqual(result.stdout, 'BATCH_INVALID_OR_PREPARATION_BLOCKED\n')
         self.assertEqual(result.stderr, '')
+
+    def test_interrupted_manifest_write_never_publishes_partial_final(self):
+        import validate_live_batch as cli
+        self.read()
+        policy = self.root / 'policy.json'; policy.write_text(json.dumps(self.policy))
+        private = self.root / 'private'; private.mkdir(mode=0o700)
+        out = private / 'effective.json'
+        args = ['validate', '--zip', str(self.root / 'batch.zip'),
+                '--approved-zip-sha256', hashlib.sha256((self.root / 'batch.zip').read_bytes()).hexdigest(),
+                '--approved-addresses-sha256', hashlib.sha256(json.dumps(self.directory).encode()).hexdigest(),
+                '--topic-policy-file', str(policy), '--output', str(out)]
+        def partial_failure(value, stream, **kwargs):
+            stream.write('{')
+            raise OSError('synthetic interrupted write')
+        with mock.patch.object(sys, 'argv', args), mock.patch.object(cli.json, 'dump', side_effect=partial_failure):
+            self.assertEqual(cli.main(), 1)
+        self.assertFalse(out.exists())
+        self.assertEqual(list(private.iterdir()), [])
+        with mock.patch.object(sys, 'argv', args):
+            self.assertEqual(cli.main(), 0)
+        self.assertEqual(out.stat().st_mode & 0o777, 0o600)
+        original = out.read_bytes()
+        with mock.patch.object(sys, 'argv', args):
+            self.assertEqual(cli.main(), 1)
+        self.assertEqual(out.read_bytes(), original)
+        self.assertEqual(list(private.iterdir()), [out])
+        # Atomic publication must not replace or follow an existing symlink.
+        out.unlink(); target = private / 'existing.json'; target.write_text('synthetic existing')
+        out.symlink_to(target)
+        with mock.patch.object(sys, 'argv', args):
+            self.assertEqual(cli.main(), 1)
+        self.assertEqual(target.read_text(), 'synthetic existing')
+        self.assertTrue(out.is_symlink())
 
     def test_no_photo_journal_complete_and_replay_refused(self):
         m = self.read(); j = BatchJournal(self.root / 'journal.db'); self.addCleanup(j.close)
