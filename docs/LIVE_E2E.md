@@ -155,3 +155,20 @@ tar xzf bundle.tgz   # recording.mp4, instrumentation.txt, screenshots, case num
 
 Run 14 stopped before any send: the emulator sat on its lock screen, the app activity was stopped right after launch and Compose found no hierarchy (`LIVE_E2E FAIL class=IllegalStateException`, no `SEND_TAPPED`). Its recording also showed a launcher "not responding" dialog. The live test now calls `DeviceReady.ensureReady` before anything else: wake the screen, dismiss the keyguard (the throwaway PIN is tried once if needed), press "Wait" on a system not-responding dialog, and require a short quiet stretch. It writes `LIVE_E2E DEVICE_READY` on success and fails with a fixed message otherwise, before the photo is claimed or any case data is read. `DeviceReadyTest` is the dry check in the normal emulator CI: it sets a PIN, puts the screen to sleep, waits up to 15 s for the keyguard, requires the helper to bring the device back, and always clears the PIN again and makes the device ready once more (logging `DEVICE_READY_DRYCHECK cleanup ready=...`) so a failed check cannot cascade into later tests (#444). It makes no city contact.
 
+
+### Pre-start proof survives encryption (#553)
+
+The pre-start exception is computed before raw instrumentation/case evidence is
+substituted or shredded. A fixed private sentinel survives that cleanup. It
+requires a nonempty raw instrument failure with no test-start marker, a successful
+readable empty submissions-directory probe and a successful case-file-absence
+probe before device cleanup. Any collected marker-log sentinel, response, case or
+submission state refuses the exception. Missing proof burns the identity.
+An absent submissions directory is deliberately unknown, not proof of emptiness.
+The old `wc -l` output is diagnostics only: a failing `ls` can still pipe zero.
+Empty marker sentinels are not included in the nonempty-only archive inventory.
+
+`scripts/test_live_prestart_proof.py` runs the actual workflow encrypt/shred and
+record steps on synthetic data. It verifies positive proof survives cleanup and
+missing, empty, started, creating or response-bearing evidence still records a
+no-replay digest. No live report is required to test this behavior.
