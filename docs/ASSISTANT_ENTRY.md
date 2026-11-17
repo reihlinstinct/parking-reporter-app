@@ -98,6 +98,11 @@ known category returns an immutable app-owned activity PendingIntent, malformed
 and missing parameters return a typed invalid-argument error, and a valid request
 fails with platform ERROR_DISABLED after consent is revoked. Each binder call has a bounded timeout. It never
 sends the returned action, opens the camera, creates a draft or contacts the city.
-Until this test executes in exact-head CI, these are test assertions, not observed
-runtime proof. It does not prove Gemini discovery, Hebrew invocation, unauthorized
-third-party caller behavior or end-to-end review creation.
+Observed runtime proof at head `b721d25e40e517cf48fa7ebf9852acb63ab3bff0`:
+[API36 CI run 44085089512](https://github.com/reihlinstinct/parking-reporter-app/actions/runs/44085089512),
+artifact `14329971242` (`emulator-test-results-api36`), records this named test
+completing with instrumentation status 0, not skipped. This includes the typed
+ERROR_DISABLED assertion. Cleanup failures are now suppressed onto any primary
+test failure rather than masking it; that later change requires fresh exact-head
+CI execution before merge. This does not prove Gemini discovery, Hebrew invocation,
+unauthorized third-party caller behavior or end-to-end review creation.

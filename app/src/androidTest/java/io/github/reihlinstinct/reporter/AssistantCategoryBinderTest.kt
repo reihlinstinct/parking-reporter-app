@@ -52,6 +52,7 @@ class AssistantCategoryBinderTest {
                 }
             }
 
+        var primaryFailure: Throwable? = null
         try {
             // Bounded initial package indexing only, never a retry of failed execution assertions.
             var indexed = false
@@ -89,9 +90,18 @@ class AssistantCategoryBinderTest {
             assertTrue("Revocation must be a typed platform error", error is android.app.appfunctions.AppFunctionException)
             assertEquals(android.app.appfunctions.AppFunctionException.ERROR_DISABLED,
                 (error as android.app.appfunctions.AppFunctionException).errorCode)
+        } catch (failure: Throwable) {
+            primaryFailure = failure
+            throw failure
         } finally {
-            store.save(false)
-            assertTrue("System cleanup must revoke consent", AssistantEntry.setEnabled(context, false))
+            val cleanupFailure = runCatching {
+                store.save(false)
+                assertTrue("System cleanup must revoke consent", AssistantEntry.setEnabled(context, false))
+            }.exceptionOrNull()
+            if (cleanupFailure != null) {
+                val original = primaryFailure
+                if (original != null) original.addSuppressed(cleanupFailure) else throw cleanupFailure
+            }
         }
     }
 }
