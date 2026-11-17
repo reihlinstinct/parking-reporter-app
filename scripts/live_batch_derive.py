@@ -62,12 +62,12 @@ def coordinates_address(lat, lon, directory):
     def distance(a, b):
         # Local distances only, no external geocoder or broad nearest-street guess.
         return math.hypot((a - lat) * 111320, (b - lon) * 111320 * math.cos(math.radians(lat)))
-    names = {str(r['StreetName']) for r in directory.get('streets', [])}
+    names = {_norm(str(r['StreetName'])): str(r['StreetName']) for r in directory.get('streets', [])}
     candidates = {}
     for row in directory.get('addresses', []):
-        if isinstance(row, list) and len(row) >= 4 and row[3] in names:
+        if isinstance(row, list) and len(row) >= 4 and _norm(str(row[3])) in names:
             d = distance(row[0], row[1])
-            key = str(row[3]) + ' ' + str(row[2])
+            key = names[_norm(str(row[3]))] + ' ' + str(row[2])
             candidates[key] = min(d, candidates.get(key, math.inf))
     found = sorted((d, name) for name, d in candidates.items() if d <= 150)
     need(found and (len(found) == 1 or found[1][0] - found[0][0] > 20), 'coordinate address missing or ambiguous')
