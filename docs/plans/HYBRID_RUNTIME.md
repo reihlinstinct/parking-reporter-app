@@ -44,11 +44,14 @@ flowchart TD
   I/O has a single absolute write/read deadline; partial output cannot hang a
   line reader and any error kills/poisons the process. Six real subprocess
   tests cover partial replies, no stdin consumption, process death and malformed
-  responses. Photo preflight verifies hashes, format and full ImageIO decode
+  responses. Two additional mocked process tests cover cleanup timeouts and exit races. Photo preflight verifies hashes, format and full ImageIO decode
   before login, with8192edge/24millionpixel/10MiBlimits before allocation.
   These JVM checks do not establish UI-adapter parity.
-- `live-batch-hybrid.yml`: protected main-only first-attempt **preparation-only**
-  dispatch with immutable private ref/path/outerdigest. It builds bridge before
+- `live-batch-hybrid.yml`: hard-disabled **preparation-only** dispatch. Its job
+  cannot start or receive environment secrets. Activation requires separate review
+  and verification of environment reviewer protection. Inputs bind immutable private
+  ref/path, approved outer/inner package and address-directory digests. The inactive
+  job definition builds bridge before
   private input, stages/validates the ZIP, encrypts the effective manifest and
   uploads only encrypted preparation evidence. It receives no city credentials
   and cannot call the controller/bridge or make a municipal write. Missing

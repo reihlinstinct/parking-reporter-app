@@ -59,7 +59,6 @@ jobs:
           BATCH_APPROVED_ADDRESSES_SHA256: ${{ inputs.approved_addresses_sha256 }}
           PRIVATE_LOOKUP_READ_TOKEN: ${{ secrets.BATCH_PRIVATE_CONTENTS_TOKEN }}
           TRIAL_DATA_KEY: ${{ secrets.TRIAL_DATA_KEY }}
-          TRIAL_STREET_LOOKUP_JSON: ${{ secrets.TRIAL_STREET_LOOKUP_JSON }}
           BATCH_VERIFIED_TOPIC_POLICY: ${{ secrets.BATCH_VERIFIED_TOPIC_POLICY }}
         run: python3 scripts/prepare_hybrid_batch.py
       - name: Upload encrypted preparation evidence only
