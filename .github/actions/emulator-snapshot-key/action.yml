@@ -1,0 +1,35 @@
+name: Emulator snapshot key
+description: >
+  Installs the pinned emulator packages, exports the EMU_* identities and
+  outputs the exact snapshot cache key. No secrets, no private data. Issue #548.
+outputs:
+  key:
+    description: Exact cache key. There is no restore-prefix fallback.
+    value: ${{ steps.key.outputs.key }}
+runs:
+  using: composite
+  steps:
+    - name: Install pinned emulator packages and export identities
+      shell: bash
+      run: |
+        set -euo pipefail
+        sdkroot=${ANDROID_HOME:-/usr/local/lib/android/sdk}
+        sdkmanager_bin=$(command -v sdkmanager || echo "$sdkroot/cmdline-tools/latest/bin/sdkmanager")
+        yes | "$sdkmanager_bin" --licenses > /dev/null 2>&1 || true
+        "$sdkmanager_bin" 'platforms;android-36' 'system-images;android-36;default;x86_64' 'emulator' 'platform-tools' 'build-tools;37.0.0' > /tmp/snapshot-sdk.log 2>&1 || { tail -5 /tmp/snapshot-sdk.log; exit 1; }
+        rev() { sed -n 's/^Pkg.Revision=//p' "$1" | head -1; }
+        {
+          echo EMU_API_LEVEL=36
+          echo EMU_ARCH=x86_64
+          echo EMU_TARGET=default
+          echo EMU_PROFILE=pixel_2
+          echo "EMU_IMAGE_REVISION=$(rev "$sdkroot/system-images/android-36/default/x86_64/source.properties")"
+          echo "EMU_VERSION=$(rev "$sdkroot/emulator/source.properties")"
+          echo "EMU_RUNNER_IMAGE=${ImageOS:-unknown}-${ImageVersion:-unknown}"
+          echo "EMU_SOURCE_ROOT=$GITHUB_WORKSPACE"
+          echo "EMU_PREPARE_SCRIPT=$GITHUB_WORKSPACE/.github/workflows/emulator-snapshot-producer.yml"
+        } >> "$GITHUB_ENV"
+    - name: Compute the exact key
+      id: key
+      shell: bash
+      run: echo "key=$(python3 scripts/emulator_snapshot_cache.py key)" >> "$GITHUB_OUTPUT"
