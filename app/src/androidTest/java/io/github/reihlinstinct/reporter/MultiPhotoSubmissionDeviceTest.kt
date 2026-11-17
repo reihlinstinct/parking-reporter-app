@@ -88,7 +88,7 @@ class MultiPhotoSubmissionDeviceTest {
             // A brand-new store instance reads exactly what the killed
             // attempt left on disk: one attached, one uncertain, one pending.
             val durable = store().read()!!
-            assertEquals(2, durable["version"])
+            assertEquals(2, (durable["version"] as Number).toInt())
             assertEquals("attaching", durable["status"])
             val journal = durable["photos"] as List<Map<String, Any?>>
             assertEquals(listOf("attached", "attaching", "pending"), journal.map { it["status"] })

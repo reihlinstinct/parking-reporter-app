@@ -106,7 +106,7 @@ class SubmissionStateMachine(
                 "Unknown saved state; inspect the stored state before continuing."
             )
         }
-        if (state["version"] == 2) {
+        if ((state["version"] as? Number)?.toInt() == 2) {
             throw MunicipalReviewNeededException(
                 "The saved state belongs to a multi-photo submission; continue it with submitPhotos."
             )
@@ -266,7 +266,7 @@ class SubmissionStateMachine(
             "version" to 2,
             "status" to "prepared",
         )
-        if (state["version"] != 2) {
+        if ((state["version"] as? Number)?.toInt() != 2) {
             throw MunicipalReviewNeededException(
                 "The saved state belongs to a single-photo submission; continue it with submit."
             )
