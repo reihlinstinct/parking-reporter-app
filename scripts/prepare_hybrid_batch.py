@@ -24,7 +24,7 @@ def main(root=None):
         digest(expected_inner)
         digest(expected_addresses)
         if os.environ.get('BATCH_PRIVATE_PATH', '').endswith('.enc'):
-            result = subprocess.run(['openssl', 'enc', '-d', '-aes-256-cbc', '-pbkdf2', '-iter', '200000',
+            result = subprocess.run(['openssl', 'enc', '-d', '-aes-256-cbc', '-pbkdf2', '-md', 'sha256', '-iter', '200000',
                                      '-in', str(source), '-out', str(root / 'input.zip'), '-pass', 'env:TRIAL_DATA_KEY'],
                                      capture_output=True, timeout=60)
             if result.returncode: raise ValueError()
@@ -34,7 +34,7 @@ def main(root=None):
                             expected_addresses, topic_policy=policy)
         output = root / 'effective.json'
         output.write_text(json.dumps(data, ensure_ascii=False, allow_nan=False))
-        result = subprocess.run(['openssl', 'enc', '-aes-256-cbc', '-pbkdf2', '-iter', '200000', '-salt',
+        result = subprocess.run(['openssl', 'enc', '-aes-256-cbc', '-pbkdf2', '-md', 'sha256', '-iter', '200000', '-salt',
                                  '-in', str(output), '-out', str(root / 'effective.json.enc'), '-pass', 'env:TRIAL_DATA_KEY'],
                                  capture_output=True, timeout=60)
         if result.returncode: raise ValueError()
