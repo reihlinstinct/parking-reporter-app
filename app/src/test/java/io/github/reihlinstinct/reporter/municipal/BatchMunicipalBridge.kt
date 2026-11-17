@@ -23,7 +23,11 @@ class BatchMunicipalBridge(
                 mapOf("success" to true)
             }
             "prepare" -> {
-                report(request["report"] as Map<String, Any?>)
+                val raw = request["report"] as Map<String, Any?>
+                report(raw)
+                @Suppress("UNCHECKED_CAST")
+                val photos = raw["photos"] as? List<Map<String, Any?>> ?: emptyList()
+                photos.forEach { photo(it) }
                 mapOf("success" to true)
             }
             "create" -> {
@@ -47,13 +51,8 @@ class BatchMunicipalBridge(
             }
             "attach" -> {
                 val photo = request["photo"] as Map<String, Any?>
+                val bytes = photo(photo)
                 val name = photo["path"] as String
-                require(Regex("photos/[A-Za-z0-9_./-]+\\.(jpg|jpeg|png)").matches(name))
-                val file = File(photoRoot, name).canonicalFile
-                require(file.toPath().startsWith(photoRoot.canonicalFile.toPath()))
-                require(file.isFile && file.length() in 1..10_485_760)
-                val bytes = file.readBytes()
-                require(java.security.MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) } == photo["sha256"])
                 val case = request["case"] as Map<String, Any?>
                 val filename = (photo["sha256"] as String) + if (name.endsWith(".png")) ".png" else ".jpg"
                 client.attachPhoto(authenticated(), case["CaseIdInCRM"] as? String ?: "00000000-0000-0000-0000-000000000000",
@@ -62,6 +61,34 @@ class BatchMunicipalBridge(
             }
             else -> error("unsupported operation")
         }
+    }
+
+    /** Validate full decode before any login/contact/case write, bounded before allocation. */
+    private fun photo(raw: Map<String, Any?>): ByteArray {
+        val name = raw["path"] as String
+        require(Regex("photos/[A-Za-z0-9_./-]+\\.(jpg|jpeg|png)").matches(name))
+        val file = File(photoRoot, name).canonicalFile
+        require(file.toPath().startsWith(photoRoot.canonicalFile.toPath()))
+        require(file.isFile && file.length() in 1..10_485_760)
+        val bytes = file.readBytes()
+        require(java.security.MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) } == raw["sha256"])
+        javax.imageio.ImageIO.createImageInputStream(java.io.ByteArrayInputStream(bytes)).use { input ->
+            requireNotNull(input)
+            val readers = javax.imageio.ImageIO.getImageReaders(input)
+            require(readers.hasNext())
+            val reader = readers.next()
+            try {
+                reader.setInput(input, true, true)
+                val format = reader.formatName.lowercase(java.util.Locale.ROOT)
+                require(format == if (name.endsWith(".png")) "png" else "jpeg")
+                val width = reader.getWidth(0); val height = reader.getHeight(0)
+                require(width in 1..8192 && height in 1..8192 && width.toLong() * height <= 24_000_000)
+                val decoded = reader.read(0)
+                require(decoded != null && decoded.width == width && decoded.height == height)
+                decoded.flush()
+            } finally { reader.dispose() }
+        }
+        return bytes
     }
 
     private fun report(raw: Map<String, Any?>): LinkedHashMap<String, Any?> {

@@ -41,6 +41,25 @@ class BatchMunicipalBridgeTest {
         } finally { root.deleteRecursively() }
     }
 
+    @Test fun photoPreflightDecodesBoundedBytesBeforeAnyNetwork() {
+        val root = Files.createTempDirectory("synthetic-batch-image").toFile()
+        try {
+            val client = Client(); val bridge = BatchMunicipalBridge(client, StreetDirectory.load(lookup), linkedMapOf(), root)
+            val file = java.io.File(root, "photos/synthetic.png"); file.parentFile.mkdirs()
+            val image = java.awt.image.BufferedImage(4, 4, java.awt.image.BufferedImage.TYPE_INT_RGB)
+            javax.imageio.ImageIO.write(image, "png", file)
+            fun photos() = listOf(mapOf("path" to "photos/synthetic.png", "sha256" to
+                java.security.MessageDigest.getInstance("SHA-256").digest(file.readBytes()).joinToString("") { "%02x".format(it) }))
+            bridge.call(mapOf("operation" to "prepare", "report" to (report + ("photos" to photos()))))
+            assertTrue(client.calls.isEmpty())
+            file.writeBytes(byteArrayOf(0xff.toByte(),0xd8.toByte(),0xff.toByte()))
+            assertThrows(IllegalArgumentException::class.java) {
+                bridge.call(mapOf("operation" to "prepare", "report" to (report + ("photos" to photos()))))
+            }
+            assertTrue(client.calls.isEmpty())
+        } finally { root.deleteRecursively() }
+    }
+
     @Test fun createBeforeLoginAndUnknownAddressRefuseBeforeWrites() {
         val root = Files.createTempDirectory("synthetic-batch").toFile()
         try {

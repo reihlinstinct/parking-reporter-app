@@ -40,26 +40,38 @@ flowchart TD
   `:app:writeBatchBridgeClasspath`, not a Gradle invocation per report. Read-only
   login, offline report preflight, CreateCase and AddFile use production code.
   It prints only private JSON IPC, not stdout intended for public CI. No live
-  caller is enabled. Adapter death/error stops the session; no automatic retry.
+  caller is enabled. Adapter death/error stops the session; no automatic retry. Private subprocess
+  I/O has a single absolute write/read deadline; partial output cannot hang a
+  line reader and any error kills/poisons the process. Six real subprocess
+  tests cover partial replies, no stdin consumption, process death and malformed
+  responses. Photo preflight verifies hashes, format and full ImageIO decode
+  before login, with8192edge/24millionpixel/10MiBlimits before allocation.
+  These JVM checks do not establish UI-adapter parity.
 - `live-batch-hybrid.yml`: protected main-only first-attempt **preparation-only**
   dispatch with immutable private ref/path/outerdigest. It builds bridge before
   private input, stages/validates the ZIP, encrypts the effective manifest and
   uploads only encrypted preparation evidence. It receives no city credentials
   and cannot call the controller/bridge or make a municipal write. Missing
-  private read token/topic policy is a blocker, not silently provisioned.
+  private read token/topic policy is a blocker, not silently provisioned. The read
+  variable maps only to protected `BATCH_PRIVATE_CONTENTS_TOKEN`, a narrow
+  fine-grained credential for private parking-reports Contents read/write and
+  Metadata read-only. The credential was provisioned separately under owner
+  authority on November17 and expires December17,2026; it is not a repository
+  secret and does not grant municipal access.
 
 ## Not delivered and activation blockers
 
 1. UI create/attach boundary adapter. The existing all-in-one single-report UI
    workflow cannot safely be called as a black box: it would have separate app
    state and could write before the shared journal acknowledged intent.
-2. Persistent journal initial provisioning, verified old-case import, narrowly
-   scoped private write credential and key approval. No broad account PAT is
-   copied into Actions. No new credential or journal was created by this slice.
+2. Persistent journal initial provisioning, verified old-case import and journal
+   key approval remain blocked. The narrow private credential is provisioned
+   separately in the protected environment; no broad account PAT is copied
+   into Actions. No journal was created by this slice.
    A fresh journal must include existing accepted/uncertain identities, not erase
    duplicate history. Old14dayartifacts alone are insufficient.
-3. Live credential injection, whole-batch bounded image decoding and outgoing
-   attachment policy, verified topic policy freshness and exact effective-manifest
+3. Live credential injection, UI-lane bounded decoding and outgoing attachment
+   policy parity, verified topic policy freshness and exact effective-manifest
    approval binding. Input validation is not permission.
 4. Read-only production login probe in the final network environment, tunnel
    setup/cleanup and verified pre-write fallback policy. Prior direct logins have
@@ -71,8 +83,8 @@ flowchart TD
 6. Cache550consumer integration and cold fallback. Producer is merged, first
    scheduled output not yet verified/benchmarked. No speed savings claimed.
 7. Full mock HTTP server integration, external process-kill tests spanning both
-   adapters, authenticated backup rollback protection beyond CAS, image decode
-   tests, leak tests on actual encrypted evidence inventory and supervised
+   adapters, authenticated backup rollback protection beyond CAS, malformed/oversized image decode
+   matrix, leak tests on actual encrypted evidence inventory and supervised
    owner-approved live proof. Current controller tests use injected mocks;
    persistence tests cover save failure and reopening, not full UI process death.
 

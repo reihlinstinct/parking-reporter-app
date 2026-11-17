@@ -6,29 +6,53 @@ adapter. Calling an old all-in-one workflow is not compatible with this port.
 import json
 import subprocess
 import select
+import os
+import time
 
 from live_batch_input import InvalidBatch, need
 
 
 class BridgeAdapter:
     """Private stdio to already-built production Kotlin code, never a public log."""
-    def __init__(self, command, env, error_file):
+    def __init__(self, command, env, error_file, timeout=120):
         self.process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                        stderr=error_file, text=True, env=env, bufsize=1)
-        self.case = None
+                                        stderr=error_file, env=env, bufsize=0)
+        self.case, self.poisoned, self.timeout = None, False, timeout
+
+    def _stop(self):
+        self.poisoned = True
+        if self.process.poll() is None:
+            self.process.kill()
+        self.process.wait(timeout=5)
 
     def request(self, operation, **payload):
-        need(self.process.poll() is None, 'private bridge unavailable')
+        need(not self.poisoned and self.process.poll() is None, 'private bridge unavailable')
         try:
-            self.process.stdin.write(json.dumps(dict(operation=operation, **payload), ensure_ascii=False) + '\n')
-            self.process.stdin.flush()
-            need(bool(select.select([self.process.stdout], [], [], 120)[0]), 'private bridge timed out; reconcile before continuing')
-            line = self.process.stdout.readline(1_048_577)
-            need(line.endswith('\n') and len(line) <= 1_048_576, 'private bridge response invalid')
+            message = (json.dumps(dict(operation=operation, **payload), ensure_ascii=False) + '\n').encode()
+            need(len(message) <= 1_048_576, 'private bridge request too large')
+            deadline, line, sent = time.monotonic() + self.timeout, bytearray(), 0
+            os.set_blocking(self.process.stdin.fileno(), False)
+            while sent < len(message):
+                remaining = deadline - time.monotonic()
+                need(remaining > 0 and bool(select.select([], [self.process.stdin], [], max(0, remaining))[1]),
+                     'private bridge request timed out')
+                sent += os.write(self.process.stdin.fileno(), message[sent:sent + 65536])
+            # select followed by readline can hang on a partial line forever.
+            # Read only ready bytes under one absolute response deadline.
+            while b'\n' not in line:
+                remaining = deadline - time.monotonic()
+                need(remaining > 0 and bool(select.select([self.process.stdout], [], [], max(0, remaining))[0]),
+                     'private bridge timed out; reconcile before continuing')
+                chunk = os.read(self.process.stdout.fileno(), 65536)
+                need(bool(chunk), 'private bridge closed; reconcile before continuing')
+                line.extend(chunk)
+                need(len(line) <= 1_048_576, 'private bridge response too large')
+            need(line.endswith(b'\n') and line.count(b'\n') == 1, 'private bridge response invalid')
             result = json.loads(line)
-            need(result.get('success') is True, 'municipal result unknown or refused')
+            need(isinstance(result, dict) and result.get('success') is True, 'municipal result unknown or refused')
             return result
-        except (OSError, ValueError, TypeError):
+        except BaseException:
+            self._stop()
             raise InvalidBatch('private bridge operation failed; reconcile before continuing') from None
 
     def preflight(self, reports):
@@ -47,10 +71,15 @@ class BridgeAdapter:
 
     def close(self):
         try:
+            if self.process.poll() is None:
+                try:
+                    self.process.stdin.close()
+                    self.process.wait(timeout=5)
+                except (OSError, subprocess.TimeoutExpired):
+                    self._stop()
+        finally:
             self.process.stdin.close()
-            self.process.wait(timeout=5)
-        except (OSError, subprocess.TimeoutExpired):
-            self.process.kill(); self.process.wait()
+            self.process.stdout.close()
 
 
 def partition(manifest, ui_report_ids):

@@ -44,7 +44,7 @@ jobs:
           BATCH_PRIVATE_REF: ${{ inputs.private_data_commit }}
           BATCH_PRIVATE_PATH: ${{ inputs.batch_path }}
           BATCH_APPROVED_OUTER_SHA256: ${{ inputs.approved_outer_sha256 }}
-          PRIVATE_LOOKUP_READ_TOKEN: ${{ secrets.PRIVATE_LOOKUP_READ_TOKEN }}
+          PRIVATE_LOOKUP_READ_TOKEN: ${{ secrets.BATCH_PRIVATE_CONTENTS_TOKEN }}
           TRIAL_DATA_KEY: ${{ secrets.TRIAL_DATA_KEY }}
           TRIAL_STREET_LOOKUP_JSON: ${{ secrets.TRIAL_STREET_LOOKUP_JSON }}
           BATCH_VERIFIED_TOPIC_POLICY: ${{ secrets.BATCH_VERIFIED_TOPIC_POLICY }}
