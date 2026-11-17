@@ -44,6 +44,8 @@ jobs:
         run: python3 scripts/test_live_instrumentation_capture.py
       - name: Minimal batch manifest derivation tests (offline only)
         run: python3 scripts/test_live_batch_derive.py
+      - name: Test pre-start proof through encryption and shredding
+        run: python3 scripts/test_live_prestart_proof.py
       - name: Private live photo staging safety tests
         run: python3 scripts/test_fetch_live_photo.py
   python-smoke:
