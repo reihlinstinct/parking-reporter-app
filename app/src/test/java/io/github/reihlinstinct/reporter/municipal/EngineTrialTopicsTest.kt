@@ -18,6 +18,24 @@ class EngineTrialTopicsTest {
         assertTrue(PlatePolicy.required("1145", catalog.subjects, emptySet()))
     }
 
+    @Test fun resolvedPlateFreeAndPlateRequiredDraftsAreActuallyReady() {
+        val catalog = catalog()
+        for (selector in listOf("1072", "broken_sign", "1145", "sidewalk_parking")) {
+            val code = EngineTrialTopics.resolve(selector, catalog)
+            val subject = EngineTrialTopics.draftSubject(code)
+            assertEquals(code, TopicIdentity.code(subject))
+            val required = PlatePolicy.required(code, catalog.subjects, emptySet())
+            val draft = ReviewDraft(Evidence("synthetic", "a".repeat(64),
+                "2026-01-01T12:00:00+02:00", 31.77, 35.21),
+                if (required) "1234567" else "", "synthetic street 12", subject,
+                if (required) "synthetic plate 1234567" else "synthetic description", emptySet(),
+                plateRequired = required)
+            assertTrue("resolved draft must be ready", draft.isReady())
+            assertTrue(PlatePolicy.descriptionContainsPlate(draft))
+            assertFalse("raw numeric subject is not a draft identity", draft.copy(subject = code).isReady())
+        }
+    }
+
     @Test fun missingUnknownLabelsAndMalformedNumericCodesRefuse() {
         val catalog = catalog()
         for (input in listOf("", "999999999", "1072 OR 1145", " 1072", "גרפיטי")) {
