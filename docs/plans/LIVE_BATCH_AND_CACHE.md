@@ -4,7 +4,7 @@ Issue: #548. Status: isolated, inactive foundation. No live workflow changes.
 
 ## Owner outcome
 
-One private ZIP contains photos, the pinned address directory and one JSON manifest. A protected main-only job accepts an immutable private artifact ID plus its SHA256. Each report has its own municipal topic, exact text, location, capture time, plate and one or more photos. The job submits reports sequentially using the app UI. No source commit or per-report repository-secret edit is needed.
+One private ZIP contains photos, the pinned address directory and one JSON manifest. A protected main-only job accepts a full private data commit SHA, constrained batch path and exact archive SHA256. It uses the existing fixed private repository and redirect-free read credential pattern in `fetch-live-photo.py`; no new credential is created by this foundation. Each report has its own municipal topic, exact text, location, capture time, plate and one or more photos. The job submits reports sequentially using the app UI. No source commit or per-report repository-secret edit is needed.
 
 The manifest is data, not permission. Execution still requires source-grounded owner authority for each report, exact manifest approval binding and the existing protected environment. Unknown topics need separate authority. No arbitrary steps, code, URLs, credentials or shell fields are accepted. Reporter credentials are injected separately from existing approved secrets after all checks.
 
@@ -22,7 +22,7 @@ A plaintext ZIP may be fetched only from verified private storage. For encrypted
 
 ## Intake and execution stages
 
-1. Resolve the exact private repository, successful producer run and immutable artifact ID through the authenticated API. Check repository privacy and expected owner. Do not accept arbitrary URLs or redirects to unverified hosts. Cross-repository private-read credentials require separately grounded scope and must never enter app params.
+1. Fetch `batches/<id>/input.zip[.enc]` from the existing fixed private `parking-reports` repository at a full immutable commit SHA. No caller-supplied repository or URL, no redirects and no mutable ref. Reuse the existing scoped private-read credential only after verifying its current configured scope; never put it in app params. This is a private data commit, not a source-code change or a private Actions run. `fetch_live_batch.py` implements this inactive boundary with streamed size/digest checks and atomic mode-0600 staging.
 2. Download once, verify digest, decrypt if required, validate the entire batch before any external write. Never execute archive files. The offline validator returns data only and does not extract files.
 3. Join all live routes under the existing single-live concurrency group. Never change shared TRIAL fields. Reserve all report/photo identities in durable private state before submission. The old 14-day artifact guard alone is insufficient for long-term duplicate safety.
 4. Restore a clean app-installed emulator, verify boot and APK signatures/version/hash, inject private data and reporter credentials only now. Recheck topic/address pins and owner binding.

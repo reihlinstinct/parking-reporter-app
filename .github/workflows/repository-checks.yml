@@ -90,6 +90,7 @@ jobs:
         run: |
           python3 scripts/test_live_batch_input.py -v
           python3 scripts/test_live_batch_journal.py -v
+          python3 scripts/test_fetch_live_batch.py -v
       - name: Run synthetic intake smoke tests
         # pipefail: without it a failing or crashing test run still exits 0 through tee.
         run: |
