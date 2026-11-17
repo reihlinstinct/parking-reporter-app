@@ -3,6 +3,8 @@ package io.github.reihlinstinct.reporter.municipal
 import io.github.reihlinstinct.reporter.core.Evidence
 import io.github.reihlinstinct.reporter.core.ReviewDraft
 import io.github.reihlinstinct.reporter.core.ReportCategory
+import io.github.reihlinstinct.reporter.core.MunicipalSubjects
+import io.github.reihlinstinct.reporter.core.PlatePolicy
 import io.github.reihlinstinct.reporter.security.ReporterSettings
 import java.io.File
 import java.security.MessageDigest
@@ -103,22 +105,25 @@ class EngineLiveTrialTest {
                 latitude = env("TRIAL_LAT").toDouble(),
                 longitude = env("TRIAL_LON").toDouble(),
             )
-            val category = ReportCategory.from(env("TRIAL_SUBJECT"))
-                ?: throw IllegalStateException("unsupported trial subject")
+            val catalogFile = listOf(File("src/main/assets/" + MunicipalSubjects.ASSET_PATH),
+                File("app/src/main/assets/" + MunicipalSubjects.ASSET_PATH)).first { it.isFile }
+            val catalog = catalogFile.inputStream().use { MunicipalSubjects.load(it) }
+            val category = EngineTrialTopics.resolve(env("TRIAL_SUBJECT"), catalog)
             val draft = ReviewDraft(
                 evidence = evidence,
                 plate = System.getenv("TRIAL_PLATE").orEmpty(),
                 address = env("TRIAL_ADDRESS"),
-                subject = category.code,
+                subject = category,
+                plateRequired = PlatePolicy.required(category, catalog.subjects, emptySet()),
                 exactHebrewText = text,
                 unresolved = emptySet(),
             )
 
             val streets = StreetDirectory.load(env("TRIAL_STREET_LOOKUP_JSON"))
             val stateDir = File(env("TRIAL_STATE_DIR")).apply { mkdirs() }
-            val coordinator = SubmissionCoordinator({ s -> municipalClientFrom(s) }, streets) { stableId ->
-                FileSubmissionStateStore(File(stateDir, "$stableId.json"))
-            }
+            val coordinator = SubmissionCoordinator({ s -> municipalClientFrom(s) }, streets,
+                { stableId -> FileSubmissionStateStore(File(stateDir, "$stableId.json")) },
+                { catalog.subjects.map { it.code }.toSet() }, null)
             // Single attempt: the workflow gives the submit phase no
             // fallback, so a failure here can never re-run a case write.
             when (val outcome = coordinator.submitOriginalForWorkflow(draft, settings(), photo)) {
