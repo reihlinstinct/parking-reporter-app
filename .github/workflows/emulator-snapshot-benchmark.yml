@@ -1,0 +1,140 @@
+name: Emulator snapshot benchmark (mock only)
+
+# Issue #548. Measures cold versus restored-snapshot preparation on public
+# Linux runners: three cold runs and three warm runs, each on a fresh runner.
+# Mock only: no secrets, no environment, no photos, no reporter identity, no
+# municipal traffic. Manual only. It publishes its own snapshot under the
+# calling branch (GitHub scopes that cache to the branch) and never touches the
+# live workflow. No saving is claimed unless the report job prints a measured one.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  producer:
+    uses: ./.github/workflows/emulator-snapshot-producer.yml
+    with:
+      allow-trial-ref: true
+
+  run:
+    needs: producer
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        mode: [cold, warm]
+        n: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Clock start
+        run: echo "T0=$(date +%s)" >> "$GITHUB_ENV"
+      - id: key
+        uses: ./.github/actions/emulator-snapshot-key
+      - run: echo "T_SDK=$(date +%s)" >> "$GITHUB_ENV"
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Build APKs
+        run: |
+          sh scripts/prepare_wrapper.sh
+          sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+          echo "T_BUILD=$(date +%s)" >> "$GITHUB_ENV"
+      - name: Restore snapshot (warm runs only)
+        id: restore
+        if: matrix.mode == 'warm'
+        uses: ./.github/actions/emulator-snapshot-restore
+        with:
+          key: ${{ steps.key.outputs.key }}
+          extra-allowed-ref: ${{ github.ref }}
+      - name: Record restore end and cache size
+        run: |
+          echo "T_RESTORE=$(date +%s)" >> "$GITHUB_ENV"
+          echo "CACHE_BYTES=$(du -sb "$HOME/.android/avd" 2>/dev/null | cut -f1 || echo 0)" >> "$GITHUB_ENV"
+          # A warm run that fell back cold must not be counted as warm.
+          if [ '${{ matrix.mode }}' = 'warm' ] && [ '${{ steps.restore.outputs.hit }}' != 'true' ]; then
+            echo 'WARM_FELL_BACK=1' >> "$GITHUB_ENV"
+          fi
+      - name: Boot, install and preflight (mock, no private data)
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 36
+          arch: x86_64
+          target: default
+          profile: pixel_2
+          disable-animations: true
+          force-avd-creation: ${{ matrix.mode == 'cold' || env.WARM_FELL_BACK == '1' }}
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none ${{ matrix.mode == 'warm' && '-no-snapshot-save' || '-no-snapshot' }}
+          script: |
+            date +%s > /tmp/t-ready
+            adb install -r app/build/outputs/apk/debug/app-debug.apk || { adb uninstall il.sidewalks.reporter; adb install app/build/outputs/apk/debug/app-debug.apk; }
+            adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk || { adb uninstall il.sidewalks.reporter.test; adb install app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk; }
+            date +%s > /tmp/t-installed
+            python3 scripts/emulator_preflight.py --report-dir /tmp/preflight
+            date +%s > /tmp/t-preflight
+      - name: Write timing record
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, os
+          e = os.environ
+          def t(path, default=None):
+              try:
+                  return int(open(path).read())
+              except OSError:
+                  return default
+          g = lambda k: int(e[k]) if k in e else None
+          ready, inst, pre = t('/tmp/t-ready'), t('/tmp/t-installed'), t('/tmp/t-preflight')
+          pts = [g('T0'), g('T_SDK'), g('T_BUILD'), g('T_RESTORE'), ready, inst, pre]
+          ph = {}
+          names = ['sdk_install', 'apk_build', 'cache_restore', 'boot_to_ready', 'apk_install', 'preflight']
+          for i, n in enumerate(names):
+              a, b = pts[i], pts[i + 1]
+              if a is not None and b is not None:
+                  ph[n] = b - a
+          if pts[0] is not None and pts[-1] is not None:
+              ph['total'] = pts[-1] - pts[0]
+          mode = '${{ matrix.mode }}'
+          if e.get('WARM_FELL_BACK') == '1':
+              mode = 'warm-fell-back-cold'
+          os.makedirs('timing', exist_ok=True)
+          json.dump({'mode': mode, 'run': ${{ matrix.n }}, 'phases': ph,
+                     'cache_bytes': int(e.get('CACHE_BYTES', 0)) if mode == 'warm' else None},
+                    open('timing/${{ matrix.mode }}-${{ matrix.n }}.json', 'w'))
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: snapshot-timing-${{ matrix.mode }}-${{ matrix.n }}
+          path: timing/
+          retention-days: 14
+
+  report:
+    needs: run
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: snapshot-timing-*
+          path: timing
+          merge-multiple: true
+      - name: Aggregate (a warm run that fell back cold is excluded)
+        run: |
+          python3 scripts/benchmark_snapshot_cache.py timing | tee -a "$GITHUB_STEP_SUMMARY"

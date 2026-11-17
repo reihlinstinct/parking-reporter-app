@@ -1,0 +1,48 @@
+name: Restore clean emulator snapshot
+description: >
+  Restores the AVD snapshot for an exact key, then verifies provenance, age and
+  content. Any rejection deletes the restored files and reports hit=false, so
+  the caller cold-builds the same clean image. A hit never grants filing
+  authority. Issue #548.
+inputs:
+  key:
+    description: Exact key from emulator-snapshot-key.
+    required: true
+  extra-allowed-ref:
+    description: >
+      Optional second producer ref besides refs/heads/main. Only the mock
+      benchmark sets it (its own branch). Live consumers leave it empty.
+    default: ''
+outputs:
+  hit:
+    description: "true only when a verified fresh snapshot is in place"
+    value: ${{ steps.verify.outputs.hit }}
+runs:
+  using: composite
+  steps:
+    - name: Restore exact key only
+      id: restore
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.android/avd
+        key: ${{ inputs.key }}
+    - name: Verify provenance, age and content
+      id: verify
+      shell: bash
+      env:
+        CACHE_HIT: ${{ steps.restore.outputs.cache-hit }}
+        EXTRA_REF: ${{ inputs.extra-allowed-ref }}
+      run: |
+        hit=false
+        if [ "$CACHE_HIT" = 'true' ]; then
+          args=(--allowed-ref refs/heads/main)
+          if [ -n "$EXTRA_REF" ]; then args+=(--allowed-ref "$EXTRA_REF"); fi
+          if python3 scripts/emulator_snapshot_cache.py verify --avd-dir "$HOME/.android/avd" "${args[@]}"; then
+            hit=true
+          else
+            rm -rf "$HOME/.android/avd"
+          fi
+        else
+          echo 'SNAPSHOT-MISS'
+        fi
+        echo "hit=$hit" >> "$GITHUB_OUTPUT"
