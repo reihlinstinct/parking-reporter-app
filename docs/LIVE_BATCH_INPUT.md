@@ -48,8 +48,8 @@ per-topic municipal evidence policy. No test case was sent to check it.
 
 - Root `reports`:1–50 report objects. Root `schemaVersion` optional,2 when present.
 - Each report needs `text` and enough location/topic information to resolve the
-  intended case. Location is `address` OR the pair `latitude`,`longitude`. Both
-  are permitted, neither is refused. A missing/ambiguous directory match blocks
+  intended case. Location is `address` OR the pair `latitude`,`longitude`. Supplying both
+  is allowed; supplying neither is refused. A missing/ambiguous directory match blocks
   preparation rather than picking an arbitrary address. Coordinates must be
   numeric and finite. Address is exact street+house, not street-only.
 - Topic: `topic` (exact independent directory name) OR `subjectCode` (verified
