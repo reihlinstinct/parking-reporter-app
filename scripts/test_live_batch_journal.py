@@ -70,6 +70,49 @@ class JournalTest(unittest.TestCase):
                 finally:
                     j.close()
 
+    def test_real_process_exit_preserves_intent(self):
+        import json
+        import subprocess
+        import sys
+        script = r"""
+import json, os, sys
+from live_batch_journal import BatchJournal, run_mock_batch
+j = BatchJournal(sys.argv[1])
+m = json.loads(sys.argv[2])
+j.reserve(m, 'd' * 64)
+class Adapter:
+    calls = 0
+    def write(self):
+        self.calls += 1
+        if self.calls == int(sys.argv[3]):
+            os._exit(73)
+    def create(self, report):
+        self.write()
+        return {'WebCaseIdInCRM': 'synthetic-' + report['reportId']}
+    def attach(self, case, photo):
+        self.write()
+        return True
+run_mock_batch(j, m, Adapter())
+"""
+        for boundary in range(1, 6):
+            with self.subTest(boundary=boundary):
+                path = Path(self.tmp.name) / ('killed%d.db' % boundary)
+                env = dict(os.environ, PYTHONPATH=str(Path(__file__).parent))
+                result = subprocess.run([sys.executable, '-c', script, str(path),
+                                         json.dumps(self.manifest), str(boundary)], env=env,
+                                        capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 73, result.stderr)
+                reopened = BatchJournal(path)
+                try:
+                    adapter = Adapter()
+                    with self.assertRaises(InvalidBatch):
+                        run_mock_batch(reopened, self.manifest, adapter)
+                    self.assertEqual(adapter.calls, [])
+                    report = 'one' if boundary <= 3 else 'two'
+                    self.assertEqual(reopened.state(report), 'creating' if boundary in (1, 4) else 'attaching')
+                finally:
+                    reopened.close()
+
     def test_before_create_is_durable_uncertainty(self):
         self.journal.begin_create('one')
         self.journal.close()
