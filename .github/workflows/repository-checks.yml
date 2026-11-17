@@ -48,6 +48,8 @@ jobs:
         run: python3 scripts/test_live_batch_hybrid.py
       - name: Private bridge subprocess timeout and death tests (synthetic only)
         run: python3 scripts/test_batch_bridge_process.py
+      - name: Test pre-start proof through encryption and shredding
+        run: python3 scripts/test_live_prestart_proof.py
       - name: Private live photo staging safety tests
         run: python3 scripts/test_fetch_live_photo.py
   python-smoke:
