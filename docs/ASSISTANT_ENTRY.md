@@ -89,3 +89,15 @@ Decision for the owner: approve step 1 and the wording of the "new report" featu
 `res/xml/shortcuts.xml` declares the `actions.intent.OPEN_APP_FEATURE` capability and one static shortcut `new_report`, both opening `il.sidewalks.reporter://report/new` in `MainActivity`. The feature name and shortcut label reuse the approved `tile_new_report` string ("דיווח חדש", "New report"). The am, ar and ru feature names are the existing tile translations (derived); the owner approved their use as voice feature names on 15 Nov 2026. The shortcut also shows on a long press of the launcher icon.
 
 Proven on a real system image in CI: the shortcut is registered, points only at the new-report link, and that link makes the shell request the camera (`VoiceShortcutTest`). A plain Play-Store emulator without any account only opens the Google app search page and has no Gemini app, so nothing further can be tested there. Not proven: that Google Assistant or Gemini matches a spoken phrase, and Hebrew matching. Claim voice entry only after a real-device test. Gemini and App Actions also need the app published on Google Play per Google's documentation.
+
+## Typed category dispatch regression (#190)
+
+`AssistantCategoryBinderTest` exercises the generated category function through
+Android's real API36 platform manager, not a direct helper call. It checks every
+known category returns an immutable app-owned activity PendingIntent, malformed
+and missing parameters return a typed invalid-argument error, and a valid request
+fails after consent is revoked. Each binder call has a bounded timeout. It never
+sends the returned action, opens the camera, creates a draft or contacts the city.
+Until this test executes in exact-head CI, these are test assertions, not observed
+runtime proof. It does not prove Gemini discovery, Hebrew invocation, unauthorized
+third-party caller behavior or end-to-end review creation.
