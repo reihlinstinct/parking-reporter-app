@@ -96,9 +96,11 @@ class MultiPhotoSubmissionDeviceTest {
             assertTrue(Regex("[0-9a-f-]{36}\\.jpg").matches(lastName))
             // The on-disk JSON itself carries the per-photo journal.
             val raw = File(dir, "synthetic-multi-1.json").readText(Charsets.UTF_8)
-            assertTrue(raw.contains("\"photos\""))
-            assertTrue(raw.contains(lastName))
-
+            val rawPhotos = JSONObject(raw).getJSONArray("photos")
+            assertEquals(photos.size, rawPhotos.length())
+            assertEquals(journal.map { it["file_name"] }, (0 until rawPhotos.length()).map { rawPhotos.getJSONObject(it).getString("file_name") })
+            assertEquals(listOf("attached", "attaching", "pending"), (0 until rawPhotos.length()).map { rawPhotos.getJSONObject(it).getString("status") })
+            
             // Resume through a fresh machine AND store with explicit retry:
             // photos b and c attach, the case is not recreated, photo a is
             // not re-attached.
