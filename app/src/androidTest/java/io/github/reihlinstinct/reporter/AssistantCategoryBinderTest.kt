@@ -55,9 +55,11 @@ class AssistantCategoryBinderTest {
         try {
             // Bounded initial package indexing only, never a retry of failed execution assertions.
             var indexed = false
-            for (attempt in 0 until 15) {
-                if (AssistantEntry.setEnabled(context, true)) { indexed = true; break }
-                delay(2000)
+            var attemptsRemaining = 15
+            while (!indexed && attemptsRemaining > 0) {
+                attemptsRemaining--
+                indexed = AssistantEntry.setEnabled(context, true)
+                if (!indexed) delay(2000)
             }
             assertTrue("Generated category function must be indexed", indexed)
             for (category in ReportCategory.entries) {
@@ -81,11 +83,15 @@ class AssistantCategoryBinderTest {
             }
             assertTrue("Revocation must disable both functions", AssistantEntry.setEnabled(context, false))
             assertFalse(store.enabled())
-            assertTrue("Valid category must be rejected after revocation",
-                invoke(parameters(ReportCategory.entries.first().code)).isFailure)
+            val revoked = invoke(parameters(ReportCategory.entries.first().code))
+            assertTrue("Valid category must be rejected after revocation", revoked.isFailure)
+            val error = revoked.exceptionOrNull()
+            assertTrue("Revocation must be a typed platform error", error is android.app.appfunctions.AppFunctionException)
+            assertEquals(android.app.appfunctions.AppFunctionException.ERROR_DISABLED,
+                (error as android.app.appfunctions.AppFunctionException).errorCode)
         } finally {
             store.save(false)
-            AssistantEntry.setEnabled(context, false)
+            assertTrue("System cleanup must revoke consent", AssistantEntry.setEnabled(context, false))
         }
     }
 }

@@ -96,7 +96,7 @@ Proven on a real system image in CI: the shortcut is registered, points only at 
 Android's real API36 platform manager, not a direct helper call. It checks every
 known category returns an immutable app-owned activity PendingIntent, malformed
 and missing parameters return a typed invalid-argument error, and a valid request
-fails after consent is revoked. Each binder call has a bounded timeout. It never
+fails with platform ERROR_DISABLED after consent is revoked. Each binder call has a bounded timeout. It never
 sends the returned action, opens the camera, creates a draft or contacts the city.
 Until this test executes in exact-head CI, these are test assertions, not observed
 runtime proof. It does not prove Gemini discovery, Hebrew invocation, unauthorized
