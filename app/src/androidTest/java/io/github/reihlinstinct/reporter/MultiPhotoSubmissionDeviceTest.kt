@@ -123,7 +123,19 @@ class MultiPhotoSubmissionDeviceTest {
             assertTrue((done["photos"] as List<Map<String, Any?>>).all { it["status"] == "attached" })
             // Attachment bodies (case binding, per-photo bytes) are verified
             // in the JVM contract test against the same stub.
-            assertTrue(JSONObject(raw).has("photos"))
+            val finalJson = JSONObject(File(dir, "synthetic-multi-1.json").readText(Charsets.UTF_8))
+            assertEquals(2, finalJson.getInt("version"))
+            assertEquals("complete", finalJson.getString("status"))
+            assertTrue(finalJson.getString("text_sha256").matches(Regex("[0-9a-f]{64}")))
+            assertEquals("synthetic-case-id", finalJson.getJSONObject("case").getString("CaseIdInCRM"))
+            val finalPhotos = finalJson.getJSONArray("photos")
+            assertEquals(photos.size, finalPhotos.length())
+            for (i in 0 until finalPhotos.length()) {
+                val entry = finalPhotos.getJSONObject(i)
+                assertEquals("attached", entry.getString("status"))
+                assertEquals(photos[i].sha256, entry.getString("sha256"))
+                assertTrue(Regex("[0-9a-f-]{36}\\.jpg").matches(entry.getString("file_name")))
+            }
         }
     }
 }
