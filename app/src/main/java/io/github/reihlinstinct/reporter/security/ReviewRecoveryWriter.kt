@@ -1,8 +1,13 @@
 package io.github.reihlinstinct.reporter.security
 
+import java.util.concurrent.atomic.AtomicLong
+
 /** Inactive serialized commit boundary, not a key/auth owner. One process-wide instance per fixed slot.
- * Caller captures immutable state on Main, encrypts off Main, then commits only through this boundary.
- * The port must persist only ciphertext; all methods may block and must run on I/O, never Main.
+ * Caller captures immutable state on Main and calls [capture] on that same thread, in snapshot order:
+ * token allocation is non-blocking (volatile session read + atomic counter) and never touches the I/O
+ * mutex, so the token order always follows the snapshot order. Encryption runs off Main, then commits
+ * only through this boundary. The port must persist only ciphertext; [start], [commit], [revoke] and
+ * [retire] may block on file I/O and must run on I/O, never Main.
  * No debounce/background flush/Keystore/lifecycle wiring exists yet. */
 class ReviewRecoveryWriter(
     private val slot: Slot,
@@ -12,7 +17,10 @@ class ReviewRecoveryWriter(
     private val deviceUnlocked: () -> Boolean,
 ) {
     interface Slot {
-        /** Returns a private staged-write handle. Must preserve prior committed bytes on failure. */
+        /** Returns a private staged-write handle. Must preserve prior committed bytes on failure.
+         * Must not retain [ciphertext] after the returned [Pending]'s finish/abort returns: the
+         * boundary zeroes the buffer immediately afterwards, so a port that writes asynchronously
+         * or keeps a reference would persist zeros. Copy the bytes before returning. */
         fun stage(ciphertext: ByteArray): Pending
         fun deleteAll()
     }
@@ -29,39 +37,48 @@ class ReviewRecoveryWriter(
         override fun toString() = "ReviewRecoveryWriterEdit(redacted)"
     }
     private val mutex = Any()
-    private var session: Session? = null
-    private var latestSequence = 0L
+    @Volatile private var session: Session? = null
+    private val latestSequence = AtomicLong(0)
     private var committedSequence = 0L
 
     /** New session after the future auth owner succeeds. Retires previous writer before deletion.
-     * A failed cleanup leaves no writable session, never reuses the previous key/deadline. */
+     * A failed cleanup leaves no writable session, never reuses the previous key/deadline.
+     * The token counter resets before the new session is published, so a capture that sees the new
+     * session also sees the reset counter; a stale in-flight capture of the previous session can
+     * only burn a token, never commit, because [commit] re-checks session identity. */
     fun start(binding: ReviewRecoveryEnvelope.Binding): Session = synchronized(mutex) {
         session = null
         slot.deleteAll()
         check(fresh(binding) && deviceUnlocked()) { "Recovery writer unavailable" }
-        latestSequence = 0
         committedSequence = 0
-        Session(binding).also { session = it }
+        Session(binding).also {
+            latestSequence.set(0)
+            session = it
+        }
     }
 
-    /** Every captured edit gets a new token before encryption, fencing older encryptions immediately. */
-    fun capture(current: Session): Edit = synchronized(mutex) {
+    /** Every captured edit gets a new token before encryption, fencing older encryptions immediately.
+     * Non-blocking: never waits on the I/O mutex, so it is safe on Main. Must be called on the
+     * snapshot thread, in snapshot order, so the token order follows the snapshot order. */
+    fun capture(current: Session): Edit {
         check(session === current && fresh(current.binding) && deviceUnlocked()) { "Recovery writer unavailable" }
-        check(latestSequence < Long.MAX_VALUE) { "Recovery writer exhausted" }
-        Edit(current, ++latestSequence)
+        val sequence = latestSequence.incrementAndGet()
+        check(sequence > 0L) { "Recovery writer exhausted" }
+        return Edit(current, sequence)
     }
 
     /** Owns and clears the supplied ciphertext buffer on every path. Never accepts plaintext.
      * Stage and final checks/finish share the terminal-cleanup mutex, so deletion cannot race finish.
-     * OS lock changes cannot be atomic with app I/O; recheck immediately before finish. */
+     * OS lock changes cannot be atomic with app I/O; recheck immediately before finish. The token
+     * check reads the atomic counter under the mutex, so any newer [capture], from any thread,
+     * fences this commit even while it is staged. */
     fun commit(edit: Edit, ciphertext: ByteArray): Boolean {
         try {
-            require(ciphertext.size in 30..ReviewRecoveryEnvelope.MAX_ENVELOPE_BYTES && ciphertext[0] == 1.toByte()) {
-                "Invalid recovery ciphertext"
-            }
+            require(ciphertext.size in ReviewRecoveryEnvelope.MIN_ENVELOPE_BYTES..ReviewRecoveryEnvelope.MAX_ENVELOPE_BYTES &&
+                ciphertext[0] == 1.toByte()) { "Invalid recovery ciphertext" }
             return synchronized(mutex) {
-                fun eligible() = session === edit.session && edit.sequence == latestSequence && edit.sequence > committedSequence &&
-                    fresh(edit.session.binding) && deviceUnlocked()
+                fun eligible() = session === edit.session && edit.sequence == latestSequence.get() &&
+                    edit.sequence > committedSequence && fresh(edit.session.binding) && deviceUnlocked()
                 if (!eligible()) return@synchronized false
                 val pending = slot.stage(ciphertext)
                 try {
