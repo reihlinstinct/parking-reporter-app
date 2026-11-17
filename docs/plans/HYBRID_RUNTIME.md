@@ -1,0 +1,80 @@
+# Hybrid runtime integration: inactive delivery slice
+
+Depends on the optional author-input contract. Not an active filing workflow.
+
+```mermaid
+flowchart TD
+ A[Owner-bound private ZIP] --> B[Whole-batch offline enrichment]
+ B --> C[Both lanes preflight before writes]
+ C --> D[Encrypted remote CAS journal reserve]
+ D --> E[Remote creating intent acknowledged]
+ E --> F{Selected lane}
+ F --> G[UI create boundary - not implemented]
+ F --> H[Production Kotlin direct CreateCase]
+ G --> I[Remote case receipt CAS]
+ H --> I
+ I --> J{Photos planned?}
+ J -->|none| K[Complete]
+ J -->|yes| L[Remote attaching intent CAS]
+ L --> M[Same-case AddFile]
+ M --> N[Remote attachment success CAS]
+ N --> K
+```
+
+## Implemented in this slice
+
+- `live_batch_persistence.py`: existing journal transactions backed by authenticated
+  AES256GCM snapshots to fixed `parking-reports/journal/live-batch.sqlite.aesgcm`
+  on main. GitHub Contents SHA compare-and-swap makes stale writers fail. Every
+  reservation/intent/result transaction must be acknowledged remotely before
+  returning. Save failure poisons the local instance. Missing/corrupt/oversized
+  remote journal blocks; no implicit bootstrap, reset or retry. SQLite FULL sync
+  and consistent backup are used. Current768KiBplain cap is conservative and
+  requires deliberate storage migration before growing beyond it.
+- `live_batch_hybrid.py`: injected UI/direct ports, one or two UI report IDs,
+  whole-batch preflight, whole-batch reserve, sequential per-write durable state.
+  No adapter fallback/resume/release. Zero-photo CreateCase completes. Mock tests
+  cover preflight failure, create uncertainty and attachment failure across lanes.
+- `BatchMunicipalBridge.kt` in test sources: private stdio IPC to production
+  MunicipalClient/MunicipalPayloads/StreetDirectory. Compile once via
+  `:app:writeBatchBridgeClasspath`, not a Gradle invocation per report. Read-only
+  login, offline report preflight, CreateCase and AddFile use production code.
+  It prints only private JSON IPC, not stdout intended for public CI. No live
+  caller is enabled. Adapter death/error stops the session; no automatic retry.
+- `live-batch-hybrid.yml`: protected main-only first-attempt **preparation-only**
+  dispatch with immutable private ref/path/outerdigest. It builds bridge before
+  private input, stages/validates the ZIP, encrypts the effective manifest and
+  uploads only encrypted preparation evidence. It receives no city credentials
+  and cannot call the controller/bridge or make a municipal write. Missing
+  private read token/topic policy is a blocker, not silently provisioned.
+
+## Not delivered and activation blockers
+
+1. UI create/attach boundary adapter. The existing all-in-one single-report UI
+   workflow cannot safely be called as a black box: it would have separate app
+   state and could write before the shared journal acknowledged intent.
+2. Persistent journal initial provisioning, verified old-case import, narrowly
+   scoped private write credential and key approval. No broad account PAT is
+   copied into Actions. No new credential or journal was created by this slice.
+   A fresh journal must include existing accepted/uncertain identities, not erase
+   duplicate history. Old14dayartifacts alone are insufficient.
+3. Live credential injection, whole-batch bounded image decoding and outgoing
+   attachment policy, verified topic policy freshness and exact effective-manifest
+   approval binding. Input validation is not permission.
+4. Read-only production login probe in the final network environment, tunnel
+   setup/cleanup and verified pre-write fallback policy. Prior direct logins have
+   succeeded, later tunnel fallback was needed; current future egress is unknown.
+   No new live probe or municipal write was run for this slice.
+5. Shared concurrency across ALL old/new live entry points. New preparation uses
+   the current UI group, but the legacy engine has its own group. Do not activate
+   a writer until both converge and the CAS journal owns both lanes.
+6. Cache550consumer integration and cold fallback. Producer is merged, first
+   scheduled output not yet verified/benchmarked. No speed savings claimed.
+7. Full mock HTTP server integration, external process-kill tests spanning both
+   adapters, authenticated backup rollback protection beyond CAS, image decode
+   tests, leak tests on actual encrypted evidence inventory and supervised
+   owner-approved live proof. Current controller tests use injected mocks;
+   persistence tests cover save failure and reopening, not full UI process death.
+
+No new workflow pretends these gates are satisfied. Existing single-report route
+remains unchanged. The author guide remains honest about the missing submit step.

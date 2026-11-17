@@ -1,3 +1,5 @@
+import java.io.File
+
 plugins {
     id("com.google.devtools.ksp")
     id("com.android.application")
@@ -97,4 +99,23 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
     androidTestImplementation("com.squareup.okhttp3:mockwebserver3:5.5.1")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+// Inactive batch bridge: compile once before secrets, then use private stdio IPC.
+// This task does not run the bridge or make network calls.
+tasks.register("writeBatchBridgeClasspath") {
+    dependsOn("compileDebugUnitTestKotlin", "compileDebugJavaWithJavac")
+    doLast {
+        val roots = listOf(
+            layout.buildDirectory.dir("tmp/kotlin-classes/debug").get().asFile,
+            layout.buildDirectory.dir("tmp/kotlin-classes/debugUnitTest").get().asFile,
+            layout.buildDirectory.dir("intermediates/built_in_kotlinc/debug/classes").get().asFile,
+            layout.buildDirectory.dir("intermediates/built_in_kotlinc/debugUnitTest/classes").get().asFile,
+            layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes").get().asFile,
+        )
+        val deps = configurations.getByName("debugUnitTestRuntimeClasspath").files
+        val output = layout.buildDirectory.file("batch-bridge/classpath.txt").get().asFile
+        output.parentFile.mkdirs()
+        output.writeText((roots.filter { it.exists() } + deps).joinToString(File.pathSeparator))
+    }
 }

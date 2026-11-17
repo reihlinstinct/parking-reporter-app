@@ -44,6 +44,8 @@ jobs:
         run: python3 scripts/test_live_instrumentation_capture.py
       - name: Minimal batch manifest derivation tests (offline only)
         run: python3 scripts/test_live_batch_derive.py
+      - name: Hybrid partition and write-boundary tests (offline only)
+        run: python3 scripts/test_live_batch_hybrid.py
       - name: Private live photo staging safety tests
         run: python3 scripts/test_fetch_live_photo.py
   python-smoke:
@@ -59,6 +61,8 @@ jobs:
         run: |
           python3 -m venv /tmp/venv
           /tmp/venv/bin/pip install --require-hashes -r requirements-lock.txt
+      - name: Encrypted durable journal CAS tests (no network)
+        run: /tmp/venv/bin/python scripts/test_live_batch_persistence.py
       - name: Regression test test summaries and strict installed-upgrade gates
         run: |
           python3 -m unittest discover -s tests -p 'test_test_summary.py' -v
