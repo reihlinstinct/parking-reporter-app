@@ -68,22 +68,30 @@ class SubmissionMultiPhotoStateMachineTest {
         MunicipalPayloads.ReportFields("דיווח סינתטי.", "1145", "1630", "הפלמח", "900", 220000, 630500)
     )
 
-    private fun photo(name: String, marker: Byte): SubmissionPhoto {
-        val bytes = byteArrayOf(marker, marker, marker)
+    private fun photo(marker: Byte): SubmissionPhoto {
+        val bytes = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), marker)
         return SubmissionPhoto(
-            name,
             bytes,
             io.github.reihlinstinct.reporter.intake.EncryptedPackage.sha256(bytes),
         )
     }
 
     private val threePhotos = listOf(
-        photo("synthetic-a.jpg", 1),
-        photo("synthetic-b.jpg", 2),
-        photo("synthetic-c.jpg", 3),
+        photo(1),
+        photo(2),
+        photo(3),
     )
 
-    private fun machine(client: FakeClient) = SubmissionStateMachine(client)
+    private fun machine(client: FakeClient): SubmissionStateMachine {
+        var next = 0
+        return SubmissionStateMachine(client, fileNameGenerator = { "synthetic-${'a' + next++}.jpg" })
+    }
+
+    private val textId = submissionTextIdentity(contact, report)
+
+    private fun journal(status: String = "pending") = threePhotos.mapIndexed { i, p ->
+        mutableMapOf<String, Any?>("file_name" to "synthetic-${'a' + i}.jpg", "sha256" to p.sha256, "status" to status)
+    }
 
     @Suppress("UNCHECKED_CAST")
     private fun photoStatuses(store: InMemorySubmissionStateStore): List<Pair<String, String>> =
@@ -104,7 +112,7 @@ class SubmissionMultiPhotoStateMachineTest {
         )
         assertEquals(1, client.calls.count { it == "create" })
         assertEquals(
-            listOf("prepared", "creating", "created", "attaching", "attaching", "attaching", "attaching", "complete"),
+            listOf("prepared", "creating", "created", "attaching", "attaching", "attaching", "attaching", "attaching", "attaching", "complete"),
             store.writes,
         )
         assertEquals(2, store.stored!!["version"])
@@ -126,6 +134,7 @@ class SubmissionMultiPhotoStateMachineTest {
             mutableMapOf(
                 "version" to 2,
                 "status" to "complete",
+                "text_sha256" to textId,
                 "case" to mapOf("CaseIdInCRM" to "synthetic-case-id"),
                 "photos" to mutableListOf(
                     mutableMapOf("file_name" to "synthetic-a.jpg", "sha256" to threePhotos[0].sha256, "status" to "attached"),
@@ -227,13 +236,12 @@ class SubmissionMultiPhotoStateMachineTest {
             mutableMapOf(
                 "version" to 2,
                 "status" to "created",
+                "text_sha256" to textId,
                 "case" to mutableMapOf(
                     "CaseIdInCRM" to "synthetic-case-id",
                     "WebCaseIdInCRM" to "synthetic-webcase-id",
                 ),
-                "photos" to threePhotos.map {
-                    mutableMapOf("file_name" to it.fileName, "sha256" to it.sha256, "status" to "pending")
-                },
+                "photos" to journal("pending"),
             )
         )
         val result = machine(client).submitPhotos(store, contact, report, threePhotos)
@@ -252,16 +260,15 @@ class SubmissionMultiPhotoStateMachineTest {
             mutableMapOf(
                 "version" to 2,
                 "status" to "created",
+                "text_sha256" to textId,
                 "case" to mutableMapOf(
                     "CaseIdInCRM" to "synthetic-case-id",
                     "WebCaseIdInCRM" to "synthetic-webcase-id",
                 ),
-                "photos" to threePhotos.map {
-                    mutableMapOf("file_name" to it.fileName, "sha256" to it.sha256, "status" to "pending")
-                },
+                "photos" to journal("pending"),
             )
         )
-        val different = listOf(threePhotos[0], threePhotos[1], photo("synthetic-d.jpg", 4))
+        val different = listOf(threePhotos[0], threePhotos[1], photo(4))
         assertThrows(MunicipalReviewNeededException::class.java) {
             machine(client).submitPhotos(store, contact, report, different)
         }
@@ -280,13 +287,12 @@ class SubmissionMultiPhotoStateMachineTest {
             mutableMapOf(
                 "version" to 2,
                 "status" to "attaching",
+                "text_sha256" to textId,
                 "case" to mutableMapOf(
                     "CaseIdInCRM" to "synthetic-case-id",
                     "WebCaseIdInCRM" to "synthetic-webcase-id",
                 ),
-                "photos" to threePhotos.map {
-                    mutableMapOf("file_name" to it.fileName, "sha256" to it.sha256, "status" to "half-sent")
-                },
+                "photos" to journal("half-sent"),
             )
         )
         assertThrows(MunicipalReviewNeededException::class.java) {
@@ -328,17 +334,16 @@ class SubmissionMultiPhotoStateMachineTest {
         assertThrows(MunicipalInputException::class.java) {
             machine(client).submitPhotos(store, contact, report, listOf(threePhotos[0], threePhotos[0]))
         }
-        val sameBytesDifferentName = listOf(threePhotos[0], SubmissionPhoto("synthetic-b2.jpg", byteArrayOf(1, 1, 1), threePhotos[0].sha256))
-        assertThrows(MunicipalInputException::class.java) {
-            machine(client).submitPhotos(store, contact, report, sameBytesDifferentName)
-        }
-        val wrongDigest = listOf(SubmissionPhoto("synthetic-a.jpg", byteArrayOf(1, 1, 1), "0".repeat(64)))
+        val wrongDigest = listOf(SubmissionPhoto(byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 1), "0".repeat(64)))
         assertThrows(MunicipalInputException::class.java) {
             machine(client).submitPhotos(store, contact, report, wrongDigest)
         }
-        val blankName = listOf(SubmissionPhoto(" ", byteArrayOf(9), io.github.reihlinstinct.reporter.intake.EncryptedPackage.sha256(byteArrayOf(9))))
+        val pngBytes = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 1)
+        val png = listOf(
+            SubmissionPhoto(pngBytes, io.github.reihlinstinct.reporter.intake.EncryptedPackage.sha256(pngBytes))
+        )
         assertThrows(MunicipalInputException::class.java) {
-            machine(client).submitPhotos(store, contact, report, blankName)
+            machine(client).submitPhotos(store, contact, report, png)
         }
         assertEquals(null, store.stored)
         assertEquals(emptyList<String>(), client.calls)
@@ -403,5 +408,61 @@ class SubmissionMultiPhotoStateMachineTest {
         val snapshot = LinkedHashMap(caller)
         machine(client).submitPhotos(store, caller, report, threePhotos)
         assertEquals(snapshot, caller)
+    }
+
+    @Test
+    fun completedStateWithADifferentPhotoSetIsRefusedNotShortCircuited() {
+        val client = FakeClient()
+        val store = InMemorySubmissionStateStore()
+        store.write(
+            mutableMapOf(
+                "version" to 2,
+                "status" to "complete",
+                "text_sha256" to textId,
+                "case" to mapOf("CaseIdInCRM" to "synthetic-case-id"),
+                "photos" to journal("attached"),
+            )
+        )
+        assertThrows(MunicipalReviewNeededException::class.java) {
+            machine(client).submitPhotos(store, contact, report, threePhotos.subList(0, 2))
+        }
+        assertEquals(emptyList<String>(), client.calls)
+    }
+
+    @Test
+    fun changedReportTextIsRefusedAgainstAnExistingJournal() {
+        val client = FakeClient()
+        val store = InMemorySubmissionStateStore()
+        store.write(
+            mutableMapOf(
+                "version" to 2,
+                "status" to "created",
+                "text_sha256" to textId,
+                "case" to mutableMapOf(
+                    "CaseIdInCRM" to "synthetic-case-id",
+                    "WebCaseIdInCRM" to "synthetic-webcase-id",
+                ),
+                "photos" to journal(),
+            )
+        )
+        val other = MunicipalPayloads.buildReport(
+            MunicipalPayloads.ReportFields("דיווח סינתטי אחר.", "1145", "1630", "הפלמח", "900", 220000, 630500)
+        )
+        assertThrows(MunicipalReviewNeededException::class.java) {
+            machine(client).submitPhotos(store, contact, other, threePhotos)
+        }
+        assertEquals(emptyList<String>(), client.calls)
+    }
+
+    @Test
+    fun outgoingNamesAreGeneratedAndPersistedNeverTakenFromTheCaller() {
+        val client = FakeClient()
+        val store = InMemorySubmissionStateStore()
+        SubmissionStateMachine(client).submitPhotos(store, contact, report, threePhotos)
+        val names = client.attached
+        assertEquals(3, names.size)
+        assertEquals(3, names.toSet().size)
+        assertTrue(names.all { Regex("[0-9a-f-]{36}\\.jpg").matches(it) })
+        assertEquals(names, photoStatuses(store).map { it.first })
     }
 }

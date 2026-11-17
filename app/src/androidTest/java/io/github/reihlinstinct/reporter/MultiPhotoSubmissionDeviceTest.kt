@@ -53,19 +53,18 @@ class MultiPhotoSubmissionDeviceTest {
         MunicipalPayloads.ReportFields("דיווח סינתטי.", "1145", "1630", "הפלמח", "900", 220000, 630500)
     )
 
-    private fun photo(name: String, marker: Byte): SubmissionPhoto {
-        val bytes = ByteArray(16) { (marker + it).toByte() }
+    private fun photo(marker: Byte): SubmissionPhoto {
+        val bytes = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte()) + ByteArray(16) { (marker + it).toByte() }
         return SubmissionPhoto(
-            name,
             bytes,
             io.github.reihlinstinct.reporter.intake.EncryptedPackage.sha256(bytes),
         )
     }
 
     private val photos = listOf(
-        photo("synthetic-a.jpg", 10),
-        photo("synthetic-b.jpg", 40),
-        photo("synthetic-c.jpg", 70),
+        photo(10),
+        photo(40),
+        photo(70),
     )
 
     @Suppress("UNCHECKED_CAST")
@@ -92,18 +91,13 @@ class MultiPhotoSubmissionDeviceTest {
             assertEquals(2, durable["version"])
             assertEquals("attaching", durable["status"])
             val journal = durable["photos"] as List<Map<String, Any?>>
-            assertEquals(
-                listOf(
-                    "synthetic-a.jpg" to "attached",
-                    "synthetic-b.jpg" to "attaching",
-                    "synthetic-c.jpg" to "pending",
-                ),
-                journal.map { (it["file_name"] as String) to (it["status"] as String) },
-            )
+            assertEquals(listOf("attached", "attaching", "pending"), journal.map { it["status"] })
+            val lastName = journal.last()["file_name"] as String
+            assertTrue(Regex("[0-9a-f-]{36}\\.jpg").matches(lastName))
             // The on-disk JSON itself carries the per-photo journal.
             val raw = File(dir, "synthetic-multi-1.json").readText(Charsets.UTF_8)
             assertTrue(raw.contains("\"photos\""))
-            assertTrue(raw.contains("\"synthetic-c.jpg\""))
+            assertTrue(raw.contains(lastName))
 
             // Resume through a fresh machine AND store with explicit retry:
             // photos b and c attach, the case is not recreated, photo a is

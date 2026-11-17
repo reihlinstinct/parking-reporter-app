@@ -34,19 +34,18 @@ class MultiPhotoMunicipalContractTest {
         MunicipalPayloads.ReportFields("דיווח סינתטי.", "1145", "1630", "הפלמח", "900", 220000, 630500)
     )
 
-    private fun photo(name: String, marker: Byte): SubmissionPhoto {
-        val bytes = ByteArray(16) { (marker + it).toByte() }
+    private fun photo(marker: Byte): SubmissionPhoto {
+        val bytes = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte()) + ByteArray(16) { (marker + it).toByte() }
         return SubmissionPhoto(
-            name,
             bytes,
             io.github.reihlinstinct.reporter.intake.EncryptedPackage.sha256(bytes),
         )
     }
 
     private val photos = listOf(
-        photo("synthetic-a.jpg", 10),
-        photo("synthetic-b.jpg", 40),
-        photo("synthetic-c.jpg", 70),
+        photo(10),
+        photo(40),
+        photo(70),
     )
 
     private fun MockWebServer.enqueueHappyOpen() {
@@ -77,13 +76,15 @@ class MultiPhotoMunicipalContractTest {
                 listOf("Login", "createupdatecontact", "CreateCase", "AddFileToCase", "AddFileToCase", "AddFileToCase"),
                 requests.map { it.target.substringAfterLast('/') },
             )
+            val sentNames = requests.drop(3).map { JSONObject(it.body!!.utf8()).getString("fileName") }
+            assertEquals(3, sentNames.toSet().size)
             assertEquals(1, requests.count { it.target.endsWith("/CreateCase") })
             val attaches = requests.drop(3)
             for ((index, request) in attaches.withIndex()) {
                 val body = JSONObject(request.body!!.utf8())
                 assertEquals("synthetic-case-id", body.getString("caseIdInCRM"))
                 assertEquals("synthetic-webcase-id", body.getString("webCaseIdInCRM"))
-                assertEquals(photos[index].fileName, body.getString("fileName"))
+                assertTrue(Regex("[0-9a-f-]{36}\\.jpg").matches(body.getString("fileName")))
                 assertArrayEquals(
                     photos[index].bytes(),
                     java.util.Base64.getDecoder().decode(body.getString("fileContent")),
@@ -104,9 +105,17 @@ class MultiPhotoMunicipalContractTest {
             assertThrows(MunicipalReviewNeededException::class.java) {
                 SubmissionStateMachine(client(server)).submitPhotos(store, contact, report, photos)
             }
+            // Drain the first run: login, contact, one CreateCase, photo a,
+            // and photo b's attempt (which did reach the server).
+            val firstRun = (1..5).map { take(server) }
+            assertEquals(
+                listOf("Login", "createupdatecontact", "CreateCase", "AddFileToCase", "AddFileToCase"),
+                firstRun.map { it.target.substringAfterLast('/') },
+            )
             assertEquals("attaching", store.stored!!["status"])
             @Suppress("UNCHECKED_CAST")
             val journal = store.stored!!["photos"] as List<Map<String, Any?>>
+            val journalNames = journal.map { it["file_name"] as String }
             assertEquals(listOf("attached", "attaching", "pending"), journal.map { it["status"] })
 
             // A blind re-run without retryPhotos is refused with no traffic.
@@ -130,7 +139,7 @@ class MultiPhotoMunicipalContractTest {
                 resumed.map { it.target.substringAfterLast('/') },
             )
             assertEquals(
-                listOf("synthetic-b.jpg", "synthetic-c.jpg"),
+                journalNames.drop(1),
                 resumed.drop(1).map { JSONObject(it.body!!.utf8()).getString("fileName") },
             )
             assertEquals("complete", store.stored!!["status"])
