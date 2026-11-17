@@ -64,3 +64,38 @@ CLI inference still sends prompts and selected public source to GitHub-hosted
 models. Running the CLI locally is not offline/local-model inference. No private
 source or evidence is authorized by this example. Pricing and allowances can
 change; recheck entitlement before repeating the trial.
+
+## Three-PR review comparison
+
+The same read-only profile was tested against frozen public base/head trees and a
+complete diff. Peer findings were withheld from Copilot until after its verdict.
+Shell, file-write, URL and built-in MCP access remained disabled. No verdict was
+posted as a formal GitHub approval.
+
+| PR and reviewed head | Copilot result | Maintainer check |
+| --- | --- | --- |
+| #568 `ecece88` | PASS, both changed files read | No actionable issue found; runtime/pricing claims correctly treated as reported, not independently verified |
+| #557 `a8690c0` | FINDINGS, eight changed files read | Both reproduced: zero-test unittest execution can pass; an interrupted output write leaves a partial final manifest that blocks retry |
+| #559 `6c08be2` | PASS, twenty changed files read | Inconsistent: includes the same manifest writer but did not flag its partial-output defect |
+
+The two larger reviews reached the first process time budget. They were resumed
+once to report from the source already read, rather than silently presenting an
+unfinished run as complete. Each verdict states source-inspection limits and no
+executed-test or CI proof. Reported review-session usage was about 0.48, 2.98 and
+3.32 included AI credits respectively, with automatic model selection.
+
+GitHub's Gemini reviews on these heads were capped at the first 12,000 diff
+characters. Its #557 note affirmed the private-output warning, and its #559 note
+concerned comment wording rather than a code defect. Its earlier #568 date warning
+was rejected because November 17, 2026 was the actual check date. These limited
+reviews do not establish that another full-source reviewer missed the bugs.
+
+The reproduced defects are fixed separately in #557 and inherited into #559,
+with an atomic no-replace private output publication and a test runner that fails
+on zero tests. Findings from the old heads do not approve the updated heads.
+
+Assessment: useful as an additional source reviewer, with demonstrated small
+findings and demonstrated inconsistency. It does not replace the established
+independent exact-head review plus green CI gate. This trial does not prove strong
+unknown-bug detection, adversarial robustness or full coverage from claimed file
+counts alone.
