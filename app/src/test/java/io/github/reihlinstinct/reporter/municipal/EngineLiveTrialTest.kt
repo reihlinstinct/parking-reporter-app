@@ -113,7 +113,7 @@ class EngineLiveTrialTest {
                 evidence = evidence,
                 plate = System.getenv("TRIAL_PLATE").orEmpty(),
                 address = env("TRIAL_ADDRESS"),
-                subject = category,
+                subject = EngineTrialTopics.draftSubject(category),
                 plateRequired = PlatePolicy.required(category, catalog.subjects, emptySet()),
                 exactHebrewText = text,
                 unresolved = emptySet(),
