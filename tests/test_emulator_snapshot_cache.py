@@ -2,6 +2,7 @@ import importlib.util
 import io
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -30,6 +31,12 @@ def manifest(created=NOW, **kw):
     mm = m.build_manifest(inputs(), created, 'refs/heads/main', SHA40)
     mm.update(kw)
     return mm
+
+
+def git(cwd, *a):
+    subprocess.run(['git', *a], cwd=cwd, check=True, capture_output=True,
+                   env={**os.environ, 'GIT_AUTHOR_NAME': 't', 'GIT_AUTHOR_EMAIL': 't@t', 'GIT_COMMITTER_NAME': 't',
+                        'GIT_COMMITTER_EMAIL': 't@t'})
 
 
 class KeyTest(unittest.TestCase):
@@ -141,10 +148,14 @@ class CliTest(unittest.TestCase):
         (self.avd / 'config.ini').write_text('k=v')
         (t / 'src').mkdir(); (t / 'src/app').mkdir()
         (t / 'src/app/a.kt').write_text('code')
+        (t / 'src/.gitignore').write_text('app/ignored/\n')
+        git(t / 'src', 'init', '-q')
+        git(t / 'src', 'add', '-A')
         (t / 'prep.sh').write_text('prep')
+        (t / 'prep2.sh').write_text('prep2')
         self.env = dict(EMU_API_LEVEL='36', EMU_ARCH='x86_64', EMU_TARGET='default', EMU_PROFILE='pixel_2',
                         EMU_IMAGE_REVISION='r2', EMU_VERSION='1', EMU_RUNNER_IMAGE='img',
-                        EMU_SOURCE_ROOT=str(t / 'src'), EMU_PREPARE_SCRIPT=str(t / 'prep.sh'),
+                        EMU_SOURCE_ROOT=str(t / 'src'), EMU_PREPARE_PATHS=f"{t / 'prep.sh'} {t / 'prep2.sh'}",
                         GITHUB_REF='refs/heads/main', GITHUB_SHA=SHA40)
 
     def run_cli(self, *a, env=None):
@@ -163,11 +174,49 @@ class CliTest(unittest.TestCase):
         self.assertEqual(rc, 3)
         self.assertIn('SNAPSHOT-REJECTED', out)
 
-    def test_build_output_does_not_change_source_digest(self):
+    def test_ignored_and_untracked_files_do_not_change_source_digest(self):
+        # Models the OCR asset that prepare_wrapper.sh downloads into app/
+        # after the key is computed (review P2-2).
         root = Path(self.env['EMU_SOURCE_ROOT'])
         before = m.source_digest(root)
+        (root / 'app/ignored').mkdir(); (root / 'app/ignored/eng.traineddata').write_text('model')
+        (root / 'app/untracked.bin').write_text('x')
         (root / 'app/build').mkdir(); (root / 'app/build/x.apk').write_text('1')
         self.assertEqual(before, m.source_digest(root))
+
+    def test_key_before_build_equals_inputs_at_verify_time(self):
+        rc, key_before = self.run_cli('key')
+        self.assertEqual(rc, 0)
+        root = Path(self.env['EMU_SOURCE_ROOT'])
+        (root / 'app/ignored').mkdir(); (root / 'app/ignored/eng.traineddata').write_text('model')
+        self.assertEqual(self.run_cli('write-manifest', '--avd-dir', str(self.avd))[0], 0)
+        manifest = json.loads((self.avd / 'provenance.json').read_text())
+        self.assertEqual(manifest['key'], key_before.strip())
+        self.assertEqual(self.run_cli('verify', '--avd-dir', str(self.avd))[1].strip(), 'SNAPSHOT-VERIFIED')
+
+    def test_tracked_change_changes_source_digest_and_non_git_fails_closed(self):
+        root = Path(self.env['EMU_SOURCE_ROOT'])
+        before = m.source_digest(root)
+        (root / 'app/a.kt').write_text('changed')
+        self.assertNotEqual(before, m.source_digest(root))
+        with tempfile.TemporaryDirectory() as d, self.assertRaises(m.CacheRejected):
+            m.source_digest(Path(d))
+
+    def test_every_prepare_path_rotates_the_key(self):
+        _, k1 = self.run_cli('key')
+        Path(self.env['EMU_PREPARE_PATHS'].split()[1]).write_text('changed')
+        _, k2 = self.run_cli('key')
+        self.assertNotEqual(k1, k2)
+
+    def test_two_allowed_refs_on_cli(self):
+        self.run_cli('write-manifest', '--avd-dir', str(self.avd))
+        env = {**self.env, 'GITHUB_REF': 'refs/heads/feat/x'}
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            self.assertEqual(m.main(['write-manifest', '--avd-dir', str(self.avd)], env), 0)
+        self.assertEqual(self.run_cli('verify', '--avd-dir', str(self.avd))[0], 3)
+        self.assertEqual(self.run_cli('verify', '--avd-dir', str(self.avd), '--allowed-ref', 'refs/heads/main',
+                                      '--allowed-ref', 'refs/heads/feat/x')[0], 0)
 
     def test_missing_env_and_missing_manifest_reject(self):
         self.assertEqual(self.run_cli('verify', '--avd-dir', str(self.avd))[0], 3)
@@ -204,6 +253,12 @@ class WorkflowBoundaryTest(unittest.TestCase):
     def test_restore_is_exact_key_only(self):
         for rel in self.files:
             self.assertNotIn('restore-keys', self.text(rel))
+
+    def test_benchmark_branch_may_accept_main_and_own_ref(self):
+        r = self.text('.github/actions/emulator-snapshot-restore/action.yml')
+        self.assertIn('--allowed-ref refs/heads/main', r)
+        self.assertIn('extra-allowed-ref', self.text('.github/workflows/emulator-snapshot-benchmark.yml'))
+        self.assertNotIn('extra-allowed-ref', self.text('.github/workflows/emulator-snapshot-producer.yml'))
 
     def test_only_producer_saves_and_only_the_avd_dir(self):
         saves = [rel for rel in self.files if 'cache/save' in self.text(rel)]

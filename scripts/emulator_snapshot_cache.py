@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -85,7 +86,7 @@ def build_manifest(inputs: dict, created_at: datetime, producer_ref: str, produc
 
 
 def verify_manifest(manifest, expected_inputs: dict, now: datetime,
-                    allowed_ref: str = 'refs/heads/main') -> None:
+                    allowed_ref='refs/heads/main') -> None:
     """Return None when the snapshot may be used; raise CacheRejected otherwise."""
     expected = _check_inputs(expected_inputs)
     if not isinstance(manifest, dict):
@@ -98,8 +99,12 @@ def verify_manifest(manifest, expected_inputs: dict, now: datetime,
         raise CacheRejected('unsupported manifest schema')
     if manifest['clean_build'] is not True or manifest['private_data_injected'] is not False:
         raise CacheRejected('clean-build marker is not set')
-    if manifest['producer_ref'] != allowed_ref:
-        raise CacheRejected('only the trusted main producer may publish a snapshot')
+    allowed = (allowed_ref,) if isinstance(allowed_ref, str) else tuple(allowed_ref)
+    # Consistency check only: producer_ref is written by the producer itself.
+    # The real trust boundary is GitHub cache scoping (a branch's caches are
+    # invisible to main) plus a producer job that never holds secrets.
+    if manifest['producer_ref'] not in allowed:
+        raise CacheRejected('producer ref is not an allowed ref (consistency check, not authentication)')
     if not re.fullmatch(r'[0-9a-f]{40}', str(manifest['producer_sha'])):
         raise CacheRejected('producer sha missing')
     if manifest['inputs'] != expected:
@@ -153,19 +158,37 @@ SOURCE_PATHS = ('app', 'gradle', 'build.gradle.kts', 'settings.gradle.kts', 'gra
 
 
 def source_digest(root: Path) -> str:
-    """Digest of the build inputs. Debug APKs are not byte-reproducible across
-    runners (debug signing key), so the key follows the sources, and the
-    consumer reinstalls the freshly built APKs on top of the snapshot."""
+    """Digest of the TRACKED build inputs only (git ls-files).
+
+    Git-ignored files such as the OCR model that scripts/prepare_wrapper.sh
+    downloads into app/ must not change the digest, so the key computed before
+    the build equals the one recomputed after it. Debug APKs are not
+    byte-reproducible across runners (debug signing key), so the key follows
+    the sources and the consumer reinstalls the freshly built APKs.
+    """
+    root = Path(root)
+    try:
+        out = subprocess.run(['git', 'ls-files', '-z', '--', *SOURCE_PATHS], cwd=root,
+                             capture_output=True, check=True, timeout=60).stdout
+    except (OSError, subprocess.SubprocessError):
+        raise CacheRejected('cannot list tracked sources (not a git checkout)')
+    names = sorted(n for n in out.decode().split('\0') if n)
+    if not names:
+        raise CacheRejected('no tracked source files found')
     h = hashlib.sha256()
-    files = []
-    for rel in SOURCE_PATHS:
-        base = root / rel
-        if base.is_file():
-            files.append(base)
-        elif base.is_dir():
-            files += [f for f in base.rglob('*') if f.is_file() and 'build' not in f.relative_to(base).parts[:1]]
-    for f in sorted(files):
-        h.update(f.relative_to(root).as_posix().encode() + b'\0' + _sha256(f).encode() + b'\n')
+    for name in names:
+        f = root / name
+        if f.is_symlink() or not f.is_file():
+            raise CacheRejected('tracked source is not a regular file')
+        h.update(name.encode() + b'\0' + _sha256(f).encode() + b'\n')
+    return h.hexdigest()
+
+
+def prepare_digest(paths) -> str:
+    """Digest of the preparation inputs: producer workflow, composite actions and this script."""
+    h = hashlib.sha256()
+    for name in sorted(p for p in paths if p):
+        h.update(name.encode() + b'\0' + _sha256(Path(name)).encode() + b'\n')
     return h.hexdigest()
 
 
@@ -176,7 +199,7 @@ def _inputs_from_env(env) -> dict:
         'profile': env['EMU_PROFILE'], 'system_image_revision': env['EMU_IMAGE_REVISION'],
         'emulator_version': env['EMU_VERSION'], 'runner_image': env['EMU_RUNNER_IMAGE'],
         'app_source_sha256': source_digest(Path(env.get('EMU_SOURCE_ROOT', '.'))),
-        'prepare_script_sha256': _sha256(Path(env['EMU_PREPARE_SCRIPT'])),
+        'prepare_script_sha256': prepare_digest(env['EMU_PREPARE_PATHS'].split()),
         'epoch': epoch_for(now),
     }
 
@@ -192,7 +215,7 @@ def main(argv=None, env=None) -> int:
     p.add_argument('--avd-dir', required=True)
     # Live consumers keep the default. Only the mock benchmark passes its own
     # branch ref, and GitHub scopes a branch's caches to that branch.
-    p.add_argument('--allowed-ref', default='refs/heads/main')
+    p.add_argument('--allowed-ref', action='append')
     args = ap.parse_args(argv)
     try:
         inputs = _inputs_from_env(env)
@@ -209,7 +232,7 @@ def main(argv=None, env=None) -> int:
             return 0
         scan_tree(avd)
         verify_manifest(json.loads(manifest_path.read_text()), inputs, datetime.now(timezone.utc),
-                        args.allowed_ref)
+                        args.allowed_ref or 'refs/heads/main')
         print('SNAPSHOT-VERIFIED')
         return 0
     except (CacheRejected, KeyError, OSError, ValueError) as e:

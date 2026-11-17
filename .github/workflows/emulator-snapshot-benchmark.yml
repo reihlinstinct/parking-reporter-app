@@ -59,7 +59,7 @@ jobs:
         uses: ./.github/actions/emulator-snapshot-restore
         with:
           key: ${{ steps.key.outputs.key }}
-          allowed-ref: ${{ github.ref }}
+          extra-allowed-ref: ${{ github.ref }}
       - name: Record restore end and cache size
         run: |
           echo "T_RESTORE=$(date +%s)" >> "$GITHUB_ENV"

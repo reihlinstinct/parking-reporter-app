@@ -27,7 +27,7 @@ runs:
           echo "EMU_VERSION=$(rev "$sdkroot/emulator/source.properties")"
           echo "EMU_RUNNER_IMAGE=${ImageOS:-unknown}-${ImageVersion:-unknown}"
           echo "EMU_SOURCE_ROOT=$GITHUB_WORKSPACE"
-          echo "EMU_PREPARE_SCRIPT=$GITHUB_WORKSPACE/.github/workflows/emulator-snapshot-producer.yml"
+          echo "EMU_PREPARE_PATHS=$GITHUB_WORKSPACE/.github/workflows/emulator-snapshot-producer.yml $GITHUB_WORKSPACE/.github/actions/emulator-snapshot-key/action.yml $GITHUB_WORKSPACE/.github/actions/emulator-snapshot-restore/action.yml $GITHUB_WORKSPACE/scripts/emulator_snapshot_cache.py"
         } >> "$GITHUB_ENV"
     - name: Compute the exact key
       id: key

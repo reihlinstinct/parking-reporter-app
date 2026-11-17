@@ -10,13 +10,14 @@ An Android virtual device directory (`~/.android/avd`) with the system booted, t
 
 ## Rules
 
-- Exact key, no restore-prefix fallback. The key covers API level, architecture, target, profile, system image revision, emulator version, runner image, a digest of the app build sources, a digest of the producer workflow and a 2-day epoch.
+- Exact key, no restore-prefix fallback. The key covers API level, architecture, target, profile, system image revision, emulator version, runner image, a digest of the tracked app build sources (`git ls-files`, so the OCR model that `prepare_wrapper.sh` downloads does not change it, and the key computed before the build equals the one verified after), a digest of the preparation inputs (producer workflow, both composite actions and `scripts/emulator_snapshot_cache.py`) and a 2-day epoch.
 - The key follows the sources, not APK bytes. Debug APKs are not byte-reproducible across runners (debug signing key). The consumer installs the freshly built APKs over the snapshot and uninstalls first when signatures differ.
-- `provenance.json` is stored in the cache. The consumer refuses a snapshot when any field is missing or unexpected, the inputs differ, the clean-build marker is not set, the producer ref is not `refs/heads/main`, the timestamp is in the future (5 minute skew allowed) or the age is over 72 hours.
+- `provenance.json` is stored in the cache. The consumer refuses a snapshot when any field is missing or unexpected, the inputs differ, the clean-build marker is not set, the producer ref is not an allowed ref, the timestamp is in the future (5 minute skew allowed) or the age is over 72 hours.
+- **What is and is not a boundary.** `producer_ref` in the manifest is written by the producer itself, so checking it is a consistency check, not authentication. The real boundaries are GitHub cache scoping (a branch's caches are invisible to main) and a producer job that never holds secrets or private inputs, which `WorkflowBoundaryTest` pins. The content scan is name-based, a tripwire for stray files. It cannot see data inside `userdata-qemu.img*` or `snapshots/*/ram.bin`, so nothing private may ever reach the producer. Expect real AVD file names to trip it on the first producer run; the allowlist is then adjusted deliberately.
 - A content scan rejects symlinks and file names that look private (photos, params, addresses, credentials, recordings, logs, archives, keys) before publishing and again after restore.
 - Any rejection deletes the restored files and the caller cold-builds the same clean image. Cache presence never grants filing authority.
 - Only the producer saves. It runs from `main` on a daily schedule. The key epoch makes all but one run per 2 days a no-op, so a snapshot is rebuilt at least every 2 days (requirement: 3) and on any emulator, image, runner image, app source or producer change. GitHub evicts entries unused for 7 days, which is why a miss must always fall back cold.
-- The benchmark may publish under its own branch ref. GitHub scopes a branch's caches to that branch. Live consumers only accept `refs/heads/main`.
+- The benchmark, run from a branch, accepts `refs/heads/main` and its own branch ref (a branch can restore main's snapshot, so both must be accepted for warm samples). Live consumers accept only `refs/heads/main`.
 
 ## Using it (not wired into the live workflow)
 
