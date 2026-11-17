@@ -24,11 +24,12 @@ MAX_PLAIN = 768 * 1024
 
 
 def seal(data, password):
+    # Refuse oversized snapshots before loading optional crypto dependencies.
+    need(isinstance(password, bytes) and len(password) >= 16, 'journal key unavailable')
+    need(0 < len(data) <= MAX_PLAIN, 'journal capacity exceeded')
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
     from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
     from cryptography.hazmat.primitives import hashes
-    need(isinstance(password, bytes) and len(password) >= 16, 'journal key unavailable')
-    need(0 < len(data) <= MAX_PLAIN, 'journal capacity exceeded')
     salt, nonce = os.urandom(16), os.urandom(12)
     key = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=200000).derive(password)
     return MAGIC + salt + nonce + AESGCM(key).encrypt(nonce, data, AAD)
@@ -110,6 +111,10 @@ class DurableBatchJournal(BatchJournal):
             out.write(data); out.flush(); os.fsync(out.fileno())
         super().__init__(path)
         self.path = path
+
+    def hold_legacy_sources(self, archive_commit, records):
+        # Remote bootstrap is intentionally not provided by this runtime class.
+        raise InvalidBatch('legacy import requires separately reviewed offline bootstrap')
 
     def _persist(self):
         need(not self.poisoned, 'journal held after save failure')
