@@ -6,6 +6,60 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.52.0] - 2026-11-17
+
+### Features
+
+- feat(municipal): multi-photo submission path, one CreateCase plus N AddFileToCase (#548) (#552) (bc6db9a)
+- feat: inactive serialized recovery writer fence (#358) (#542) (aaa22d6)
+- feat: inactive one-use recovery auth request identity (#358) (#541) (9ffe741)
+- feat: inactive strict recovery snapshot codec (#358) (#540) (2186ada)
+- feat: inactive recovery envelope and retention policy (#358) (#539) (c59f3ac)
+- feat(reports): details screen for a sent report (#503) (#504) (a651b66)
+
+### Fixes
+
+- fix: preserve fail-closed pre-start proof before diagnostics shred (#555) (038351e)
+- fix(review): retain plate-edit provenance after rotation (#358) (#537) (c91fa30)
+- fix(mock): reject non-object JSON under optimized Python (#532) (#533) (2c00cc3)
+- fix(ci): validate commit status by returned URL context and state (#534) (#535) (c912e5a)
+- fix(intake): preserve typed rejection for malformed UTF-8 (#527) (#528) (fa0d1cb)
+- fix(intake): OfflineReceiver.open rejects JSON arrays with the typed IllegalArgumentException (#514) (#515) (4ee2d3b)
+
+### Other changes
+
+- docs: trial a read-only repo-specific Copilot reviewer (#568) (940ec82)
+- Convert resolved trial topics to canonical draft identity before readiness gate (#566) (030eb3b)
+- Stage one owner-approved encrypted report photo for CI direct route (#561) (79ff148)
+- Allow captured numeric catalog topics in direct CI engine boundary (#563) (fcc11e9)
+- Inactive batch intake contract, ZIP validator and clean cache design (#549) (e0e253a)
+- Stage final encrypted approved live input (#554) (57cad07)
+- Clean emulator snapshot cache producer, consumer and mock benchmark (inactive) (#550) (64d09ff)
+- Stage next encrypted approved live input (#551) (dad08ce)
+- Stage next encrypted approved live input (#547) (b630cba)
+- Keep encrypted live diagnostics when instrumentation output is empty (#544) (9bb0416)
+- Stage next encrypted approved live input (#546) (229300a)
+- Stage next encrypted approved live input (#545) (e9dedc0)
+- Stage encrypted one-report live input bundle (#543) (f55fc0e)
+- docs: encrypted expiring process-death review recovery design (#358) (#538) (657e9ab)
+- test: exercise review recreation through real activity and ledger (#419) (#536) (18684d5)
+- ci: Independent review gate check for auto-merge (#518) (#519) (9b40a9a)
+- ci: ClusterFuzzLite JVM receiver fuzzing with valid synthetic corpus (#513) (#526) (1f1b2b5)
+- test: mock municipal 106 API server with failure scenarios and request counters (#523) (#524) (32ce753)
+- test(settings): bounded visibility wait and failure screenshot (#409) (#529) (03fbaab)
+- test: migrate to mockwebserver3 with matching socket effects (#83) (#531) (61ce0ff)
+- test(device): wait for visible SystemUI PIN entry before one unlock attempt (#452) (#530) (767975b)
+- docs(wiki): Hebrew user guide with synthetic screenshots; PR template Wiki checkbox (#520) (#521) (a641d0f)
+- ci: add five PR-only concurrency cancellation groups (#525) (523c376)
+- ci(coverage): production-only JaCoCo denominator and a 50% line-coverage ratchet floor (#44) (#512) (3131294)
+- docs(security): 14-day acknowledgement commitment and explicit report channels (#516) (#517) (c5fae2a)
+- test(live): seed synthetic earlier submissions in the history tab (#501) (#502) (a90105c)
+- docs(prpkg2): JSON Schema, golden values, spec test and version policy (#10) (#507) (c99bc44)
+- docs: runtime architecture, design and registry docs aligned with the code (#508) (#509) (bdccc46)
+- ci(security): scope contents: write in manual-gpg-signing to its single job (#73) (#505) (6f801b7)
+- ci(coverage): fix the empty JaCoCo report and fail the unit summary when no percentage can be measured (#44) (#506) (62922a1)
+- test(registry): UI test for the inactive-record line in he and en (#403) (#500) (687412d)
+
 ## [0.51.0] - 2026-11-16
 
 ### Features
