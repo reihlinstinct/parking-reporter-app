@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import tempfile
 from pathlib import Path
 
 from live_batch_input import InvalidBatch, validate_zip, no_duplicates
@@ -23,10 +24,21 @@ def main():
         out = Path(args.output)
         if out.parent.is_symlink() or out.parent.stat().st_mode & 0o077:
             raise InvalidBatch('private output directory required')
-        fd = os.open(out, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-        with os.fdopen(fd, 'w') as stream:
-            json.dump(manifest, stream, ensure_ascii=False, sort_keys=True, allow_nan=False)
-            stream.write('\n'); stream.flush(); os.fsync(stream.fileno())
+        fd, temporary = tempfile.mkstemp(prefix='.effective-manifest-', dir=out.parent)
+        try:
+            with os.fdopen(fd, 'w') as stream:
+                json.dump(manifest, stream, ensure_ascii=False, sort_keys=True, allow_nan=False)
+                stream.write('\n'); stream.flush(); os.fsync(stream.fileno())
+            # Atomic publication without replacing an existing file or symlink.
+            # A crash before this link leaves only a private temporary file.
+            os.link(temporary, out, follow_symlinks=False)
+            directory_fd = os.open(out.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+        finally:
+            os.unlink(temporary)
     except (InvalidBatch, ValueError, OSError, TypeError, KeyError):
         # No manifest details, paths or exception values in public output.
         print('BATCH_INVALID_OR_PREPARATION_BLOCKED')
