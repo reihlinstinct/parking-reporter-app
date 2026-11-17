@@ -62,7 +62,9 @@ refuses the oversized snapshot. This deliberately blocks remote seed; it does
 not silently raise the cap, truncate history, or claim that production storage
 can hold the full archive. Storage migration/capacity design remains separate.
 
-This PR initially targets the inactive hybrid branch. Workflows limited to PRs
-targeting main do not run on that stacked base. The smaller check list is not full
-CI proof: after its parent merges, retarget to main and require the normal full
-CI and independent exact-head review before merging this slice.
+This PR initially targeted the inactive hybrid branch. Its earlier smaller check
+list was not full CI proof because main-target workflows did not run. It is now
+retargeted to main after incorporating the parent hybrid fixes. Require the
+normal full CI on the new head and independent exact-head review before merge;
+land the parent hybrid slice first. No earlier stacked-base check list is used
+as a substitute for those checks.
