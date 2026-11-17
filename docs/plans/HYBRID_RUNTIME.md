@@ -106,3 +106,23 @@ bytes remains required and is bound by the generated outerdigest. Input data is
 not source code. No private CI run or paid runner is needed. A preparation-only
 workflow does not satisfy this criterion; no live route is claimed ready until
 both lanes, durable oldidentityjournal and credential/approval boundaries work.
+
+## UI boundary adapter (inactive slice, #558)
+
+`scripts/live_batch_ui_adapter.py` implements the UI lane's create/attach port and
+`BatchWriteGate.kt` (`GatedMunicipalClient`) is the client the app flow would be
+given. The recorded UI flow still runs in the app, but every municipal write
+(contact + CreateCase as one create boundary, then each AddFileToCase) waits for
+a grant that the adapter issues only from inside `create()`/`attach()`, which the
+controller calls after the remote intent was acknowledged. A refusal, error or
+failed write closes the gate for good; there is no retry or lane fallback.
+The all-in-one coordinator is not bypassed or rewritten, it simply cannot write
+outside these boundaries. The approved 1-2 UI selection is bound by
+`selection_digest(batch digest, ids)`; the adapter refuses any other set and
+requires a photo preflight (hash, format, bounded decode) from the shared checks.
+
+Not delivered: the real adb/instrumentation transport and harness test, UI-lane
+outgoing-photo policy parity (the app sends its reviewed JPEG derivative for the
+first photo, so its bytes differ from the manifest original; later photos are
+checked against the manifest digest), controller wiring of `selection_digest`
+into the preparation binding, and any live run.
