@@ -48,7 +48,7 @@ class JournalTest(unittest.TestCase):
 
     def test_schema_version_refuses_unknown_or_legacy_db(self):
         import sqlite3
-        for version, legacy in [(2, False), (0, True)]:
+        for version, legacy in [(999, False), (0, True)]:
             path = Path(self.tmp.name) / ('schema%d.db' % version)
             fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
             os.close(fd)
@@ -59,7 +59,7 @@ class JournalTest(unittest.TestCase):
             db.close()
             with self.assertRaisesRegex(InvalidBatch, 'unsupported journal schema version'):
                 BatchJournal(path)
-        self.assertEqual(self.journal.db.execute('PRAGMA user_version').fetchone()[0], 1)
+        self.assertEqual(self.journal.db.execute('PRAGMA user_version').fetchone()[0], 2)
 
     def test_manifest_binding_computed_and_mismatch_rejected(self):
         stored = self.journal.db.execute("SELECT manifest_digest FROM batches WHERE id='batch'").fetchone()[0]

@@ -111,6 +111,10 @@ class DurableBatchJournal(BatchJournal):
         super().__init__(path)
         self.path = path
 
+    def hold_legacy_sources(self, archive_commit, records):
+        # Remote bootstrap is intentionally not provided by this runtime class.
+        raise InvalidBatch('legacy import requires separately reviewed offline bootstrap')
+
     def _persist(self):
         need(not self.poisoned, 'journal held after save failure')
         fd, tmp = tempfile.mkstemp(prefix='.journal-', dir=self.path.parent)
