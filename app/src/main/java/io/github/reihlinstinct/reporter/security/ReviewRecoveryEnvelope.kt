@@ -9,6 +9,7 @@ import javax.crypto.spec.SecretKeySpec
 
 /** Inactive recovery primitive (#358). No files, Keystore, UI, auth or production callers.
  * This authenticates opaque bytes, NOT a validated ReviewRecoverySnapshot or permission to restore/send.
+ * SecretKeySpec and Cipher may copy keys internally; clearing caller arrays cannot promise provider-copy erasure.
  * A future caller must validate the strict snapshot schema and obtain fresh in-app auth separately. */
 object ReviewRecoveryEnvelope {
     const val LIFETIME_MS = 15 * 60 * 1000L

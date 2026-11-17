@@ -2,6 +2,7 @@ package io.github.reihlinstinct.reporter.security
 
 import org.junit.Assert.*
 import org.junit.Test
+import javax.crypto.AEADBadTagException
 
 class ReviewRecoveryEnvelopeTest {
     private val key = ByteArray(32) { it.toByte() }
@@ -14,9 +15,12 @@ class ReviewRecoveryEnvelopeTest {
         ReviewRecoveryEnvelope.seal(p, key, b, 2000, 4, 197)
     private fun open(bytes: ByteArray, b: ReviewRecoveryEnvelope.Binding = binding(), k: ByteArray = key) =
         ReviewRecoveryEnvelope.open(bytes, k, b, 2000, 4, 197)
-    private fun rejects(block: () -> Unit) {
-        try { block(); fail("Must reject") } catch (expected: Exception) { /* no plaintext/error-value logging */ }
+    private inline fun <reified T : Exception> rejectsAs(block: () -> Unit) {
+        try { block(); fail("Must reject with ${T::class.java.simpleName}") }
+        catch (actual: Exception) { assertTrue("Unexpected exception type", actual is T) }
     }
+    private fun rejects(block: () -> Unit) = rejectsAs<IllegalArgumentException>(block)
+    private fun rejectsTag(block: () -> Unit) = rejectsAs<AEADBadTagException>(block)
 
     @Test fun roundTripAndFreshNonce() {
         val first = seal(); val second = seal()
@@ -52,24 +56,25 @@ class ReviewRecoveryEnvelopeTest {
         val variants = listOf(binding(session = "d".repeat(32)), binding(report = "synthetic-2"),
             binding(digest = "d".repeat(64)), binding(hash = "d".repeat(64)), binding(revision = 8),
             binding(version = 198), binding(boot = 5), binding(created = 1001))
-        variants.forEach { b -> rejects {
+        variants.forEach { b -> rejectsTag {
             ReviewRecoveryEnvelope.open(bytes, key, b, 2000, b.bootCount, b.appVersionCode)
         } }
     }
     @Test fun ciphertextNonceTagAndVersionTamperingRejected() {
         val bytes = seal()
-        for (index in listOf(0, 1, 12, 13, bytes.lastIndex)) {
-            rejects { open(bytes.copyOf().also { it[index] = (it[index].toInt() xor 1).toByte() }) }
+        rejects { open(bytes.copyOf().also { it[0] = 2 }) }
+        for (index in listOf(1, 12, 13, bytes.lastIndex)) {
+            rejectsTag { open(bytes.copyOf().also { it[index] = (it[index].toInt() xor 1).toByte() }) }
         }
-        rejects { open(bytes + byteArrayOf(0)) }
-        rejects { open(bytes.copyOf(bytes.size - 1)) }
-        rejects { open(bytes, k = ByteArray(32) { 42 }) }
+        rejectsTag { open(bytes + byteArrayOf(0)) }
+        rejectsTag { open(bytes.copyOf(bytes.size - 1)) }
+        rejectsTag { open(bytes, k = ByteArray(32) { 42 }) }
     }
     @Test fun sizeLimitsEnforcedBeforeDecrypt() {
         rejects { seal(p = byteArrayOf()) }
         rejects { seal(p = ByteArray(ReviewRecoveryEnvelope.MAX_PAYLOAD_BYTES + 1)) }
         rejects { open(byteArrayOf()) }
-        rejects { open(ByteArray(ReviewRecoveryEnvelope.MAX_ENVELOPE_BYTES + 1)) }
+        rejects { open(ByteArray(ReviewRecoveryEnvelope.MAX_ENVELOPE_BYTES + 1).also { it[0] = 1 }) }
         val p = ByteArray(ReviewRecoveryEnvelope.MAX_PAYLOAD_BYTES) { 7 }
         val bytes = seal(p = p)
         assertEquals(ReviewRecoveryEnvelope.MAX_ENVELOPE_BYTES, bytes.size)
