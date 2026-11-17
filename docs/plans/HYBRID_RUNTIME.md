@@ -78,3 +78,16 @@ flowchart TD
 
 No new workflow pretends these gates are satisfied. Existing single-report route
 remains unchanged. The author guide remains honest about the missing submit step.
+
+
+## Next-batch acceptance criterion: zero PRs in the filing loop
+
+The next operational batch must need **no source PR and no data PR**. One-time
+implementation changes still follow independent exact-head review and green CI.
+Per batch: prepare approved private ZIP, commit it directly to the existing
+private data repository, bind its full immutable commit/path/outerSHA256, then
+protected workflow_dispatch. Explicit approval of exact text/location/topic/photo
+bytes remains required and is bound by the generated outerdigest. Input data is
+not source code. No private CI run or paid runner is needed. A preparation-only
+workflow does not satisfy this criterion; no live route is claimed ready until
+both lanes, durable oldidentityjournal and credential/approval boundaries work.
