@@ -115,7 +115,8 @@ class MultiPhotoSubmissionDeviceTest {
                 server.takeRequest(1, TimeUnit.SECONDS)?.target?.substringAfterLast('/')
             }.toList()
             assertEquals(1, targets.count { it == "CreateCase" })
-            assertEquals(3, targets.count { it == "AddFileToCase" })
+            // a, the ambiguous b attempt, then b and c again on the explicit retry.
+            assertEquals(4, targets.count { it == "AddFileToCase" })
 
             val done = store().read()!!
             assertEquals("complete", done["status"])
