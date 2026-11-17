@@ -119,6 +119,7 @@ def validate_zip(path, expected_sha256, subjects, addresses_sha256, *, topic_pol
             need(1 <= len(entries) <= MAX_ENTRIES, "invalid ZIP entry count")
             need(sum(e.file_size for e in entries) <= MAX_EXPANDED_BYTES, "expanded archive too large")
             files = {}
+            expanded = 0
             for entry in entries:
                 name = safe_name(entry.filename)
                 need(name not in files and not entry.is_dir(), "duplicate or directory ZIP entry")
@@ -128,7 +129,19 @@ def validate_zip(path, expected_sha256, subjects, addresses_sha256, *, topic_pol
                 need(entry.compress_type in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED), "unsupported ZIP compression")
                 if name == "manifest.json":
                     need(entry.file_size <= MAX_MANIFEST_BYTES, "manifest too large")
-                files[name] = archive.read(entry)
+                limit = min(MAX_EXPANDED_BYTES - expanded,
+                            MAX_MANIFEST_BYTES if name == "manifest.json" else MAX_EXPANDED_BYTES)
+                data = bytearray()
+                with archive.open(entry) as decoded:
+                    while True:
+                        chunk = decoded.read(min(64 * 1024, limit - len(data) + 1))
+                        if not chunk:
+                            break
+                        data.extend(chunk)
+                        need(len(data) <= limit, "expanded entry too large")
+                expanded += len(data)
+                need(expanded <= MAX_EXPANDED_BYTES, "expanded archive too large")
+                files[name] = bytes(data)
     except (zipfile.BadZipFile, RuntimeError, NotImplementedError, OSError):
         raise InvalidBatch("unreadable ZIP") from None
     need("manifest.json" in files and "addresses.json" in files, "missing manifest or directory")

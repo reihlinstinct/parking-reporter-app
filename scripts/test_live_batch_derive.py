@@ -123,6 +123,10 @@ class DeriveTest(unittest.TestCase):
         self.m['reports'][0]['photos'] = ['photos/a.jpg', 'photos/a.jpg']
         with self.assertRaises(InvalidBatch): self.read()
 
+    def test_explicit_address_rejects_180_meter_offset(self):
+        self.m['reports'][0].update(latitude=31.7 + 180 / 111320, longitude=35.2)
+        with self.assertRaises(InvalidBatch): self.read()
+
     def test_conflicting_explicit_coordinates(self):
         self.m['reports'][0].update(latitude=31.9, longitude=35.8)
         with self.assertRaises(InvalidBatch): self.read()

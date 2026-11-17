@@ -55,7 +55,12 @@ def address_location(address, directory):
     return next(iter(matches))
 
 
+ADDRESS_TOLERANCE_METERS = 150
+ADDRESS_AMBIGUITY_METERS = 20
+
+
 def coordinates_address(lat, lon, directory):
+    """Resolve a nearby unique address while retaining the caller's supplied point."""
     from live_batch_input import need
     need(type(lat) in (int, float) and type(lon) in (int, float) and math.isfinite(lat) and math.isfinite(lon), 'invalid coordinates')
     need(-90 <= lat <= 90 and -180 <= lon <= 180, 'invalid coordinates')
@@ -69,8 +74,8 @@ def coordinates_address(lat, lon, directory):
             d = distance(row[0], row[1])
             key = names[_norm(str(row[3]))] + ' ' + str(row[2])
             candidates[key] = min(d, candidates.get(key, math.inf))
-    found = sorted((d, name) for name, d in candidates.items() if d <= 150)
-    need(found and (len(found) == 1 or found[1][0] - found[0][0] > 20), 'coordinate address missing or ambiguous')
+    found = sorted((d, name) for name, d in candidates.items() if d <= ADDRESS_TOLERANCE_METERS)
+    need(found and (len(found) == 1 or found[1][0] - found[0][0] > ADDRESS_AMBIGUITY_METERS), 'coordinate address missing or ambiguous')
     return found[0][1]
 
 
@@ -189,7 +194,7 @@ def derive_manifest(m, files, directory, subjects, topic_policy):
                 # Strict lookup fails closed on missing/ambiguous points here too.
                 a, b = address_location(address, directory)
                 need(type(lat) in (int, float) and type(lon) in (int, float) and math.isfinite(lat) and math.isfinite(lon), 'invalid coordinates')
-                need(math.hypot((a - lat) * 111320, (b - lon) * 111320 * math.cos(math.radians(lat))) <= 200, 'address coordinate conflict')
+                need(math.hypot((a - lat) * 111320, (b - lon) * 111320 * math.cos(math.radians(lat))) <= ADDRESS_TOLERANCE_METERS, 'address coordinate conflict')
         else:
             lat, lon = address_location(address, directory)
         photos = []
