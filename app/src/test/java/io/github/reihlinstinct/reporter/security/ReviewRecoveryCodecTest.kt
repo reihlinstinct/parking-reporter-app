@@ -55,6 +55,9 @@ class ReviewRecoveryCodecTest {
         rejects<IllegalArgumentException> { ReviewRecoveryCodec.encode(fixture(rawPlate = "<")) }
     }
     @Test fun longRawPlateFailsClosedWithoutTruncatingUserInput() {
+        val multibyte = "\u0661".repeat(ReviewRecoveryCodec.PLATE_BYTES / 2)
+        assertEquals(multibyte, ReviewRecoveryCodec.decode(ReviewRecoveryCodec.encode(fixture(rawPlate = multibyte))).plateRaw)
+        rejects<IllegalArgumentException> { ReviewRecoveryCodec.encode(fixture(rawPlate = multibyte + "1")) }
         val exact = "1".repeat(ReviewRecoveryCodec.PLATE_BYTES)
         assertEquals(exact, ReviewRecoveryCodec.decode(ReviewRecoveryCodec.encode(fixture(rawPlate = exact))).plateRaw)
         rejects<IllegalArgumentException> { ReviewRecoveryCodec.encode(fixture(rawPlate = exact + "1")) }
