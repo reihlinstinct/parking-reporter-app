@@ -55,6 +55,15 @@ class DeriveTest(unittest.TestCase):
         r = self.m['reports'][0]; del r['address']; r.update(latitude=31.7, longitude=35.2)
         self.assertEqual(self.read()['reports'][0]['address'], 'synthetic street 10')
 
+    def test_coordinate_lookup_normalizes_nfkc_and_final_letters(self):
+        self.directory['streets'][0]['StreetName'] = 'דרך המלך'
+        self.directory['addresses'][0][3] = 'דרכ המלכ'
+        r = self.m['reports'][0]; del r['address']; r.update(latitude=31.7, longitude=35.2)
+        self.assertEqual(self.read()['reports'][0]['address'], 'דרך המלך 10')
+        self.directory['streets'][0]['StreetName'] = 'ＡＢＣ'
+        self.directory['addresses'][0][3] = 'ABC'
+        self.assertEqual(self.read()['reports'][0]['address'], 'ＡＢＣ 10')
+
     def test_missing_or_partial_location(self):
         del self.m['reports'][0]['address']
         for values in [{}, {'latitude': 31.7}, {'latitude': 0, 'longitude': 0}]:
