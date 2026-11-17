@@ -2,6 +2,7 @@
 import datetime as dt
 import hashlib
 import json
+import io
 import math
 import re
 import stat
@@ -94,7 +95,7 @@ def validate_manifest(m, files, subjects):
             need(name in files and name not in used, "missing or reused photo")
             need(image["sha256"] not in photos, "duplicate photo digest")
             data = files[name]
-            need(data.startswith(b"\xff\xd8\xff") or data.startswith(b"\x89PNG\r\n\x1a\n"), "invalid photo signature")
+            need(data.startswith(b"\x89PNG\r\n\x1a\n") if name.endswith(".png") else data.startswith(b"\xff\xd8\xff"), "photo extension signature mismatch")
             need(hashlib.sha256(data).hexdigest() == image["sha256"], "photo digest mismatch")
             photos.add(image["sha256"])
             used.add(name)
@@ -110,7 +111,6 @@ def validate_zip(path, expected_sha256, subjects, addresses_sha256):
         payload = stream.read(MAX_ARCHIVE_BYTES + 1)
     need(len(payload) <= MAX_ARCHIVE_BYTES, "archive too large")
     need(hashlib.sha256(payload).hexdigest() == expected_sha256, "archive digest mismatch")
-    import io
     try:
         with zipfile.ZipFile(io.BytesIO(payload)) as archive:
             entries = archive.infolist()

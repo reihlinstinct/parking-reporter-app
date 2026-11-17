@@ -4,6 +4,7 @@ The caller must keep this DB on persistent PRIVATE storage and encrypt backups.
 Intent commits happen before an adapter call. A crash never releases an identity.
 """
 import contextlib
+import hashlib
 import json
 import os
 import sqlite3
@@ -28,6 +29,7 @@ class BatchJournal:
             CREATE TABLE IF NOT EXISTS reports(
                 id TEXT PRIMARY KEY, batch TEXT NOT NULL REFERENCES batches(id),
                 position INTEGER NOT NULL, state TEXT NOT NULL, case_json TEXT,
+                text_digest TEXT NOT NULL UNIQUE,
                 UNIQUE(batch, position));
             CREATE TABLE IF NOT EXISTS photos(
                 digest TEXT PRIMARY KEY, report TEXT NOT NULL REFERENCES reports(id),
@@ -49,16 +51,25 @@ class BatchJournal:
         else:
             self.db.execute('COMMIT')
 
-    def reserve(self, manifest, manifest_digest):
+    @staticmethod
+    def manifest_digest(manifest):
+        return hashlib.sha256(json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+
+    def reserve(self, manifest, manifest_digest=None):
         """Validated data only. Atomic whole-batch reserve; no implicit resume."""
         from live_batch_input import digest
-        digest(manifest_digest)
+        actual_digest = self.manifest_digest(manifest)
+        if manifest_digest is not None:
+            digest(manifest_digest)
+            need(manifest_digest == actual_digest, "manifest digest mismatch")
+        manifest_digest = actual_digest
         try:
             with self.transaction():
                 self.db.execute('INSERT INTO batches VALUES(?,?)', (manifest['batchId'], manifest_digest))
                 for i, report in enumerate(manifest['reports']):
-                    self.db.execute('INSERT INTO reports VALUES(?,?,?,?,NULL)',
-                                    (report['reportId'], manifest['batchId'], i, 'reserved'))
+                    digest(report['textSha256'])
+                    self.db.execute('INSERT INTO reports VALUES(?,?,?,?,NULL,?)',
+                                    (report['reportId'], manifest['batchId'], i, 'reserved', report['textSha256']))
                     for j, photo in enumerate(report['photos']):
                         self.db.execute('INSERT INTO photos VALUES(?,?,?,?)',
                                         (photo['sha256'], report['reportId'], j, 'reserved'))

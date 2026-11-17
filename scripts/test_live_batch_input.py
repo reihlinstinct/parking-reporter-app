@@ -80,6 +80,18 @@ class BatchInputTest(unittest.TestCase):
             with self.subTest(name=name), self.assertRaises(InvalidBatch):
                 self.read(self.write(extra=[(name, b'bad')]))
 
+    def test_extension_must_match_bytes(self):
+        def renamed(m):
+            m['reports'][0]['photos'][0]['path'] = 'photos/a.png'
+        with zipfile.ZipFile(self.path, 'w') as z:
+            m = copy.deepcopy(self.manifest)
+            renamed(m)
+            z.writestr('manifest.json', json.dumps(m))
+            z.writestr('addresses.json', self.addresses)
+            z.writestr('photos/a.png', self.photo)
+        with self.assertRaisesRegex(InvalidBatch, 'extension signature mismatch'):
+            self.read(self.sha(self.path.read_bytes()))
+
     def test_duplicate_photos_and_reports(self):
         def twice(m):
             m['reports'].append(copy.deepcopy(m['reports'][0]))

@@ -22,7 +22,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 def stage(destination, env=os.environ, opener=None):
     ref = env.get('BATCH_PRIVATE_REF', '')
     path = env.get('BATCH_PRIVATE_PATH', '')
-    digest = env.get('BATCH_APPROVED_ARCHIVE_SHA256', '')
+    digest = env.get('BATCH_APPROVED_OUTER_SHA256', '')
     token = env.get('PRIVATE_LOOKUP_READ_TOKEN', '')
     if not re.fullmatch(r'[0-9a-f]{40}', ref):
         raise ValueError('immutable batch ref required')
@@ -39,6 +39,8 @@ def stage(destination, env=os.environ, opener=None):
     opener = opener or urllib.request.build_opener(NoRedirect())
     destination = Path(destination)
     destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if destination.parent.is_symlink() or destination.parent.stat().st_mode & 0o077:
+        raise ValueError("private staging directory required")
     fd, name = tempfile.mkstemp(prefix='.batch-', dir=destination.parent)
     try:
         sha, total = hashlib.sha256(), 0

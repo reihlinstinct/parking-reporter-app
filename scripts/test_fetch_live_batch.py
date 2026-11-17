@@ -26,7 +26,7 @@ class FetchTest(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.dest = Path(self.tmp.name) / 'private' / 'input.zip'
         self.env = dict(BATCH_PRIVATE_REF='a'*40, BATCH_PRIVATE_PATH='batches/synthetic/input.zip',
-                        BATCH_APPROVED_ARCHIVE_SHA256=hashlib.sha256(b'synthetic zip bytes').hexdigest(),
+                        BATCH_APPROVED_OUTER_SHA256=hashlib.sha256(b'synthetic zip bytes').hexdigest(),
                         PRIVATE_LOOKUP_READ_TOKEN='synthetic-not-a-real-secret')
 
     def test_pinned_fixed_private_endpoint(self):
@@ -46,7 +46,7 @@ class FetchTest(unittest.TestCase):
                            ('BATCH_PRIVATE_PATH', 'batches/../input.zip'),
                            ('BATCH_PRIVATE_PATH', 'reports/synthetic/original.jpg'),
                            ('BATCH_PRIVATE_PATH', 'batches/id/input.zip?ref=main'),
-                           ('BATCH_APPROVED_ARCHIVE_SHA256', 'bad'), ('PRIVATE_LOOKUP_READ_TOKEN', '')]:
+                           ('BATCH_APPROVED_OUTER_SHA256', 'bad'), ('PRIVATE_LOOKUP_READ_TOKEN', '')]:
             with self.subTest(key=key, value=value):
                 env = dict(self.env, **{key: value})
                 opener = Opener()
@@ -55,7 +55,7 @@ class FetchTest(unittest.TestCase):
                 self.assertEqual(opener.calls, [])
 
     def test_failure_preserves_prior_file_and_cleans_partial(self):
-        self.dest.parent.mkdir()
+        self.dest.parent.mkdir(mode=0o700)
         self.dest.write_bytes(b'prior')
         for opener in [Opener(b''), Opener(b'wrong'), Opener(error=RuntimeError('sensitive fake URL'))]:
             with self.subTest(opener=opener), self.assertRaisesRegex(ValueError, '^private batch staging failed$'):
@@ -67,6 +67,12 @@ class FetchTest(unittest.TestCase):
         with patch('fetch_live_batch.MAX_BYTES', 2), self.assertRaises(ValueError):
             stage(self.dest, self.env, Opener())
         self.assertFalse(self.dest.exists())
+        self.assertEqual(list(self.dest.parent.iterdir()), [])
+
+    def test_existing_staging_directory_must_be_private(self):
+        self.dest.parent.mkdir(mode=0o755)
+        with self.assertRaisesRegex(ValueError, 'private staging directory required'):
+            stage(self.dest, self.env, Opener())
         self.assertEqual(list(self.dest.parent.iterdir()), [])
 
     def test_no_auth_redirect(self):

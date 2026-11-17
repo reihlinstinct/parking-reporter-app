@@ -34,9 +34,24 @@ class JournalTest(unittest.TestCase):
         self.journal = BatchJournal(self.path)
         self.addCleanup(lambda: self.journal.close())
         self.manifest = dict(batchId='batch', reports=[
-            dict(reportId='one', photos=[dict(sha256='a'*64), dict(sha256='b'*64)]),
-            dict(reportId='two', photos=[dict(sha256='c'*64)])])
-        self.journal.reserve(self.manifest, 'd'*64)
+            dict(reportId='one', textSha256='1'*64, photos=[dict(sha256='a'*64), dict(sha256='b'*64)]),
+            dict(reportId='two', textSha256='2'*64, photos=[dict(sha256='c'*64)])])
+        self.journal.reserve(self.manifest)
+
+    def test_same_incident_fresh_photo_rejected_across_batches(self):
+        run_mock_batch(self.journal, self.manifest, Adapter())
+        new = dict(batchId='fresh', reports=[dict(reportId='fresh', textSha256='1'*64,
+                                                photos=[dict(sha256='f'*64)])])
+        with self.assertRaises(InvalidBatch):
+            self.journal.reserve(new)
+        self.assertIsNone(self.journal.db.execute("SELECT 1 FROM batches WHERE id='fresh'").fetchone())
+
+    def test_manifest_binding_computed_and_mismatch_rejected(self):
+        stored = self.journal.db.execute("SELECT manifest_digest FROM batches WHERE id='batch'").fetchone()[0]
+        self.assertEqual(stored, BatchJournal.manifest_digest(self.manifest))
+        other = dict(batchId='other', reports=[])
+        with self.assertRaisesRegex(InvalidBatch, 'manifest digest mismatch'):
+            self.journal.reserve(other, '0'*64)
 
     def test_order_and_one_case_per_report(self):
         adapter = Adapter()
@@ -56,7 +71,7 @@ class JournalTest(unittest.TestCase):
                 path = Path(self.tmp.name) / ('crash%d.db' % failure)
                 j = BatchJournal(path)
                 try:
-                    j.reserve(self.manifest, 'd'*64)
+                    j.reserve(self.manifest)
                     adapter = Adapter(failure)
                     with self.assertRaises(RuntimeError):
                         run_mock_batch(j, self.manifest, adapter)
@@ -79,7 +94,7 @@ import json, os, sys
 from live_batch_journal import BatchJournal, run_mock_batch
 j = BatchJournal(sys.argv[1])
 m = json.loads(sys.argv[2])
-j.reserve(m, 'd' * 64)
+j.reserve(m)
 class Adapter:
     calls = 0
     def write(self):
@@ -137,10 +152,10 @@ run_mock_batch(j, m, Adapter())
         self.assertEqual(self.journal.state('one'), 'case_created')
 
     def test_atomic_conflict_reservation(self):
-        other = dict(batchId='second', reports=[dict(reportId='three', photos=[dict(sha256='e'*64)]),
-                                                    dict(reportId='four', photos=[dict(sha256='a'*64)])])
+        other = dict(batchId='second', reports=[dict(reportId='three', textSha256='3'*64, photos=[dict(sha256='e'*64)]),
+                                                    dict(reportId='four', textSha256='4'*64, photos=[dict(sha256='a'*64)])])
         with self.assertRaises(InvalidBatch):
-            self.journal.reserve(other, 'd'*64)
+            self.journal.reserve(other)
         self.assertIsNone(self.journal.db.execute("SELECT 1 FROM batches WHERE id='second'").fetchone())
         self.assertIsNone(self.journal.db.execute("SELECT 1 FROM photos WHERE digest=?", ('e'*64,)).fetchone())
 
@@ -169,9 +184,9 @@ run_mock_batch(j, m, Adapter())
     def test_concurrent_connections_cannot_reserve_same_photo(self):
         second = BatchJournal(self.path)
         try:
-            m = dict(batchId='other', reports=[dict(reportId='other', photos=[dict(sha256='a'*64)])])
+            m = dict(batchId='other', reports=[dict(reportId='other', textSha256='5'*64, photos=[dict(sha256='a'*64)])])
             with self.assertRaises(InvalidBatch):
-                second.reserve(m, 'd'*64)
+                second.reserve(m)
         finally:
             second.close()
 
