@@ -5,8 +5,9 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class BatchMunicipalBridgeTest {
-    private val lookup = """{"version":1,"streets":[{"StreetCode":"1001","StreetName":"synthetic street"}],"addresses":[[31.7683,35.2137,"12","synthetic street"]]}"""
-    private val report = mapOf("text" to "synthetic description", "subjectCode" to "9000", "address" to "synthetic street 12", "latitude" to 31.7683, "longitude" to 35.2137)
+    // Synthetic Null Island point, not a report location or a municipal address.
+    private val lookup = """{"version":1,"streets":[{"StreetCode":"1001","StreetName":"synthetic street"}],"addresses":[[0.0,0.0,"12","synthetic street"]]}"""
+    private val report = mapOf("text" to "synthetic description", "subjectCode" to "9000", "address" to "synthetic street 12", "latitude" to 0.0, "longitude" to 0.0)
 
     private class Client : MunicipalClient {
         val calls = mutableListOf<String>()
@@ -34,7 +35,7 @@ class BatchMunicipalBridgeTest {
             assertEquals(listOf("login", "contact", "create"), client.calls)
             assertEquals("synthetic description", client.report!!["CaseDescription"])
             assertEquals("1001", client.report!!["CaseStreetCode"])
-            assertEquals(220333, client.report!!["CoordinateX"])
+            assertEquals(Itm.toItm(0.0, 0.0).first, client.report!!["CoordinateX"])
             @Suppress("UNCHECKED_CAST") val case = result["case"] as Map<String, Any?>
             assertNull(case["CaseNumberInCRM"])
             assertFalse(client.calls.contains("attach"))
@@ -55,6 +56,44 @@ class BatchMunicipalBridgeTest {
             file.writeBytes(byteArrayOf(0xff.toByte(),0xd8.toByte(),0xff.toByte()))
             assertThrows(IllegalArgumentException::class.java) {
                 bridge.call(mapOf("operation" to "prepare", "report" to (report + ("photos" to photos()))))
+            }
+            assertTrue(client.calls.isEmpty())
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test fun attachRefusesMissingBlankAndZeroCaseIdentityBeforeAnyNetwork() {
+        val root = Files.createTempDirectory("synthetic-batch-case").toFile()
+        try {
+            val client = Client()
+            val bridge = BatchMunicipalBridge(client, StreetDirectory.load(lookup), linkedMapOf(), root)
+            for (case in listOf(emptyMap<String, Any?>(), mapOf("CaseIdInCRM" to null),
+                    mapOf("CaseIdInCRM" to " "), mapOf("CaseIdInCRM" to "00000000-0000-0000-0000-000000000000"))) {
+                assertThrows(IllegalArgumentException::class.java) {
+                    bridge.call(mapOf("operation" to "attach", "case" to case, "photo" to emptyMap<String, Any?>()))
+                }
+                assertTrue(client.calls.isEmpty())
+            }
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test fun excessivePixelHeaderRefusesBeforeDecodeOrNetwork() {
+        val root = Files.createTempDirectory("synthetic-batch-large-header").toFile()
+        try {
+            val client = Client()
+            val bridge = BatchMunicipalBridge(client, StreetDirectory.load(lookup), linkedMapOf(), root)
+            val file = java.io.File(root, "photos/synthetic.png"); file.parentFile.mkdirs()
+            val image = java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_INT_RGB)
+            javax.imageio.ImageIO.write(image, "png", file)
+            val bytes = file.readBytes()
+            // Alter only the tiny PNG's IHDR dimensions/CRC, never allocate a large image.
+            java.nio.ByteBuffer.wrap(bytes).putInt(16, 2001).putInt(20, 2000)
+            val crc = java.util.zip.CRC32().apply { update(bytes, 12, 17) }
+            java.nio.ByteBuffer.wrap(bytes).putInt(29, crc.value.toInt())
+            file.writeBytes(bytes)
+            val hash = java.security.MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+            assertThrows(IllegalArgumentException::class.java) {
+                bridge.call(mapOf("operation" to "prepare", "report" to (report +
+                    ("photos" to listOf(mapOf("path" to "photos/synthetic.png", "sha256" to hash))))))
             }
             assertTrue(client.calls.isEmpty())
         } finally { root.deleteRecursively() }

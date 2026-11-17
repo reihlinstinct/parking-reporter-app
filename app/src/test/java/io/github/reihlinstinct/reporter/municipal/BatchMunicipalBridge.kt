@@ -50,12 +50,14 @@ class BatchMunicipalBridge(
                 mapOf("success" to true, "case" to case)
             }
             "attach" -> {
+                val case = request["case"] as Map<String, Any?>
+                val caseId = case["CaseIdInCRM"] as? String
+                require(!caseId.isNullOrBlank() && caseId.trim('0', '-', ' ').isNotEmpty())
                 val photo = request["photo"] as Map<String, Any?>
                 val bytes = photo(photo)
                 val name = photo["path"] as String
-                val case = request["case"] as Map<String, Any?>
                 val filename = (photo["sha256"] as String) + if (name.endsWith(".png")) ".png" else ".jpg"
-                client.attachPhoto(authenticated(), case["CaseIdInCRM"] as? String ?: "00000000-0000-0000-0000-000000000000",
+                client.attachPhoto(authenticated(), caseId,
                     case["WebCaseIdInCRM"] as? String ?: "", filename, bytes)
                 mapOf("success" to true)
             }
@@ -82,7 +84,7 @@ class BatchMunicipalBridge(
                 val format = reader.formatName.lowercase(java.util.Locale.ROOT)
                 require(format == if (name.endsWith(".png")) "png" else "jpeg")
                 val width = reader.getWidth(0); val height = reader.getHeight(0)
-                require(width in 1..8192 && height in 1..8192 && width.toLong() * height <= 24_000_000)
+                require(width in 1..8192 && height in 1..8192 && width.toLong() * height <= 4_000_000)
                 val decoded = reader.read(0)
                 require(decoded != null && decoded.width == width && decoded.height == height)
                 decoded.flush()

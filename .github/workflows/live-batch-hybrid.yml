@@ -25,7 +25,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  # Must match the existing UI live route. Serialize private preparation; no municipal writes in this inactive workflow.
+  # Reserved UI-route concurrency group for future activation; this disabled job performs no writes.
   group: live-emulator-e2e
   cancel-in-progress: false
 jobs:

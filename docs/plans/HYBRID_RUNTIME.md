@@ -45,7 +45,7 @@ flowchart TD
   line reader and any error kills/poisons the process. Six real subprocess
   tests cover partial replies, no stdin consumption, process death and malformed
   responses. Two additional mocked process tests cover cleanup timeouts and exit races. Photo preflight verifies hashes, format and full ImageIO decode
-  before login, with8192edge/24millionpixel/10MiBlimits before allocation.
+  before login, with8192-edge / 4-million-pixel / 10-MiB limits before allocation.
   These JVM checks do not establish UI-adapter parity.
 - `live-batch-hybrid.yml`: hard-disabled **preparation-only** dispatch. Its job
   cannot start or receive environment secrets. Activation requires separate review
