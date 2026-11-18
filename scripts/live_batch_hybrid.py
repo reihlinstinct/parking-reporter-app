@@ -9,7 +9,7 @@ import select
 import os
 import time
 
-from live_batch_input import InvalidBatch, need
+from live_batch_input import InvalidBatch, need, no_duplicates
 
 
 class BridgeAdapter:
@@ -52,7 +52,7 @@ class BridgeAdapter:
                 line.extend(chunk)
                 need(len(line) <= 1_048_576, 'private bridge response too large')
             need(line.endswith(b'\n') and line.count(b'\n') == 1, 'private bridge response invalid')
-            result = json.loads(line)
+            result = json.loads(line, object_pairs_hook=no_duplicates, parse_constant=lambda _: (_ for _ in ()).throw(ValueError('nonfinite bridge JSON')))
             need(isinstance(result, dict) and result.get('success') is True, 'municipal result unknown or refused')
             return result
         except BaseException:
