@@ -195,6 +195,24 @@ class TrialTest(unittest.TestCase):
         self.assertEqual(1, sum(e[0] == 'create' for e in self.events))
         self.assertEqual(0, sum(e[0] == 'attach' for e in self.events))
 
+    def test_routed_deadline_before_at_after_for_both_effects(self):
+        from datetime import datetime, timedelta
+        config = json.loads((Path(trial.__file__).parent / 'supervised_trial_activation.json').read_text())
+        env = dict(BATCH_PRIVATE_REF=config['privateCommit'], BATCH_PRIVATE_PATH=config['batchPath'], BATCH_APPROVED_OUTER_SHA256=config['outerSha256'])
+        deadline = datetime.fromisoformat(config['expiresAt'])
+        for delta in (-1, 0, 1):
+            for effect in ('create', 'attach'):
+                calls = []
+                class Api:
+                    def create(self, *args): calls.append('create')
+                    def attach(self, *args): calls.append('attach')
+                routed = trial.Routed(Api(), lambda: None, env, lambda: deadline + timedelta(microseconds=delta))
+                operation = lambda: routed.create(self.report) if effect == 'create' else routed.attach({}, self.report, {})
+                if delta < 0: operation()
+                else:
+                    with self.assertRaises(ValueError): operation()
+                self.assertEqual([effect] if delta < 0 else [], calls)
+
     def test_real_encryption_is_authenticated_and_does_not_expose_private_text(self):
         blob = trial.encrypt_record(dict(text='synthetic-private-text'), b'synthetic-password16')
         self.assertNotIn(b'synthetic-private-text', blob)
