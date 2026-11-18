@@ -60,7 +60,7 @@ weakened by this gate. A healthy preflight is not proof that the device cannot
 fail later in a test run.
 
 The display workflow runs normal-font foldable and compact 200% profiles for
-risky UI, resources, strings, instrumentation and workflow changes. Guard tests
+all main source, debug source, root build inputs, resources, strings, instrumentation and workflow changes. Guard tests
 pin the current path filter; it is not blanket coverage of every possible UI
 change. Weekly/manual runs also exist. Normal font is the demo default;
 compact 200% is an accessibility stress check. See the workflow for exact globs.

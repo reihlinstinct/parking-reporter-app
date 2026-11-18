@@ -9,6 +9,11 @@ on:
   # leave the compact stress check to the weekly/manual cadence.
   pull_request:
     paths:
+      - 'settings.gradle.kts'
+      - 'build.gradle.kts'
+      - 'gradle/**'
+      - 'gradle.properties'
+      - 'app/src/debug/**'
       - '.github/workflows/**'
       - 'scripts/emulator_preflight.py'
       # Compose can live outside ui/ (assistant settings, activities, etc.).
