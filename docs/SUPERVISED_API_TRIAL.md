@@ -95,3 +95,15 @@ values by Itm.toItm's Pair<Int, Int> contract and five executed bridge tests.
 Existing scoped token and key are retained (#607/#608). VPN drop or failed
 post-create save holds the claim, requires manual reconciliation, and never
 permits an automatic replay. No broader credentials or settings are provisioned.
+
+Expiry is a request-initiation cutoff, checked after route verification immediately
+before create and attach. An in-flight municipal request can complete after the
+cutoff and cannot safely be recalled. Its receipt is durably saved; the next write
+is refused, the incident remains held for manual reconciliation, and no replay is
+allowed. Production Routed boundary tests exercise route-check time crossing and
+a create returning at cutoff, preserving its receipt and preventing attachment.
+
+The complete writer inventory and current acknowledgements are a private owner
+execution check, not a source-review assertion. No dispatch is allowed until the
+owner supplies the complete current inventory and explicitly verifies every route
+is fenced. Earlier partial acknowledgements do not establish completeness.

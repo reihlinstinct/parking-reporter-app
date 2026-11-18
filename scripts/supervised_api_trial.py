@@ -144,6 +144,28 @@ def validate_activation(env, now=None):
         need(env.get(key) == config[field], 'not the one approved trial package')
 
 
+class Routed:
+    """Production route/expiry boundary; expiry limits initiation, never remote completion."""
+    def __init__(self, api, route_check, env, clock=None):
+        self.api, self.route_check, self.env, self.clock = api, route_check, env, clock
+
+    def preflight(self, reports):
+        self.route_check()
+        return self.api.preflight(reports)
+
+    def _before_write(self):
+        self.route_check()
+        validate_activation(self.env, self.clock() if self.clock else None)
+
+    def create(self, report):
+        self._before_write()
+        return self.api.create(report)
+
+    def attach(self, case, report, photo):
+        self._before_write()
+        return self.api.attach(case, report, photo)
+
+
 def validate_trial_coordinates(report):
     import math
     lat, lon = report['latitude'], report['longitude']
@@ -193,15 +215,8 @@ def main():
                 'io.github.reihlinstinct.reporter.municipal.SupervisedApiTrialBridge'], env, error)
             claim = PrivateTrialClaim(trial['originalSha256'], os.environ['BATCH_PRIVATE_CONTENTS_TOKEN'],
                                       os.environ['TRIAL_DATA_KEY'].encode())
-            class Routed:
-                def preflight(self, reports):
-                    verify_municipal_routes(); return api.preflight(reports)
-                def create(self, report):
-                    verify_municipal_routes(); validate_activation(os.environ); return api.create(report)
-                def attach(self, case, report, photo):
-                    verify_municipal_routes(); validate_activation(os.environ); return api.attach(case, report, photo)
             record = execute_trial(trial['report'], trial['originalSha256'], trial['outgoingSha256'],
-                                   claim, Routed(), os.environ['GITHUB_RUN_ID'],
+                                   claim, Routed(api, verify_municipal_routes, os.environ), os.environ['GITHUB_RUN_ID'],
                                    write_guard=lambda: validate_activation(os.environ))
             (root / 'result.json.enc').write_bytes(encrypt_record(record, os.environ['TRIAL_DATA_KEY'].encode()))
         print('SUPERVISED_API_TRIAL_COMPLETE_RECEIPT_ENCRYPTED')

@@ -134,6 +134,35 @@ class TrialTest(unittest.TestCase):
             self.assertEqual(0 if expired_write == 1 else 1, creates)
             self.assertEqual(0, attaches)
 
+    def test_production_routed_rechecks_after_routes_and_inflight_expiry(self):
+        from datetime import datetime, timezone
+        config = json.loads((Path(trial.__file__).parent / 'supervised_trial_activation.json').read_text())
+        env = dict(BATCH_PRIVATE_REF=config['privateCommit'], BATCH_PRIVATE_PATH=config['batchPath'],
+                   BATCH_APPROVED_OUTER_SHA256=config['outerSha256'])
+        now = [datetime(2026, 11, 18, 15, 59, 59, tzinfo=timezone.utc)]
+        expired = datetime(2026, 11, 18, 16, tzinfo=timezone.utc)
+        # Route checking may consume the remaining time; production wrapper must refuse.
+        def route(): now[0] = expired
+        routed = trial.Routed(self.api, route, env, lambda: now[0])
+        for call in (lambda: routed.create(self.report), lambda: routed.attach({}, self.report, {})):
+            with self.assertRaises(ValueError): call()
+        self.assertEqual([], self.events)
+        # An already-started request can return after cutoff. Keep its receipt, never attach/replay.
+        now[0] = datetime(2026, 11, 18, 15, 59, 59, tzinfo=timezone.utc)
+        create = self.api.create
+        def crossing(report):
+            receipt = create(report)
+            now[0] = expired
+            return receipt
+        self.api.create = crossing
+        routed = trial.Routed(self.api, lambda: None, env, lambda: now[0])
+        with self.assertRaises(ValueError):
+            trial.execute_trial(self.report, 'a' * 64, 'b' * 64, self.claim, routed, 'synthetic')
+        self.assertEqual('attaching', self.records[-1]['state'])
+        self.assertIn('case', self.records[-1])
+        self.assertEqual(1, sum(e[0] == 'create' for e in self.events))
+        self.assertEqual(0, sum(e[0] == 'attach' for e in self.events))
+
     def test_real_encryption_is_authenticated_and_does_not_expose_private_text(self):
         blob = trial.encrypt_record(dict(text='synthetic-private-text'), b'synthetic-password16')
         self.assertNotIn(b'synthetic-private-text', blob)
