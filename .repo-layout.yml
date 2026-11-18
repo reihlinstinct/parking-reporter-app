@@ -76,6 +76,10 @@
       "allow": [
         "*.py",
         "*.sh"
+      ],
+      "allow_paths": [
+        "scripts/jvm/ApiOutgoingPhoto.java",
+        "scripts/jvm/ApiOutgoingPhotoTest.java"
       ]
     },
     "tests": {
