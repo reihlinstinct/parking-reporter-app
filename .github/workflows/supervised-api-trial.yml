@@ -67,7 +67,7 @@ jobs:
       - name: Build production bridge and locked tooling before secrets
         run: |
           sh scripts/verify_bridge_wrapper.sh
-          sh gradlew -p api-bridge --no-daemon test writeBatchBridgeClasspath
+          sh gradlew -p api-bridge --no-daemon --dependency-verification strict test writeBatchBridgeClasspath
           python3 -m venv /tmp/api-trial-venv
           /tmp/api-trial-venv/bin/pip install --require-hashes -r requirements-lock.txt
           sudo apt-get update -qq > /dev/null 2>&1

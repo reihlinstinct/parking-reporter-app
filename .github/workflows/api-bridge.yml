@@ -36,11 +36,11 @@ jobs:
         run: |
           set -euo pipefail
           sh scripts/verify_bridge_wrapper.sh
-          sh gradlew -p api-bridge --no-daemon test writeBatchBridgeClasspath
+          sh gradlew -p api-bridge --no-daemon --dependency-verification strict test writeBatchBridgeClasspath
           test -s app/build/batch-bridge/classpath.txt
           # No credentials: prove the actual main class loads and fails closed.
           java -cp "$(cat app/build/batch-bridge/classpath.txt)" io.github.reihlinstinct.reporter.municipal.SupervisedApiTrialBridge | grep -Fx '{"success":false,"error":"SUPERVISED_TRIAL_UNAVAILABLE"}'
-          sh gradlew -p api-bridge --no-daemon writeBatchBridgeClasspath --dry-run > /tmp/bridge-task-graph.txt
+          sh gradlew -p api-bridge --no-daemon --dependency-verification strict writeBatchBridgeClasspath --dry-run > /tmp/bridge-task-graph.txt
           if grep -E ':app:|Android|ksp|compose|OCR' /tmp/bridge-task-graph.txt; then exit 1; fi
           # Positive control: the same expression must detect a synthetic app task.
           printf '%s\n' ':app:compileDebugKotlin' > /tmp/bridge-positive-task.txt
