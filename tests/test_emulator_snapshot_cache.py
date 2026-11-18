@@ -260,9 +260,6 @@ class CliTest(unittest.TestCase):
         self.assertFalse((self.avd / 'provenance.json').exists())
 
 
-if __name__ == '__main__':
-    unittest.main()
-
 
 class WorkflowBoundaryTest(unittest.TestCase):
     root = Path(__file__).resolve().parents[1]
@@ -306,3 +303,7 @@ class WorkflowBoundaryTest(unittest.TestCase):
     def test_live_workflow_not_referencing_the_cache(self):
         t = self.text('.github/workflows/live-emulator-e2e.yml')
         self.assertNotIn('snapshot', t.lower())
+
+
+if __name__ == '__main__':
+    unittest.main()

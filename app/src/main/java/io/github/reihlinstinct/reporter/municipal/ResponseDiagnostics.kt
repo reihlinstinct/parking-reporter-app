@@ -11,13 +11,19 @@ object ResponseDiagnostics {
     private val sensitive = Regex("(?i)(token|password|passwd|secret|authorization|cookie|subscription|api.?key|username|credential|auth|sid|jwt|otp|session|pwd|private.?key|bearer)")
     fun redactBody(raw: String, secrets: List<String>): String {
         val foundSecrets = secrets.toMutableList()
+        val exactNumericSecrets = mutableSetOf<String>()
         fun rememberLeaves(value: Any?) {
             when (value) {
                 is JSONObject -> value.keys().forEach { rememberLeaves(value.opt(it)) }
                 is JSONArray -> for (i in 0 until value.length()) rememberLeaves(value.opt(i))
                 is String -> if (value.isNotEmpty()) foundSecrets += value
-                is Number -> if (value.toString().length >= 4) foundSecrets += value.toString()
-                is Boolean -> foundSecrets += value.toString()
+                is Number -> {
+                    exactNumericSecrets += value.toString()
+                    if (value.toString().length >= 4) foundSecrets += value.toString()
+                }
+                // Booleans have only two values and are not usable credential
+                // identities. The sensitive field is removed by key; collecting
+                // its value would destroy unrelated Success/status flags.
             }
         }
         fun collect(value: Any?) {
@@ -35,9 +41,9 @@ object ResponseDiagnostics {
                 out.put(key, if (sensitive.containsMatchIn(key)) "[REDACTED]" else scrub(value.opt(key)))
             } }
             is JSONArray -> JSONArray().also { out -> for (i in 0 until value.length()) out.put(scrub(value.opt(i))) }
-            is String -> foundSecrets.filter { it.isNotEmpty() }.distinct().sortedByDescending { it.length }.fold(value) { text, secret -> text.replace(secret, "[REDACTED]") }
+            is String -> if (value in exactNumericSecrets) "[REDACTED]" else foundSecrets.filter { it.isNotEmpty() }.distinct().sortedByDescending { it.length }.fold(value) { text, secret -> text.replace(secret, "[REDACTED]") }
             null -> JSONObject.NULL
-            else -> if (value.toString() in foundSecrets) "[REDACTED]" else value
+            else -> if (value !is Boolean && (value.toString() in foundSecrets || value.toString() in exactNumericSecrets)) "[REDACTED]" else value
         }
         if (raw.toByteArray(Charsets.UTF_8).size > MAX_BODY_BYTES) return "[body omitted: size limit]"
         return try { val parsed = JSONObject(raw); collect(parsed); scrub(parsed).toString() } catch (_: Exception) { "[body omitted: non-JSON]" }
