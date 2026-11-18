@@ -83,6 +83,27 @@ class FetchTest(unittest.TestCase):
             stage(self.dest, self.env, Opener())
         self.assertEqual(list(self.dest.parent.iterdir()), [])
 
+    def test_redirect_http_error_never_publishes_or_retries_encrypted_input(self):
+        import urllib.error
+        import urllib.request
+        self.env['BATCH_PRIVATE_PATH'] += '.enc'
+        for code in (301, 302, 303, 307, 308):
+            with self.subTest(code=code):
+                failure = urllib.error.HTTPError('https://fixed.invalid/', code,
+                    'synthetic redirect', {'Location': 'https://other.invalid/'}, None)
+                opener = Opener(error=failure)
+                with self.assertRaisesRegex(ValueError, '^private batch staging failed$'):
+                    stage(self.dest, self.env, opener, encrypted_only=True)
+                self.assertEqual(1, len(opener.calls))
+                self.assertFalse(self.dest.exists())
+                self.assertEqual([], list(self.dest.parent.iterdir()))
+                request = opener.calls[0][0]
+                self.assertEqual('Bearer synthetic-not-a-real-secret', request.get_header('Authorization'))
+                with self.assertRaises(ValueError):
+                    NoRedirect().redirect_request(request, None, code, '',
+                        {'Location': 'https://other.invalid/'}, 'https://other.invalid/')
+        # Offline refusal proof only. No approved private package was retrieved.
+
     def test_no_auth_redirect(self):
         with self.assertRaisesRegex(ValueError, 'redirects are forbidden'):
             NoRedirect().redirect_request(None, None, 302, '', {}, 'https://other.invalid/')
