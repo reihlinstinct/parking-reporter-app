@@ -6,6 +6,44 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.53.0] - 2026-11-18
+
+### Features
+
+- feat: bounded compressed journal capacity (inactive) (#580) (0527818)
+- feat: bounded API outgoing-photo preparation (inactive) (#601) (c88037d)
+- feat: API-only sequential batch controller (inactive) (#599) (56fc559)
+- feat: immutable read-only history and ledger audit (#582) (e511671)
+- feat: hold legacy identity aliases with provenance (offline only) (#572) (3912b08)
+- feat(batch): inactive UI boundary adapter and gated municipal client (#558) (#564) (9a8e3da)
+- feat: inactive hybrid CAS journal, controller and production API bridge (#559) (6fdf360)
+- feat: minimal optional batch JSON and safe runtime derivation (inactive) (#557) (4b260af)
+
+### Fixes
+
+- fix: prove pre-case failure before permitting a same-photo retry (#595) (4db7182)
+
+### Other changes
+
+- chore(deps): bump filelock from 4.2.9 to 4.2.10 (#576) (7913e03)
+- Activate one pinned expiring supervised API trial, no replay (#645) (28c44bc)
+- chore(deps): bump com.google.ai.edge.litert:litert from 1.4.2 to 2.3.2 (#574) (992f157)
+- chore(deps): bump com.google.devtools.ksp from 2.3.13 to 2.3.14 (#578) (97ec1e0)
+- chore(deps): bump gradle-wrapper from 9.9.0 to 9.9.1 (#577) (2e49861)
+- Use in-envelope synthetic success fixture and record activation prerequisites (#640) (42f7406)
+- Recognize Tab in trusted exact-head independent review allowlist (#614) (3cde8e5)
+- Add fixed-vocabulary snapshot rejection diagnostics without relaxing validation (#606) (e8c1dce)
+- Add inactive one-incident GPS-only API trial with durable private claim (#604) (9c22e44)
+- data: stage encrypted single-request input without dispatch (#594) (bb08c2c)
+- data: stage encrypted single-case input without dispatch (#593) (bc1aba6)
+- data: stage encrypted single-case input without dispatch (#592) (d7ee3b8)
+- data: stage encrypted single-case input without dispatch (#591) (08f16f2)
+- data: stage owner-approved encrypted single-case input (#590) (78ba853)
+- data: stage owner-approved encrypted single-case input (#589) (6675c2b)
+- data: encrypted single-case input 18-2 (no dispatch) (#588) (e9dbec2)
+- data: encrypted single-case input 18-1 (no dispatch) (#587) (0afc93c)
+- test: exercise generated category AppFunction through real system binder (#570) (b7907bd)
+
 ## [0.52.0] - 2026-11-17
 
 ### Features
