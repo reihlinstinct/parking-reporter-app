@@ -3,21 +3,21 @@
   "packages": [
     {
       "slot": "car1",
-      "batchPath": "batches/two-car-once-6376066/input.zip.enc",
+      "batchPath": "batches/ci-once-1b12618077db4fe4/input.zip.enc",
       "outerSha256": "e5a383c5d47ea5e8fa8c81a2e26ebecaa1f6a98d6f1cdb515e508191fdaea12b",
       "trialSha256": "4515321830768e9acb2ca164a94e82b09d51bd7a3bdc9972dec7987b6553d61e",
       "originalSha256": "1b12618077db4fe4cf0aedddc5e623e95b77eb597b0d3ad9045ccb166c475d1b",
       "outgoingSha256": "9a8c7e4f0907f49e7d17ac20ca5f61481811cb39de47356d548b36fc2d3733d2",
-      "privateCommit": "2770bf04fa3fbd6b19bdd75e1bd0a4e83daa4c28"
+      "privateCommit": "42bd823aae145beee21a58147ce57307c98f9405"
     },
     {
       "slot": "car2",
-      "batchPath": "batches/two-car-once-15495101/input.zip.enc",
+      "batchPath": "batches/ci-once-8a4d80829d23017c/input.zip.enc",
       "outerSha256": "408a11df49d7a96e52dd9875bdf26929c2288e2485810e628496c106d07680db",
       "trialSha256": "a4d1091c5bc5c4b79dd062109bd68f8ab9774fe9d934393731ba572ff5759ee7",
       "originalSha256": "8a4d80829d23017cb266b9ec7c042e9d08c5379898964787fab6c4319ad2aae1",
       "outgoingSha256": "cb28189c9d3eb61e082b83417d7f321b6b9927ff5e88534875c78dd3c9037a51",
-      "privateCommit": "37188d118455adfc30c869550ec8d43fb7eb610d"
+      "privateCommit": "22463cd26590961371ceb3320eda3b7d7d1d254a"
     }
   ]
 }
