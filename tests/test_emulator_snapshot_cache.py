@@ -126,6 +126,29 @@ class ScanTest(unittest.TestCase):
                     m.scan_tree(self.root)
                 p.unlink()
 
+    def test_rejection_diagnostics_are_fixed_vocabulary_and_keep_every_file_blocked(self):
+        cases = {
+            'read-snapshot.txt': 'emulator_read_snapshot_txt',
+            'qemu.log': 'emulator_qemu_log',
+            'emulator.log': 'emulator_log',
+            'quickbootChoice.txt': 'emulator_quickboot_choice_txt',
+            'synthetic-private-label.txt': 'blocked_suffix_txt',
+            'synthetic-token-value.json': 'sensitive_name_redacted',
+            'synthetic-photo.jpg': 'blocked_suffix_jpg',
+        }
+        for name, label in cases.items():
+            with self.subTest(name=name):
+                file = self.root / name
+                file.write_text('synthetic private body never logged')
+                try:
+                    with self.assertRaises(m.CacheRejected) as raised:
+                        m.scan_tree(self.root)
+                    self.assertEqual('forbidden file name in cache tree: ' + label, str(raised.exception))
+                    self.assertNotIn(name, str(raised.exception))
+                    self.assertNotIn('private body', str(raised.exception))
+                finally:
+                    file.unlink()
+
     def test_symlink_and_bad_root_rejected(self):
         os.symlink('/etc/passwd', self.root / 'link.img')
         with self.assertRaises(m.CacheRejected):
