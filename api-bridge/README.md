@@ -11,3 +11,11 @@ The output classpath stays at app/build/batch-bridge/classpath.txt, so the priva
 Only the supervised trial workflow uses this build in this change. The inactive general batch workflow is unchanged. No new live trial is triggered by this build or by merging it. A separate approved dispatch, protected environment approval and renewed writer fence are still required.
 
 Issue #658 follows the first trial's pre-network failure in Android's self-project debugUnitTestRuntimeClasspath variant resolution. The standalone build has no Android runtime to resolve.
+
+## Build integrity and offline boundary
+
+Both bridge workflows verify the tracked Gradle wrapper jar against the same fixed SHA-256 used by scripts/prepare_wrapper.sh. They deliberately do not call prepare_wrapper.sh or its OCR model downloader: this JVM source allowlist does not load an OCR model or Android assets. The synthetic payload golden fixtures are test resources only.
+
+Dependencies use exact versions from Maven Central, but this repository currently has no Gradle dependency-verification metadata or lockfile for this standalone graph. Exact version selection and TLS are not artifact checksum verification. That supply-chain gap remains explicit; this change does not claim otherwise. The bridge is compiled from reviewed source in the same checkout rather than downloaded as a prebuilt binary.
+
+Offline CI also runs a positive control proving the task-graph expression recognizes a synthetic :app:compileDebugKotlin task. The actual graph must have no match. Controller, trial utilities and locked Python requirements also trigger this offline CI.
