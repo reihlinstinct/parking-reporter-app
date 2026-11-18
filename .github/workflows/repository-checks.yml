@@ -97,6 +97,8 @@ jobs:
         run: python3 -m unittest discover -s tests -p 'test_architecture_docs.py' -v
       - name: Encrypted live input bundle regression tests
         run: python3 -m unittest discover -s tests -p 'test_live_bundle.py' -v
+      - name: Native ELF alignment inspector regressions (synthetic APKs only)
+        run: python3 -m unittest discover -s tests -p 'test_native_alignment.py' -v
       - name: Mock municipal API server tests
         run: python3 -m unittest discover -s tests -p 'test_mock_municipal.py' -v
       - name: PRPKG2 contract schema and golden values
