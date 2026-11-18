@@ -116,3 +116,12 @@ same commit, then run check_repository.py and test_supervised_api_trial.py.
 Changing only the private commit, package path or outer digest fails the checker.
 Do not weaken the exact expression to accommodate drift. No activation is made
 by this documentation or by passing the checker.
+
+## Legacy intake isolation
+
+Generic schema v1 retains its mandatory plate digits. Schema v2 can represent an
+empty plate, but its author-input derivation requires independent topic policy.
+Neither generic format enters the trial through automatic conversion: the trial
+accepts only its exact report field inventory and its pinned non-plate topic.
+Synthetic regression test test_legacy_plate_schema_remains_separate_from_modern_optional_plate
+keeps legacy validation from silently widening. No private legacy records are used.
