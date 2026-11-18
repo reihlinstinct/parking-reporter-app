@@ -1,4 +1,5 @@
 """Synthetic API batch execution with actual journal, no network or credentials."""
+import copy
 from pathlib import Path
 import tempfile
 import unittest
@@ -69,6 +70,29 @@ class ApiBatchTest(unittest.TestCase):
             with self.assertRaises(InvalidBatch):
                 run_api_batch(self.journal, manifest, api)
         self.assertEqual([], self.events)
+
+    def test_malformed_port_contract_refuses_before_preflight_or_reservation(self):
+        variants = []
+        duplicate = copy.deepcopy(self.manifest)
+        duplicate['reports'][1]['reportId'] = duplicate['reports'][0]['reportId']
+        variants.append(duplicate)
+        for value in (None, {}, 'not-list'):
+            invalid = copy.deepcopy(self.manifest)
+            invalid['reports'][0]['photos'] = value
+            variants.append(invalid)
+        missing = copy.deepcopy(self.manifest)
+        del missing['reports'][0]['photos']
+        variants.append(missing)
+        for photos in ([{}], [{'sha256': 'bad'}], [{'sha256': 'c' * 64}] * 2):
+            invalid = copy.deepcopy(self.manifest)
+            invalid['reports'][0]['photos'] = photos
+            variants.append(invalid)
+        variants.extend((None, {'reports': [None]}, {'reports': [{'reportId': ' ', 'photos': []}]}))
+        for invalid in variants:
+            with self.subTest(invalid=invalid), self.assertRaises(InvalidBatch):
+                run_api_batch(self.journal, invalid, self.api)
+        self.assertEqual([], self.events)
+        self.assertEqual(0, self.journal.db.execute('SELECT count(*) FROM reports').fetchone()[0])
 
     def test_unknown_create_holds_and_never_moves_to_next_report(self):
         def fail(report):

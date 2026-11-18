@@ -24,3 +24,13 @@ Review latency, edge rejection on writes and incomplete old identity coverage ar
 ## Controller boundary
 
 `run_api_batch` has no command-line entry point, default adapter, credentials, VPN operation or workflow caller. Its caller must supply a validated effective manifest, an authorized API adapter and a journal whose return means durable remote acknowledgement. The existing local journal in tests demonstrates ordering and held-state semantics, not remote storage readiness. Any exception stops the batch. Successful responses followed by failed receipt persistence leave intent held. There is no resume, release, replacement case or automatic attachment retry.
+
+Review boundary: this controller rejects duplicate report IDs and malformed/duplicate
+photo identities before preflight. Full approved-manifest validation remains intake's
+job. A supplied adapter is trusted executable code: the controller cannot sandbox
+its preflight method. Production wiring must bind only the reviewed read-only
+preflight adapter, never arbitrary caller-supplied code. No caller is activated here.
+Synthetic report/batch/case IDs in these offline tests are non-numeric labels, not
+national IDs, payment identifiers or real municipal references; Luhn is inapplicable.
+Review dependencies at the same head: scripts/live_batch_input.py and
+scripts/live_batch_journal.py, including reservation, duplicate and intent persistence.

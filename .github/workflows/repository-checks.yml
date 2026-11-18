@@ -49,7 +49,7 @@ jobs:
           python3 scripts/run_unittest_file.py scripts/test_prepare_hybrid_batch.py
           python3 scripts/run_unittest_file.py scripts/test_run_unittest_file.py
           python3 scripts/run_unittest_file.py scripts/test_live_batch_derive.py
-      - name: Hybrid partition and write-boundary tests (offline only)
+      - name: Hybrid and API-only write-boundary tests (offline only)
         run: |
           python3 scripts/test_live_batch_hybrid.py
           python3 scripts/run_unittest_file.py scripts/test_live_batch_api.py
