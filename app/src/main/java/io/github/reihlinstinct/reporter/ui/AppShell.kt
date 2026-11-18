@@ -508,7 +508,7 @@ fun AppShell(
             // Review is scrollable. Reserve a separate scaffold slot for save feedback
             // so it cannot land below the form or overlap its contents.
             if (page == "review" && status.isNotEmpty()) {
-                Surface(color = MaterialTheme.colorScheme.inverseSurface, contentColor = MaterialTheme.colorScheme.inverseOnSurface) {
+                Surface(modifier = Modifier.navigationBarsPadding(), color = MaterialTheme.colorScheme.inverseSurface, contentColor = MaterialTheme.colorScheme.inverseOnSurface) {
                     Text(status, color = MaterialTheme.colorScheme.inverseOnSurface, modifier = Modifier.fillMaxWidth().padding(16.dp).semantics { liveRegion = LiveRegionMode.Polite })
                 }
             }
