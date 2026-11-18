@@ -104,7 +104,7 @@ dependencies {
 // Inactive batch bridge: compile once before secrets, then use private stdio IPC.
 // This task does not run the bridge or make network calls.
 tasks.register("writeBatchBridgeClasspath") {
-    dependsOn("compileDebugUnitTestKotlin", "compileDebugJavaWithJavac", "compileDebugUnitTestJavaWithJavac")
+    dependsOn("compileDebugUnitTestKotlin", "compileDebugJavaWithJavac", "compileApiOutgoingPhoto")
     doLast {
         val roots = listOf(
             layout.buildDirectory.dir("tmp/kotlin-classes/debug").get().asFile,
@@ -112,11 +112,31 @@ tasks.register("writeBatchBridgeClasspath") {
             layout.buildDirectory.dir("intermediates/built_in_kotlinc/debug/classes").get().asFile,
             layout.buildDirectory.dir("intermediates/built_in_kotlinc/debugUnitTest/classes").get().asFile,
             layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes").get().asFile,
-            layout.buildDirectory.dir("intermediates/javac/debugUnitTest/compileDebugUnitTestJavaWithJavac/classes").get().asFile,
+            layout.buildDirectory.dir("batch-bridge/photo-classes").get().asFile,
         )
         val deps = configurations.getByName("debugUnitTestRuntimeClasspath").files
         val output = layout.buildDirectory.file("batch-bridge/classpath.txt").get().asFile
         output.parentFile.mkdirs()
         output.writeText((roots.filter { it.exists() } + deps).joinToString(File.pathSeparator))
     }
+}
+
+// Desktop ImageIO belongs to the CI JVM, never Android's restricted Java bootclasspath.
+val compileApiOutgoingPhoto by tasks.registering(JavaCompile::class) {
+    source(rootProject.fileTree("scripts/jvm") { include("ApiOutgoingPhoto*.java") })
+    classpath = configurations.getByName("debugUnitTestRuntimeClasspath")
+    destinationDirectory.set(layout.buildDirectory.dir("batch-bridge/photo-classes"))
+    sourceCompatibility = "17"
+    targetCompatibility = "17"
+}
+val testApiOutgoingPhoto by tasks.registering(Test::class) {
+    dependsOn(compileApiOutgoingPhoto)
+    testClassesDirs = files(compileApiOutgoingPhoto.flatMap { it.destinationDirectory })
+    classpath = files(testClassesDirs, configurations.getByName("debugUnitTestRuntimeClasspath"))
+    useJUnit()
+    systemProperty("java.awt.headless", "true")
+    maxHeapSize = "512m"
+}
+tasks.matching { it.name == "testDebugUnitTest" }.configureEach {
+    dependsOn(testApiOutgoingPhoto)
 }

@@ -1,6 +1,6 @@
 # API outgoing-photo preparation (inactive, issue #600)
 
-The API bridge currently requires decoded images of at most 4 million pixels. Camera originals can be much larger. `ApiOutgoingPhoto` is a JVM preparation helper on the existing bridge classpath, not an active caller. It never modifies originals, writes files or makes a network call.
+The API bridge currently requires decoded images of at most 4 million pixels. Camera originals can be much larger. `ApiOutgoingPhoto` is a desktop-JVM preparation helper on the existing bridge classpath, not an active caller. It never modifies originals, writes files or makes a network call.
 
 ## Explicit policy
 
@@ -17,4 +17,4 @@ An exact derivative must be reviewed and bound in the approved effective package
 
 Android parity is partial and explicit: both preserve original bytes, apply orientation and strip EXIF in a bounded JPEG derivative, but this helper adds a 4-million-pixel ceiling and white transparency matte, and uses the JVM encoder. It does not claim to reproduce the same JPEG bytes. Vendor constraints and approval presentation remain activation gates in #598.
 
-Seven synthetic JVM tests cover a 24.36-million-pixel original, original/outgoing hashes and immutability, all eight EXIF orientations in both byte orders, PNG eXIf and CRC, transparency, corruption, digest mismatch, oversize input/dimensions and refusal at the quality floor. A rotated synthetic quadrant JPEG was opened and visually checked. Real user photos and municipal APIs were not used.
+A separate JavaCompile/Test task keeps desktop ImageIO off Android's Java bootclasspath. The normal testDebugUnitTest task depends on these tests; the bridge classpath build includes the compiled helper. Seven synthetic JVM tests cover a 24.36-million-pixel original, original/outgoing hashes and immutability, all eight EXIF orientations in both byte orders, PNG eXIf and CRC, transparency, corruption, digest mismatch, oversize input/dimensions and refusal at the quality floor. A rotated synthetic quadrant JPEG was opened and visually checked. Real user photos and municipal APIs were not used.
