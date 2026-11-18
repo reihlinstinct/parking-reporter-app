@@ -81,3 +81,10 @@ and write encrypted claims in the fixed private records repository. The fetch
 alias PRIVATE_LOOKUP_READ_TOKEN does not reduce that scope. Owner deferred
 credential splitting to issue #607; this is not a claim of read-only privilege or
 activation approval. No credential/settings changes are made here.
+
+Post-merge review prerequisites: verify coordinate-envelope parity (issue #611)
+and enforce the encrypted suffix in the fetch helper itself (issue #612) before
+activation. Python success/mock fixtures now use an in-envelope synthetic point;
+none exercises the real bridge or municipality. CoordinateX/Y are integer ITM
+values by Itm.toItm's Pair<Int, Int> contract and five executed bridge tests.
+This fixture correction is not activation permission.

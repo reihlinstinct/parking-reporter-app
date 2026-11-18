@@ -16,7 +16,7 @@ import supervised_api_trial as trial
 class TrialTest(unittest.TestCase):
     def setUp(self):
         self.report = dict(reportId='synthetic-trial', text='synthetic exact text', subjectCode='9000',
-                           latitude=0, longitude=0, locationDescription='synthetic crossing',
+                           latitude=31.8, longitude=35.2, locationDescription='synthetic crossing',
                            photos=[dict(path='photos/approved.jpg', sha256='b' * 64)])
         self.events, self.records = [], []
         parent = self
