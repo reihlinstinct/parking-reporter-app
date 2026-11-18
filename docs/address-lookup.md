@@ -134,11 +134,10 @@ both sides is expected for addresses outside OSM/registry coverage).
 
 ## On-device lookup precedence and updates
 
-The first installed candidate wins: app-specific external files directory,
-then noBackupFilesDir, then the bundled development asset. A present but stale
-external copy blocks submission even when a matching copy exists later in the
-list. This is deliberate fail-closed behavior; replace or remove the stale
-first copy rather than bypassing the pin. Missing and mismatched files have
+The first installed candidate wins: noBackupFilesDir (the verified in-app import),
+then the legacy app-specific external files directory, then the bundled development asset. A present but stale first copy still refuses. Importing the exact pinned document
+replaces the private internal copy atomically after hash and parser validation;
+it does not bypass the pin. The import does not publish or bundle the database. Missing and mismatched files have
 different UI messages.
 
 The pin covers the whole file byte-for-byte. Any regeneration or reformatting
@@ -158,3 +157,12 @@ Missing, wrong or unreadable data fails before any tap. No lookup data is
 committed or uploaded as an artifact; runner/device copies are removed.
 Revoke the temporary token after the night's test, verify 401, then remove
 the environment secret. Never copy it into repository-level secrets.
+
+## First-device private installation
+
+The review screen offers a system document picker for an existing private copy.
+Only the exact production SHA-256 file is accepted, bounded to8MiB and strict UTF-8.
+Malformed, wrong-pin and oversized files cannot replace a prior installed copy.
+Search is disabled while data is unavailable and after a failed lookup until
+inputs change or a verified document is installed. No network download, licence
+change, public distribution or municipality call is introduced.

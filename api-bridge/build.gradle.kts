@@ -3,7 +3,7 @@ kotlin { jvmToolchain(17) }
 
 // A separate Gradle build: never configures :app, AGP, Compose, OCR or an SDK.
 // Compile the exact production sources, not a copied municipal client.
-val mainMunicipal = listOf("MunicipalClient", "MunicipalCaseReference", "MunicipalErrors", "MunicipalPayloads", "PythonJson", "ResponseDiagnostics", "StreetDirectory", "HouseNumber", "Itm")
+val mainMunicipal = listOf("PrivateAddressInstall", "AddressLookupPin", "MunicipalClient", "MunicipalCaseReference", "MunicipalErrors", "MunicipalPayloads", "PythonJson", "ResponseDiagnostics", "StreetDirectory", "HouseNumber", "Itm")
 val mainCore = listOf("MunicipalSubjects", "CityTopicCache", "ReportCategory")
 kotlin.sourceSets.main {
     kotlin.srcDir("../app/src/main/java")
@@ -15,7 +15,7 @@ kotlin.sourceSets.main {
 }
 kotlin.sourceSets.test {
     kotlin.srcDir("../app/src/test/java")
-    listOf("BatchMunicipalBridgeTest", "SupervisedApiTrialBridgeTest", "TwoCarCiBridgeTest", "ItmTest", "MunicipalPayloadsTest", "PythonJsonTest").forEach {
+    listOf("PrivateAddressInstallTest", "BatchMunicipalBridgeTest", "SupervisedApiTrialBridgeTest", "TwoCarCiBridgeTest", "ItmTest", "MunicipalPayloadsTest", "PythonJsonTest").forEach {
         kotlin.include("io/github/reihlinstinct/reporter/municipal/$it.kt")
     }
 }

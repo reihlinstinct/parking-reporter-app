@@ -1,5 +1,6 @@
 package io.github.reihlinstinct.reporter
 
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
@@ -32,6 +33,26 @@ class ReviewAddressTest {
     private fun draft() = ReviewDraft(
         Evidence("address-fixture", "a".repeat(64), "2026-01-01T12:00:00+02:00", 31.77, 35.21),
         "1234567", "", "sidewalk_parking", "תיאור בדיקה בלבד", setOf("address_needs_confirmation"))
+
+    @Test fun unavailableAddressDataDisablesExactSearchEvenWithCallback() {
+        val initial = draft().copy(pendingStreet = "אגריפס", pendingHouse = "12")
+        compose.setContent { AppTheme { ReviewScreen(initial, null, {}, {},
+            manualAddressLookup = { _, _ -> error("must not be called") }, addressDataAvailable = false,
+            topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
+        compose.onNodeWithText("חפש כתובת מדויקת").performScrollTo().assertIsNotEnabled()
+    }
+
+    @Test fun failedLookupDisablesUntilInputChanges() {
+        val initial = draft().copy(pendingStreet = "אגריפס", pendingHouse = "12")
+        compose.setContent { AppTheme { ReviewScreen(initial, null, {}, {},
+            manualAddressLookup = { _, _ -> error("synthetic no match") },
+            topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
+        compose.onNodeWithText("חפש כתובת מדויקת").performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("חפש כתובת מדויקת").assertIsNotEnabled()
+        compose.onNodeWithText("מספר בית").performScrollTo().performTextReplacement("14")
+        compose.onNodeWithText("חפש כתובת מדויקת").performScrollTo().assertIsEnabled()
+    }
 
     // Issue #256: the Done key on the last single-line field clears focus and hides the keyboard.
     @Test fun imeDoneOnHouseNumberClearsFocus() {
