@@ -45,7 +45,6 @@ import io.github.reihlinstinct.reporter.i18n.ProvideStringsIfMissing
 @Composable
 fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft) -> Unit, onBack: () -> Unit, onSubmit: ((ReviewDraft) -> Unit)? = null, submitting: Boolean = false, submissionNote: String = "", missingCredentialKeys: List<String> = emptyList(), noDeviceCredential: Boolean = false, addressLookup: (suspend (Double, Double) -> List<io.github.reihlinstinct.reporter.evidence.AddressSuggestion>)? = null, plateRecognizer: (suspend () -> List<String>)? = null, manualAddressLookup: (suspend (String, String) -> io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress)? = null, crossingLookup: (suspend (String, String) -> io.github.reihlinstinct.reporter.municipal.StreetDirectory.IntersectionAddress)? = null,
     addressDataAvailable: Boolean = manualAddressLookup != null,
-    onInstallAddressData: (() -> Unit)? = null, addressInstallNote: String = "",
     topicSnapshot: io.github.reihlinstinct.reporter.core.CityTopicCache.Snapshot? = null,
     topicsAvailable: Boolean = false, topicsLoading: Boolean = false,
     openTopics: (() -> Unit)? = null, topicSelected: ((String) -> Unit)? = null,
@@ -503,12 +502,6 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 }
             }, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.location.find_address")) }
             if (!addressDataAvailable || manualAddressLookup == null || manualError) Text(s.t("review.location.lookup_failed"))
-            onInstallAddressData?.let { install ->
-                OutlinedButton(enabled = !manualBusy, onClick = install, modifier = Modifier.fillMaxWidth()) {
-                    Text(s.t("review.location.import_addresses"))
-                }
-            }
-            if (addressInstallNote.isNotEmpty()) Text(addressInstallNote)
             LaunchedEffect(addressDataAvailable) { if (addressDataAvailable) manualError = false }
             manualResult?.let { result ->
                 Text(reviewAddressSuggestionText(s, result.address))

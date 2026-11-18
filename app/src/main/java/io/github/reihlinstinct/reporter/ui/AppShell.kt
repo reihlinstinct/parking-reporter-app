@@ -141,29 +141,11 @@ fun AppShell(
     var streetsDirectory by remember { mutableStateOf<StreetDirectory?>(null) }
     var submitting by remember { mutableStateOf(false) }
     var submissionNote by remember(draft?.evidence?.stableId) { mutableStateOf("") }
-    // The legacy lookup has not yet been rebuilt with verified open inputs: it is NOT committed to
-    // this public repo. Load the on-device private copy (pushed to the
-    // app-specific external dir, or the no-backup dir); the bundled asset is
-    // a dev-only fallback when a developer places the file there locally.
-    fun loadStreetDirectory(context: android.content.Context): StreetDirectory {
-        // The in-app verified import is authoritative; a stale external legacy
-        // copy cannot shadow a freshly installed pinned private document.
-        val candidates = listOf(
-            File(context.noBackupFilesDir, "addresses.json"),
-            File(context.getExternalFilesDir(null), "addresses.json"),
-        )
-        for (candidate in candidates) {
-            if (candidate.isFile) {
-                return StreetDirectory.load(AddressLookupPin.verifyPinned(candidate.readText(Charsets.UTF_8)))
-            }
-        }
-        val bundled = try {
-            context.assets.open("addresses.json").bufferedReader().readText()
-        } catch (_: Exception) {
-            throw MunicipalInputException("address lookup not installed on device")
-        }
-        return StreetDirectory.load(AddressLookupPin.verifyPinned(bundled))
-    }
+    // Bundled default: owner confirms our OSM-based file. See docs/address-lookup.md
+    // for exact-byte provenance, attribution and the unrecovered-generator gap.
+    fun loadStreetDirectory(context: android.content.Context): StreetDirectory =
+        StreetDirectory.load(AddressLookupPin.verifyPinned(
+            context.assets.open("addresses.json").bufferedReader(Charsets.UTF_8).use { it.readText() }))
     fun submitReport(shown: ReviewDraft, outgoing: io.github.reihlinstinct.reporter.evidence.OutgoingImage?) {
         // Runs 42853563754 / 42880867432: the send tap never reached the
         // submit path. Log every gate so the next live run shows exactly
@@ -639,39 +621,17 @@ fun AppShell(
                     }
                 }
             }
-            var addressInstallRevision by remember { mutableStateOf(0) }
             var addressLoading by remember { mutableStateOf(true) }
-            var addressInstallNote by remember { mutableStateOf("") }
-            LaunchedEffect(value.evidence.stableId, addressInstallRevision) {
+            LaunchedEffect(value.evidence.stableId) {
                 addressLoading = true
                 streetsDirectory = withContext(Dispatchers.IO) {
                     runCatching { streetDirectoryLoader?.invoke() ?: loadStreetDirectory(context) }.getOrNull()
                 }
                 addressLoading = false
             }
-            val addressImporter = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-                if (uri != null) scope.launch {
-                    addressLoading = true
-                    val imported = withContext(Dispatchers.IO) {
-                        runCatching {
-                            context.contentResolver.openInputStream(uri)?.use {
-                                io.github.reihlinstinct.reporter.municipal.PrivateAddressInstall.install(it, context.noBackupFilesDir)
-                            } ?: error("document unavailable")
-                        }.getOrNull()
-                    }
-                    if (imported != null) {
-                        streetsDirectory = imported
-                        addressInstallNote = strings.t("shell.status.address_imported")
-                        addressInstallRevision++
-                    } else addressInstallNote = strings.t("review.location.lookup_failed")
-                    addressLoading = false
-                }
-            }
             val readyDirectory = streetsDirectory.takeUnless { addressLoading }
             ReviewScreen(value, image, ::saveDraft,
                 addressDataAvailable = readyDirectory != null,
-                addressInstallNote = addressInstallNote,
-                onInstallAddressData = { addressImporter.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
                 manualAddressLookup = readyDirectory?.let { directory -> { street, house -> directory.findConfirmedAddress(street, house) } },
                 crossingLookup = readyDirectory?.let { directory -> { a, b -> directory.findIntersectionAddress(a, b) } },
                 onBack = { page = "home" },
