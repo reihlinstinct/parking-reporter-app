@@ -371,7 +371,9 @@ class M1ShellTest {
         // The reason text follows the keyboard/scroll settling; wait for it, then scroll and assert.
         compose.waitUntil(10_000) { compose.onAllNodes(hasText("חסרים או לא תקינים", substring = true)).fetchSemanticsNodes().isNotEmpty() }
         compose.waitForIdle()
-        compose.onNode(hasText("חסרים או לא תקינים", substring = true)).performScrollTo().assertIsDisplayed()
+        val reason = compose.onNode(hasText("חסרים או לא תקינים", substring = true))
+        compose.waitUntil(10_000) { reason.performScrollTo().isDisplayed() }
+        reason.assertIsDisplayed()
         compose.onNodeWithText("שם משפחה").performTextInput("מדווח")
         compose.onNodeWithText("מספר זהות").performScrollTo().performTextReplacement("000000018")
         compose.onNodeWithText("טלפון").performScrollTo().performTextReplacement("050-123-4567")
