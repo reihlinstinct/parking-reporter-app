@@ -122,6 +122,17 @@ class DeriveTest(unittest.TestCase):
         self.files['photos/a.jpg'] = b'\xff\xd8\xffsynthetic'; self.m['reports'][0]['photos'] = ['photos/a.jpg']
         self.assertIsNone(self.read()['reports'][0]['capturedAt'])
 
+    def test_exif_malformed_timezone_is_not_normalized_into_capture_time(self):
+        for offset in (b'+01:99\0', b'-00:60\0', b'+14:01\0', b'-15:00\0'):
+            with self.subTest(offset=offset):
+                self.assertIsNone(exif_capture(exif(offset=offset)))
+        for offset in (b'+14:00\0', b'-14:00\0', b'+05:45\0', b'+00:00\0'):
+            with self.subTest(offset=offset):
+                self.assertIsNotNone(exif_capture(exif(offset=offset)))
+        self.files['photos/a.jpg'] = exif(offset=b'+01:99\0')
+        self.m['reports'][0]['photos'] = ['photos/a.jpg']
+        self.assertIsNone(self.read()['reports'][0]['capturedAt'])
+
     def test_photo_hash_mismatch_and_duplicates_refused(self):
         self.files['photos/a.jpg'] = exif()
         self.m['reports'][0]['photos'] = [{'path': 'photos/a.jpg', 'sha256': '0' * 64}]
