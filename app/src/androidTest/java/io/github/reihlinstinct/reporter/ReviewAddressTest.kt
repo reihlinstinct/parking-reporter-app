@@ -35,7 +35,7 @@ class ReviewAddressTest {
         "1234567", "", "sidewalk_parking", "תיאור בדיקה בלבד", setOf("address_needs_confirmation"))
 
     @Test fun unavailableAddressDataDisablesExactSearchEvenWithCallback() {
-        val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null))
+        val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null), confirmedLatitude = null, confirmedLongitude = null)
         compose.setContent { AppTheme { ReviewScreen(initial, null, {}, {},
             manualAddressLookup = { _, _ -> error("must not be called") }, addressDataAvailable = false,
             topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
@@ -47,7 +47,7 @@ class ReviewAddressTest {
     }
 
     @Test fun failedLookupDisablesUntilInputChanges() {
-        val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null))
+        val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null), confirmedLatitude = null, confirmedLongitude = null)
         compose.setContent { AppTheme { ReviewScreen(initial, null, {}, {},
             manualAddressLookup = { _, _ -> error("synthetic no match") },
             topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
@@ -70,7 +70,7 @@ class ReviewAddressTest {
     }
 
     @Test fun licencesShowBundledDataAttribution() {
-        compose.setContent { AppTheme { io.github.reihlinstinct.reporter.ui.LicensesScreen({}) } }
+        compose.setContent { AppTheme { io.github.reihlinstinct.reporter.i18n.ProvideStringsIfMissing { io.github.reihlinstinct.reporter.ui.LicensesScreen({}) } } }
         compose.onNodeWithText("רישיונות ומקורות מידע").assertExists()
         compose.onNodeWithText("© OpenStreetMap contributors (ODbL 1.0)").performScrollTo().assertExists()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
