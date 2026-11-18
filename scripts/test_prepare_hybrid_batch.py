@@ -18,7 +18,8 @@ class PreparePinsTest(unittest.TestCase):
                        BATCH_APPROVED_INNER_SHA256='1' * 64,
                        BATCH_APPROVED_ADDRESSES_SHA256='2' * 64,
                        BATCH_VERIFIED_TOPIC_POLICY='{"9000": {"plateRequired": false}}')
-            def stage(path): path.write_bytes(data)
+            def stage(path, *, encrypted_only):
+                self.assertFalse(encrypted_only); path.write_bytes(data)
             with patch.dict(os.environ, env, clear=True), patch.object(preparation, 'stage', stage), \
                     patch.object(preparation, 'validate_zip', return_value={}) as validate, \
                     patch.object(preparation.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as run:
@@ -40,7 +41,7 @@ class PreparePinsTest(unittest.TestCase):
                        BATCH_PRIVATE_PATH='batches/synthetic/input.zip.enc',
                        BATCH_VERIFIED_TOPIC_POLICY='{"9000": {"plateRequired": false}}')
             with patch.dict(os.environ, env, clear=True), \
-                    patch.object(preparation, 'stage', lambda path: path.write_bytes(data)), \
+                    patch.object(preparation, 'stage', lambda path, **kwargs: path.write_bytes(data)), \
                     patch.object(preparation, 'validate_zip', return_value={}), \
                     patch.object(preparation.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as run:
                 self.assertEqual(preparation.main(root), 0)
@@ -55,7 +56,7 @@ class PreparePinsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / 'private'
             with patch.dict(os.environ, {'BATCH_APPROVED_OUTER_SHA256': '0' * 64}, clear=True), \
-                    patch.object(preparation, 'stage', lambda path: path.write_bytes(b'synthetic')), \
+                    patch.object(preparation, 'stage', lambda path, **kwargs: path.write_bytes(b'synthetic')), \
                     patch.object(preparation, 'validate_zip') as validate:
                 self.assertEqual(preparation.main(root), 1)
                 validate.assert_not_called()
