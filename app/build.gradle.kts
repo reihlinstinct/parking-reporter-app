@@ -104,7 +104,7 @@ dependencies {
 // Inactive batch bridge: compile once before secrets, then use private stdio IPC.
 // This task does not run the bridge or make network calls.
 tasks.register("writeBatchBridgeClasspath") {
-    dependsOn("compileDebugUnitTestKotlin", "compileDebugJavaWithJavac")
+    dependsOn("compileDebugUnitTestKotlin", "compileDebugJavaWithJavac", "compileDebugUnitTestJavaWithJavac")
     doLast {
         val roots = listOf(
             layout.buildDirectory.dir("tmp/kotlin-classes/debug").get().asFile,
@@ -112,6 +112,7 @@ tasks.register("writeBatchBridgeClasspath") {
             layout.buildDirectory.dir("intermediates/built_in_kotlinc/debug/classes").get().asFile,
             layout.buildDirectory.dir("intermediates/built_in_kotlinc/debugUnitTest/classes").get().asFile,
             layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes").get().asFile,
+            layout.buildDirectory.dir("intermediates/javac/debugUnitTest/compileDebugUnitTestJavaWithJavac/classes").get().asFile,
         )
         val deps = configurations.getByName("debugUnitTestRuntimeClasspath").files
         val output = layout.buildDirectory.file("batch-bridge/classpath.txt").get().asFile
