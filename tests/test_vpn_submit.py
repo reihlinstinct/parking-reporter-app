@@ -13,6 +13,21 @@ vpn = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(vpn)
 
 class VpnSubmitTest(unittest.TestCase):
+    def test_down_preserves_untracked_and_replaced_host_configuration(self):
+        import hashlib
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'run'; root.mkdir()
+            matching = Path(directory) / 'matching'; matching.write_bytes(b'synthetic-written')
+            changed = Path(directory) / 'changed'; changed.write_bytes(b'synthetic-replacement')
+            untouched = Path(directory) / 'untouched'; untouched.write_bytes(b'synthetic-existing')
+            (root / 'generated-config.json').write_text(json.dumps({'match': hashlib.sha256(matching.read_bytes()).hexdigest(), 'changed': '0' * 64, '../../untrusted': '0' * 64}))
+            with patch.object(vpn, 'ROOT', root), patch.object(vpn, 'run'), patch.object(vpn, 'config_destinations', return_value={'match': matching, 'changed': changed, 'untouched': untouched}):
+                vpn.down()
+            self.assertFalse(matching.exists())
+            self.assertEqual(b'synthetic-replacement', changed.read_bytes())
+            self.assertEqual(b'synthetic-existing', untouched.read_bytes())
+
     def test_private_destinations_rejected_before_tunnel_start(self):
         with patch.object(vpn, 'run') as run:
             vpn.isolate_private_networks()
