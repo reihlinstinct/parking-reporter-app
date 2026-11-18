@@ -36,6 +36,28 @@ FORBIDDEN_SUFFIXES = ('.jpg', '.jpeg', '.png', '.mp4', '.zip', '.enc', '.log', '
 # Files that legitimately end in a forbidden suffix inside an AVD directory.
 ALLOWED_EXACT = {'hardware-qemu.ini', 'config.ini', 'provenance.json', 'screenshot.png',
                  'emu-launch-params.txt'}
+# Diagnostic labels are fixed vocabulary only, never raw directory/file names.
+# Recognition here is NOT permission to cache the file.
+KNOWN_REJECTED_METADATA = {
+    'read-snapshot.txt': 'emulator_read_snapshot_txt',
+    'qemu.log': 'emulator_qemu_log',
+    'emulator.log': 'emulator_log',
+    'quickbootchoice.txt': 'emulator_quickboot_choice_txt',
+}
+
+
+def rejection_label(name: str) -> str:
+    lower = name.lower()
+    if lower in KNOWN_REJECTED_METADATA:
+        return KNOWN_REJECTED_METADATA[lower]
+    if FORBIDDEN_NAMES.search(name):
+        return 'sensitive_name_redacted'
+    for suffix in FORBIDDEN_SUFFIXES:
+        if lower.endswith(suffix):
+            return 'blocked_suffix_' + suffix[1:]
+    return 'unclassified_redacted'
+
+
 MAX_FILES = 5000
 
 
@@ -140,10 +162,10 @@ def scan_tree(root: Path) -> None:
             if lower in ALLOWED_EXACT:
                 continue
             if FORBIDDEN_NAMES.search(name) or lower.endswith(FORBIDDEN_SUFFIXES):
-                raise CacheRejected('forbidden file name in cache tree')
+                raise CacheRejected('forbidden file name in cache tree: ' + rejection_label(name))
         for d in dirnames:
             if FORBIDDEN_NAMES.search(d):
-                raise CacheRejected('forbidden directory name in cache tree')
+                raise CacheRejected('forbidden directory name in cache tree: sensitive_name_redacted')
 
 
 def _sha256(path: Path) -> str:
