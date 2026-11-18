@@ -167,6 +167,10 @@ jobs:
             # Dump the device log so app-side Log lines and compose tree dumps
             # from failing tests are readable without rerunning locally.
             adb logcat -d -v threadtime > app/build/reports/androidTests/logcat.txt || true
+            # #376: retain ART/native crash diagnostics before emulator teardown.
+            adb shell dumpsys dropbox --print SYSTEM_TOMBSTONE > app/build/reports/androidTests/native-tombstones.txt || true
+            adb shell dumpsys meminfo il.sidewalks.reporter > app/build/reports/androidTests/memory-after-tests.txt || true
+            adb shell getprop > app/build/reports/androidTests/emulator-properties.txt || true
             python3 scripts/test_summary.py --title 'Instrumented tests (emulator, API ${{ matrix.api }})' --instrumentation app/build/reports/androidTests/instrumentation.txt --check; echo $? > app/build/reports/androidTests/summary.rc
             for f in $(adb shell run-as il.sidewalks.reporter ls files/ | tr -d '\r' | grep '\.png$'); do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/androidTests/screenshots/$f" || true; done
             # Best-effort: a crashed run must still reach the presence checks
