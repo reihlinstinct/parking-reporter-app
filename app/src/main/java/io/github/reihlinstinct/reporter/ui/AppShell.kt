@@ -505,6 +505,11 @@ fun AppShell(
     }
     Scaffold(
         bottomBar = {
+            // Review is scrollable. Reserve a separate scaffold slot for save feedback
+            // so it cannot land below the form or overlap its contents.
+            if (page == "review" && status.isNotEmpty()) {
+                Surface { Text(status, modifier = Modifier.fillMaxWidth().padding(16.dp).semantics { liveRegion = LiveRegionMode.Polite }) }
+            }
             if (page == "home" || page == "settings" || page == "reports") {
                 Column {
                 // Issue #295: one shared status slot above the bar on every page
@@ -651,10 +656,6 @@ fun AppShell(
                 topicsLoading = topicsLoading, openTopics = ::openCityTopics,
                 topicSelected = { topicRepository.selected(it) }, recentTopics = topicRepository.recentCodes(), topicAliases = topicAliases, plateEnables = topicRepository.plateEnables(), registryLookup = registryLookup,
                 sidewalkScorer = { bitmap -> withContext(Dispatchers.Default) { io.github.reihlinstinct.reporter.recognition.SidewalkSuggestion.score(context, bitmap) } })
-            // Save feedback lands in the shell status; the review page has no
-            // bottom bar, so it keeps its own announced slot (home/settings/
-            // reports share the one above the bar).
-            if (status.isNotEmpty()) Text(status, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         }
         "settings" -> SettingsScreen(profile, save = { value, touchedMunicipal, cleared ->
             persistSettings(value, touchedMunicipal, cleared)

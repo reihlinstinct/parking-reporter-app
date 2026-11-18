@@ -93,12 +93,12 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // True only after the user typed in the description field here; text that arrived with the draft is not theirs to protect.
     var textTyped by remember(initial.evidence.stableId) { mutableStateOf(restored?.textTyped ?: false) }
     var editing by remember(initial.evidence.stableId) { mutableStateOf(restored?.editing ?: false) }
-    var manualStreet by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualStreet.orEmpty()) }
-    var manualHouse by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualHouse.orEmpty()) }
+    var manualStreet by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualStreet ?: initial.pendingStreet) }
+    var manualHouse by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualHouse ?: initial.pendingHouse) }
     var manualResult by remember(initial.evidence.stableId) { mutableStateOf<io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress?>(restored?.manualResult) }
     var manualBusy by remember { mutableStateOf(false) }
     // Optional crossing street: with a street and no house number the lookup finds the nearest numbered address.
-    var manualCross by remember(initial.evidence.stableId) { mutableStateOf("") }
+    var manualCross by remember(initial.evidence.stableId) { mutableStateOf(initial.pendingCross) }
     var crossingResult by remember(initial.evidence.stableId) { mutableStateOf<io.github.reihlinstinct.reporter.municipal.StreetDirectory.IntersectionAddress?>(null) }
     var manualError by remember { mutableStateOf(false) }
     // Tab review (#266): address warnings clear only when the field value
@@ -131,7 +131,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     val hasUnsavedEdits = (draftForEdits != savedDraft && draftForEdits != cleanDraft) ||
         latitude != initial.confirmedLatitude?.toString().orEmpty() ||
         longitude != initial.confirmedLongitude?.toString().orEmpty() ||
-        manualStreet != savedManualStreet || manualHouse != savedManualHouse
+        manualStreet != savedManualStreet || manualHouse != savedManualHouse || manualCross != initial.pendingCross
     // Kept only when the screen leaves composition because of a configuration change. Every other exit
     // (save, discard, back, process death) leaves nothing held.
     val holdOnRotation by rememberUpdatedState {
@@ -169,7 +169,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code)) +
             if (lat == null || lon == null) draft.unresolved.intersect(setOf(
                 ReviewWarning.MISSING_GPS.code, ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code)) else emptySet()
-        return folded.copy(unresolved = unsettled)
+        return folded.copy(unresolved = unsettled, pendingStreet = manualStreet, pendingHouse = manualHouse, pendingCross = manualCross)
     }
     fun confirmPendingEvidence() {
         draft = foldedDraft()

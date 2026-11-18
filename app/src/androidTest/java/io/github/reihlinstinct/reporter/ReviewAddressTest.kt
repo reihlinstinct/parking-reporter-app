@@ -45,6 +45,29 @@ class ReviewAddressTest {
         compose.onNodeWithText("מספר בית").assertIsNotFocused()
     }
 
+    @Test fun unresolvedManualAddressSavesOfflineAndReopensStillUnconfirmed() {
+        val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null),
+            confirmedLatitude = null, confirmedLongitude = null)
+        var saved: ReviewDraft? = null
+        compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {},
+            manualAddressLookup = { _, _ -> error("synthetic unavailable database") },
+            topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
+        compose.onNodeWithText("רחוב בירושלים").performScrollTo().performTextReplacement("רחוב בדיקה")
+        compose.onNodeWithText("מספר בית").performScrollTo().performTextReplacement("12")
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
+        compose.runOnIdle {
+            val persisted = io.github.reihlinstinct.reporter.ledger.DraftCodec.decode(
+                io.github.reihlinstinct.reporter.ledger.DraftCodec.encode(saved!!))
+            assertEquals("רחוב בדיקה", persisted.pendingStreet)
+            assertEquals("12", persisted.pendingHouse)
+            assertEquals("", persisted.address)
+            assertNull(persisted.confirmedLatitude)
+            org.junit.Assert.assertFalse(persisted.isReady())
+        }
+        compose.onNodeWithText("שלח").performScrollTo().assertIsNotEnabled()
+    }
+
     @Test fun noGpsAddressRequiresExplicitConfirmationAndPreservesOriginal() {
         val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null),
             address = "", confirmedLatitude = null, confirmedLongitude = null, unresolved = setOf("missing_gps", "address_needs_confirmation"))

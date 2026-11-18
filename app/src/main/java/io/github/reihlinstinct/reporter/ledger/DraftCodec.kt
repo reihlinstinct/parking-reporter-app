@@ -14,6 +14,8 @@ object DraftCodec {
         put("plate", d.plate); put("address", d.address); put("subject", d.subject); put("text", d.exactHebrewText)
         if (d.plateClass != io.github.reihlinstinct.reporter.core.PlateClass.REGULAR) put("plateClass", d.plateClass.code)
         put("unresolved", JSONArray(d.unresolved.sorted()))
+        // Draft-only unfinished lookup inputs. Never substitute for approved address.
+        put("pendingStreet", d.pendingStreet); put("pendingHouse", d.pendingHouse); put("pendingCross", d.pendingCross)
     }.toString()
     fun decode(value: String): ReviewDraft {
         val j = JSONObject(value)
@@ -24,6 +26,8 @@ object DraftCodec {
             j.getString("plate"), j.getString("address"), j.getString("subject"), j.getString("text"),
             (0 until questions.length()).map { questions.getString(it) }.toSet(),
             confirmedTime = text("time"), confirmedLatitude = number("lat"), confirmedLongitude = number("lon"), plateRequired = if (j.has("plateRequired") && !j.isNull("plateRequired")) j.getBoolean("plateRequired") else null,
-            plateClass = io.github.reihlinstinct.reporter.core.PlateClass.fromCode(text("plateClass")))
+            plateClass = io.github.reihlinstinct.reporter.core.PlateClass.fromCode(text("plateClass")),
+            pendingStreet = text("pendingStreet").orEmpty(), pendingHouse = text("pendingHouse").orEmpty(),
+            pendingCross = text("pendingCross").orEmpty())
     }
 }
