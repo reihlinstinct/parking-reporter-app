@@ -9,11 +9,12 @@ class PrivateOcrDiagnosticsTest {
     private fun source(path: String): String = sourceFile(path).readText()
     private val forbidden = listOf("Log.", "android.util.Log", "Timber.", "print(", "println(", "System.out", "System.err", "printStackTrace")
     // Every function that returns raw OCR text, including the experimental window reader (#442).
-    private val rawText = Regex("recognize(?:Text|TileTexts)\\s*\\(")
+    private val rawText = Regex("(?:recognize(?:Text|TileTexts)\\s*\\(|::\\s*recognize(?:Text|TileTexts)\\b)")
     private fun count(text: String, token: String) = text.windowed(token.length).count { it == token }
     // #448: bounds and raw text sources are counted per engine file, so one unbounded site cannot hide behind another bounded one.
     private fun engineFindings(text: String, rawCallers: Int, bounds: Int = 1, sources: Int = bounds, sourceToken: String = "result.text"): List<String> = buildList {
         for (token in forbidden) if (text.contains(token)) add(token)
+        if (Regex("(?:print(?:ln)?|printStackTrace)\\s*\\(").containsMatchIn(text)) add("spaced printing")
         if (!text.contains("fun recognize(bitmap: Bitmap): List<String> = PlateCandidates.fromText(recognizeText(bitmap))")) add("delegation")
         if (!text.contains("internal fun recognizeText(bitmap: Bitmap): String")) add("internal declaration")
         if (rawText.findAll(text).count() != rawCallers) add("raw callers")
@@ -22,20 +23,25 @@ class PrivateOcrDiagnosticsTest {
     }
     private fun privateTestFindings(text: String): List<String> = buildList {
         for (token in forbidden) if (text.contains(token)) add(token)
+        if (Regex("(?:print(?:ln)?|printStackTrace)\\s*\\(").containsMatchIn(text)) add("spaced printing")
         if (!text.contains("answer.put(\"raw_text\", raw)")) add("private raw field")
         if (!text.contains(".put(\"error\", failure.javaClass.simpleName)")) add("class-only failure")
         if (text.contains("failure.toString()") || text.contains("failure.message")) add("failure detail")
     }
     @Test fun productionDelegatesToSameCandidateFilterAndPrivateTestDoesNotLogRawText() {
         val engines = setOf("OfflinePlateOcr.kt", "MlKitPlateOcr.kt")
-        val main = sourceFile("src/main/java")
-        for (file in main.walkTopDown().filter { it.isFile && it.extension == "kt" }) {
+        val roots = listOf("src/main/java", "src/main/kotlin").map { File(sourceFile("src/main"), it.removePrefix("src/main/")) }
+        val found = mutableListOf<String>()
+        for (file in roots.filter { it.exists() }.flatMap { it.walkTopDown().filter { f -> f.isFile && f.extension in setOf("kt", "java") }.toList() }) {
+            if (file.name in engines) found += file.name
             val text = file.readText()
             if (file.name in engines) assertEquals(file.name, emptyList<String>(),
                 if (file.name == "MlKitPlateOcr.kt") engineFindings(text, 3, bounds = 2)
                 else engineFindings(text, 2, bounds = 1, sourceToken = "tess.utF8Text"))
             else assertFalse(file.name, rawText.containsMatchIn(text))
         }
+        assertEquals(engines, found.toSet())
+        assertEquals(engines.size, found.size)
         assertEquals(emptyList<String>(), privateTestFindings(source("src/androidTest/java/io/github/reihlinstinct/reporter/PrivateRealPhotoOcrTest.kt")))
     }
     @Test fun rawLoggingPrintingUnboundedAndExceptionMutantsAreRejected() {
@@ -55,6 +61,8 @@ class PrivateOcrDiagnosticsTest {
         val offline = source("src/main/java/io/github/reihlinstinct/reporter/recognition/OfflinePlateOcr.kt")
         assertTrue(engineFindings(offline.replace(".take(64_000)", ""), 2, bounds = 1, sourceToken = "tess.utF8Text").contains("bound"))
         assertTrue(rawText.containsMatchIn("MlKitPlateOcr.recognizeTileTexts(bitmap, 1).also { println(it) }"))
+        assertTrue(rawText.containsMatchIn("MlKitPlateOcr::recognizeText"))
+        assertTrue(privateTestFindings("println (raw)").isNotEmpty())
         val productionMutant = "PlateCandidates.fromText(MlKitPlateOcr.recognizeText(bitmap).also { android.util.Log.d(\"OCR\", it) })"
         assertTrue(rawText.containsMatchIn(productionMutant))
         val test = source("src/androidTest/java/io/github/reihlinstinct/reporter/PrivateRealPhotoOcrTest.kt")
