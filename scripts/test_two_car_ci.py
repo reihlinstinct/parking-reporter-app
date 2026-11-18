@@ -27,8 +27,8 @@ class FixedCaseTest(unittest.TestCase):
     def run_case(self, claim=None, api=None, guard=lambda: None):
         c=claim or Claim(); a=api or Api();r=execute({'photos':[{'path':'synthetic'}]}, {'originalSha256':'a'*64,'outgoingSha256':'b'*64},c,a,guard,'synthetic-run');return c,a,r
 
-    def test_zero_canonical_preserves_web_receipt_no_attach_no_recreate(self):
-        c,a,r=self.run_case();self.assertEqual(a.calls,['preflight','create']);self.assertEqual(r['state'],'accepted_photo_not_attached');self.assertFalse(r['photoAttached']);self.assertTrue(r['noReplay']);self.assertEqual(c.rows[-1]['case']['WebCaseIdInCRM'],'synthetic-web')
+    def test_zero_canonical_preserves_exact_web_receipt_and_attaches_once(self):
+        c,a,r=self.run_case();self.assertEqual(a.calls,['preflight','create','attach']);self.assertEqual(r['state'],'complete');self.assertTrue(r['photoAttached']);self.assertTrue(r['noReplay']);self.assertEqual(c.rows[-1]['case']['WebCaseIdInCRM'],'synthetic-web')
 
     def test_valid_canonical_attaches_only_after_durable_intent(self):
         c=Claim()
@@ -36,6 +36,20 @@ class FixedCaseTest(unittest.TestCase):
             def create(self, report): assert c.rows[-1]['state']=='creating';return super().create(report)
             def attach(self,*args): assert c.rows[-1]['state']=='attaching';return super().attach(*args)
         _,a,r=self.run_case(c,Checked(cid='synthetic-canonical'));self.assertEqual(a.calls,['preflight','create','attach']);self.assertTrue(r['photoAttached'])
+
+    def test_zero_crm_attachment_failure_keeps_accepted_receipt_without_retry(self):
+        c=Claim()
+        class FailAttach(Api):
+            def attach(self,*args):
+                self.calls.append('attach')
+                raise ValueError('synthetic uncertain attachment')
+        a=FailAttach()
+        with self.assertRaises(ValueError):self.run_case(c,a)
+        self.assertEqual(a.calls,['preflight','create','attach'])
+        self.assertTrue(c.rows[-1]['municipalCreateAccepted'])
+        self.assertTrue(c.rows[-1]['noReplay'])
+        self.assertFalse(c.rows[-1]['photoAttached'])
+        self.assertEqual(c.rows[-1]['state'],'attaching')
 
     def test_claim_failure_prevents_create(self):
         a=Api()

@@ -47,6 +47,29 @@ class TrialTest(unittest.TestCase):
         self.assertEqual('synthetic-case', result['case']['CaseIdInCRM'])
         self.assertEqual(self.report, result['report'])
 
+    def test_zero_crm_with_web_receipt_attaches_exact_pair_once(self):
+        case = dict(CaseIdInCRM='00000000-0000-0000-0000-000000000000', WebCaseIdInCRM='synthetic-web', CaseNumberInCRM=None)
+        self.api.create = lambda report: case
+        calls = []
+        def attach(actual, report, photo):
+            self.assertEqual(case, actual)
+            self.assertEqual('attaching', self.records[-1]['state'])
+            calls.append('attach')
+            return True
+        self.api.attach = attach
+        result = self.run_trial()
+        self.assertEqual(['attach'], calls)
+        self.assertTrue(result['photoAttached'])
+        self.assertTrue(result['noReplay'])
+
+    def test_empty_or_zero_only_receipt_never_attaches(self):
+        for case in [None, {}, dict(CaseIdInCRM='', WebCaseIdInCRM='synthetic-web'),
+                     dict(CaseIdInCRM='00000000-0000-0000-0000-000000000000', WebCaseIdInCRM='00000000-0000-0000-0000-000000000000')]:
+            self.setUp()
+            self.api.create = lambda report: case
+            with self.assertRaises(ValueError): self.run_trial()
+            self.assertFalse(any(e[0] == 'attach' for e in self.events))
+
     def test_every_persistence_failure_prevents_next_external_write(self):
         for failed, writes in [('reserved', 0), ('creating', 0), ('created', 1), ('attaching', 1), ('complete', 2)]:
             self.events.clear(); self.records.clear()

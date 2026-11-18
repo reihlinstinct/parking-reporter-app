@@ -74,6 +74,15 @@ class PrivateTrialClaim:
             raise ValueError('trial claim unavailable or already held; reconcile before continuing') from None
 
 
+def attachable_receipt(case):
+    """The exact returned ID pair, including zero CRM plus usable web ID."""
+    if not isinstance(case, dict):
+        return False
+    crm, web = case.get('CaseIdInCRM'), case.get('WebCaseIdInCRM', '')
+    usable = lambda value: isinstance(value, str) and bool(value.strip('0- '))
+    return isinstance(crm, str) and bool(crm.strip()) and (usable(crm) or usable(web))
+
+
 def execute_trial(report, original_hash, outgoing_hash, claim, api, run_id, write_guard=lambda: None):
     """Caller validates exact approved bytes and current topic before this boundary.
 
@@ -94,15 +103,14 @@ def execute_trial(report, original_hash, outgoing_hash, claim, api, run_id, writ
     claim.save(record)
     write_guard()
     case = api.create(report)
-    need(isinstance(case, dict) and isinstance(case.get('CaseIdInCRM'), str) and case['CaseIdInCRM'].strip('0- '),
-         'trial case receipt not confirmed')
-    record.update(case=case, state='created')
+    need(attachable_receipt(case), 'trial case receipt not confirmed')
+    record.update(case=case, state='created', municipalCreateAccepted=True, noReplay=True, photoAttached=False)
     claim.save(record)
     record['state'] = 'attaching'
     claim.save(record)
     write_guard()
     need(api.attach(case, report, report['photos'][0]) is True, 'trial attachment not confirmed')
-    record['state'] = 'complete'
+    record.update(state='complete', photoAttached=True)
     claim.save(record)
     return record
 
