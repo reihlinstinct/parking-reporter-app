@@ -12,7 +12,7 @@ class SupervisedApiTrialBridgeTest {
         var payload: Map<String, Any?>? = null
         var failCreate = false
         override fun login(): String { calls.add("login"); return "synthetic-token" }
-        override fun subjectCategories(token: String) = listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject("9000", "synthetic subject", emptyList()))
+        override fun subjectCategories(token: String) = listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject("1137", "synthetic subject", emptyList()))
         override fun upsertContact(token: String, contact: LinkedHashMap<String, Any?>): Map<String, Any?> {
             calls.add("contact"); return mapOf("ContactIdInCRM" to "synthetic-contact")
         }
@@ -30,7 +30,7 @@ class SupervisedApiTrialBridgeTest {
         javax.imageio.ImageIO.write(image, "jpg", file); image.flush()
         val hash = java.security.MessageDigest.getInstance("SHA-256").digest(file.readBytes()).joinToString("") { "%02x".format(it) }
         // Synthetic point in the supported coordinate envelope, not a real filing.
-        return mapOf("reportId" to "synthetic-trial", "text" to "synthetic description", "subjectCode" to "9000",
+        return mapOf("reportId" to "synthetic-trial", "text" to "synthetic description", "subjectCode" to "1137",
             "latitude" to 31.8, "longitude" to 35.2, "locationDescription" to "synthetic crossing, no verified number",
             "photos" to listOf(mapOf("path" to "photos/approved.jpg", "sha256" to hash)))
     }

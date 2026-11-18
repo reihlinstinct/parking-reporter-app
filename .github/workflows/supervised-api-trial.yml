@@ -1,4 +1,4 @@
-name: Supervised API trial (inactive, one incident)
+name: Supervised API trial (pinned one incident)
 on:
   workflow_dispatch:
     inputs:
@@ -41,8 +41,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   trial:
-    # Activation requires a separately reviewed change; this job cannot run now.
-    if: ${{ false }}
+    # Owner-approved single encrypted package; durable create-only claim prevents replay.
+    if: ${{ github.ref == 'refs/heads/main' && inputs.confirm == 'GPS_ONLY_ONCE' && inputs.private_data_commit == 'b617af9275833bc3237a0f94ac874e616bc5d7b4' && inputs.batch_path == 'batches/supervised-once-20261118/input.zip.enc' && inputs.approved_outer_sha256 == '96a3e90e6923009ee17b3cd46d836da29df851280ffc203ac524e5ef3d3e913c' }}
     environment: m0-trial-submit
     runs-on: ubuntu-24.04
     timeout-minutes: 30

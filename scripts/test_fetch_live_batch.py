@@ -29,6 +29,14 @@ class FetchTest(unittest.TestCase):
                         BATCH_APPROVED_OUTER_SHA256=hashlib.sha256(b'synthetic zip bytes').hexdigest(),
                         PRIVATE_LOOKUP_READ_TOKEN='synthetic-not-a-real-secret')
 
+    def test_trial_encrypted_only_refuses_plain_before_network(self):
+        opener = Opener()
+        with self.assertRaises(ValueError): stage(self.dest, self.env, opener, encrypted_only=True)
+        self.assertEqual([], opener.calls)
+        self.env['BATCH_PRIVATE_PATH'] += '.enc'
+        stage(self.dest, self.env, opener, encrypted_only=True)
+        self.assertEqual(1, len(opener.calls))
+
     def test_pinned_fixed_private_endpoint(self):
         for suffix in ['', '.enc']:
             self.env['BATCH_PRIVATE_PATH'] = 'batches/synthetic/input.zip' + suffix

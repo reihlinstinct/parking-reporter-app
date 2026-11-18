@@ -15,7 +15,7 @@ import supervised_api_trial as trial
 
 class TrialTest(unittest.TestCase):
     def setUp(self):
-        self.report = dict(reportId='synthetic-trial', text='synthetic exact text', subjectCode='9000',
+        self.report = dict(reportId='synthetic-trial', text='synthetic exact text', subjectCode='1137',
                            latitude=31.8, longitude=35.2, locationDescription='synthetic crossing',
                            photos=[dict(path='photos/approved.jpg', sha256='b' * 64)])
         self.events, self.records = [], []
@@ -98,6 +98,20 @@ class TrialTest(unittest.TestCase):
             self.assertEqual(1, enc.call_count)
         self.assertTrue(claim.poisoned)
 
+    def test_activation_refuses_wrong_package_expiry_and_coordinate_envelope(self):
+        from datetime import datetime, timezone
+        config = json.loads((Path(trial.__file__).parent / 'supervised_trial_activation.json').read_text())
+        env = dict(BATCH_PRIVATE_REF=config['privateCommit'], BATCH_PRIVATE_PATH=config['batchPath'],
+                   BATCH_APPROVED_OUTER_SHA256=config['outerSha256'])
+        trial.validate_activation(env, datetime(2026, 11, 18, 11, tzinfo=timezone.utc))
+        with self.assertRaises(ValueError):
+            trial.validate_activation(env, datetime(2026, 11, 18, 16, tzinfo=timezone.utc))
+        for key in env:
+            with self.assertRaises(ValueError): trial.validate_activation(dict(env, **{key: 'wrong'}))
+        trial.validate_trial_coordinates(self.report)
+        for changed in [dict(latitude=0), dict(longitude=0), dict(latitude=True), dict(latitude=float('nan')), dict(subjectCode='1145')]:
+            with self.assertRaises(ValueError): trial.validate_trial_coordinates(dict(self.report, **changed))
+
     def test_real_encryption_is_authenticated_and_does_not_expose_private_text(self):
         blob = trial.encrypt_record(dict(text='synthetic-private-text'), b'synthetic-password16')
         self.assertNotIn(b'synthetic-private-text', blob)
@@ -130,20 +144,19 @@ class TrialTest(unittest.TestCase):
     def test_suffix_precedes_fetch_and_tar_has_immediate_and_failure_cleanup(self):
         root = Path(__file__).resolve().parents[1]
         script = (root / 'scripts/supervised_api_trial.py').read_text()
-        self.assertLess(script.index("need(os.environ['BATCH_PRIVATE_PATH'].endswith"), script.index("stage(root / 'input.zip.enc')"))
+        self.assertLess(script.index("need(os.environ['BATCH_PRIVATE_PATH'].endswith"), script.index("stage(root / 'input.zip.enc', encrypted_only=True)"))
         workflow = (root / '.github/workflows/supervised-api-trial.yml').read_text()
         self.assertIn("trap 'shred -u /tmp/supervised-api-trial-evidence.tgz", workflow)
         self.assertIn('test -s /tmp/supervised-api-trial-evidence.tgz.enc\n            shred -u /tmp/supervised-api-trial-evidence.tgz', workflow)
         import check_repository
-        self.assertTrue(check_repository.trial_job_disabled(workflow))
-        for changed in (workflow.replace('    if: ${{ false }}', '    if: ${{ true }}'),
-                        workflow.replace('    if: ${{ false }}', '    # gate absent'),
-                        workflow.replace('    if: ${{ false }}', '      if: ${{ false }}')):
-            self.assertFalse(check_repository.trial_job_disabled(changed))
+        self.assertTrue(check_repository.trial_job_pinned(workflow))
+        gate = next(line for line in workflow.splitlines() if line.startswith('    if:'))
+        for changed in (workflow.replace(gate, '    if: ${{ true }}'), workflow.replace(gate, ''), workflow.replace(gate, '  '+gate)):
+            self.assertFalse(check_repository.trial_job_pinned(changed))
 
-    def test_workflow_is_hard_disabled_and_always_encrypts_and_cleans_up(self):
+    def test_workflow_is_pinned_and_always_encrypts_and_cleans_up(self):
         source = (Path(__file__).resolve().parents[1] / '.github/workflows/supervised-api-trial.yml').read_text()
-        for text in ('if: ${{ false }}', 'environment: m0-trial-submit', 'group: live-emulator-e2e',
+        for text in ("inputs.confirm == 'GPS_ONLY_ONCE'", 'environment: m0-trial-submit', 'group: live-emulator-e2e',
                      'cancel-in-progress: false', 'persist-credentials: false', 'if: always()',
                      'supervised-api-trial-evidence.tgz.enc', 'sudo python3 trial/l2tp.py down'):
             self.assertIn(text, source)

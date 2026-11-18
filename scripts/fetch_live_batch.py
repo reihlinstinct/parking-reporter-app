@@ -19,7 +19,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         raise ValueError('batch redirects are forbidden')
 
 
-def stage(destination, env=os.environ, opener=None):
+def stage(destination, env=os.environ, opener=None, *, encrypted_only=False):
     ref = env.get('BATCH_PRIVATE_REF', '')
     path = env.get('BATCH_PRIVATE_PATH', '')
     digest = env.get('BATCH_APPROVED_OUTER_SHA256', '')
@@ -28,6 +28,8 @@ def stage(destination, env=os.environ, opener=None):
         raise ValueError('immutable batch ref required')
     if not re.fullmatch(r'batches/[A-Za-z0-9][A-Za-z0-9_-]{0,79}/input\.zip(?:\.enc)?', path):
         raise ValueError('invalid batch path')
+    if encrypted_only and not path.endswith('/input.zip.enc'):
+        raise ValueError('encrypted trial input required')
     if not re.fullmatch(r'[0-9a-f]{64}', digest) or not token:
         raise ValueError('batch digest and private credential required')
     url = f'https://api.github.com/repos/reihlinstinct/parking-reports/contents/{path}?ref={ref}'

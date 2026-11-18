@@ -1,6 +1,7 @@
 package io.github.reihlinstinct.reporter.municipal
 
 import java.io.File
+import io.github.reihlinstinct.reporter.core.ReportCategory
 
 /** Isolated supervised GPS-only experiment, not an app or batch activation.
  * Unknown municipal acceptance: never invent a street/house to satisfy validation.
@@ -30,6 +31,8 @@ class SupervisedApiTrialBridge(private val client: MunicipalClient,
                 check(prepared != null && token == null)
                 val t = client.login()
                 val subject = prepared!!["subjectCode"] as String
+                val policy = ReportCategory.FADED_CROSSWALK
+                require(subject == policy.municipalSubjectCode && !policy.needsPlate)
                 require(client.subjectCategories(t).any { it.code == subject && it.plateRequired != true })
                 token = t
                 mapOf("success" to true)
@@ -103,7 +106,7 @@ class SupervisedApiTrialBridge(private val client: MunicipalClient,
             MunicipalPayloads.checkText(text, "Trial text"); MunicipalPayloads.checkText(location, "Trial location")
             require(text.length <= 10000 && location.length <= 1000)
             val subject = raw["subjectCode"] as String
-            require(Regex("[0-9]{1,10}").matches(subject))
+            require(subject == ReportCategory.FADED_CROSSWALK.municipalSubjectCode)
             val lat = (raw["latitude"] as Number).toDouble(); val lon = (raw["longitude"] as Number).toDouble()
             require(lat.isFinite() && lon.isFinite() && lat in 31.65..31.95 && lon in 35.05..35.35)
             val (x, y) = Itm.toItm(lat, lon)
