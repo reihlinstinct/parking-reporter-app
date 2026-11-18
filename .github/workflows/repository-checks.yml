@@ -76,7 +76,9 @@ jobs:
           python3 -m venv /tmp/venv
           /tmp/venv/bin/pip install --require-hashes -r requirements-lock.txt
       - name: Encrypted durable journal CAS tests (no network)
-        run: /tmp/venv/bin/python scripts/test_live_batch_persistence.py
+        run: |
+          /tmp/venv/bin/python scripts/test_live_batch_persistence.py
+          /tmp/venv/bin/python scripts/test_supervised_api_trial.py
       - name: Regression test test summaries and strict installed-upgrade gates
         run: |
           python3 -m unittest discover -s tests -p 'test_test_summary.py' -v
