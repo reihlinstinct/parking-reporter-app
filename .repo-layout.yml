@@ -80,7 +80,8 @@
       "allow_paths": [
         "scripts/supervised_trial_activation.json",
         "scripts/jvm/ApiOutgoingPhoto.java",
-        "scripts/jvm/ApiOutgoingPhotoTest.java"
+        "scripts/jvm/ApiOutgoingPhotoTest.java",
+        "scripts/two_car_ci_activation.json"
       ]
     },
     "tests": {

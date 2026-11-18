@@ -8,14 +8,14 @@ val mainCore = listOf("MunicipalSubjects", "CityTopicCache", "ReportCategory")
 kotlin.sourceSets.main {
     kotlin.srcDir("../app/src/main/java")
     kotlin.srcDir("../app/src/test/java")
-    (mainMunicipal + listOf("BatchMunicipalBridge", "SupervisedApiTrialBridge")).forEach {
+    (mainMunicipal + listOf("BatchMunicipalBridge", "SupervisedApiTrialBridge", "TwoCarCiBridge")).forEach {
         kotlin.include("io/github/reihlinstinct/reporter/municipal/$it.kt")
     }
     mainCore.forEach { kotlin.include("io/github/reihlinstinct/reporter/core/$it.kt") }
 }
 kotlin.sourceSets.test {
     kotlin.srcDir("../app/src/test/java")
-    listOf("BatchMunicipalBridgeTest", "SupervisedApiTrialBridgeTest", "ItmTest", "MunicipalPayloadsTest", "PythonJsonTest").forEach {
+    listOf("BatchMunicipalBridgeTest", "SupervisedApiTrialBridgeTest", "TwoCarCiBridgeTest", "ItmTest", "MunicipalPayloadsTest", "PythonJsonTest").forEach {
         kotlin.include("io/github/reihlinstinct/reporter/municipal/$it.kt")
     }
 }
