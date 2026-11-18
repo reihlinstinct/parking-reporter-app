@@ -35,20 +35,24 @@ class ReviewAddressTest {
         "1234567", "", "sidewalk_parking", "תיאור בדיקה בלבד", setOf("address_needs_confirmation"))
 
     @Test fun unavailableAddressDataDisablesExactSearchEvenWithCallback() {
-        val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null), pendingStreet = "אגריפס", pendingHouse = "12")
+        val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null))
         compose.setContent { AppTheme { ReviewScreen(initial, null, {}, {},
             manualAddressLookup = { _, _ -> error("must not be called") }, addressDataAvailable = false,
             topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
+        compose.onNodeWithText("רחוב בירושלים").performScrollTo().performTextReplacement("אגריפס")
+        compose.onNodeWithText("מספר בית").performScrollTo().performTextReplacement("12")
         compose.onNodeWithText("חפש כתובת מדויקת").performScrollTo().assertIsNotEnabled()
         val out = File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir, "address-unavailable-disabled.png")
         out.outputStream().use { compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
     }
 
     @Test fun failedLookupDisablesUntilInputChanges() {
-        val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null), pendingStreet = "אגריפס", pendingHouse = "12")
+        val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null))
         compose.setContent { AppTheme { ReviewScreen(initial, null, {}, {},
             manualAddressLookup = { _, _ -> error("synthetic no match") },
             topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
+        compose.onNodeWithText("רחוב בירושלים").performScrollTo().performTextReplacement("אגריפס")
+        compose.onNodeWithText("מספר בית").performScrollTo().performTextReplacement("12")
         compose.onNodeWithText("חפש כתובת מדויקת").performScrollTo().performClick()
         compose.waitForIdle()
         compose.onNodeWithText("חפש כתובת מדויקת").assertIsNotEnabled()
