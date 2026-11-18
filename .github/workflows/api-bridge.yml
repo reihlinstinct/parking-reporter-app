@@ -1,0 +1,39 @@
+name: Standalone API bridge (offline tests)
+on:
+  pull_request:
+    paths:
+      - 'api-bridge/**'
+      - 'app/src/main/java/io/github/reihlinstinct/reporter/municipal/**'
+      - 'app/src/main/java/io/github/reihlinstinct/reporter/core/**'
+      - 'app/src/test/java/io/github/reihlinstinct/reporter/municipal/**'
+      - 'app/src/test/resources/**'
+      - 'scripts/jvm/**'
+      - '.github/workflows/api-bridge.yml'
+      - '.github/workflows/supervised-api-trial.yml'
+      - 'gradle/wrapper/**'
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  standalone:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Compile exact production bridge, run synthetic tests, resolve real runtime
+        run: |
+          set -euo pipefail
+          sh gradlew -p api-bridge --no-daemon test writeBatchBridgeClasspath
+          test -s app/build/batch-bridge/classpath.txt
+          # No credentials: prove the actual main class loads and fails closed.
+          java -cp "$(cat app/build/batch-bridge/classpath.txt)" io.github.reihlinstinct.reporter.municipal.SupervisedApiTrialBridge | grep -Fx '{"success":false,"error":"SUPERVISED_TRIAL_UNAVAILABLE"}'
+          sh gradlew -p api-bridge --no-daemon writeBatchBridgeClasspath --dry-run > /tmp/bridge-task-graph.txt
+          if grep -E ':app:|Android|ksp|compose|OCR' /tmp/bridge-task-graph.txt; then exit 1; fi

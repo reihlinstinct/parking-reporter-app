@@ -113,6 +113,12 @@
         "*.md",
         "Dockerfile"
       ]
+    },
+    "api-bridge": {
+      "allow": [
+        "*.kts",
+        "*.md"
+      ]
     }
   }
 }
