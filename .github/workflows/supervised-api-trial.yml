@@ -1,0 +1,128 @@
+name: Supervised API trial (inactive, one incident)
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: GPS_ONLY_ONCE
+        required: true
+        type: string
+      private_data_commit:
+        description: Full immutable private input commit
+        required: true
+        type: string
+      batch_path:
+        description: Fixed private batches/<id>/input.zip.enc
+        required: true
+        type: string
+      approved_outer_sha256:
+        description: Approved encrypted package digest
+        required: true
+        type: string
+      approved_trial_json_sha256:
+        description: Exact approved report/location data digest
+        required: true
+        type: string
+      approved_original_sha256:
+        description: Exact approved original photo digest
+        required: true
+        type: string
+      approved_outgoing_sha256:
+        description: Exact approved reviewed outgoing JPEG digest
+        required: true
+        type: string
+      other_writers_fenced:
+        description: CONFIRMED only after accepted/unknown incident check and other-writer fence
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: live-emulator-e2e
+  cancel-in-progress: false
+jobs:
+  trial:
+    # Activation requires a separately reviewed change; this job cannot run now.
+    if: ${{ false }}
+    environment: m0-trial-submit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate dispatch boundary before secrets
+        env:
+          CONFIRM_INPUT: ${{ inputs.confirm }}
+          FENCE_INPUT: ${{ inputs.other_writers_fenced }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$CONFIRM_INPUT" = GPS_ONLY_ONCE
+          test "$FENCE_INPUT" = CONFIRMED
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Build production bridge and locked tooling before secrets
+        run: |
+          sh scripts/prepare_wrapper.sh
+          sh gradlew --no-daemon :app:writeBatchBridgeClasspath
+          python3 -m venv /tmp/api-trial-venv
+          /tmp/api-trial-venv/bin/pip install --require-hashes -r requirements-lock.txt
+          sudo apt-get update -qq > /dev/null 2>&1
+          sudo apt-get install -y strongswan xl2tpd ppp > /dev/null 2>&1
+      - name: Mandatory VPN before any municipal request
+        env:
+          VPN_L2TP_SERVER: ${{ secrets.VPN_L2TP_SERVER }}
+          VPN_L2TP_PSK: ${{ secrets.VPN_L2TP_PSK }}
+          VPN_L2TP_USERNAME: ${{ secrets.VPN_L2TP_USERNAME }}
+          VPN_L2TP_PASSWORD: ${{ secrets.VPN_L2TP_PASSWORD }}
+        run: sudo --preserve-env=VPN_L2TP_SERVER,VPN_L2TP_PSK,VPN_L2TP_USERNAME,VPN_L2TP_PASSWORD python3 trial/l2tp.py up-bounded
+      - name: One privately claimed API trial, no retries or fallback
+        env:
+          SUPERVISED_API_TRIAL: ${{ inputs.confirm }}
+          TRIAL_OTHER_WRITERS_FENCED: ${{ inputs.other_writers_fenced }}
+          BATCH_PRIVATE_REF: ${{ inputs.private_data_commit }}
+          BATCH_PRIVATE_PATH: ${{ inputs.batch_path }}
+          BATCH_APPROVED_OUTER_SHA256: ${{ inputs.approved_outer_sha256 }}
+          APPROVED_TRIAL_JSON_SHA256: ${{ inputs.approved_trial_json_sha256 }}
+          APPROVED_ORIGINAL_SHA256: ${{ inputs.approved_original_sha256 }}
+          APPROVED_OUTGOING_SHA256: ${{ inputs.approved_outgoing_sha256 }}
+          PRIVATE_LOOKUP_READ_TOKEN: ${{ secrets.BATCH_PRIVATE_CONTENTS_TOKEN }}
+          BATCH_PRIVATE_CONTENTS_TOKEN: ${{ secrets.BATCH_PRIVATE_CONTENTS_TOKEN }}
+          TRIAL_DATA_KEY: ${{ secrets.TRIAL_DATA_KEY }}
+          J106_SUBSCRIPTION_KEY: ${{ secrets.J106_SUBSCRIPTION_KEY }}
+          J106_APP_USERNAME: ${{ secrets.J106_APP_USERNAME }}
+          J106_APP_PASSWORD: ${{ secrets.J106_APP_PASSWORD }}
+          REPORTER_FIRST_NAME: ${{ secrets.REPORTER_FIRST_NAME }}
+          REPORTER_LAST_NAME: ${{ secrets.REPORTER_LAST_NAME }}
+          REPORTER_PHONE: ${{ secrets.REPORTER_PHONE }}
+          REPORTER_ID_NUMBER: ${{ secrets.REPORTER_ID_NUMBER }}
+          REPORTER_EMAIL: ${{ secrets.REPORTER_EMAIL }}
+        run: /tmp/api-trial-venv/bin/python scripts/supervised_api_trial.py
+      - name: Encrypt all private diagnostics even on refusal or uncertainty
+        if: always()
+        env:
+          TRIAL_DATA_KEY: ${{ secrets.TRIAL_DATA_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -d /tmp/supervised-api-trial ]; then
+            tar czf /tmp/supervised-api-trial-evidence.tgz -C /tmp/supervised-api-trial .
+            openssl enc -aes-256-cbc -pbkdf2 -md sha256 -iter 200000 -salt -in /tmp/supervised-api-trial-evidence.tgz -out /tmp/supervised-api-trial-evidence.tgz.enc -pass env:TRIAL_DATA_KEY
+            test -s /tmp/supervised-api-trial-evidence.tgz.enc
+          fi
+      - name: Upload encrypted evidence only
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: supervised-api-trial-encrypted
+          path: /tmp/supervised-api-trial-evidence.tgz.enc
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Always remove VPN and private staging
+        if: always()
+        run: |
+          sudo python3 trial/l2tp.py down || true
+          rm -rf /tmp/supervised-api-trial
+          shred -u /tmp/supervised-api-trial-evidence.tgz 2>/dev/null || true
