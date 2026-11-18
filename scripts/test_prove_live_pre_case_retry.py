@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Synthetic fail-closed recovery checks; no municipal calls or real inputs."""
-import copy
 import io
 import tarfile
 import unittest

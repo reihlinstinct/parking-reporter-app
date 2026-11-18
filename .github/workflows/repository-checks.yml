@@ -59,6 +59,7 @@ jobs:
         run: |
           python3 scripts/test_live_prestart_proof.py
           python3 scripts/run_unittest_file.py scripts/test_prove_live_pre_case_retry.py
+          python3 scripts/run_unittest_file.py scripts/test_live_retry_workflow_guard.py
       - name: Private live photo staging safety tests
         run: python3 scripts/test_fetch_live_photo.py
   python-smoke:
