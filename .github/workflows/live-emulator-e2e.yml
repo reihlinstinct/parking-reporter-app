@@ -107,11 +107,11 @@ jobs:
                 proof_record=$(mktemp /tmp/live-e2e/prior-record.XXXXXX)
                 printf '%s' "$plain" > "$proof_record"
                 python3 scripts/prove_live_pre_case_retry.py --record "$proof_record"
-                shred -u "$proof_record
+                shred -u "$proof_record"
               fi
             done < <(jq -r '.artifacts[] | select(.expired | not) | [.id, .archive_download_url] | @tsv' <<<"$resp")
           fi
-          echo 'no prior live run took this photo'
+          echo 'all prior photo claims absent or proven pre-case only'
       - name: Build app and test APKs
         run: sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
       - name: Pre-download the emulator system image (direct, before any tunnel)

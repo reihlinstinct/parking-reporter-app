@@ -88,6 +88,14 @@ class PreCaseProofTest(unittest.TestCase):
         with self.assertRaises(Exception):
             proof.prove(self.record, '123', 'a' * 64, 'b' * 64, self.log, b'not gzip')
 
+    def test_workflow_guard_is_valid_bash(self):
+        import subprocess
+        from pathlib import Path
+        source = (Path(__file__).resolve().parents[1] / '.github/workflows/live-emulator-e2e.yml').read_text()
+        guard = source.split('          set -euo pipefail\n', 1)[1].split('      - name: Build app', 1)[0]
+        script = '\n'.join(line[10:] for line in guard.splitlines())
+        subprocess.run(['bash', '-n'], input=script, text=True, check=True)
+
     def test_workflow_uses_read_only_proof_without_erasing_prior_artifacts(self):
         from pathlib import Path
         source = (Path(__file__).resolve().parents[1] / '.github/workflows/live-emulator-e2e.yml').read_text()
