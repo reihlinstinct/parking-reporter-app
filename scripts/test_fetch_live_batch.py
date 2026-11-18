@@ -37,11 +37,18 @@ class FetchTest(unittest.TestCase):
         stage(self.dest, self.env, opener, encrypted_only=True)
         self.assertEqual(1, len(opener.calls))
 
+    def test_default_refuses_plaintext_before_network(self):
+        opener = Opener()
+        with self.assertRaisesRegex(ValueError, 'encrypted trial input required'):
+            stage(self.dest, self.env, opener)
+        self.assertEqual([], opener.calls)
+        self.assertFalse(self.dest.parent.exists())
+
     def test_pinned_fixed_private_endpoint(self):
         for suffix in ['', '.enc']:
             self.env['BATCH_PRIVATE_PATH'] = 'batches/synthetic/input.zip' + suffix
             opener = Opener()
-            stage(self.dest, self.env, opener)
+            stage(self.dest, self.env, opener, encrypted_only=False)
             request, timeout = opener.calls[0]
             self.assertEqual(request.full_url, 'https://api.github.com/repos/reihlinstinct/parking-reports/contents/batches/synthetic/input.zip' + suffix + '?ref=' + 'a'*40)
             self.assertEqual(timeout, 60)
@@ -59,7 +66,7 @@ class FetchTest(unittest.TestCase):
                 env = dict(self.env, **{key: value})
                 opener = Opener()
                 with self.assertRaises(ValueError):
-                    stage(self.dest, env, opener)
+                    stage(self.dest, env, opener, encrypted_only=False)
                 self.assertEqual(opener.calls, [])
 
     def test_failure_preserves_prior_file_and_cleans_partial(self):
@@ -67,20 +74,20 @@ class FetchTest(unittest.TestCase):
         self.dest.write_bytes(b'prior')
         for opener in [Opener(b''), Opener(b'wrong'), Opener(error=RuntimeError('sensitive fake URL'))]:
             with self.subTest(opener=opener), self.assertRaisesRegex(ValueError, '^private batch staging failed$'):
-                stage(self.dest, self.env, opener)
+                stage(self.dest, self.env, opener, encrypted_only=False)
             self.assertEqual(self.dest.read_bytes(), b'prior')
             self.assertEqual(list(self.dest.parent.iterdir()), [self.dest])
 
     def test_size_limit(self):
         with patch('fetch_live_batch.MAX_BYTES', 2), self.assertRaises(ValueError):
-            stage(self.dest, self.env, Opener())
+            stage(self.dest, self.env, Opener(), encrypted_only=False)
         self.assertFalse(self.dest.exists())
         self.assertEqual(list(self.dest.parent.iterdir()), [])
 
     def test_existing_staging_directory_must_be_private(self):
         self.dest.parent.mkdir(mode=0o755)
         with self.assertRaisesRegex(ValueError, 'private staging directory required'):
-            stage(self.dest, self.env, Opener())
+            stage(self.dest, self.env, Opener(), encrypted_only=False)
         self.assertEqual(list(self.dest.parent.iterdir()), [])
 
     def test_no_auth_redirect(self):
