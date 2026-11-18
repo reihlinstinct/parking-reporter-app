@@ -17,8 +17,27 @@ REQUIRED = (
 )
 
 
+def trial_job_disabled(source: str) -> bool:
+    # Deliberately strict shape: activation must update this invariant in review.
+    lines = source.splitlines()
+    try:
+        start = lines.index('  trial:') + 1
+    except ValueError:
+        return False
+    job = []
+    for line in lines[start:]:
+        if re.match(r'^  [A-Za-z_][\w-]*:', line):
+            break
+        job.append(line)
+    gates = [line for line in job if re.match(r'^    if:', line)]
+    return gates == ['    if: ${{ false }}']
+
+
 def check() -> list[str]:
     errors: list[str] = []
+    trial = ROOT / '.github/workflows/supervised-api-trial.yml'
+    if not trial.is_file() or not trial_job_disabled(trial.read_text(encoding='utf-8')):
+        errors.append('Supervised API trial job must remain explicitly hard-disabled')
     for relative in REQUIRED:
         path = ROOT / relative
         if not path.is_file() or not path.read_text(encoding="utf-8").strip():

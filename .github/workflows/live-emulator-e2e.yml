@@ -79,8 +79,15 @@ jobs:
             "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts?name=live-e2e-run-record-encrypted&per_page=100")
           # The listing also returns artifacts past their retention (expired
           # ones cannot be downloaded); skip them - that matches the
-          # documented 14-day memory of this guard. per_page=100 covers the
-          # first page only, which is far above this dispatch-only volume.
+          # documented 14-day memory of this guard. Refuse incomplete listings;
+          # never infer absence from a truncated first page.
+          jq -e '(.total_count | type == "number") and (.artifacts | type == "array") and (.total_count == (.artifacts | length)) and (.total_count <= 100)' <<<"$resp" >/dev/null || {
+            echo 'incomplete prior record listing - refusing (fail closed)'; exit 1; }
+          proof_record=''
+          cleanup_proof() {
+            if [ -n "$proof_record" ]; then shred -u "$proof_record"; fi
+          }
+          trap cleanup_proof EXIT
           count=$(jq -r '[.artifacts[] | select(.expired | not)] | length' <<<"$resp")
           echo "prior run records found: $count"
           if [ "$count" != "0" ]; then
@@ -101,12 +108,18 @@ jobs:
               # same text (fail closed) until it expires.
               if { [ -n "$prior_photo" ] && [ "$prior_photo" = "$APPROVED_PHOTO_SHA256_INPUT" ]; } \
                 || { [ -z "$prior_photo" ] && [ "$prior" = "$APPROVED_SHA256_INPUT" ]; }; then
-                echo 'this photo (or an older record of this text) already went through a live run - refusing to re-dispatch'
-                exit 1
+                # Never erase a prior claim. A same-input retry is permitted only
+                # when that exact run's provider artifacts prove zero submissions
+                # and the app's explicit pre-case failure. Missing evidence refuses.
+                proof_record=$(mktemp /tmp/live-e2e/prior-record.XXXXXX)
+                printf '%s' "$plain" > "$proof_record"
+                python3 scripts/prove_live_pre_case_retry.py --record "$proof_record"
+                shred -u "$proof_record"
+                proof_record=''
               fi
             done < <(jq -r '.artifacts[] | select(.expired | not) | [.id, .archive_download_url] | @tsv' <<<"$resp")
           fi
-          echo 'no prior live run took this photo'
+          echo 'all prior photo claims absent or proven pre-case only'
       - name: Build app and test APKs
         run: sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
       - name: Pre-download the emulator system image (direct, before any tunnel)
