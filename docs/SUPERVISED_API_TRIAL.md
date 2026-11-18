@@ -145,3 +145,14 @@ the enforcement: HTTPS on IPv4 may return only through ppp42, all other IPv4 HTT
 is rejected, and all IPv6 HTTPS is rejected. The switch also covers private claim
 persistence, so VPN loss can hold a claim; it never licenses direct fallback.
 This is port-443 policy for the fixed HTTPS services, not a general network sandbox.
+
+## Encrypted evidence retention
+
+Only ciphertext evidence is uploaded to the repository's Actions artifacts, for
+14 days. Repository/Actions access is the artifact audience; encryption is still
+required and the data key is held separately. The encrypted private claim is the
+durable no-replay record, independent of artifact upload. Download and privately
+reconcile evidence before artifact expiry when an incident is held. Cleanup removes
+plaintext staging/tar only, never ciphertext or private claims. Upload failure must
+not trigger a municipal retry. rm/shred on ephemeral storage does not promise
+physical secure erasure or removal of host/provider snapshots.
