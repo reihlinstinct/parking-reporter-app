@@ -75,3 +75,9 @@ archive inventory and digest refusal, durable intent/write ordering, every save
 failure, API uncertainty, GPS-only payload, photo validation, and in-process
 create/attachment burning. They make no municipal call. Full Gradle/Android and
 workflow execution remain CI gates, not local claims.
+
+Current credential scope: BATCH_PRIVATE_CONTENTS_TOKEN must read encrypted input
+and write encrypted claims in the fixed private records repository. The fetch
+alias PRIVATE_LOOKUP_READ_TOKEN does not reduce that scope. Owner deferred
+credential splitting to issue #607; this is not a claim of read-only privilege or
+activation approval. No credential/settings changes are made here.

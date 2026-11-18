@@ -143,8 +143,8 @@ def main():
         os.umask(0o077)
         root.mkdir(mode=0o700, exist_ok=False)
         from fetch_live_batch import stage
-        stage(root / 'input.zip.enc')
         need(os.environ['BATCH_PRIVATE_PATH'].endswith('.zip.enc'), 'encrypted trial input required')
+        stage(root / 'input.zip.enc')
         need((root / 'input.zip.enc').stat().st_size <= 30 * 1024 * 1024, 'trial envelope too large')
         subprocess.run(['openssl', 'enc', '-d', '-aes-256-cbc', '-pbkdf2', '-md', 'sha256', '-iter', '200000',
                         '-in', str(root / 'input.zip.enc'), '-out', str(root / 'input.zip'), '-pass', 'env:TRIAL_DATA_KEY'],

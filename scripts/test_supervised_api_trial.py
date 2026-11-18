@@ -127,6 +127,20 @@ class TrialTest(unittest.TestCase):
                 package(path, extra)
                 with self.assertRaises(ValueError): trial.validate_package(path, env)
 
+    def test_suffix_precedes_fetch_and_tar_has_immediate_and_failure_cleanup(self):
+        root = Path(__file__).resolve().parents[1]
+        script = (root / 'scripts/supervised_api_trial.py').read_text()
+        self.assertLess(script.index("need(os.environ['BATCH_PRIVATE_PATH'].endswith"), script.index("stage(root / 'input.zip.enc')"))
+        workflow = (root / '.github/workflows/supervised-api-trial.yml').read_text()
+        self.assertIn("trap 'shred -u /tmp/supervised-api-trial-evidence.tgz", workflow)
+        self.assertIn('test -s /tmp/supervised-api-trial-evidence.tgz.enc\n            shred -u /tmp/supervised-api-trial-evidence.tgz', workflow)
+        import check_repository
+        self.assertTrue(check_repository.trial_job_disabled(workflow))
+        for changed in (workflow.replace('    if: ${{ false }}', '    if: ${{ true }}'),
+                        workflow.replace('    if: ${{ false }}', '    # gate absent'),
+                        workflow.replace('    if: ${{ false }}', '      if: ${{ false }}')):
+            self.assertFalse(check_repository.trial_job_disabled(changed))
+
     def test_workflow_is_hard_disabled_and_always_encrypts_and_cleans_up(self):
         source = (Path(__file__).resolve().parents[1] / '.github/workflows/supervised-api-trial.yml').read_text()
         for text in ('if: ${{ false }}', 'environment: m0-trial-submit', 'group: live-emulator-e2e',

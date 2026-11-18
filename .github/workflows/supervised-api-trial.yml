@@ -89,6 +89,8 @@ jobs:
           APPROVED_TRIAL_JSON_SHA256: ${{ inputs.approved_trial_json_sha256 }}
           APPROVED_ORIGINAL_SHA256: ${{ inputs.approved_original_sha256 }}
           APPROVED_OUTGOING_SHA256: ${{ inputs.approved_outgoing_sha256 }}
+          # Same fixed-private-repo contents read/write token, fetch alias is NOT read-only scope.
+          # Token split tracked in issue607; no credential provisioning in this scaffold.
           PRIVATE_LOOKUP_READ_TOKEN: ${{ secrets.BATCH_PRIVATE_CONTENTS_TOKEN }}
           BATCH_PRIVATE_CONTENTS_TOKEN: ${{ secrets.BATCH_PRIVATE_CONTENTS_TOKEN }}
           TRIAL_DATA_KEY: ${{ secrets.TRIAL_DATA_KEY }}
@@ -107,10 +109,12 @@ jobs:
           TRIAL_DATA_KEY: ${{ secrets.TRIAL_DATA_KEY }}
         run: |
           set -euo pipefail
+          trap 'shred -u /tmp/supervised-api-trial-evidence.tgz 2>/dev/null || true' EXIT
           if [ -d /tmp/supervised-api-trial ]; then
             tar czf /tmp/supervised-api-trial-evidence.tgz -C /tmp/supervised-api-trial .
             openssl enc -aes-256-cbc -pbkdf2 -md sha256 -iter 200000 -salt -in /tmp/supervised-api-trial-evidence.tgz -out /tmp/supervised-api-trial-evidence.tgz.enc -pass env:TRIAL_DATA_KEY
             test -s /tmp/supervised-api-trial-evidence.tgz.enc
+            shred -u /tmp/supervised-api-trial-evidence.tgz
           fi
       - name: Upload encrypted evidence only
         if: always()
