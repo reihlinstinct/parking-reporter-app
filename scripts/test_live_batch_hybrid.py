@@ -42,6 +42,14 @@ class HybridTest(unittest.TestCase):
         with self.assertRaises(InvalidBatch): run_hybrid(self.j, self.m, ['a'], self.direct, None)
         self.assertEqual(self.events, [])
 
+    def test_absent_ui_never_reserves_even_when_direct_port_is_available(self):
+        from unittest.mock import Mock
+        journal, direct = Mock(), Mock()
+        with self.assertRaisesRegex(InvalidBatch, 'UI boundary adapter not implemented'):
+            run_hybrid(journal, self.m, ['a'], direct, None)
+        self.assertEqual([], journal.mock_calls)
+        self.assertEqual([], direct.mock_calls)
+
     def test_readonly_preflight_failure_never_reserves(self):
         def fail(reports): raise InvalidBatch('synthetic login failure')
         self.direct.preflight = fail
