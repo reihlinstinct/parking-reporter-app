@@ -73,6 +73,32 @@ class CapacityTest(unittest.TestCase):
         with self.assertRaisesRegex(InvalidBatch, 'capacity exceeded'):
             storage.unseal(oversized, PASSWORD)
 
+    def test_real_limit_high_ratio_bomb_refuses_with_bounded_decode(self):
+        # Authenticate a legal size header around a payload expanding to twice
+        # the real limit. Observe the actual decoder call, not a patched limit.
+        data = b'SQLite format 3\x00' + b'x' * (2 * storage.MAX_PLAIN)
+        packed = zlib.compress(data)
+        self.assertLess(len(packed), storage.MAX_COMPRESSED)
+        blob = self.encrypted(packed, storage.MAX_PLAIN)
+        real_decoder = zlib.decompressobj
+        observed = []
+        class BoundedDecoder:
+            def __init__(self): self.decoder = real_decoder()
+            def decompress(self, payload, max_length=0):
+                observed.append(max_length)
+                if max_length != storage.MAX_PLAIN + 1:
+                    raise AssertionError('decode must use the real finite bound')
+                result = self.decoder.decompress(payload, max_length)
+                self_output_sizes.append(len(result))
+                return result
+            def __getattr__(self, name): return getattr(self.decoder, name)
+        self_output_sizes = []
+        with patch.object(storage.zlib, 'decompressobj', BoundedDecoder):
+            with self.assertRaisesRegex(InvalidBatch, 'invalid compressed journal'):
+                storage.unseal(blob, PASSWORD)
+        self.assertEqual(observed, [storage.MAX_PLAIN + 1])
+        self.assertEqual(self_output_sizes, [storage.MAX_PLAIN + 1])
+
     def test_max_plaintext_boundary_is_supported_when_stored_size_fits(self):
         data = b'SQLite format 3\x00' + b'\x00' * (storage.MAX_PLAIN - 16)
         blob = storage.seal(data, PASSWORD)

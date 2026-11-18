@@ -63,7 +63,7 @@ not establish real historical coverage or authorize a production seed.
 The V2 envelope uses bounded compression: up to 8 MiB decoded SQLite and 768 KiB
 compressed payload, with authenticated decoded length and bounded decompression.
 The synthetic 640-source history now round-trips with all sources and aliases
-unchanged, rather than being refused solely by the old768 KiB plaintext limit.
+unchanged, rather than being refused solely by the old 768 KiB plaintext limit.
 Oversized plaintext or compressed payloads still fail before crypto imports.
 See `JOURNAL_CAPACITY.md` for compatibility and limits. This is synthetic format
 proof, not real-history capacity, completeness, seed approval or activation.

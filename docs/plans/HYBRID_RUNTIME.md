@@ -29,9 +29,9 @@ flowchart TD
   reservation/intent/result transaction must be acknowledged remotely before
   returning. Save failure poisons the local instance. Missing/corrupt/oversized
   remote journal blocks; no implicit bootstrap, reset or retry. SQLite FULL sync
-  and consistent backup are used. The original 768 KiBplain cap
+  and consistent backup are used. The original 768 KiB plaintext cap
   was the original format's limit. The bounded V2 compression format now separates
-  an 8 MiB decoded SQLite limit from a 768 KiBcompressed limit; see
+  an 8 MiB decoded SQLite limit from a 768 KiB compressed limit; see
   `JOURNAL_CAPACITY.md`. Actual full-history capacity is still unverified.
 - `live_batch_hybrid.py`: injected UI/direct ports, one or two UI report IDs,
   whole-batch preflight, whole-batch reserve, sequential per-write durable state.
@@ -61,7 +61,7 @@ flowchart TD
   variable maps only to protected `BATCH_PRIVATE_CONTENTS_TOKEN`, a narrow
   fine-grained credential for private parking-reports Contents read/write and
   Metadata read-only. The credential was provisioned separately under owner
-  authority on November17 and expires December17,2026; it is not a repository
+  authority on November 17 and expires December 17, 2026; it is not a repository
   secret and does not grant municipal access.
 
 ## Not delivered and activation blockers
@@ -74,7 +74,7 @@ flowchart TD
    separately in the protected environment; no broad account PAT is copied
    into Actions. No journal was created by this slice.
    A fresh journal must include existing accepted/uncertain identities, not erase
-   duplicate history. Old14dayartifacts alone are insufficient.
+   duplicate history. Old 14-day artifacts alone are insufficient.
 3. Live credential injection, UI-lane bounded decoding and outgoing attachment
    policy parity, verified topic policy freshness and exact effective-manifest
    approval binding. Input validation is not permission.
@@ -85,7 +85,7 @@ flowchart TD
 5. Shared concurrency across ALL old/new live entry points. New preparation uses
    the current UI group, but the legacy engine has its own group. Do not activate
    a writer until both converge and the CAS journal owns both lanes.
-6. Cache550consumer integration and cold fallback. Producer is merged, first
+6. Cache #550 consumer integration and cold fallback. Producer is merged, first
    scheduled output not yet verified/benchmarked. No speed savings claimed.
 7. Full UI/direct mock HTTP integration, authenticated backup rollback
    protection beyond CAS, malformed/oversized image decode
@@ -107,10 +107,10 @@ implementation changes still follow independent exact-head review and green CI.
 Per batch: prepare approved private ZIP, commit it directly to the existing
 private data repository, bind its full immutable commit/path/outerSHA256, then
 protected workflow_dispatch. Explicit approval of exact text/location/topic/photo
-bytes remains required and is bound by the generated outerdigest. Input data is
+bytes remains required and is bound by the generated outer digest. Input data is
 not source code. No private CI run or paid runner is needed. A preparation-only
 workflow does not satisfy this criterion; no live route is claimed ready until
-both lanes, durable oldidentityjournal and credential/approval boundaries work.
+both lanes, durable old identity journal and credential/approval boundaries work.
 
 ### Inactive workflow gate
 
