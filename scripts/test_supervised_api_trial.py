@@ -224,6 +224,21 @@ class TrialTest(unittest.TestCase):
                 package(path, extra)
                 with self.assertRaises(ValueError): trial.validate_package(path, env)
 
+    def test_png_bytes_with_matching_approval_pins_still_refuse(self):
+        for original, photo in [(b'\x89PNG\r\n\x1a\nsynthetic', b'\xff\xd8synthetic'),
+                (b'\xff\xd8synthetic', b'\x89PNG\r\n\x1a\nsynthetic')]:
+            report = copy.deepcopy(self.report)
+            report['photos'][0]['sha256'] = trial.digest(photo)
+            raw = json.dumps(dict(report=report, originalSha256=trial.digest(original), outgoingSha256=trial.digest(photo))).encode()
+            env = dict(APPROVED_TRIAL_JSON_SHA256=trial.digest(raw), APPROVED_ORIGINAL_SHA256=trial.digest(original), APPROVED_OUTGOING_SHA256=trial.digest(photo))
+            with tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / 'input.zip'
+                with zipfile.ZipFile(path, 'w') as archive:
+                    for name, body in [('trial.json', raw), ('original.jpg', original), ('photos/approved.jpg', photo)]:
+                        archive.writestr(name, body)
+                with self.assertRaisesRegex(ValueError, 'JPEG'):
+                    trial.validate_package(path, env)
+
     def test_suffix_precedes_fetch_and_tar_has_immediate_and_failure_cleanup(self):
         root = Path(__file__).resolve().parents[1]
         script = (root / 'scripts/supervised_api_trial.py').read_text()
