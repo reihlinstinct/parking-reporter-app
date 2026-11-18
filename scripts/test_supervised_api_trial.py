@@ -39,6 +39,17 @@ class TrialTest(unittest.TestCase):
     def run_trial(self):
         return trial.execute_trial(self.report, 'a' * 64, 'b' * 64, self.claim, self.api, 'synthetic-run')
 
+    def test_child_identity_is_removed_from_parent_environment(self):
+        env = dict(PATH='/synthetic', REPORTER_ID_NUMBER='synthetic-id', REPORTER_EMAIL='synthetic-email',
+                   J106_APP_PASSWORD='synthetic-password', BATCH_PRIVATE_CONTENTS_TOKEN='synthetic-claim', TRIAL_DATA_KEY='synthetic-key')
+        child = trial.take_bridge_identity(env)
+        self.assertEqual('synthetic-id', child['REPORTER_ID_NUMBER'])
+        for key in ('REPORTER_ID_NUMBER', 'REPORTER_EMAIL', 'J106_APP_PASSWORD'):
+            self.assertNotIn(key, env)
+        for key in ('BATCH_PRIVATE_CONTENTS_TOKEN', 'TRIAL_DATA_KEY'):
+            self.assertNotIn(key, child)
+            self.assertIn(key, env)
+
     def test_success_has_durable_intent_before_each_write_and_exact_receipts(self):
         result = self.run_trial()
         self.assertEqual([('preflight',), ('save', 'reserved'), ('save', 'creating'), ('create',),
