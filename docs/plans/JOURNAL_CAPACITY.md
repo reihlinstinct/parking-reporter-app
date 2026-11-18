@@ -4,24 +4,27 @@ No remote file, credential, journal seed, writer or municipal action is created.
 
 ## Why change the format
 
-The old envelope capped plaintext SQLite at768KiB. A synthetic640-source history
-with3200 held aliases already exceeds that cap. Dropping aliases to fit would
+The old envelope capped plaintext SQLite at 768 KiB. A synthetic 640-source history
+with 3200 held aliases already exceeds that cap. Dropping aliases to fit would
 lose duplicate protection. Simply raising the stored-file cap would also break
 the current GitHub Contents base64-content reader's small-file assumptions.
 
 V2 compresses the complete SQLite snapshot before authenticated encryption. It
-keeps a768KiB compressed-payload limit and adds a separate8MiB decoded-database
+keeps a 768 KiB compressed-payload limit and adds a separate 8 MiB decoded-database
 limit. Eight MiB is a finite memory budget, not unlimited growth or a promise
-about real history. The stored file is at most786515 bytes including the header,
-salt, nonce and authentication tag. GitHub documents full Contents API features
-for files at most1MB: https://docs.github.com/en/rest/repos/contents . The existing
-fixed-path Contents CAS remains unchanged. Response reads and saves are bounded
-against the envelope limit, not the larger decoded limit.
+about real history. The stored file is at most 786515 bytes including the header,
+salt, nonce and authentication tag. GitHub documents full Contents API features for files of 1 MB or smaller:
+https://docs.github.com/en/rest/repos/contents . That threshold measures raw
+file bytes, not the larger base64 content or JSON response. The 786515-byte
+envelope fits the raw-file threshold; its base64 representation can exceed
+1 MB. The existing fixed-path Contents CAS remains unchanged. File reads and
+saves are bounded against the envelope limit, not the larger decoded limit;
+the response-read bound separately allows for base64 and JSON overhead.
 
 ## Format and safety
 
 V2 is a new magic/version, followed by an eight-byte big-endian decoded size,
-16-byte random salt,12-byte random nonce and AES-GCM ciphertext/tag. The existing
+16-byte random salt, 12-byte random nonce and AES-GCM ciphertext/tag. The existing
 PBKDF2 SHA256/200000 key derivation is retained. The compressed payload and size
 header are authenticated, with version/path-specific associated data. Encryption
 happens after compression; no remote plaintext or separate unauthenticated size
@@ -30,14 +33,14 @@ file remains private and hashes are not treated as anonymous data.
 
 Reject oversized plaintext and compressed payloads before crypto imports or key
 derivation. On read, authenticate first, then decode at most the authenticated
-size plus one byte, never more than8MiBplus one. Require exact decoded size, end of
+size plus one byte, never more than 8 MiB plus one. Require exact decoded size, end of
 the one zlib stream, no trailing bytes/second stream, and SQLite signature.
 Truncated streams, false sizes, compression bombs and malformed envelopes fail
-closed. A snapshot read in the persistence path is capped at8MiBplus one too.
+closed. A snapshot read in the persistence path is capped at 8 MiB plus one too.
 Local SQLite and snapshots remain plaintext with private permissions; encryption
 starts at `seal`, not when provenance is inserted.
 
-V1 remains readable under its original768KiB plaintext limit and original AAD.
+V1 remains readable under its original 768 KiB plaintext limit and original AAD.
 Only V2 is emitted. Opening old data alone does not remotely rewrite it; the next
 successful runtime transaction produces V2 under normal CAS. New format headers
 cannot be downgraded without authentication failure. Unknown versions fail.

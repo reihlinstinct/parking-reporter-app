@@ -26,7 +26,7 @@ AAD = b'reihlinstinct/parking-reports:journal/live-batch.sqlite.aesgcm:v2'
 URL = 'https://api.github.com/repos/reihlinstinct/parking-reports/contents/journal/live-batch.sqlite.aesgcm'
 LEGACY_MAX_PLAIN = 768 * 1024
 MAX_PLAIN = 8 * 1024 * 1024
-# Keep encrypted files below the Contents API's full base64-content threshold.
+# Keep raw encrypted files within the Contents API's full-feature file-size limit.
 MAX_COMPRESSED = 768 * 1024
 MAX_ENVELOPE = len(MAGIC) + 8 + 44 + MAX_COMPRESSED
 MAX_RESPONSE = 2 * MAX_ENVELOPE + 4096

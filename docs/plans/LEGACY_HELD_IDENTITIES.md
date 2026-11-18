@@ -60,10 +60,10 @@ not establish real historical coverage or authorize a production seed.
 
 ## Capacity remains bounded, real coverage still unverified
 
-The V2 envelope uses bounded compression: up to8MiBdecoded SQLite and768KiB
+The V2 envelope uses bounded compression: up to 8 MiB decoded SQLite and 768 KiB
 compressed payload, with authenticated decoded length and bounded decompression.
-The synthetic640-source history now round-trips with all sources and aliases
-unchanged, rather than being refused solely by the old768KiBplaintext limit.
+The synthetic 640-source history now round-trips with all sources and aliases
+unchanged, rather than being refused solely by the old768 KiB plaintext limit.
 Oversized plaintext or compressed payloads still fail before crypto imports.
 See `JOURNAL_CAPACITY.md` for compatibility and limits. This is synthetic format
 proof, not real-history capacity, completeness, seed approval or activation.
