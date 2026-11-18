@@ -74,7 +74,7 @@ class PrivateTrialClaim:
             raise ValueError('trial claim unavailable or already held; reconcile before continuing') from None
 
 
-def execute_trial(report, original_hash, outgoing_hash, claim, api, run_id):
+def execute_trial(report, original_hash, outgoing_hash, claim, api, run_id, write_guard=lambda: None):
     """Caller validates exact approved bytes and current topic before this boundary.
 
     Preflight may only validate/login. The durable reservation and creating intent
@@ -92,6 +92,7 @@ def execute_trial(report, original_hash, outgoing_hash, claim, api, run_id):
     claim.save(record)
     record['state'] = 'creating'
     claim.save(record)
+    write_guard()
     case = api.create(report)
     need(isinstance(case, dict) and isinstance(case.get('CaseIdInCRM'), str) and case['CaseIdInCRM'].strip('0- '),
          'trial case receipt not confirmed')
@@ -99,6 +100,7 @@ def execute_trial(report, original_hash, outgoing_hash, claim, api, run_id):
     claim.save(record)
     record['state'] = 'attaching'
     claim.save(record)
+    write_guard()
     need(api.attach(case, report, report['photos'][0]) is True, 'trial attachment not confirmed')
     record['state'] = 'complete'
     claim.save(record)
@@ -128,7 +130,49 @@ def validate_package(path, env):
     report = trial['report']
     need(set(report) == {'reportId', 'text', 'subjectCode', 'latitude', 'longitude', 'locationDescription', 'photos'}, 'invalid trial report')
     need(report['photos'] == [{'path': 'photos/approved.jpg', 'sha256': digest(outgoing)}], 'trial photo mismatch')
+    validate_trial_coordinates(report)
     return trial, outgoing
+
+
+def validate_activation(env, now=None):
+    from datetime import datetime, timezone
+    config = json.loads((Path(__file__).parent / 'supervised_trial_activation.json').read_text())
+    now = now or datetime.now(timezone.utc)
+    need(now < datetime.fromisoformat(config['expiresAt']), 'single-trial authorization expired')
+    for key, field in [('BATCH_PRIVATE_REF', 'privateCommit'), ('BATCH_PRIVATE_PATH', 'batchPath'),
+                       ('BATCH_APPROVED_OUTER_SHA256', 'outerSha256')]:
+        need(env.get(key) == config[field], 'not the one approved trial package')
+
+
+class Routed:
+    """Production route/expiry boundary; expiry limits initiation, never remote completion."""
+    def __init__(self, api, route_check, env, clock=None):
+        self.api, self.route_check, self.env, self.clock = api, route_check, env, clock
+
+    def preflight(self, reports):
+        self.route_check()
+        return self.api.preflight(reports)
+
+    def _before_write(self):
+        self.route_check()
+        validate_activation(self.env, self.clock() if self.clock else None)
+
+    def create(self, report):
+        self._before_write()
+        return self.api.create(report)
+
+    def attach(self, case, report, photo):
+        self._before_write()
+        return self.api.attach(case, report, photo)
+
+
+def validate_trial_coordinates(report):
+    import math
+    lat, lon = report['latitude'], report['longitude']
+    need(type(lat) in (int, float) and type(lon) in (int, float) and
+         math.isfinite(lat) and math.isfinite(lon) and
+         31.65 <= lat <= 31.95 and 35.05 <= lon <= 35.35, 'trial coordinate envelope refused')
+    need(report['subjectCode'] == '1137', 'only approved crosswalk topic permitted')
 
 
 def main():
@@ -140,11 +184,12 @@ def main():
         need(os.environ['TRIAL_OTHER_WRITERS_FENCED'] == 'CONFIRMED', 'other writers must be fenced')
         for name in ('APPROVED_TRIAL_JSON_SHA256', 'APPROVED_ORIGINAL_SHA256', 'APPROVED_OUTGOING_SHA256', 'BATCH_APPROVED_OUTER_SHA256'):
             need(re.fullmatch('[0-9a-f]{64}', os.environ[name]), 'invalid trial approval binding')
+        validate_activation(os.environ)
         os.umask(0o077)
         root.mkdir(mode=0o700, exist_ok=False)
         from fetch_live_batch import stage
         need(os.environ['BATCH_PRIVATE_PATH'].endswith('.zip.enc'), 'encrypted trial input required')
-        stage(root / 'input.zip.enc')
+        stage(root / 'input.zip.enc', encrypted_only=True)
         need((root / 'input.zip.enc').stat().st_size <= 30 * 1024 * 1024, 'trial envelope too large')
         subprocess.run(['openssl', 'enc', '-d', '-aes-256-cbc', '-pbkdf2', '-md', 'sha256', '-iter', '200000',
                         '-in', str(root / 'input.zip.enc'), '-out', str(root / 'input.zip'), '-pass', 'env:TRIAL_DATA_KEY'],
@@ -170,15 +215,9 @@ def main():
                 'io.github.reihlinstinct.reporter.municipal.SupervisedApiTrialBridge'], env, error)
             claim = PrivateTrialClaim(trial['originalSha256'], os.environ['BATCH_PRIVATE_CONTENTS_TOKEN'],
                                       os.environ['TRIAL_DATA_KEY'].encode())
-            class Routed:
-                def preflight(self, reports):
-                    verify_municipal_routes(); return api.preflight(reports)
-                def create(self, report):
-                    verify_municipal_routes(); return api.create(report)
-                def attach(self, case, report, photo):
-                    verify_municipal_routes(); return api.attach(case, report, photo)
             record = execute_trial(trial['report'], trial['originalSha256'], trial['outgoingSha256'],
-                                   claim, Routed(), os.environ['GITHUB_RUN_ID'])
+                                   claim, Routed(api, verify_municipal_routes, os.environ), os.environ['GITHUB_RUN_ID'],
+                                   write_guard=lambda: validate_activation(os.environ))
             (root / 'result.json.enc').write_bytes(encrypt_record(record, os.environ['TRIAL_DATA_KEY'].encode()))
         print('SUPERVISED_API_TRIAL_COMPLETE_RECEIPT_ENCRYPTED')
         return 0

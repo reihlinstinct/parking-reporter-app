@@ -2,9 +2,12 @@
 
 Issue #603. This is not general API batch activation and is not the earlier pre-case retry.
 
-The workflow is hard-disabled with `if: ${{ false }}`. No dispatch, remote claim, key,
-input upload or municipality request is part of this change. Activation is a separate
-reviewed change after exact-head green CI and independent complete-source PASS.
+Owner approved one supervised submission on 18 November 2026. The activation
+pins one immutable encrypted package in both workflow and Python, expires at
+16:00 UTC that day, and does not activate the general batch/journal writer.
+Only main, the exact package and explicit confirm/fence inputs may proceed.
+Repeated dispatches hit the same create-only original-photo claim and cannot replay.
+Merge follows the owner's CI-green findings rule, not a claim of independent PASS.
 
 ## One incident only
 
@@ -60,7 +63,7 @@ claim remains held even if artifact collection fails.
 
 Before activation:
 
-- [ ] Exact-head full CI and independent complete-source PASS.
+- [ ] Exact-head full CI and review under the owner-approved findings rule.
 - [ ] Exact outgoing derivative inspected and approved, original identity retained.
 - [ ] Exact report JSON and blank-address experimental mechanics approved.
 - [ ] Current incident history checked; no accepted or unknown duplicate.
@@ -82,9 +85,25 @@ alias PRIVATE_LOOKUP_READ_TOKEN does not reduce that scope. Owner deferred
 credential splitting to issue #607; this is not a claim of read-only privilege or
 activation approval. No credential/settings changes are made here.
 
-Post-merge review prerequisites: verify coordinate-envelope parity (issue #611)
-and enforce the encrypted suffix in the fetch helper itself (issue #612) before
-activation. Python success/mock fixtures now use an in-envelope synthetic point;
+Trial activation resolves the trial-specific parts of #611 and #612: Python
+validates exactly the bridge envelope and helper encrypted_only mode refuses
+plaintext before network. Normal batch/derive paths are unchanged and remain
+inactive. Topic 1137 is pinned against the independent ReportCategory non-plate
+policy as well as the live catalog; unknown catalog metadata cannot widen it. Python success/mock fixtures now use an in-envelope synthetic point;
 none exercises the real bridge or municipality. CoordinateX/Y are integer ITM
 values by Itm.toItm's Pair<Int, Int> contract and five executed bridge tests.
-This fixture correction is not activation permission.
+Existing scoped token and key are retained (#607/#608). VPN drop or failed
+post-create save holds the claim, requires manual reconciliation, and never
+permits an automatic replay. No broader credentials or settings are provisioned.
+
+Expiry is a request-initiation cutoff, checked after route verification immediately
+before create and attach. An in-flight municipal request can complete after the
+cutoff and cannot safely be recalled. Its receipt is durably saved; the next write
+is refused, the incident remains held for manual reconciliation, and no replay is
+allowed. Production Routed boundary tests exercise route-check time crossing and
+a create returning at cutoff, preserving its receipt and preventing attachment.
+
+The complete writer inventory and current acknowledgements are a private owner
+execution check, not a source-review assertion. No dispatch is allowed until the
+owner supplies the complete current inventory and explicitly verifies every route
+is fenced. Earlier partial acknowledgements do not establish completeness.
