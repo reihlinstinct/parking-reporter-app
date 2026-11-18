@@ -117,8 +117,8 @@ class LiveE2eSafetyTest {
         assertTrue(yaml.contains("FILE-LIVE-REPORT"))
         // The staged text digest is validated on the runner before staging.
         assertTrue(yaml.contains("approved text digest mismatch"))
-        // A digest that already went through a live run is refused: the
-        // cross-run duplicate guard reads prior runs' encrypted records.
+        // The cross-run guard reads prior encrypted records. A matching claim
+        // requires a fail-closed same-run pre-case proof before proceeding.
         assertTrue(yaml.contains("actions: read"))
         // Expired records are skipped (14-day memory), and the digest burn
         // is fail-safe: it may be skipped only when a positively collected
@@ -129,12 +129,15 @@ class LiveE2eSafetyTest {
         assertTrue(yaml.contains("log.collected"))
         assertTrue(yaml.contains("LIVE_E2E START"))
         assertTrue(yaml.contains("live-e2e-run-record"))
-        assertTrue(yaml.contains("refusing to re-dispatch"))
+        assertTrue(yaml.contains("python3 scripts/prove_live_pre_case_retry.py --record"))
+        val guard = yaml.substringAfter("proof_record=$(mktemp").substringBefore("      - name: Build app")
+        assertFalse(guard.contains("|| true"))
+        assertTrue(yaml.contains("set -euo pipefail"))
         // The guard keys on the photo, not the wording: the same text with a
-        // different photo may be filed; the same photo is refused whatever
-        // the text, and an older record with no photo still refuses its text.
+        // different photo may be filed; the same photo requires proof whatever
+        // the text, and an older no-photo record still matches on text.
         assertTrue(yaml.contains("approvedPhotoSha256"))
-        assertTrue(yaml.contains("this photo (or an older record of this text) already went through a live run"))
+        assertTrue(yaml.contains("Missing evidence refuses."))
         assertTrue(yaml.contains("prior_photo=") && yaml.contains("[ -z "))
         // A run that failed before any submission existed leaves no record,
         // but only with device-side proof (no test-start line, empty
