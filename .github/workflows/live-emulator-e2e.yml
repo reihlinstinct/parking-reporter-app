@@ -211,11 +211,11 @@ jobs:
           for i in 1 2; do
             speed=$(curl -sS -m 30 -o /dev/null -w '%{speed_upload}' --data-binary @/tmp/upload-probe.bin https://httpbin.org/post || true)
             echo "upload probe $i: ${speed:-0} bytes/s"
-            if [ -n "$speed" ] && [ "${speed%.*}" -gt 10000 ]; then ok=1; break; fi
+            if [ -n "$speed" ] && [ "${speed%.*}" -ge 100000 ]; then ok=1; break; fi
             sleep 2
           done
           rm -f /tmp/upload-probe.bin
-          if [ "$ok" != 1 ]; then echo 'upload path through the tunnel stalled - refusing to send'; exit 1; fi
+          if [ "$ok" != 1 ]; then echo 'httpbin.org upload probe below 100000 bytes/s - refusing to send'; exit 1; fi
       - name: Fail when the probe failed without a proven egress block
         if: steps.probe.outcome == 'failure' && steps.vpn.outputs.ready != '1'
         run: exit 1
