@@ -40,6 +40,14 @@ def git(cwd, *a):
 
 
 class KeyTest(unittest.TestCase):
+    def test_directory_rejection_uses_redacted_classifier(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'trial-private-name').mkdir()
+            with self.assertRaisesRegex(m.CacheRejected, '^forbidden directory name in cache tree: sensitive_name_redacted$'):
+                m.scan_tree(root)
+
     def test_every_input_changes_the_key(self):
         base = m.cache_key(inputs())
         self.assertEqual(base, m.cache_key(inputs()))
