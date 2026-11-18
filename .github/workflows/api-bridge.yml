@@ -13,6 +13,9 @@ on:
       - 'scripts/test_supervised_api_trial.py'
       - 'scripts/two_car_ci*'
       - 'scripts/test_two_car_ci.py'
+      - 'scripts/submission_branch.py'
+      - 'scripts/test_submission_branch.py'
+      - '.github/workflows/submission-branch.yml'
       - '.github/workflows/two-car-ci.yml'
       - 'trial/**'
       - 'requirements-lock.txt'
@@ -41,6 +44,7 @@ jobs:
           set -euo pipefail
           sh scripts/verify_bridge_wrapper.sh
           sh gradlew -p api-bridge --no-daemon --dependency-verification strict --info test writeBatchBridgeClasspath
+          python3 scripts/test_submission_branch.py
           python3 scripts/test_two_car_ci.py
           python3 scripts/test_supervised_api_trial.py
           test -s app/build/batch-bridge/classpath.txt
