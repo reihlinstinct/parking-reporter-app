@@ -22,6 +22,17 @@ class ResponseDiagnosticsTest {
         val redacted = ResponseDiagnostics.redactBody(raw, emptyList())
         for (secret in listOf("OBJ-1", "ARR-1", "987654321", "true")) assertFalse(secret, redacted.contains(secret))
     }
+    @Test fun shortSensitiveNumbersDoNotCorruptUnrelatedDatesOrCounts() {
+        val redacted = org.json.JSONObject(ResponseDiagnostics.redactBody(
+            """{"Token":0,"Password":1,"date":"2026-11-18","count":10,"status":200}""", emptyList()))
+        assertEquals("[REDACTED]", redacted.getString("Token"))
+        assertEquals("[REDACTED]", redacted.getString("Password"))
+        assertEquals("2026-11-18", redacted.getString("date"))
+        assertEquals(10, redacted.getInt("count"))
+        assertEquals(200, redacted.getInt("status"))
+        // Explicitly supplied credentials still redact even when short.
+        assertFalse(ResponseDiagnostics.redactBody("""{"echo":"x1x"}""", listOf("1")).contains("x1x"))
+    }
     @Test fun longestSecretIsRemovedBeforeItsPrefix() {
         assertFalse(ResponseDiagnostics.redactBody("""{"message":"abcdef"}""", listOf("abcd", "abcdef")).contains("ef"))
     }

@@ -16,7 +16,8 @@ object ResponseDiagnostics {
                 is JSONObject -> value.keys().forEach { rememberLeaves(value.opt(it)) }
                 is JSONArray -> for (i in 0 until value.length()) rememberLeaves(value.opt(i))
                 is String -> if (value.isNotEmpty()) foundSecrets += value
-                is Number, is Boolean -> foundSecrets += value.toString()
+                is Number -> if (value.toString().length >= 4) foundSecrets += value.toString()
+                is Boolean -> foundSecrets += value.toString()
             }
         }
         fun collect(value: Any?) {
