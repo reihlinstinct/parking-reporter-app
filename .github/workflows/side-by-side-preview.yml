@@ -1,0 +1,41 @@
+name: Separate phone preview build
+on:
+  pull_request:
+    branches: [fix/private-address-install]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: separate-preview-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - run: sh scripts/prepare_wrapper.sh
+      - name: Build separately identified arm64 preview
+        run: sh gradlew --no-daemon assembleDebug -PpreviewArm64 -PpreviewSideBySide
+      - name: Verify APK identity and pinned address asset
+        run: |
+          set -eu
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
+          "$AAPT" dump badging "$APK" | tee /tmp/preview-badging.txt
+          grep -F "package: name='il.sidewalks.reporter.preview'" /tmp/preview-badging.txt
+          unzip -p "$APK" assets/addresses.json | sha256sum | grep '^5eaa83a9eb9253798109555bf2f6ea6ab6ec941a86e86c15c6761b2e5ee046d4 '
+          sha256sum "$APK"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: phone-arm64-side-by-side-preview-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
