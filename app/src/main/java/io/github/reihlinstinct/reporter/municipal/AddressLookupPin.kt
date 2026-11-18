@@ -16,6 +16,19 @@ object AddressLookupPin {
             .digest(text.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
 
+    /** Verify original bytes in a bounded buffer, before parsing or resolving any address. */
+    fun verifyPinned(input: java.io.InputStream) {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(8192)
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            if (count > 0) digest.update(buffer, 0, count)
+        }
+        val actual = digest.digest().joinToString("") { "%02x".format(it) }
+        if (actual != EXPECTED_SHA256) throw AddressLookupMismatchException()
+    }
+
     /** Returns the text unchanged when pinned; refuses anything else. */
     fun verifyPinned(text: String): String {
         if (sha256Hex(text) != EXPECTED_SHA256) {

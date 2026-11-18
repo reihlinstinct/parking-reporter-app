@@ -46,7 +46,6 @@ import io.github.reihlinstinct.reporter.municipal.FileSubmissionStateStore
 import io.github.reihlinstinct.reporter.municipal.historyIdentifier
 import io.github.reihlinstinct.reporter.municipal.MunicipalClient
 import io.github.reihlinstinct.reporter.municipal.OkHttpMunicipalClient
-import io.github.reihlinstinct.reporter.municipal.AddressLookupPin
 import io.github.reihlinstinct.reporter.municipal.MunicipalInputException
 import io.github.reihlinstinct.reporter.municipal.StreetDirectory
 import io.github.reihlinstinct.reporter.municipal.SubmissionCoordinator
@@ -144,8 +143,7 @@ fun AppShell(
     // Bundled default: owner confirms our OSM-based file. See docs/address-lookup.md
     // for exact-byte provenance, attribution and the unrecovered-generator gap.
     fun loadStreetDirectory(context: android.content.Context): StreetDirectory =
-        StreetDirectory.load(AddressLookupPin.verifyPinned(
-            context.assets.open("addresses.json").bufferedReader(Charsets.UTF_8).use { it.readText() }))
+        io.github.reihlinstinct.reporter.municipal.BundledStreetDirectory.load(context.assets)
     fun submitReport(shown: ReviewDraft, outgoing: io.github.reihlinstinct.reporter.evidence.OutgoingImage?) {
         // Runs 42853563754 / 42880867432: the send tap never reached the
         // submit path. Log every gate so the next live run shows exactly

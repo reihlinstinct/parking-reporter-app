@@ -62,11 +62,14 @@ class ReviewAddressTest {
 
     @Test fun bundledDefaultResolvesOnFreshInstallWithoutImport() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val text = context.assets.open("addresses.json").bufferedReader(Charsets.UTF_8).use { it.readText() }
-        val directory = io.github.reihlinstinct.reporter.municipal.StreetDirectory.load(
-            io.github.reihlinstinct.reporter.municipal.AddressLookupPin.verifyPinned(text))
+        val directory = io.github.reihlinstinct.reporter.municipal.BundledStreetDirectory.load(context.assets)
         val address = directory.findConfirmedAddress("אגריפס", "12")
         assertEquals("אגריפס 12", address.address)
+        val resolved = directory.resolve("אגריפס", "12", null)
+        assertEquals("613", resolved.streetCode)
+        assertEquals("address_lookup", resolved.coordinateSource)
+        org.junit.Assert.assertTrue(kotlin.math.abs(resolved.x - 220579) <= 1)
+        org.junit.Assert.assertTrue(kotlin.math.abs(resolved.y - 632269) <= 1)
     }
 
     @Test fun licencesShowBundledDataAttribution() {
