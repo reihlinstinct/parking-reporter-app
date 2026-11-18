@@ -113,6 +113,15 @@
         "*.md",
         "Dockerfile"
       ]
+    },
+    "api-bridge": {
+      "allow": [
+        "*.kts",
+        "*.md"
+      ],
+      "allow_paths": [
+        "api-bridge/gradle/verification-metadata.xml"
+      ]
     }
   }
 }
