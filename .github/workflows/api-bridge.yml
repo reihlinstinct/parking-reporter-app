@@ -39,7 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           sh scripts/verify_bridge_wrapper.sh
-          sh gradlew -p api-bridge --no-daemon --dependency-verification strict test writeBatchBridgeClasspath
+          sh gradlew -p api-bridge --no-daemon --dependency-verification strict --info test writeBatchBridgeClasspath
           python3 scripts/test_two_car_ci.py
           test -s app/build/batch-bridge/classpath.txt
           # No credentials: prove the actual main class loads and fails closed.
