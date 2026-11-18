@@ -40,7 +40,7 @@ class ReviewAddressTest {
             manualAddressLookup = { _, _ -> error("must not be called") }, addressDataAvailable = false,
             topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
         compose.onNodeWithText("חפש כתובת מדויקת").performScrollTo().assertIsNotEnabled()
-        val out = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "address-unavailable-disabled.png")
+        val out = File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir, "address-unavailable-disabled.png")
         out.outputStream().use { compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
     }
 
