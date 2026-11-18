@@ -112,6 +112,28 @@ class TrialTest(unittest.TestCase):
         for changed in [dict(latitude=0), dict(longitude=0), dict(latitude=True), dict(latitude=float('nan')), dict(subjectCode='1145')]:
             with self.assertRaises(ValueError): trial.validate_trial_coordinates(dict(self.report, **changed))
 
+    def test_expiry_at_each_write_boundary_stops_without_replay(self):
+        from datetime import datetime, timezone
+        config = json.loads((Path(trial.__file__).parent / 'supervised_trial_activation.json').read_text())
+        env = dict(BATCH_PRIVATE_REF=config['privateCommit'], BATCH_PRIVATE_PATH=config['batchPath'],
+                   BATCH_APPROVED_OUTER_SHA256=config['outerSha256'])
+        for expired_write in (1, 2):
+            self.setUp()
+            calls = []
+            def guard():
+                calls.append(1)
+                hour = 16 if len(calls) == expired_write else 15
+                trial.validate_activation(env, datetime(2026, 11, 18, hour, tzinfo=timezone.utc))
+            with self.assertRaises(ValueError):
+                trial.execute_trial(self.report, 'a' * 64, 'b' * 64, self.claim, self.api,
+                                    'synthetic-run', write_guard=guard)
+            self.assertEqual(expired_write, len(calls))
+            self.assertEqual('creating' if expired_write == 1 else 'attaching', self.records[-1]['state'])
+            creates = sum(event[0] == 'create' for event in self.events)
+            attaches = sum(event[0] == 'attach' for event in self.events)
+            self.assertEqual(0 if expired_write == 1 else 1, creates)
+            self.assertEqual(0, attaches)
+
     def test_real_encryption_is_authenticated_and_does_not_expose_private_text(self):
         blob = trial.encrypt_record(dict(text='synthetic-private-text'), b'synthetic-password16')
         self.assertNotIn(b'synthetic-private-text', blob)

@@ -74,7 +74,7 @@ class PrivateTrialClaim:
             raise ValueError('trial claim unavailable or already held; reconcile before continuing') from None
 
 
-def execute_trial(report, original_hash, outgoing_hash, claim, api, run_id):
+def execute_trial(report, original_hash, outgoing_hash, claim, api, run_id, write_guard=lambda: None):
     """Caller validates exact approved bytes and current topic before this boundary.
 
     Preflight may only validate/login. The durable reservation and creating intent
@@ -92,6 +92,7 @@ def execute_trial(report, original_hash, outgoing_hash, claim, api, run_id):
     claim.save(record)
     record['state'] = 'creating'
     claim.save(record)
+    write_guard()
     case = api.create(report)
     need(isinstance(case, dict) and isinstance(case.get('CaseIdInCRM'), str) and case['CaseIdInCRM'].strip('0- '),
          'trial case receipt not confirmed')
@@ -99,6 +100,7 @@ def execute_trial(report, original_hash, outgoing_hash, claim, api, run_id):
     claim.save(record)
     record['state'] = 'attaching'
     claim.save(record)
+    write_guard()
     need(api.attach(case, report, report['photos'][0]) is True, 'trial attachment not confirmed')
     record['state'] = 'complete'
     claim.save(record)
@@ -195,11 +197,12 @@ def main():
                 def preflight(self, reports):
                     verify_municipal_routes(); return api.preflight(reports)
                 def create(self, report):
-                    verify_municipal_routes(); return api.create(report)
+                    verify_municipal_routes(); validate_activation(os.environ); return api.create(report)
                 def attach(self, case, report, photo):
-                    verify_municipal_routes(); return api.attach(case, report, photo)
+                    verify_municipal_routes(); validate_activation(os.environ); return api.attach(case, report, photo)
             record = execute_trial(trial['report'], trial['originalSha256'], trial['outgoingSha256'],
-                                   claim, Routed(), os.environ['GITHUB_RUN_ID'])
+                                   claim, Routed(), os.environ['GITHUB_RUN_ID'],
+                                   write_guard=lambda: validate_activation(os.environ))
             (root / 'result.json.enc').write_bytes(encrypt_record(record, os.environ['TRIAL_DATA_KEY'].encode()))
         print('SUPERVISED_API_TRIAL_COMPLETE_RECEIPT_ENCRYPTED')
         return 0
