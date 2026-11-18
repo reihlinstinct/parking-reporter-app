@@ -11,7 +11,7 @@ import org.junit.Test
  * page its link opens (the ML Kit Terms of Service at developers.google.com/ml-kit/terms,
  * which incorporate the Google APIs Terms of Service), and the Amharic OSM body uses
  * "derived" for the ODbL derivative database instead of the stray "የተራመደው". The OSM body
- * states the boundary condition on its "reproduced exactly" claim (Refs #163).
+ * names the directly bundled database, without a false reproducibility claim.
  */
 class LicensesStringsTest {
 
@@ -57,7 +57,7 @@ class LicensesStringsTest {
     @Test
     fun amharicOsmBodyUsesDerivedNotTheOldWord() {
         val am = value("licenses.osm.body", code("አማርኛ"))
-        assertTrue(am.contains("የተገኘው የአድራሻ ዳታቤዝ"))
+        assertTrue(am.contains("የአድራሻ ዳታቤዙ"))
         assertFalse(am.contains("የተራመደው"))
     }
 
@@ -71,71 +71,39 @@ class LicensesStringsTest {
         }
     }
 
-    // licenses.osm.body (Refs #163): the "reproduced exactly" claim carries the same boundary
-    // condition as docs/address-lookup.md. The Overpass [date:] pin does not cover the boundary
-    // area, so the addresses section is reproducible only while OSM relation 1381350 and the
-    // server's area derived from it are unchanged.
+    // The bundled legacy file is available directly, not reproduced by the open
+    // replacement generator. Keep the approved notice honest about that route.
     private val osmBody = linkedMapOf(
-        "עברית" to "נקודות הכתובות מבוססות על נתוני OpenStreetMap, © תורמי OpenStreetMap, רישיון ODbL 1.0: openstreetmap.org/copyright — מסד הנתונים הנגזר של הכתובות מופץ ברישיון ODbL 1.0 וניתן לשחזור מדויק בעזרת מחולל הקוד הפתוח במאגר האפליקציה והקלטים המקובעים המתועדים בו, כל עוד יחס הגבול 1381350 של OpenStreetMap (והאזור שהשרת גוזר ממנו) לא השתנה.",
-        "English" to "Address points are based on OpenStreetMap data, © OpenStreetMap contributors, ODbL 1.0: openstreetmap.org/copyright - the derivative address database is distributed under ODbL 1.0 and can be reproduced exactly with the open-source generator in the app's repository and its documented pinned inputs, as long as the OpenStreetMap boundary relation 1381350 (and the area the server derives from it) is unchanged.",
-        "العربية" to "تستند نقاط العناوين إلى بيانات OpenStreetMap، © مساهمو OpenStreetMap، رخصة ODbL 1.0: openstreetmap.org/copyright - قاعدة العناوين المشتقة موزعة بموجب ODbL 1.0 ويمكن إعادة إنتاجها بدقة عبر المولّد المفتوح المصدر في مستودع التطبيق ومدخلاته المثبتة الموثقة، ما دامت علاقة الحدود 1381350 في OpenStreetMap (والمنطقة التي يشتقها الخادم منها) دون تغيير.",
-        "Русский" to "Адресные точки основаны на данных OpenStreetMap, © участники OpenStreetMap, лицензия ODbL 1.0: openstreetmap.org/copyright - производная база адресов распространяется по лицензии ODbL 1.0 и может быть точно воспроизведена генератором с открытым кодом из репозитория приложения и его задокументированными зафиксированными входными данными, пока граничное отношение OpenStreetMap 1381350 (и область, которую сервер строит на его основе) остаётся неизменным.",
-        "አማርኛ" to "የአድራሻ ነጥቦች በOpenStreetMap ውሂብ ላይ የተመሰረቱ ናቸው፣ © የOpenStreetMap አበርካቾች፣ ODbL 1.0 ፍቃድ: openstreetmap.org/copyright - የተገኘው የአድራሻ ዳታቤዝ በODbL 1.0 ሥር ይሰራጫል እና በመተግበሪያው ማከማቻ ውስጥ ባለው ክፍት ምንጭ አመንጭ እና በተመዘገቡ ተቆልፈው በሚገኙ ግቤቶች በትክክል መድገም ይቻላል፣ የOpenStreetMap የወሰን ግንኙነት 1381350 (እና አገልጋዩ ከእሱ የሚያመነጨው ክልል) እስካልተቀየረ ድረስ።",
+        "עברית" to "נקודות הכתובות מבוססות על OpenStreetMap, © תורמי OpenStreetMap, ברישיון ODbL 1.0. מאגר הכתובות כלול בקוד המקור ובאפליקציה ומופץ באותו רישיון.",
+        "English" to "Address points are based on OpenStreetMap, © OpenStreetMap contributors, under ODbL 1.0. The address database is included in the source repository and app and distributed under the same licence.",
+        "العربية" to "تستند نقاط العناوين إلى OpenStreetMap، © مساهمو OpenStreetMap، بموجب ODbL 1.0. قاعدة العناوين مضمنة في مستودع المصدر والتطبيق وموزعة بموجب الترخيص نفسه.",
+        "Русский" to "Адресные точки основаны на OpenStreetMap, © участники OpenStreetMap, по лицензии ODbL 1.0. База адресов включена в исходный репозиторий и приложение и распространяется по той же лицензии.",
+        "አማርኛ" to "የአድራሻ ነጥቦች በOpenStreetMap፣ © የOpenStreetMap አበርካቾች፣ በODbL 1.0 ፍቃድ ላይ የተመሰረቱ ናቸው። የአድራሻ ዳታቤዙ በምንጭ ማከማቻው እና በመተግበሪያው ውስጥ ተካትቶ በዚያው ፍቃድ ይሰራጫል።",
     )
-
-    /** The exactness claim in each language; the boundary condition must follow it. */
-    private val exactnessClaim = linkedMapOf(
-        "עברית" to "לשחזור מדויק",
-        "English" to "reproduced exactly",
-        "العربية" to "بدقة",
-        "Русский" to "точно воспроизведена",
-        "አማርኛ" to "በትክክል",
-    )
-
-    @Test
-    fun osmBodyIsPinnedInEveryPinnedLanguage() {
-        for ((lang, pinned) in pinsByCode(osmBody)) {
-            assertEquals("licenses.osm.body[$lang]", pinned, value("licenses.osm.body", lang))
-        }
+    @Test fun osmBodyIsPinnedInEveryPinnedLanguage() {
+        for ((lang, pinned) in pinsByCode(osmBody)) assertEquals(pinned, value("licenses.osm.body", lang))
     }
-
-    @Test
-    fun osmBodyStatesTheBoundaryConditionAfterTheExactnessClaim() {
-        for ((lang, claimText) in pinsByCode(exactnessClaim)) {
-            val text = value("licenses.osm.body", lang)
-            val claim = text.indexOf(claimText)
-            val relation = text.indexOf("1381350")
-            assertTrue("$lang still states the exactness claim", claim >= 0)
-            assertTrue("$lang names boundary relation 1381350", relation >= 0)
-            assertTrue("$lang puts the condition after the claim, in the same sentence", relation > claim)
-            assertFalse(
-                "$lang has no sentence end between the claim and the condition",
-                text.substring(claim, relation).contains(Regex("[.።]")),
-            )
-            assertTrue("$lang ends with the condition", text.indexOf("1381350") > text.length - 120)
-        }
-    }
-
-    @Test
-    fun osmBodyKeepsAttributionLicenceAndGenerator() {
+    @Test fun osmNoticeKeepsAttributionAndLicenseWithoutFalseExactnessClaim() {
         for (lang in languages) {
             val text = value("licenses.osm.body", lang)
-            assertTrue("$lang attribution", text.contains("©") && text.contains("OpenStreetMap"))
-            assertEquals("$lang names ODbL 1.0 twice (source and derivative)", 2, Regex("ODbL 1\\.0").findAll(text).count())
-            assertTrue("$lang copyright link", text.contains("openstreetmap.org/copyright"))
+            assertTrue(text.contains("©") && text.contains("OpenStreetMap"))
+            assertTrue(text.contains("ODbL 1.0"))
+            assertFalse(text.contains("1381350"))
         }
-        assertTrue(value("licenses.osm.body", code("English")).contains("open-source generator in the app's repository"))
-        assertTrue(value("licenses.osm.body", code("עברית")).contains("מחולל הקוד הפתוח במאגר האפליקציה"))
-        for (lang in languages) {
-            assertTrue("$lang names the boundary relation", value("licenses.osm.body", lang).contains("1381350"))
-        }
+        assertFalse(value("licenses.osm.body", code("English")).contains("reproduced exactly"))
+        assertTrue(value("licenses.osm.body", code("English")).contains("included in the source repository and app"))
     }
-
-    @Test
-    fun everyPinTableNamesOnlyCatalogLanguages() {
-        for (pins in listOf(mlkitBody, osmBody, exactnessClaim)) {
+    @Test fun sourceLinksAreClickableAndUseTheNamedSources() {
+        val source = I18nTestFiles.moduleFile("src/main/java/io/github/reihlinstinct/reporter/ui/LicensesScreen.kt").readText()
+        for (url in listOf("https://www.openstreetmap.org/copyright", "https://opendatacommons.org/licenses/odbl/1-0/", "https://data.gov.il/terms-of-use")) {
+            assertTrue(source.contains(url))
+        }
+        assertTrue(source.contains("uriHandler.openUri"))
+    }
+    @Test fun everyPinTableNamesOnlyCatalogLanguages() {
+        for (pins in listOf(mlkitBody, osmBody)) {
             assertTrue(pinsByCode(pins).keys.all { it in languages })
-            assertEquals("one pin per language", pins.size, pinsByCode(pins).keys.toSet().size)
+            assertEquals(pins.size, pinsByCode(pins).keys.toSet().size)
         }
     }
 }

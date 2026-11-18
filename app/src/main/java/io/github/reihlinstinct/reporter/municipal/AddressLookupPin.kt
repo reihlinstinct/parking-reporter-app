@@ -2,15 +2,9 @@ package io.github.reihlinstinct.reporter.municipal
 
 import java.security.MessageDigest
 
-/**
- * Pins the on-device private address lookup (#165): the app refuses to
- * resolve against a copy whose sha256 differs from the pipeline's current
- * version-1 file, so a tampered or stale file cannot silently change
- * address resolution. The file itself stays private (not committed); only
- * its digest is public, matching the taxonomy fingerprint approach (#98).
- * When the private data is regenerated, the pin changes in the same change
- * that adopts the new file.
- */
+/** Exact bytes of the bundled production address database. A stale or modified
+ * database cannot silently change address resolution. See docs/address-lookup.md
+ * for source statements and the outstanding legacy generator verification gap. */
 class AddressLookupMismatchException : Exception("address lookup on device does not match the pinned copy")
 
 object AddressLookupPin {
