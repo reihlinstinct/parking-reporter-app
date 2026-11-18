@@ -72,6 +72,15 @@ class VpnSubmitTest(unittest.TestCase):
             with self.assertRaises(socket.gaierror):
                 vpn.verify_municipal_routes()
 
+    def test_https_killswitch_rejects_ipv6_and_unrouted_ipv4_before_tunnel(self):
+        import inspect
+        source = inspect.getsource(vpn.up)
+        self.assertIn("['iptables','ip6tables']", source)
+        self.assertIn("if binary=='iptables':run(binary,'-A','PARK106','-o','ppp42','-j','RETURN')", source)
+        self.assertIn("run(binary,'-A','PARK106','-j','REJECT')", source)
+        self.assertLess(source.index("stage('install_https_killswitch')"), source.index("stage('ipsec_daemon_start')"))
+        self.assertIn("'--dport','443'", source)
+
     def test_manual_protected_submit_is_vpn_first_single_attempt(self):
         workflow = (ROOT / '.github/workflows/m0-engine-trial.yml').read_text()
         submit = workflow.split('  trial-submit:', 1)[1]

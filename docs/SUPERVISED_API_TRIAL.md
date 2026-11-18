@@ -135,3 +135,13 @@ there is no guarantee that finally/always steps execute. Discard the runner rath
 than reusing its network state. No automatic municipal retry follows cleanup.
 System configuration is removed only if a fixed run-generated hash still matches;
 this is not a backup/restore mechanism for pre-existing system configuration.
+
+## DNS checks and enforcement are different
+
+verify_municipal_routes resolves public IPv4 targets and checks their current route.
+That is advisory: the HTTP client resolves again, so route lookup alone cannot
+prove the later socket follows that answer. The installed OUTPUT kill switch is
+the enforcement: HTTPS on IPv4 may return only through ppp42, all other IPv4 HTTPS
+is rejected, and all IPv6 HTTPS is rejected. The switch also covers private claim
+persistence, so VPN loss can hold a claim; it never licenses direct fallback.
+This is port-443 policy for the fixed HTTPS services, not a general network sandbox.
