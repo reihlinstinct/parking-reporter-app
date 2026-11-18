@@ -36,6 +36,9 @@ object MunicipalPayloads {
     fun checkText(value: String, label: String): String {
         val trimmed = value.trim()
         if (trimmed.isEmpty()) throw MunicipalInputException("$label must not be empty.")
+        if ('\uFFFD' in trimmed || !Charsets.UTF_8.newEncoder().canEncode(trimmed)) {
+            throw MunicipalInputException("$label contains damaged Unicode text. Supply the original text.")
+        }
         // Python: value.encode("latin-1").decode("utf-8") - both steps strict;
         // any failure keeps the original value.
         val restored: String = try {

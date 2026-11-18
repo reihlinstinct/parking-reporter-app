@@ -15,8 +15,13 @@ from live_batch_input import InvalidBatch, need
 class BridgeAdapter:
     """Private stdio to already-built production Kotlin code, never a public log."""
     def __init__(self, command, env, error_file, timeout=120):
+        # JDK17 decodes native environment values using the process locale,
+        # before -Dfile.encoding or JSON serialization can repair them. Narrow
+        # caller environments omit LANG/LC_ALL; force UTF-8 without inheriting
+        # extra credentials or mutating the caller's environment.
+        child_env = dict(env, LANG='C.UTF-8', LC_ALL='C.UTF-8')
         self.process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                        stderr=error_file, env=env, bufsize=0)
+                                        stderr=error_file, env=child_env, bufsize=0)
         self.case, self.poisoned, self.timeout = None, False, timeout
 
     def _stop(self):
