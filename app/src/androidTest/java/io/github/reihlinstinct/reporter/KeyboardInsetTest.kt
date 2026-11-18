@@ -3,6 +3,7 @@ package io.github.reihlinstinct.reporter
 import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
+import org.junit.After
 import org.junit.Before
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -22,7 +23,20 @@ import java.io.File
 class KeyboardInsetTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
+    private var priorImeSetting: String? = null
+    private fun shell(command: String): String =
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(
+            InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(command)
+        ).use { String(it.readBytes()).trim() }
+
+    @After fun restoreImeSetting() {
+        val prior = priorImeSetting ?: return
+        if (prior == "0" || prior == "1") shell("settings put secure show_ime_with_hard_keyboard $prior")
+        else shell("settings delete secure show_ime_with_hard_keyboard")
+    }
+
     @Before fun productionEdgeToEdgeAndRealIme() {
+        priorImeSetting = shell("settings get secure show_ime_with_hard_keyboard")
         compose.activityRule.scenario.onActivity {
             it.enableEdgeToEdge()
             // Mirrors android:windowSoftInputMode="adjustResize" on the production
@@ -30,8 +44,7 @@ class KeyboardInsetTest {
             // the system only reports the keyboard inset in this mode (#471).
             it.window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         }
-        InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(
-            "settings put secure show_ime_with_hard_keyboard 1").close()
+        shell("settings put secure show_ime_with_hard_keyboard 1")
     }
 
     @Test fun settingsLastEmailAndSaveReasonStayReachableWithRealKeyboard() {
