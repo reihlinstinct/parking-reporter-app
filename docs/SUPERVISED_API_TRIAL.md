@@ -107,3 +107,12 @@ The complete writer inventory and current acknowledgements are a private owner
 execution check, not a source-review assertion. No dispatch is allowed until the
 owner supplies the complete current inventory and explicitly verifies every route
 is fenced. Earlier partial acknowledgements do not establish completeness.
+
+## Atomic activation configuration edits
+
+The historical activation JSON and workflow gate are a single reviewed change.
+If a future separately authorized activation requires new pins, edit both in the
+same commit, then run check_repository.py and test_supervised_api_trial.py.
+Changing only the private commit, package path or outer digest fails the checker.
+Do not weaken the exact expression to accommodate drift. No activation is made
+by this documentation or by passing the checker.

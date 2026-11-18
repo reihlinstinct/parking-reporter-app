@@ -277,6 +277,10 @@ class TrialTest(unittest.TestCase):
         self.assertIn('test -s /tmp/supervised-api-trial-evidence.tgz.enc\n            shred -u /tmp/supervised-api-trial-evidence.tgz', workflow)
         import check_repository
         self.assertTrue(check_repository.trial_job_pinned(workflow))
+        import json
+        config = json.loads((root / 'scripts/supervised_trial_activation.json').read_text())
+        for key in ('privateCommit', 'batchPath', 'outerSha256'):
+            self.assertFalse(check_repository.trial_job_pinned(workflow.replace(config[key], 'synthetic-mismatch')))
         gate = next(line for line in workflow.splitlines() if line.startswith('    if:'))
         for changed in (workflow.replace(gate, '    if: ${{ true }}'), workflow.replace(gate, ''), workflow.replace(gate, '  '+gate)):
             self.assertFalse(check_repository.trial_job_pinned(changed))
