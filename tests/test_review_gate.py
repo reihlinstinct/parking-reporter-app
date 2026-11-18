@@ -21,6 +21,17 @@ def review(**changes):
 
 
 class ReviewGateTest(unittest.TestCase):
+    def test_tab_exact_head_pass_keeps_all_rejections(self):
+        tab = review(user={'login': 'reihl-tab', 'type': 'User'})
+        self.assertTrue(evaluate(HEAD, [tab])[0])
+        self.assertFalse(evaluate('b' * 40, [tab])[0])
+        self.assertFalse(evaluate(HEAD, [tab], author='reihl-tab')[0])
+        self.assertFalse(evaluate(HEAD, [review(user={'login': 'reihl-tab', 'type': 'Bot'})])[0])
+        self.assertFalse(evaluate(HEAD, [tab, review(id=2, user={'login': 'reihl-tab'}, state='DISMISSED')])[0])
+        self.assertFalse(evaluate(HEAD, [tab, review(id=2, user={'login': 'reihl-poke'}, state='CHANGES_REQUESTED')])[0])
+        workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/review-gate.yml').read_text()
+        self.assertIn("REVIEWERS = {'reihl', 'reihl-poke', 'reihl-folk', 'reihl-tab'}", workflow)
+
     def test_exact_head_and_latest_dismissal(self):
         self.assertTrue(evaluate(HEAD, [review()])[0])
         self.assertFalse(evaluate('b' * 40, [review()])[0])
