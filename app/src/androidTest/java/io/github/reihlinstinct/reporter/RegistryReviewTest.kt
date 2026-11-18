@@ -99,6 +99,29 @@ class RegistryReviewTest {
         screenshot("registry-partial-tag-then-licence.png")
     }
 
+    /** #397: controlled vehicle-first completion; no registry network request. */
+    @Test fun vehicleFirstShowsPendingTagLiveRegionThenReplacesIt() {
+        val tag = CompletableDeferred<DisabilityLookupResult>()
+        val lookup: RegistryLookup = { plate, publish -> readRegistrySnapshot(plate,
+            { tag.await() }, { snapshot(DisabilityTagType.TRIANGLE).vehicle!! }, publish) }
+        compose.setContent { AppTheme { Surface(Modifier.fillMaxSize()) {
+            RegistryStatus("1234567", lookup)
+        } } }
+        val pending = "בודק תג חניה לנכה..."
+        compose.onNodeWithText(pending).assertIsDisplayed()
+        compose.onNodeWithText("רישיון הרכב פג תוקף לפי המאגר").assertExists()
+        compose.onAllNodes(SemanticsMatcher.expectValue(
+            androidx.compose.ui.semantics.SemanticsProperties.LiveRegion,
+            androidx.compose.ui.semantics.LiveRegionMode.Polite)).assertCountEquals(1)
+        screenshot("registry-vehicle-first-tag-pending.png")
+        compose.runOnIdle { tag.complete(DisabilityLookupResult.Found(DisabilityTagType.TRIANGLE)) }
+        compose.waitForIdle()
+        compose.onNodeWithText(pending).assertDoesNotExist()
+        compose.onNodeWithText("תג חניה לנכה, סמל משולש").assertIsDisplayed()
+        screenshot("registry-vehicle-first-tag-completed.png")
+        // Semantics proof only. Actual TalkBack utterance count is still unverified.
+    }
+
     @Test fun absentTagIsSilentButExpiredLicenceRemainsVisible() {
         val lookup: RegistryLookup = { _, _ -> RegistrySnapshot(DisabilityLookupResult.NotFound,
             snapshot(DisabilityTagType.TRIANGLE).vehicle, Instant.now()) }
