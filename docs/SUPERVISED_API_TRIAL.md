@@ -125,3 +125,13 @@ Neither generic format enters the trial through automatic conversion: the trial
 accepts only its exact report field inventory and its pinned non-plate topic.
 Synthetic regression test test_legacy_plate_schema_remains_separate_from_modern_optional_plate
 keeps legacy validation from silently widening. No private legacy records are used.
+
+## Interrupted teardown
+
+The VPN helper is for disposable hosted runners only, never an existing user or
+shared host. Teardown attempts each owned chain/route even when an earlier
+removal fails. SIGKILL, runner loss or a denied command can leave rules installed;
+there is no guarantee that finally/always steps execute. Discard the runner rather
+than reusing its network state. No automatic municipal retry follows cleanup.
+System configuration is removed only if a fixed run-generated hash still matches;
+this is not a backup/restore mechanism for pre-existing system configuration.

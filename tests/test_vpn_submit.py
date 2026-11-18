@@ -41,6 +41,22 @@ class VpnSubmitTest(unittest.TestCase):
             with self.assertRaises(vpn.TunnelError):
                 vpn.isolate_private_networks()
 
+    def test_teardown_attempts_all_own_chains_despite_command_failures(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'run'; root.mkdir()
+            with patch.object(vpn, 'ROOT', root), patch.object(vpn, 'run', side_effect=OSError('synthetic')) as run, patch.object(vpn, 'config_destinations', return_value={}):
+                vpn.down()
+            calls = [call.args for call in run.call_args_list]
+            for binary in ('iptables', 'ip6tables'):
+                self.assertIn((binary, '-X', 'PARK106'), calls)
+            self.assertIn(('iptables', '-X', 'PARK106LAN'), calls)
+            self.assertFalse(root.exists())
+            # A second teardown with no run root must not mutate host state.
+            with patch.object(vpn, 'ROOT', root), patch.object(vpn, 'run') as run:
+                vpn.down()
+                run.assert_not_called()
+
     def routes(self, targets, device='ppp42'):
         answers = [(socket.AF_INET, socket.SOCK_STREAM, 6, '', (x, 443)) for x in targets]
         with patch.object(vpn.socket, 'getaddrinfo', return_value=answers), patch.object(vpn, 'run', return_value=json.dumps([{'dev': device}])) as run:
