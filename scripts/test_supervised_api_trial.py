@@ -135,6 +135,15 @@ class TrialTest(unittest.TestCase):
         for changed in [dict(latitude=0), dict(longitude=0), dict(latitude=True), dict(latitude=float('nan')), dict(subjectCode='1145')]:
             with self.assertRaises(ValueError): trial.validate_trial_coordinates(dict(self.report, **changed))
 
+    def test_coordinate_envelope_inclusive_edges_and_nonfinite_refusal(self):
+        for lat in (31.65, 31.95):
+            for lon in (35.05, 35.35):
+                trial.validate_trial_coordinates(dict(self.report, latitude=lat, longitude=lon))
+        for lat, lon in [(31.649999, 35.2), (31.950001, 35.2), (31.8, 35.049999),
+                (31.8, 35.350001), (float('inf'), 35.2), (31.8, False)]:
+            with self.assertRaises(ValueError):
+                trial.validate_trial_coordinates(dict(self.report, latitude=lat, longitude=lon))
+
     def test_expiry_at_each_write_boundary_stops_without_replay(self):
         from datetime import datetime, timezone
         config = json.loads((Path(trial.__file__).parent / 'supervised_trial_activation.json').read_text())

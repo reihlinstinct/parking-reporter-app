@@ -51,6 +51,20 @@ class SupervisedApiTrialBridgeTest {
         } finally { root.deleteRecursively() }
     }
 
+    @Test fun coordinateEnvelopeMatchesPythonInclusiveEdges() {
+        val root = Files.createTempDirectory("synthetic-envelope").toFile()
+        try {
+            val r = report(root)
+            for (lat in listOf(31.65, 31.95)) for (lon in listOf(35.05, 35.35)) {
+                SupervisedApiTrialBridge.payload(r + mapOf("latitude" to lat, "longitude" to lon))
+            }
+            for ((lat, lon) in listOf(31.649999 to 35.2, 31.950001 to 35.2, 31.8 to 35.049999, 31.8 to 35.350001)) {
+                assertThrows(IllegalArgumentException::class.java) {
+                    SupervisedApiTrialBridge.payload(r + mapOf("latitude" to lat, "longitude" to lon))
+                }
+            }
+        } finally { root.deleteRecursively() }
+    }
     @Test fun prepareIsOfflineCreateAndAttachAreSeparateAndBurned() {
         val root = Files.createTempDirectory("synthetic-trial").toFile()
         try {
