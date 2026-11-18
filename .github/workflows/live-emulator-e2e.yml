@@ -101,8 +101,13 @@ jobs:
               # same text (fail closed) until it expires.
               if { [ -n "$prior_photo" ] && [ "$prior_photo" = "$APPROVED_PHOTO_SHA256_INPUT" ]; } \
                 || { [ -z "$prior_photo" ] && [ "$prior" = "$APPROVED_SHA256_INPUT" ]; }; then
-                echo 'this photo (or an older record of this text) already went through a live run - refusing to re-dispatch'
-                exit 1
+                # Never erase a prior claim. A same-input retry is permitted only
+                # when that exact run's provider artifacts prove zero submissions
+                # and the app's explicit pre-case failure. Missing evidence refuses.
+                proof_record=$(mktemp /tmp/live-e2e/prior-record.XXXXXX)
+                printf '%s' "$plain" > "$proof_record"
+                python3 scripts/prove_live_pre_case_retry.py --record "$proof_record"
+                shred -u "$proof_record
               fi
             done < <(jq -r '.artifacts[] | select(.expired | not) | [.id, .archive_download_url] | @tsv' <<<"$resp")
           fi
