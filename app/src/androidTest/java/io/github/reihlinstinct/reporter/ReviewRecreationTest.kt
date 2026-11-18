@@ -78,6 +78,9 @@ class ReviewRecreationTest {
             assertArrayEquals(originalBytes, original.readBytes())
             compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
             compose.waitUntil(15_000) { runBlocking { db.reports().find(id)!!.revision == 8L } }
+            val feedback = io.github.reihlinstinct.reporter.i18n.Strings(AppCatalog.get(context), AppCatalog.defaultCode(context)).t("shell.status.draft_saved")
+            compose.onNodeWithText(feedback).assertIsDisplayed()
+            compose.waitForIdle()
             val saved = runBlocking { db.reports().find(id)!! }
             assertEquals("רחוב סינתטי 42", DraftCodec.decode(saved.draftJson).address)
             assertEquals("originals/$id.jpg", saved.originalRelativePath)
