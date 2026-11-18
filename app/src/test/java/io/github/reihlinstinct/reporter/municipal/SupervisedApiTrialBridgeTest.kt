@@ -11,6 +11,7 @@ class SupervisedApiTrialBridgeTest {
         val calls = mutableListOf<String>()
         var payload: Map<String, Any?>? = null
         var failCreate = false
+        var crm = "synthetic-case"
         override fun login(): String { calls.add("login"); return "synthetic-token" }
         override fun subjectCategories(token: String) = listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject("1137", "synthetic subject", emptyList()))
         override fun upsertContact(token: String, contact: LinkedHashMap<String, Any?>): Map<String, Any?> {
@@ -19,7 +20,7 @@ class SupervisedApiTrialBridgeTest {
         override fun createCase(token: String, contact: LinkedHashMap<String, Any?>, report: LinkedHashMap<String, Any?>): Map<String, Any?> {
             calls.add("create"); payload = report
             if (failCreate) error("synthetic refusal")
-            return mapOf("CaseIdInCRM" to "synthetic-case", "WebCaseIdInCRM" to "synthetic-web", "CaseNumberInCRM" to null)
+            return mapOf("CaseIdInCRM" to crm, "WebCaseIdInCRM" to "synthetic-web", "CaseNumberInCRM" to null)
         }
         override fun attachPhoto(token: String, caseIdInCRM: String, webCaseIdInCRM: String, fileName: String, jpeg: ByteArray) { calls.add("attach") }
     }
@@ -67,6 +68,24 @@ class SupervisedApiTrialBridgeTest {
         } finally { root.deleteRecursively() }
     }
 
+    @Test fun zeroCrmWithWebIdAttachesOnceAndInvalidPairIsRefused() {
+        val root = Files.createTempDirectory("synthetic-zero-crm").toFile()
+        try {
+            val r = report(root)
+            val c = Client().apply { crm = "00000000-0000-0000-0000-000000000000" }
+            val b = SupervisedApiTrialBridge(c, linkedMapOf(), root)
+            b.call(mapOf("operation" to "prepare", "report" to r)); b.call(mapOf("operation" to "login"))
+            @Suppress("UNCHECKED_CAST") val receipt = b.call(mapOf("operation" to "create", "report" to r))["case"] as Map<String, Any?>
+            @Suppress("UNCHECKED_CAST") val photo = (r["photos"] as List<Map<String, Any?>>).single()
+            assertThrows(IllegalArgumentException::class.java) { b.call(mapOf("operation" to "attach", "case" to (receipt + ("WebCaseIdInCRM" to "other-web")), "photo" to photo)) }
+            b.call(mapOf("operation" to "attach", "case" to receipt, "photo" to photo))
+            assertThrows(IllegalStateException::class.java) { b.call(mapOf("operation" to "attach", "case" to receipt, "photo" to photo)) }
+            assertEquals(listOf("login", "contact", "create", "attach"), c.calls)
+            assertThrows(IllegalArgumentException::class.java) { MunicipalCaseReference.requireAttachable(mapOf("CaseIdInCRM" to c.crm, "WebCaseIdInCRM" to c.crm)) }
+            assertThrows(IllegalArgumentException::class.java) { MunicipalCaseReference.requireAttachable(mapOf("WebCaseIdInCRM" to "synthetic-web")) }
+        } finally { root.deleteRecursively() }
+    }
+
     @Test fun createRefusalNeverRetriesOrAttaches() {
         val root = Files.createTempDirectory("synthetic-trial").toFile()
         try {
@@ -90,6 +109,23 @@ class SupervisedApiTrialBridgeTest {
             assertEquals(listOf("login"), client.calls)
         } finally { root.deleteRecursively() }
     }
+    @Test fun actualHttpAttachmentSendsZeroCrmAndWebIdUnchanged() {
+        MockWebServer().apply { start() }.use { server ->
+            server.enqueue(MockResponse.Builder().code(200).body("{\"Success\":true,\"BlobName\":\"synthetic-blob.jpg\"}").build())
+            val c = OkHttpMunicipalClient.forTesting(server.url("/synthetic/"), "synthetic-key", "synthetic-user", "synthetic-password")
+            val zero = "00000000-0000-0000-0000-000000000000"
+            c.attachPhoto("synthetic-token", zero, "synthetic-web", "evidence.jpg", byteArrayOf(1, 2, 3))
+            assertEquals(1, server.requestCount)
+            val request = server.takeRequest()
+            assertEquals("/synthetic/AddFileToCase", request.url.encodedPath)
+            val body = org.json.JSONObject(request.body!!.utf8())
+            assertEquals(zero, body.getString("caseIdInCRM"))
+            assertEquals("synthetic-web", body.getString("webCaseIdInCRM"))
+            assertEquals("AQID", body.getString("fileContent"))
+            assertEquals("evidence.jpg", body.getString("fileName"))
+        }
+    }
+
     @Test fun actualHttpPayloadKeepsBlankAddressAnd403DoesNotRetry() {
         val root = Files.createTempDirectory("synthetic-trial-http").toFile()
         try {

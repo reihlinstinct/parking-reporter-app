@@ -52,7 +52,7 @@ class TwoCarCiBridge(private val client: MunicipalClient,
                 createdCase = linkedMapOf(
                     "CaseIdInCRM" to result["CaseIdInCRM"], "WebCaseIdInCRM" to result["WebCaseIdInCRM"],
                     "CaseNumberInCRM" to result["CaseNumberInCRM"])
-                require(listOf("CaseIdInCRM", "WebCaseIdInCRM").any { (createdCase!![it] as? String)?.trim('0', '-', ' ')?.isNotEmpty() == true })
+                MunicipalCaseReference.requireAttachable(createdCase!!)
                 mapOf("success" to true, "case" to createdCase)
             }
             "attach" -> {
@@ -61,11 +61,10 @@ class TwoCarCiBridge(private val client: MunicipalClient,
                 require(request["photo"] == approved)
                 val case = request["case"] as Map<String, Any?>
                 require(case == createdCase)
-                val caseId = case["CaseIdInCRM"] as? String
-                require(!caseId.isNullOrBlank() && caseId.trim('0', '-', ' ').isNotEmpty())
+                val (caseId, webId) = MunicipalCaseReference.requireAttachable(case)
                 val data = photo(approved)
                 attached = true
-                client.attachPhoto(token!!, caseId, case["WebCaseIdInCRM"] as? String ?: "", "evidence.jpg", data)
+                client.attachPhoto(token!!, caseId, webId, "evidence.jpg", data)
                 mapOf("success" to true)
             }
             else -> error("unsupported supervised operation")

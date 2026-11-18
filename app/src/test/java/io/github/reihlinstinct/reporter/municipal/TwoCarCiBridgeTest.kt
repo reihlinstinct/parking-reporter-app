@@ -11,7 +11,11 @@ class TwoCarCiBridgeTest {
         override fun subjectCategories(token: String) = listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject("1145", "synthetic", emptyList(), true))
         override fun upsertContact(token: String, contact: LinkedHashMap<String, Any?>): Map<String, Any?> { calls.add("contact"); return mapOf("ContactIdInCRM" to "synthetic-contact") }
         override fun createCase(token: String, contact: LinkedHashMap<String, Any?>, report: LinkedHashMap<String, Any?>): Map<String, Any?> { calls.add("create"); return mapOf("CaseIdInCRM" to "00000000-0000-0000-0000-000000000000", "WebCaseIdInCRM" to "synthetic-web", "CaseNumberInCRM" to null) }
-        override fun attachPhoto(token: String, caseIdInCRM: String, webCaseIdInCRM: String, fileName: String, jpeg: ByteArray) { calls.add("attach") }
+        override fun attachPhoto(token: String, caseIdInCRM: String, webCaseIdInCRM: String, fileName: String, jpeg: ByteArray) {
+            assertEquals("00000000-0000-0000-0000-000000000000", caseIdInCRM)
+            assertEquals("synthetic-web", webCaseIdInCRM)
+            calls.add("attach")
+        }
     }
     private fun report(root: java.io.File): Map<String, Any?> {
         val f=java.io.File(root,"photos/approved.jpg");f.parentFile.mkdirs()
@@ -28,7 +32,7 @@ class TwoCarCiBridgeTest {
             assertThrows(IllegalArgumentException::class.java) { TwoCarCiBridge.payload(r+("text" to "no plate")) }
         } finally { root.deleteRecursively() }
     }
-    @Test fun acceptedWebReceiptReturnsEvenWhenCanonicalIsZeroButCannotAttachOrRecreate() {
+    @Test fun acceptedZeroCrmReceiptAttachesExactPairOnceButCannotRecreate() {
         val root=Files.createTempDirectory("synthetic-cars").toFile()
         try {
             val c=Client();val b=TwoCarCiBridge(c, linkedMapOf(),root);val r=report(root)
@@ -38,8 +42,9 @@ class TwoCarCiBridgeTest {
             assertEquals("synthetic-web",receipt["WebCaseIdInCRM"])
             assertThrows(IllegalStateException::class.java) { b.call(mapOf("operation" to "create","report" to r)) }
             @Suppress("UNCHECKED_CAST") val photo=(r["photos"] as List<Map<String,Any?>>).single()
-            assertThrows(IllegalArgumentException::class.java) { b.call(mapOf("operation" to "attach","case" to receipt,"photo" to photo)) }
-            assertEquals(listOf("login","contact","create"),c.calls)
+            b.call(mapOf("operation" to "attach","case" to receipt,"photo" to photo))
+            assertThrows(IllegalStateException::class.java) { b.call(mapOf("operation" to "attach","case" to receipt,"photo" to photo)) }
+            assertEquals(listOf("login","contact","create","attach"),c.calls)
         } finally { root.deleteRecursively() }
     }
 }

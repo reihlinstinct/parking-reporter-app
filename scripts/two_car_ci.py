@@ -9,7 +9,7 @@ import zipfile
 from datetime import datetime, timezone
 from live_batch_input import need, no_duplicates
 from live_batch_hybrid import BridgeAdapter
-from supervised_api_trial import PrivateTrialClaim, encrypt_record
+from supervised_api_trial import PrivateTrialClaim, encrypt_record, attachable_receipt
 
 CONFIG = Path(__file__).with_name('two_car_ci_activation.json')
 
@@ -43,10 +43,6 @@ def validate_package(path, pin):
     return trial, photo
 
 
-def usable(value):
-    return isinstance(value, str) and bool(value.strip('0- '))
-
-
 def execute(report, pin, claim, api, guard, run_id):
     guard()
     api.preflight([report])  # Includes live municipal category verification.
@@ -55,12 +51,9 @@ def execute(report, pin, claim, api, guard, run_id):
     record['state'] = 'creating'; claim.save(record)
     guard()  # Recheck route and expiry immediately before contact/create.
     case = api.create(report)
-    need(isinstance(case, dict) and any(usable(case.get(k)) for k in ['CaseIdInCRM', 'WebCaseIdInCRM']), 'case receipt uncertain')
+    need(attachable_receipt(case), 'case receipt uncertain')
     record.update(case=case, state='created', municipalCreateAccepted=True, noReplay=True, photoAttached=False)
     claim.save(record)  # Preserve accepted web receipt even if canonical ID is zero.
-    if not usable(case.get('CaseIdInCRM')):
-        record['state'] = 'accepted_photo_not_attached'; claim.save(record)
-        return record
     record['state'] = 'attaching'; claim.save(record)
     guard()
     need(api.attach(case, report, report['photos'][0]) is True, 'case attachment uncertain')
