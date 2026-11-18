@@ -122,9 +122,16 @@ tasks.register("writeBatchBridgeClasspath") {
 }
 
 // Desktop ImageIO belongs to the CI JVM, never Android's restricted Java bootclasspath.
+// Never resolve Android's self-project unit runtime from a desktop Test task:
+// AGP publishes multiple artifact variants, so use a separate JVM-only JUnit scope.
+val apiOutgoingPhotoTestRuntime by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+dependencies { add(apiOutgoingPhotoTestRuntime.name, "junit:junit:4.13.2") }
 val compileApiOutgoingPhoto by tasks.registering(JavaCompile::class) {
     source(rootProject.fileTree("scripts/jvm") { include("ApiOutgoingPhoto*.java") })
-    classpath = configurations.getByName("debugUnitTestRuntimeClasspath")
+    classpath = apiOutgoingPhotoTestRuntime
     destinationDirectory.set(layout.buildDirectory.dir("batch-bridge/photo-classes"))
     sourceCompatibility = "17"
     targetCompatibility = "17"
@@ -132,7 +139,7 @@ val compileApiOutgoingPhoto by tasks.registering(JavaCompile::class) {
 val testApiOutgoingPhoto by tasks.registering(Test::class) {
     dependsOn(compileApiOutgoingPhoto)
     testClassesDirs = files(compileApiOutgoingPhoto.flatMap { it.destinationDirectory })
-    classpath = files(testClassesDirs, configurations.getByName("debugUnitTestRuntimeClasspath"))
+    classpath = files(testClassesDirs, apiOutgoingPhotoTestRuntime)
     useJUnit()
     systemProperty("java.awt.headless", "true")
     maxHeapSize = "512m"
