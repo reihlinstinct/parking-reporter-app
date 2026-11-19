@@ -827,7 +827,7 @@
       "ar": "Apache-2.0 libraries",
       "ru": "Apache-2.0 libraries",
       "am": "Apache-2.0 libraries",
-      "fr": "Apache-2.0 libraries"
+      "fr": "Bibliothèques Apache-2.0"
     },
     "licenses.apache.body": {
       "he": "AndroidX, Kotlin, Compose, CameraX, Room, OkHttp, Tink, kotlinx-coroutines ו-tesseract4android מופצים ברישיון Apache 2.0.",
@@ -2723,7 +2723,7 @@
       "ar": "سيُحذف رقم جواز السفر من الملف الشخصي على هذا الجهاز. لن يتغير النص في البلاغات المحفوظة.",
       "ru": "Номер паспорта будет удалён из профиля на этом устройстве. Текст сохранённых обращений не изменится.",
       "am": "የፓስፖርት ቁጥሩ ከመሣሪያው መገለጫ ይሰረዛል። በተቀመጡ ሪፖርቶች ውስጥ ያለው ጽሑፍ አይቀየርም።",
-      "fr": "Le numéro sera supprimé du profil sur cet appareil. Le texte des signalements enregistrés ne changera pas."
+      "fr": "Supprimer le numéro de passeport enregistré dans ce profil ? Les rapports existants ne seront pas modifiés."
     },
     "settings.passport.delete_confirm": {
       "he": "מחק",
@@ -2739,7 +2739,7 @@
       "ar": "حُذف رقم جواز السفر من الملف الشخصي. لم تتغير البلاغات المحفوظة.",
       "ru": "Номер паспорта удалён из профиля. Сохранённые обращения не изменены.",
       "am": "የፓስፖርት ቁጥሩ ከመገለጫው ተወግዷል። የተቀመጡ ሪፖርቶች አልተቀየሩም።",
-      "fr": "Numéro supprimé du profil. Les signalements enregistrés restent inchangés."
+      "fr": "Numéro de passeport supprimé du profil. Les signalements enregistrés restent inchangés."
     }
   }
 }

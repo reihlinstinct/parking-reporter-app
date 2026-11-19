@@ -26,11 +26,33 @@ class FrenchLocalizationTest {
         assertEquals(catalog.language(I18nTestFiles.codeNamed("English"))!!.status, l.status)
     }
 
+    private fun hasNonBlankForms(value: Any?): Boolean = when (value) {
+        is String -> value.isNotBlank()
+        is JSONObject -> value.has("other") && value.length() > 0 &&
+            value.keys().asSequence().all { form ->
+                value.opt(form) is String && value.getString(form).isNotBlank()
+            }
+        else -> false
+    }
+
     @Test fun everyKeyHasANonBlankFrenchValue() {
         for (key in strings.keys()) {
-            val v = strings.getJSONObject(key).opt(fr)
-            assertTrue("$key has fr", v != null && v.toString().isNotBlank() && v.toString() != "{}")
+            assertTrue("$key has nonblank fr forms", hasNonBlankForms(strings.getJSONObject(key).opt(fr)))
         }
+    }
+
+    @Test fun emptyOrMissingPluralFormsAreRejected() {
+        assertFalse(hasNonBlankForms(JSONObject("""{"one":"un","other":""}""")))
+        assertFalse(hasNonBlankForms(JSONObject("""{"one":"un","other":"plusieurs","many":"  "}""")))
+        assertFalse(hasNonBlankForms(JSONObject("""{"one":"un"}""")))
+        assertFalse(hasNonBlankForms(JSONObject("""{"other":3}""")))
+        assertTrue(hasNonBlankForms(JSONObject("""{"one":"un","other":"plusieurs","many":"millions"}""")))
+    }
+
+    @Test fun passportDeletionNamesTheFieldEvenWithoutItsTitle() {
+        assertTrue(catalog.t(fr, "settings.passport.delete_body").contains("passeport"))
+        assertTrue(catalog.t(fr, "settings.passport.deleted").contains("passeport"))
+        assertEquals("Bibliothèques Apache-2.0", catalog.t(fr, "licenses.apache.title"))
     }
 
     @Test fun machineTranslationNoticeExistsInEveryLanguageAndFrenchSaysSo() {

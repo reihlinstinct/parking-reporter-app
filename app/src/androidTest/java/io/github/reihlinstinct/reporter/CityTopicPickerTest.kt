@@ -19,7 +19,12 @@ class CityTopicPickerTest {
         var chosen: MunicipalSubject? = null
         compose.setContent { AppTheme { CityTopicPicker(syntheticCityTopics().topics, null, emptyList(),
             mapOf("1280" to listOf("התקנת עמודים")), {}, { chosen = it }) } }
+        compose.onNodeWithTag("topic-results").assert(
+            SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.SelectableGroup))
+        compose.onNodeWithTag("picker-search-input").assert(
+            SemanticsMatcher.keyNotDefined(androidx.compose.ui.semantics.SemanticsProperties.ContentDescription))
         compose.onNodeWithTag("picker-search-input").performTextInput("התקנת עמודים")
+        compose.onNodeWithTag("picker-search-input").assertTextContains("התקנת עמודים")
         compose.waitUntil(5_000) { compose.onNodeWithText("\u20661\u2069 תוצאות").isDisplayed() }
         compose.onNodeWithText("\u20661\u2069 תוצאות").assertIsDisplayed()
             .assert(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.LiveRegion,

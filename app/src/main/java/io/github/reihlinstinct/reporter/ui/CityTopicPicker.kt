@@ -2,6 +2,7 @@ package io.github.reihlinstinct.reporter.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -38,10 +39,11 @@ fun CityTopicPicker(topics: List<MunicipalSubject>, selected: String?, recent: L
                 Text(s.t("topics.search"), Modifier.fillMaxWidth().testTag("picker-search-label"),
                     style = MaterialTheme.typography.bodyMedium.copy(platformStyle = PlatformTextStyle(includeFontPadding = true)))
                 OutlinedTextField(query, { query = it },
-                    modifier = Modifier.fillMaxWidth().testTag("picker-search-input").semantics { contentDescription = s.t("topics.search") }, singleLine = true)
+                    modifier = Modifier.fillMaxWidth().testTag("picker-search-input"),
+                    label = { Text(s.t("topics.search")) }, singleLine = true)
                 Text(s.t("topics.results", mapOf("count" to results.size.toString())),
                     Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                LazyColumn(Modifier.weight(1f, fill = false).testTag("topic-results")) {
+                LazyColumn(Modifier.weight(1f, fill = false).testTag("topic-results").selectableGroup()) {
                     items(results, key = { it.code }) { topic ->
                         Column(Modifier.fillMaxWidth().heightIn(min = 48.dp)
                             .selectable(selected = topic.code == selected, role = Role.RadioButton, onClick = { choose(topic) })
