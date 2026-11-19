@@ -1,0 +1,12 @@
+CBS geographic routing data
+
+Israel Central Bureau of Statistics (CBS), Statistical Areas 2022, accessed19November2026.
+Source: https://www.cbs.gov.il/he/publications/DocLib/2022/%D7%A7%D7%98%D7%9C%D7%95%D7%92/1.%20%D7%99%D7%99%D7%A9%D7%95%D7%91%D7%99%D7%9D%20%D7%95%D7%97%D7%9C%D7%95%D7%A7%D7%95%D7%AA%20%D7%92%D7%90%D7%95%D7%92%D7%A8%D7%A4%D7%99%D7%95%D7%AA/census_2022_statistical_areas_2022.gdb.zip
+CBS Open License v2.1: https://www.cbs.gov.il/he/Pages/%D7%A8%D7%99%D7%A9%D7%99%D7%95%D7%9F-%D7%A9%D7%99%D7%9E%D7%95%D7%A9.aspx
+
+The source is provided as-is under the CBS license. This application uses a disclosed technical derivative: Jerusalem city-code3000 subset, EPSG2039 converted to WGS84, demographic fields removed, ring orientation normalized, then partitioned into versioned geographic files. Boundaries are not simplified or repaired. The2022 snapshot contains243statistical areas, not named neighborhoods. It does not establish current municipal boundaries. Internal non-Jerusalem enclaves remain holes. CBS does not sponsor or endorse this application.
+
+Source ZIP SHA256:0baa26b0548c42836ae02a172dc06b977929fd3f55a41a4a4d08ad9f4d9fdb89
+Converted Jerusalem GeoJSON SHA256:ad780e9e8a977ad7f55618a4a032af35053b8f3e013de9be7e7b9c7332e02310
+
+Address points remain a separate OpenStreetMap-derived dataset under ODbL1.0, with the existing source-verification caveat documented in docs/address-lookup.md.383address points outside the CBS2022coverage are preserved for manual lookup in a separately labeled shard, never assigned to an invented polygon.

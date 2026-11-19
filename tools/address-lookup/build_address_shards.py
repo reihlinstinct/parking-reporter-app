@@ -50,6 +50,10 @@ def ring_contains(ring, point):
 
 def contains(polygons, point):
     for rings in polygons:
+        outer=rings[0]
+        if not (min(p[0] for p in outer) <= point[0] <= max(p[0] for p in outer) and
+                min(p[1] for p in outer) <= point[1] <= max(p[1] for p in outer)):
+            continue
         if any(on_segment(point,a,b) for ring in rings for a,b in zip(ring,ring[1:]+ring[:1])):
             return True
         if ring_contains(rings[0],point) and not any(ring_contains(r,point) for r in rings[1:]):
@@ -57,7 +61,7 @@ def contains(polygons, point):
     return False
 
 
-def build(dataset, boundaries):
+def build(dataset, boundaries, allow_outside=False):
     regions = []
     for feature in boundaries['features']:
         rid = str(feature['properties']['id'])
@@ -75,28 +79,36 @@ def build(dataset, boundaries):
     aliases = {}
     for r in streets:
         for name in [r['StreetName'], r.get('StreetArabicName','')] + r.get('aliases',[]):
-            if norm(name):aliases.setdefault(norm(name),set()).add(str(r['StreetCode']))
+            if isinstance(name,str) and norm(name):aliases.setdefault(norm(name),set()).add(str(r['StreetCode']))
+    outside=dict(id='outside-cbs-coverage',polygons=[],rows=[],codes=set())
+    street_words=[(str(r['StreetCode']),words(r['StreetName'])) for r in streets]
+    for region in regions:
+        pts=[p for poly in region['polygons'] for ring in poly for p in ring]
+        region['bbox']=[min(p[0] for p in pts),min(p[1] for p in pts),max(p[0] for p in pts),max(p[1] for p in pts)]
     for row in dataset['addresses']:
         point = [row[1],row[0]]
-        matching = [r for r in regions if contains(r['polygons'],point)]
-        if not matching:raise ValueError('address point outside boundary coverage')
+        matching = [r for r in regions if r['bbox'][0]<=point[0]<=r['bbox'][2] and
+                    r['bbox'][1]<=point[1]<=r['bbox'][3] and contains(r['polygons'],point)]
+        if not matching:
+            if not allow_outside:raise ValueError('address point outside boundary coverage')
+            matching=[outside]
         codes = aliases.get(norm(str(row[3])),set())
         if not codes:
             tail=words(str(row[3]))
             if tail:
-                candidates={str(r['StreetCode']) for r in streets
-                            if len(words(r['StreetName']))>len(tail) and words(r['StreetName'])[-len(tail):]==tail}
+                candidates={code for code,w in street_words if len(w)>len(tail) and w[-len(tail):]==tail}
                 if len(candidates)==1:codes=candidates
         for region in matching:
             region['rows'].append(row)
             region['codes'].update(codes)
+    if outside['rows']:regions.append(outside)
     files={}
     index=dict(version=1, sourceSha256=PIN, streets=streets, regions=[])
     for r in sorted(regions,key=lambda r:r['id']):
-        payload=encode(dict(version=1,addresses=r['rows']))
+        payload=encode(dict(version=1,polygons=r['polygons'],addresses=r['rows']))
         files[r['id']+'.json']=payload
         index['regions'].append(dict(id=r['id'],sha256=hashlib.sha256(payload).hexdigest(),
-            polygons=r['polygons'],streetCodes=sorted(r['codes'])))
+            bbox=r.get('bbox'),streetCodes=sorted(r['codes'])))
     files['index.json']=encode(index)
     return files
 
@@ -110,10 +122,11 @@ def main():
     parser.add_argument('--dataset',required=True,type=Path)
     parser.add_argument('--polygons',required=True,type=Path)
     parser.add_argument('--output',required=True,type=Path)
+    parser.add_argument('--allow-outside-cbs-coverage',action='store_true')
     args=parser.parse_args()
     raw=args.dataset.read_bytes()
     if hashlib.sha256(raw).hexdigest()!=PIN:raise ValueError('dataset pin mismatch')
-    files=build(json.loads(raw),json.loads(args.polygons.read_bytes()))
+    files=build(json.loads(raw),json.loads(args.polygons.read_bytes()),args.allow_outside_cbs_coverage)
     args.output.mkdir(parents=True,exist_ok=True)
     for name,data in files.items():(args.output/name).write_bytes(data)
     print('index-sha256',hashlib.sha256(files['index.json']).hexdigest())

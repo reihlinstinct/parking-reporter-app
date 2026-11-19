@@ -9,7 +9,7 @@ class AddressShardIndexTest {
         val streets = mutableListOf<Map<String,Any?>>(mapOf("StreetCode" to "1", "StreetName" to "synthetic street", "aliases" to listOf("alias")))
         if (ambiguous) streets.add(mapOf("StreetCode" to "2", "StreetName" to "alias"))
         val data = mapOf("version" to 1, "streets" to streets, "regions" to listOf("a","b").map { id ->
-            mapOf("id" to id,"sha256" to "a".repeat(64),"polygons" to listOf(listOf(point)),"streetCodes" to listOf("1"))
+            mapOf("id" to id,"sha256" to "a".repeat(64),"bbox" to listOf(34,31,36,32),"streetCodes" to listOf("1"))
         })
         return AddressShardIndex(PythonJson.dumps(data))
     }
@@ -24,7 +24,7 @@ class AddressShardIndexTest {
         assertThrows(IllegalArgumentException::class.java) { index().forStreets(listOf("unknown")) }
     }
     @Test fun coordinatesSelectOnlyLocalPolygonIds() {
-        assertEquals(setOf("a","b"),index().forLocation(31.5,35.0))
-        assertThrows(IllegalArgumentException::class.java) { index().forLocation(30.0,33.0) }
+        assertEquals(setOf("a","b"),index().candidates(31.5,35.0))
+        assertTrue(index().candidates(30.0,33.0).isEmpty())
     }
 }
