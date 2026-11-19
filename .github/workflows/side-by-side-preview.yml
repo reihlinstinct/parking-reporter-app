@@ -34,6 +34,7 @@ jobs:
           "$AAPT" dump badging "$APK" | tee /tmp/preview-badging.txt
           grep -F "package: name='il.sidewalks.reporter.preview'" /tmp/preview-badging.txt
           unzip -p "$APK" assets/addresses.json | sha256sum | grep '^5eaa83a9eb9253798109555bf2f6ea6ab6ec941a86e86c15c6761b2e5ee046d4 '
+          "$AAPT" dump xmltree "$APK" res/xml/shortcuts.xml | python3 scripts/verify_preview_shortcuts.py
           sha256sum "$APK"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
