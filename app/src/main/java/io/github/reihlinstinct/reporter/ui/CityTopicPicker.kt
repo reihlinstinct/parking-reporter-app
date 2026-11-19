@@ -42,7 +42,7 @@ fun CityTopicPicker(topics: List<MunicipalSubject>, selected: String?, recent: L
                 OutlinedTextField(state = search,
                     modifier = Modifier.fillMaxWidth().testTag("picker-search-input"),
                     labelPosition = TextFieldLabelPosition.Above(),
-                    label = { Text(s.t("topics.search"), Modifier.wrapContentHeight(unbounded = true).testTag("picker-search-label"),
+                    label = { Text(s.t("topics.search"), Modifier.fillMaxWidth().wrapContentHeight(unbounded = true).testTag("picker-search-label"),
                         style = MaterialTheme.typography.bodySmall.copy(platformStyle = PlatformTextStyle(includeFontPadding = true))) }, lineLimits = TextFieldLineLimits.SingleLine)
                 Text(s.t("topics.results", mapOf("count" to results.size.toString())),
                     Modifier.semantics { liveRegion = LiveRegionMode.Polite })
