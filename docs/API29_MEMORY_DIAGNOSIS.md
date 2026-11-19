@@ -48,3 +48,16 @@ At `31c2bff`, full-suite, fresh-suite and snapshots all passed with a measured51
 The snapshot artifact extraction incorrectly requested28/111 although the listener wrote24/27. Worse, `adb exec-out run-as ... cat` returned zero and the redirected nonempty error text passed the old file-size guard. Those artifacts are not HPROF evidence. Extraction now matches24/27 and requires the HPROF binary signature; synthetic tests cover nonempty error text.
 
 A `paired` mode now runs the full suite followed by the four isolated classes on the same emulator, with no heap change and no test retries. Every process records actual Runtime.maxMemory, PID, process bitness, supported ABIs, ActivityManager memory classes and low-RAM status. Same device alone does not prove the budgets match; compare these values before interpreting results. The varying16/512MiB process cap is an unresolved environment lead.
+
+## Boot-race hypothesis, not yet confirmed locally
+
+Android10 emulator zygote can start before its heap-size property is initialized, inheriting the AndroidRuntime16m fallback. Later `getprop` can show512m while target processes still inherit16m. This exactly fits the observed mismatch, but the old logs were cleared before tests and cannot prove startup ordering.
+
+Sources inspected:
+- https://www.rainforestqa.com/blog/hunting-race-condition-in-android-10-emulator
+- https://github.com/ReactiveCircus/android-emulator-runner/issues/264
+- https://android.googlesource.com/platform/frameworks/base/+/369320574a87c15adc743a459944cecbff4b33fe/core/jni/AndroidRuntime.cpp
+
+A separate `boot-probe` diagnostic records initial boot logs and actual init files, then samples up to8cold boots using one tiny instrumentation test without UI/address loading. If Runtime.maxMemory is16MiB while the configured property is512m, it records before/after a warm zygote restart on that synthetic device only. This is a control intervention, not a production CI fix. No heap property, application manifest, dependency or minimum SDK changes. No test failure is retried; each boot's observation is retained. A cold run without the mismatch is explicitly not-reproduced, never proof that the race is absent. A restart that does not restore512MiB is not claimed to do so.
+
+At422025e all five diagnostic modes and normalCI passed. Paired full suite sampled about106MiB Java used before GC, compared to about38MiB peak in the isolated classes, all with the same512MiB actual cap. Different test histories and GC headroom still prevent calling that difference a retained leak. Valid HPROFs are now available; early histogram inspection is not a retained-owner verdict.

@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mode: [suite, fresh-suite, snapshots, isolated, paired]
+        mode: [suite, fresh-suite, snapshots, isolated, paired, boot-probe]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -43,6 +43,11 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
+            mkdir -p app/build/reports/api29-memory
+            adb logcat -b all -d -v threadtime > app/build/reports/api29-memory/initial-boot-logcat.txt
+            adb shell cat /vendor/etc/init/hw/init.ranchu.rc > app/build/reports/api29-memory/init-ranchu.txt
+            adb shell cat /init.rc > app/build/reports/api29-memory/init-main.txt
+            adb shell cat /system/build.prop > app/build/reports/api29-memory/system-build-properties.txt
             sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
@@ -50,7 +55,11 @@ jobs:
             python3 scripts/emulator_preflight.py --report-dir app/build/reports/api29-memory
             adb shell svc wifi disable
             adb shell svc data disable
-            bash scripts/api29_memory_diagnostic.sh ${{ matrix.mode }}
+            if [ '${{ matrix.mode }}' = boot-probe ]; then
+              python3 scripts/api29_boot_probe.py
+            else
+              bash scripts/api29_memory_diagnostic.sh ${{ matrix.mode }}
+            fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
