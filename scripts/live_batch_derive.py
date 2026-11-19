@@ -84,7 +84,8 @@ def exif_capture(data):
 
     Missing/unsupported/malformed metadata returns None. Bounded IFD entries,
     offsets and segment traversal. Multiple EXIF segments refuse derivation.
-    PNG/HEIC are not auto-timed in this inactive slice.
+    PNG/HEIC are not auto-timed in this inactive slice. Offset minutes must be
+    valid and the absolute timezone offset must not exceed fourteen hours.
     """
     try:
         if not data.startswith(b'\xff\xd8'):
@@ -140,6 +141,11 @@ def exif_capture(data):
         date = ascii_tag(0x9003, 20)
         offset = ascii_tag(0x9011, 7)
         if not re.fullmatch(r'\d{4}:\d{2}:\d{2} \d{2}:\d{2}:\d{2}', date) or not re.fullmatch(r'[+-]\d{2}:\d{2}', offset):
+            return None
+        # datetime normalizes malformed minute fields, for example +01:99.
+        # Metadata must describe its actual offset, never a repaired guess.
+        hours, minutes = int(offset[1:3]), int(offset[4:6])
+        if minutes >= 60 or hours > 14 or (hours == 14 and minutes != 0):
             return None
         value = date[:10].replace(':', '-') + 'T' + date[11:] + offset
         parsed = dt.datetime.fromisoformat(value)

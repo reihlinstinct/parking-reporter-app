@@ -54,6 +54,7 @@ Plate recognition offers plate candidates, with manual fallback and required rev
 ### Emulator health and display cadence
 
 The separate [API29 retained-heap diagnostic](docs/API29_MEMORY_DIAGNOSIS.md) compares the full suite to isolated classes, with optional synthetic-only heap snapshots. It is diagnostic evidence, not a memory fix or replacement for the normal matrix.
+Android/display CI uses a [bounded pinned-plugin preflight](docs/GRADLE_PLUGIN_RESOLUTION.md) before the original build/test commands. Only the exact KSP-resolution failure can retry before tasks start; app tests never retry.
 
 UI CI checks stable boot, focused window and active process ANR/crash state before
 starting tests. One bounded reboot is allowed before tests; persistent failure
@@ -62,7 +63,7 @@ weakened by this gate. A healthy preflight is not proof that the device cannot
 fail later in a test run.
 
 The display workflow runs normal-font foldable and compact 200% profiles for
-risky UI, resources, strings, instrumentation and workflow changes. Guard tests
+all main source, debug source, root build inputs, resources, strings, instrumentation and workflow changes. Guard tests
 pin the current path filter; it is not blanket coverage of every possible UI
 change. Weekly/manual runs also exist. Normal font is the demo default;
 compact 200% is an accessibility stress check. See the workflow for exact globs.

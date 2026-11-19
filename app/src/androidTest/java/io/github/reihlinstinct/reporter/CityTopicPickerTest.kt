@@ -14,7 +14,7 @@ import java.io.File
 class CityTopicPickerTest {
     @get:Rule val compose = createComposeRule()
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
-    private fun draft() = ReviewDraft(Evidence("synthetic-topic", "a".repeat(64), "2026-01-01T12:00:00Z", 31.0, 35.0), "1234567", "רחוב בדיקה 1", "sidewalk_parking", "בדיקה", emptySet())
+    private fun draft() = ReviewDraft(Evidence("synthetic-topic", "a".repeat(64), "2026-01-01T12:00:00Z", 31.77, 35.21), "1234567", "רחוב בדיקה 1", "sidewalk_parking", "בדיקה", emptySet())
     @Test fun municipalSearchFiltersByCodeAndAliasesAndAnnouncesResults() {
         var chosen: MunicipalSubject? = null
         compose.setContent { AppTheme { CityTopicPicker(syntheticCityTopics().topics, null, emptyList(),
@@ -29,6 +29,24 @@ class CityTopicPickerTest {
         compose.onNodeWithTag("picker-search-input").performTextReplacement("17841")
         compose.onNodeWithText("תמרור תנועה נפל / דהוי / שבור / נוטה ליפול", useUnmergedTree = true).assertIsDisplayed()
     }
+    /** #362: the selected identity is exposed once, not once per displayed path. */
+    @Test fun selectedDuplicateIdentityHasOneSelectedFocusTarget() {
+        val rows = listOf(
+            MunicipalSubject("5164", "אחר", listOf("גינון", "אחר")),
+            MunicipalSubject("5164", "אחר", listOf("תאורה", "אחר")),
+            MunicipalSubject("1280", "עמוד", listOf("רחוב", "עמוד")))
+        var chosen: String? = null
+        compose.setContent { AppTheme { CityTopicPicker(rows, "5164", emptyList(), emptyMap(), {}, { chosen = it.code }) } }
+        compose.onAllNodes(isSelected()).assertCountEquals(1)
+        compose.onNode(isSelected()).assertHasClickAction()
+            .assertContentDescriptionEquals("אחר. גינון › אחר\nתאורה › אחר")
+        compose.onNodeWithTag("picker-search-input").performTextInput("5164")
+        compose.onAllNodes(isSelected()).assertCountEquals(1)
+        compose.onNode(isSelected()).performClick()
+        compose.runOnIdle { assertEquals("5164", chosen) }
+        // This verifies Compose accessibility semantics, not spoken TalkBack order.
+    }
+
     @Test fun searchableMunicipalCatalogRecordingUsesMockRefreshNotLiveCity() {
         io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set(io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(context))
         val cache = CityTopicCache(File(context.cacheDir, "topic-recording/catalog.json"))

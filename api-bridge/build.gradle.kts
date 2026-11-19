@@ -15,7 +15,7 @@ kotlin.sourceSets.main {
 }
 kotlin.sourceSets.test {
     kotlin.srcDir("../app/src/test/java")
-    listOf("BatchMunicipalBridgeTest", "SupervisedApiTrialBridgeTest", "TwoCarCiBridgeTest", "ItmTest", "MunicipalPayloadsTest", "PythonJsonTest").forEach {
+    listOf("BatchMunicipalBridgeTest", "SupervisedApiTrialBridgeTest", "TwoCarCiBridgeTest", "ItmTest", "MunicipalPayloadsTest", "PythonJsonTest", "MunicipalClientContractTest").forEach {
         kotlin.include("io/github/reihlinstinct/reporter/municipal/$it.kt")
     }
 }

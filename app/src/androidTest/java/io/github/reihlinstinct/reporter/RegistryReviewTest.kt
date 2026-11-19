@@ -28,7 +28,7 @@ class RegistryReviewTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set(io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(InstrumentationRegistry.getInstrumentation().targetContext))
     }
-    private fun draft(plate: String = "1234567") = ReviewDraft(Evidence("registry-synthetic", "a".repeat(64), null, 31.0, 35.0),
+    private fun draft(plate: String = "1234567") = ReviewDraft(Evidence("registry-synthetic", "a".repeat(64), null, 31.77, 35.21),
         plate, "רחוב בדיקה 12", "municipal:1145", "רכב $plate חונה על המדרכה", emptySet())
     private fun snapshot(type: DisabilityTagType) = RegistrySnapshot(DisabilityLookupResult.Found(type),
         VehicleLookupResult.Found(VehicleRecord(PlateNumber.parse("1234567")!!, LocalDate.of(2020, 1, 1), null, null, null, null, null)),
@@ -97,6 +97,29 @@ class RegistryReviewTest {
         compose.waitForIdle()
         compose.onNodeWithText("רישיון הרכב פג תוקף לפי המאגר").assertExists()
         screenshot("registry-partial-tag-then-licence.png")
+    }
+
+    /** #397: controlled vehicle-first completion; no registry network request. */
+    @Test fun vehicleFirstShowsPendingTagLiveRegionThenReplacesIt() {
+        val tag = CompletableDeferred<DisabilityLookupResult>()
+        val lookup: RegistryLookup = { plate, publish -> readRegistrySnapshot(plate,
+            { tag.await() }, { snapshot(DisabilityTagType.TRIANGLE).vehicle!! }, publish) }
+        compose.setContent { AppTheme { Surface(Modifier.fillMaxSize()) {
+            RegistryStatus("1234567", lookup)
+        } } }
+        val pending = "בודק תג חניה לנכה..."
+        compose.onNodeWithText(pending).assertIsDisplayed()
+        compose.onNodeWithText("רישיון הרכב פג תוקף לפי המאגר").assertExists()
+        compose.onAllNodes(SemanticsMatcher.expectValue(
+            androidx.compose.ui.semantics.SemanticsProperties.LiveRegion,
+            androidx.compose.ui.semantics.LiveRegionMode.Polite)).assertCountEquals(1)
+        screenshot("registry-vehicle-first-tag-pending.png")
+        compose.runOnIdle { tag.complete(DisabilityLookupResult.Found(DisabilityTagType.TRIANGLE)) }
+        compose.waitForIdle()
+        compose.onNodeWithText(pending).assertDoesNotExist()
+        compose.onNodeWithText("תג חניה לנכה, סמל משולש").assertIsDisplayed()
+        screenshot("registry-vehicle-first-tag-completed.png")
+        // Semantics proof only. Actual TalkBack utterance count is still unverified.
     }
 
     @Test fun absentTagIsSilentButExpiredLicenceRemainsVisible() {

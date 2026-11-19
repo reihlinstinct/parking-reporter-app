@@ -132,6 +132,23 @@ class TrialTest(unittest.TestCase):
             self.assertEqual(1, enc.call_count)
         self.assertTrue(claim.poisoned)
 
+    def test_initial_claim_http_refusal_is_single_attempt_and_never_becomes_update(self):
+        import urllib.error
+        for status in (409, 422, 429, 500):
+            calls = []
+            class Refuse:
+                def open(self, request, timeout):
+                    calls.append(json.loads(request.data))
+                    raise urllib.error.HTTPError(request.full_url, status, 'synthetic refusal', {}, None)
+            claim = trial.PrivateTrialClaim('a' * 64, 'synthetic-token', b'synthetic-key-at-least16', Refuse())
+            with patch.object(trial, 'encrypt_record', return_value=b'opaque'):
+                for _ in range(2):
+                    with self.assertRaises(ValueError): claim.save(dict(state='reserved'))
+            self.assertEqual(1, len(calls))
+            self.assertNotIn('sha', calls[0])
+            self.assertIsNone(claim.revision)
+            self.assertTrue(claim.poisoned)
+
     def test_activation_refuses_wrong_package_expiry_and_coordinate_envelope(self):
         from datetime import datetime, timezone
         config = json.loads((Path(trial.__file__).parent / 'supervised_trial_activation.json').read_text())

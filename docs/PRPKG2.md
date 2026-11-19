@@ -143,3 +143,7 @@ The test implements the org.json `quote` rules and Java `Double.toString` (JDK 1
 ## Not yet done for issue #10
 
 Publication at a stable public URL (GitHub Pages is not enabled on this repository and stays off until the owner decides otherwise), and a Kotlin test that reads `docs/prpkg2-spec/golden.json` so the sync check also covers the Kotlin side.
+
+The offline synthetic schema checker rejects non-finite coordinate numbers as
+well as booleans, strings and out-of-range numbers. This tightens the contract
+test harness, not the package wire format or the production Kotlin receiver.

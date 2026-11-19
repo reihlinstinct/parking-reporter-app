@@ -29,6 +29,21 @@ elif args[:2]==['shell','getprop']:print('16m')
 
 
 class DiagnosticRunnerTest(unittest.TestCase):
+    def test_unmitigated_experiment_is_manual_only_and_normal_matrix_stays(self):
+        workflow = (ROOT / '.github/workflows/api29-memory.yml').read_text()
+        triggers = workflow.split('permissions:', 1)[0]
+        self.assertIn('workflow_dispatch:', triggers)
+        self.assertNotIn('pull_request:', triggers)
+        self.assertNotIn('push:', triggers)
+        self.assertNotIn('continue-on-error:', workflow)
+        normal = (ROOT / '.github/workflows/android.yml').read_text()
+        self.assertIn('api29_heap_preflight.py', normal)
+        self.assertIn('adb shell am instrument -w -r', normal)
+        checks = (ROOT / '.github/workflows/repository-checks.yml').read_text()
+        self.assertIn('scripts/test_api29_memory_diagnostic.py', checks)
+        self.assertIn('scripts/test_api29_boot_probe.py', checks)
+        self.assertIn('scripts/test_warm_gradle_plugins.py', checks)
+
     def run_case(self, mode='suite', **values):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

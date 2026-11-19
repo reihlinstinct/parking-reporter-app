@@ -1,6 +1,8 @@
 # API29 retained-heap diagnosis (#684)
 
-Status: diagnostic only, no memory fix and no guilty commit identified.
+Status: manual diagnostic only. The observed 16 MiB startup budget was traced to emulator initialization, not app retention. The merged API29 heap preflight (#690), with natural recovery proof in #691, protects normal CI.
+
+Run this unmitigated diagnostic only with `workflow_dispatch`. Its purpose is to retain the original bad state for investigation, so it still fails when an OOM reproduces. It does not run automatically on pull requests. Normal Android API29/30/36, display and offline runner regression checks remain required; no failure is converted into a pass.
 
 The exact green #669 head and the failing main merge have identical source trees. The first recorded failure moved between EntryPointsTest and FirstRunScreenTest; later failures include review recreation and unsaved-back tests. The observed application growth limit is 16 MiB. An allocation stack shows where memory ran out, not what retained the heap.
 

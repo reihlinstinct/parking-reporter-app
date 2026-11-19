@@ -6,6 +6,7 @@ Input: a directory of JSON files {"mode": "cold"|"warm", "run": int,
 of medians. It states a saving only with at least three cold and three warm
 runs, and says "not measured" otherwise.
 """
+import math
 import json
 import statistics
 import sys
@@ -17,11 +18,18 @@ PHASES = ('sdk_install', 'apk_build', 'cache_restore', 'boot_to_ready', 'apk_ins
 
 def load(directory: Path):
     runs = {'cold': [], 'warm': [], 'warm-fell-back-cold': []}
+    seen = set()
     for f in sorted(directory.glob('*.json')):
         d = json.loads(f.read_text())
         if d.get('mode') not in runs or not isinstance(d.get('phases'), dict):
             raise ValueError('bad timing file')
-        if any(not isinstance(v, (int, float)) or v < 0 for v in d['phases'].values()):
+        run = d.get('run')
+        if type(run) is not int or run < 0 or (d['mode'], run) in seen:
+            raise ValueError('invalid or repeated benchmark run')
+        seen.add((d['mode'], run))
+        if d.get('cache_bytes') is not None and (type(d['cache_bytes']) is not int or d['cache_bytes'] < 0):
+            raise ValueError('invalid cache size')
+        if any(type(v) not in (int, float) or not math.isfinite(v) or v < 0 for v in d['phases'].values()):
             raise ValueError('bad phase value')
         runs[d['mode']].append(d)
     return runs

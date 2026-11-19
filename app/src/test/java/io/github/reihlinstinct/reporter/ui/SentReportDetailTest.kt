@@ -23,6 +23,19 @@ class SentReportDetailTest {
         assertEquals("addr 1", d.address)
     }
 
+    @Test fun jerusalemDateDoesNotDependOnDeviceTimezoneAndBlankRowsStayHidden() {
+        val previous = java.util.TimeZone.getDefault()
+        try {
+            java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Pacific/Honolulu"))
+            val instant = java.time.Instant.parse("2026-11-16T22:30:00Z").toEpochMilli()
+            val detail = sentReportDetail(record(address = "   "), "  exact-city-id  ", instant) { "  " }
+            assertEquals("17/11/2026", detail.sentOn)
+            assertEquals("  exact-city-id  ", detail.identifier)
+            assertNull(detail.address)
+            assertNull(detail.category)
+        } finally { java.util.TimeZone.setDefault(previous) }
+    }
+
     @Test fun unknownValuesAreNullSoTheirRowsAreLeftOut() {
         val d = sentReportDetail(record(address = ""), "2611-0000002", null) { null }
         assertNull(d.sentOn)

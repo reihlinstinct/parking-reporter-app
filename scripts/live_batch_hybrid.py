@@ -9,7 +9,7 @@ import select
 import os
 import time
 
-from live_batch_input import InvalidBatch, need
+from live_batch_input import InvalidBatch, need, no_duplicates
 
 
 class BridgeAdapter:
@@ -57,7 +57,7 @@ class BridgeAdapter:
                 line.extend(chunk)
                 need(len(line) <= 1_048_576, 'private bridge response too large')
             need(line.endswith(b'\n') and line.count(b'\n') == 1, 'private bridge response invalid')
-            result = json.loads(line)
+            result = json.loads(line, object_pairs_hook=no_duplicates, parse_constant=lambda _: (_ for _ in ()).throw(ValueError('nonfinite bridge JSON')))
             need(isinstance(result, dict) and result.get('success') is True, 'municipal result unknown or refused')
             return result
         except BaseException:
@@ -92,9 +92,14 @@ class BridgeAdapter:
 
 
 def partition(manifest, ui_report_ids):
-    reports = manifest['reports']
+    need(isinstance(manifest, dict), 'invalid hybrid manifest')
+    reports = manifest.get('reports')
+    need(isinstance(reports, list) and 1 <= len(reports) <= 50, 'invalid hybrid report list')
+    need(all(isinstance(r, dict) and isinstance(r.get('reportId'), str) and r['reportId'].strip()
+             for r in reports), 'invalid hybrid report identity')
     ids = [r['reportId'] for r in reports]
-    need(isinstance(ui_report_ids, list) and len(ui_report_ids) == len(set(ui_report_ids)), 'invalid UI selection')
+    need(len(ids) == len(set(ids)), 'duplicate hybrid report identity')
+    need(isinstance(ui_report_ids, list) and all(isinstance(rid, str) for rid in ui_report_ids) and len(ui_report_ids) == len(set(ui_report_ids)), 'invalid UI selection')
     need(1 <= len(ui_report_ids) <= min(2, len(reports)) and set(ui_report_ids) <= set(ids), 'one or two UI reports required')
     return {rid: ('ui' if rid in ui_report_ids else 'direct') for rid in ids}
 
@@ -102,6 +107,7 @@ def partition(manifest, ui_report_ids):
 def run_hybrid(journal, manifest, ui_report_ids, direct, ui):
     """One whole-batch preflight; durable remote reservation/intent before writes.
 
+    Duplicate or malformed report identities fail before either preflight port.
     No automatic resume, release, route fallback or retry. If an adapter's
     preflight fails, nothing is reserved/sent. If any later step fails, stop.
     A server return followed by remote-save failure leaves intent held remotely.

@@ -11,7 +11,7 @@ spec.loader.exec_module(b)
 
 
 def write(d, name, mode, total, **extra):
-    (Path(d) / name).write_text(json.dumps({'mode': mode, 'run': 1, 'phases': {'total': total, **extra}, 'cache_bytes': 2_000_000}))
+    (Path(d) / name).write_text(json.dumps({'mode': mode, 'run': int(''.join(c for c in name if c.isdigit()) or '0'), 'phases': {'total': total, **extra}, 'cache_bytes': 2_000_000}))
 
 
 class BenchTest(unittest.TestCase):
@@ -42,6 +42,24 @@ class BenchTest(unittest.TestCase):
             out = b.report(b.load(Path(d)))
             self.assertIn('excluded): 1', out)
             self.assertIn('Saving: not measured', out)
+
+    def test_nonfinite_boolean_timings_and_duplicate_run_are_rejected(self):
+        for value in (float('nan'), float('inf'), float('-inf'), True):
+            with tempfile.TemporaryDirectory() as d:
+                write(d, 'c1.json', 'cold', value)
+                with self.assertRaises(ValueError): b.load(Path(d))
+        with tempfile.TemporaryDirectory() as d:
+            write(d, 'c1.json', 'cold', 600)
+            write(d, 'duplicate1.json', 'cold', 600)
+            with self.assertRaisesRegex(ValueError, 'repeated benchmark run'):
+                b.load(Path(d))
+
+    def test_invalid_run_and_cache_metadata_refused(self):
+        for extra in ({'run': True}, {'run': -1}, {'run': '1'}, {'cache_bytes': True}, {'cache_bytes': -1}):
+            with tempfile.TemporaryDirectory() as d:
+                path = Path(d) / 'x.json'
+                path.write_text(json.dumps(dict(mode='cold', run=0, phases={'total': 1}, cache_bytes=None) | extra))
+                with self.assertRaises(ValueError): b.load(Path(d))
 
     def test_bad_files_rejected(self):
         with tempfile.TemporaryDirectory() as d:
