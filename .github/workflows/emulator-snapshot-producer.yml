@@ -87,7 +87,11 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/ci/clean_snapshot_read_marker.py --avd-dir "$HOME/.android/avd"
-          python3 scripts/emulator_snapshot_cache.py write-manifest --avd-dir "$HOME/.android/avd" --diagnose-clean-producer
+          diagnostic=()
+          if [ "$GITHUB_REF" = refs/heads/main ]; then
+            diagnostic=(--diagnose-clean-producer)
+          fi
+          python3 scripts/emulator_snapshot_cache.py write-manifest --avd-dir "$HOME/.android/avd" "${diagnostic[@]}"
       - name: Publish (exact key, AVD directory allowlist only)
         if: steps.exists.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
