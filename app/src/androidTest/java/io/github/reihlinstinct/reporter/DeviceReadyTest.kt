@@ -23,7 +23,9 @@ class DeviceReadyTest {
         val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
         val set = shell("locksettings set-pin $pin")
         if (!set.contains("set to")) { println("DEVICE_READY_DRYCHECK skipped: emulator did not accept a PIN"); return }
+        val previousTimeout = shell("settings get secure lock_screen_lock_after_timeout").trim()
         try {
+            shell("settings put secure lock_screen_lock_after_timeout 0")
             shell("input keyevent KEYCODE_SLEEP")
             // API 36 can take longer than 1.5 s to raise the keyguard after sleep (#444): poll up to 15 s.
             val until = System.currentTimeMillis() + 15_000
@@ -34,6 +36,11 @@ class DeviceReadyTest {
             assertTrue("device was not made ready", ready)
             assertFalse(DeviceReady.keyguardLocked(context))
         } finally {
+            if (previousTimeout.matches(Regex("[0-9]+"))) {
+                shell("settings put secure lock_screen_lock_after_timeout $previousTimeout")
+            } else {
+                shell("settings delete secure lock_screen_lock_after_timeout")
+            }
             shell("locksettings clear --old $pin")
             shell("input keyevent KEYCODE_WAKEUP")
             shell("wm dismiss-keyguard")

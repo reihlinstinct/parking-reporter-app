@@ -47,6 +47,7 @@ jobs:
           python3 scripts/run_unittest_file.py scripts/test_history_audit.py
           python3 scripts/run_unittest_file.py scripts/test_prepare_hybrid_batch.py
           python3 scripts/run_unittest_file.py scripts/test_run_unittest_file.py
+          python3 scripts/run_unittest_file.py scripts/test_warm_gradle_plugins.py
           python3 scripts/run_unittest_file.py scripts/test_live_batch_derive.py
       - name: Hybrid and API-only write-boundary tests (offline only)
         run: |
@@ -89,6 +90,7 @@ jobs:
       - name: Regression test test summaries and strict installed-upgrade gates
         run: |
           python3 -m unittest discover -s tests -p 'test_test_summary.py' -v
+          python3 -m unittest discover -s tests -p 'test_coverage_scope.py' -v
           python3 -m unittest discover -s tests -p 'test_upgrade*.py' -v
           python3 -m unittest discover -s tests -p 'test_namespace_upgrade_workflow.py' -v
       - name: Standalone bridge dependency integrity tripwires
@@ -101,6 +103,8 @@ jobs:
         run: python3 -m unittest discover -s tests -p 'test_architecture_docs.py' -v
       - name: Encrypted live input bundle regression tests
         run: python3 -m unittest discover -s tests -p 'test_live_bundle.py' -v
+      - name: Native ELF alignment inspector regressions (synthetic APKs only)
+        run: python3 -m unittest discover -s tests -p 'test_native_alignment.py' -v
       - name: Mock municipal API server tests
         run: python3 -m unittest discover -s tests -p 'test_mock_municipal.py' -v
       - name: PRPKG2 contract schema and golden values
@@ -124,6 +128,7 @@ jobs:
       - name: Emulator snapshot cache key, provenance and benchmark tests (offline)
         run: |
           python3 -m unittest discover -s tests -p 'test_emulator_snapshot_cache.py' -v
+          python3 -m unittest discover -s tests -p 'test_snapshot_marker_cleanup.py' -v
           python3 -m unittest discover -s tests -p 'test_benchmark_snapshot_cache.py' -v
       - name: Offline OCR network-isolation behavioral regression tests
         run: /tmp/venv/bin/python -m unittest discover -s tests -p 'test_ocr_network_isolation.py' -v

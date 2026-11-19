@@ -90,7 +90,7 @@ public class UnicodeProbe {
         with self.assertRaises(InvalidBatch): b.request('create')
 
     def test_malformed_negative_or_extra_responses_burn_session(self):
-        for response in ['not-json', '{"success":false}', '[]', '{"success":true}\\n{"success":true}']:
+        for response in ['{"success":false,"success":true}', '{"success":true,"case":{"id":NaN}}', 'not-json', '{"success":false}', '[]', '{"success":true}\\n{"success":true}']:
             with self.subTest(response=response):
                 b=self.bridge('import sys;sys.stdin.readline();print('+repr(response)+',flush=True)')
                 with self.assertRaises(InvalidBatch): b.request('create')

@@ -19,7 +19,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         raise ValueError('batch redirects are forbidden')
 
 
-def stage(destination, env=os.environ, opener=None, *, encrypted_only=False):
+def stage(destination, env=os.environ, opener=None, *, encrypted_only=True):
     ref = env.get('BATCH_PRIVATE_REF', '')
     path = env.get('BATCH_PRIVATE_PATH', '')
     digest = env.get('BATCH_APPROVED_OUTER_SHA256', '')
