@@ -142,7 +142,10 @@ class KeyboardInsetTest {
         val decor = compose.activity.window.decorView
         val inset = ViewCompat.getRootWindowInsets(decor)!!.getInsets(WindowInsetsCompat.Type.ime()).bottom
         val target = compose.onNodeWithText(label).fetchSemanticsNode().boundsInRoot
-        val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+        // Text-selection handles can add a tiny popup root on API36. Measure
+        // the root containing this action, not an arbitrary global root.
+        val root = compose.onNode(isRoot() and hasAnyDescendant(hasText(label)))
+            .fetchSemanticsNode().boundsInRoot
         assertTrue("Real keyboard must have a measurable inset", inset > 0)
         // imePadding shrinks the scroll viewport. The complete action must fit.
         assertTrue("Action remains in the visible content: $target vs $root", target.top >= root.top && target.bottom <= minOf(root.bottom, (decor.height - inset).toFloat()))

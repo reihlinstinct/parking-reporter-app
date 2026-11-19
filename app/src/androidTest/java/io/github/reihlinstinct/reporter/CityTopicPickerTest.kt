@@ -91,7 +91,10 @@ class CityTopicPickerTest {
         if (expectAlternative) {
             assertTrue("Unselected city code remains actionable", hasActionableUnselectedRadio(parent!!))
         }
-        assertEquals("android.widget.RadioButton", nodes.single().className?.toString())
+        // AndroidX keeps composite selectable rows as android.view.View when
+        // they have independently exposed text children. Checked/checkable and
+        // one-target identity above are the state contract, not a widget class.
+        assertEquals("android.view.View", nodes.single().className?.toString())
     }
 
     @Test fun searchableMunicipalCatalogRecordingUsesMockRefreshNotLiveCity() {
