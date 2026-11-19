@@ -252,7 +252,17 @@ class CityTopicPickerTest {
         assertEquals("All four editable characters must have bounds", 4, rects.size)
         // boundsInWindow and native screen bounds differ by the application window offset.
         val window = android.graphics.Rect()
-        automation.windows.single { it.id == editor.windowId }.getBoundsInScreen(window)
+        val originalService = automation.serviceInfo
+        val originalFlags = originalService.flags
+        try {
+            originalService.flags = originalFlags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+            automation.serviceInfo = originalService
+            compose.waitUntil(5_000) { automation.windows.any { it.id == editor.windowId } }
+            automation.windows.single { it.id == editor.windowId }.getBoundsInScreen(window)
+        } finally {
+            originalService.flags = originalFlags
+            automation.serviceInfo = originalService
+        }
         assertTrue("Above label must finish before actual editable text starts",
             label.bottom + window.top <= rects.minOf { it.top })
     }
