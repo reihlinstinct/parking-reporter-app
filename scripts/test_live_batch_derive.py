@@ -51,6 +51,15 @@ class DeriveTest(unittest.TestCase):
             for name, data in self.files.items(): z.writestr(name, data)
         return validate_zip(p, hashlib.sha256(p.read_bytes()).hexdigest(), set(self.policy), hashlib.sha256(a).hexdigest(), topic_policy=self.policy)
 
+    def test_direct_derivation_boundary_refuses_malformed_dependencies(self):
+        from live_batch_derive import derive_manifest
+        from live_batch_input import InvalidBatch
+        for files, subjects, policy in [(None, set(self.policy), self.policy),
+                ({'photos/a.jpg': 'not bytes'}, set(self.policy), self.policy),
+                ({}, ['9000'], self.policy), ({}, set(self.policy), None)]:
+            with self.assertRaises(InvalidBatch):
+                derive_manifest(self.m, files, self.directory, subjects, policy)
+
     def test_smallest_address_input_has_no_photo_plate_time_hash_or_id(self):
         m = self.read(); r = m['reports'][0]
         self.assertEqual((r['latitude'], r['longitude']), (SYNTHETIC_LAT, SYNTHETIC_LON))
