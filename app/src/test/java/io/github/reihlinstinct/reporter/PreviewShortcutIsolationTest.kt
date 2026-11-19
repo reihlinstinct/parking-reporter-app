@@ -17,7 +17,11 @@ class PreviewShortcutIsolationTest {
 
     @Test fun previewWorkflowWarmsPluginsButDoesNotRetryBuildOrChangeVerification() {
         val workflow = File("../.github/workflows/side-by-side-preview.yml").readText()
-        assertTrue(workflow.indexOf("python3 scripts/warm_gradle_plugins.py") < workflow.indexOf("assembleDebug"))
+        val warmIndex = workflow.indexOf("python3 scripts/warm_gradle_plugins.py")
+        val buildIndex = workflow.indexOf("assembleDebug")
+        assertTrue("Warm-up command must exist", warmIndex >= 0)
+        assertTrue("Build command must exist", buildIndex >= 0)
+        assertTrue("Warm-up must precede build", warmIndex < buildIndex)
         assertEquals(1, Regex("assembleDebug").findAll(workflow).count())
         assertFalse(workflow.contains("dependency-verification off"))
         assertFalse(workflow.contains("continue-on-error"))
