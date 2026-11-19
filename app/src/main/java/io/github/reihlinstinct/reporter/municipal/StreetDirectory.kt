@@ -224,6 +224,13 @@ class StreetDirectory private constructor(
             if (data["version"] != 1L) throw MunicipalInputException("Unsupported address lookup format.")
             val streetRows = data["streets"] as? List<Any?>
                 ?: throw MunicipalInputException("Unsupported address lookup format.")
+            val addressRows = data["addresses"] as? List<Any?> ?: emptyList()
+            return loadRows(streetRows, addressRows.asSequence())
+        }
+
+        /** Builds address points one row at a time; Android's asset reader never retains a JSON tree. */
+        @Suppress("UNCHECKED_CAST")
+        internal fun loadRows(streetRows: List<Any?>, addressRows: Sequence<Any?>): StreetDirectory {
             val streets = LinkedHashMap<String, String>()
             val aliases = LinkedHashMap<String, MutableSet<String>>()
             for (row in streetRows) {
@@ -242,7 +249,6 @@ class StreetDirectory private constructor(
             }
             val streetWords = streets.map { (c, n) -> c to words(n) }
             val points = mutableListOf<Point>()
-            val addressRows = data["addresses"] as? List<Any?> ?: emptyList()
             for (row in addressRows) {
                 val entry = row as? List<Any?> ?: continue
                 if (entry.size < 4) continue

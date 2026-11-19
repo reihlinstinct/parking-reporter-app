@@ -91,6 +91,10 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_test_summary.py' -v
           python3 -m unittest discover -s tests -p 'test_upgrade*.py' -v
           python3 -m unittest discover -s tests -p 'test_namespace_upgrade_workflow.py' -v
+      - name: Standalone bridge dependency integrity tripwires
+        run: |
+          python3 -m unittest discover -s tests -p 'test_bridge_integrity.py' -v
+          python3 -m unittest discover -s tests -p 'test_trial_evidence_lifecycle.py' -v
       - name: Independent review verifier regression tests
         run: python3 -m unittest discover -s tests -p 'test_review_gate.py' -v
       - name: Architecture documentation source-map checks

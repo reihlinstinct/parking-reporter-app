@@ -40,6 +40,11 @@ def stage(destination, env=os.environ, opener=None, *, encrypted_only=False):
     })
     opener = opener or urllib.request.build_opener(NoRedirect())
     destination = Path(destination)
+    # Check the lexical ancestry before mkdir: a private-looking immediate parent
+    # may still redirect through a symlink. This is a trusted disposable-runner
+    # tree, not a defence against a concurrent same-UID rename adversary.
+    if any(p.is_symlink() for p in (destination, *destination.parents)):
+        raise ValueError('private staging path must not contain symlinks')
     destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     if destination.parent.is_symlink() or destination.parent.stat().st_mode & 0o077:
         raise ValueError("private staging directory required")

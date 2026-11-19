@@ -20,6 +20,16 @@ class AddressLookupPinTest {
         }
     }
 
+    @Test fun streamedPinRefusesChangedBytes() {
+        assertThrows(AddressLookupMismatchException::class.java) {
+            "synthetic invalid asset".byteInputStream().use { AddressLookupPin.verifyPinned(it) }
+        }
+    }
+
+    @Test fun streamedPinMatchesBundledBytesWithoutWholeTextCopy() {
+        File("src/main/assets/addresses.json").inputStream().use { AddressLookupPin.verifyPinned(it) }
+    }
+
     @Test fun pinMatchesThePrivateFileWhenPresentLocally() {
         // Shipping default must exist and match the production pin.
         val file = File("src/main/assets/addresses.json")

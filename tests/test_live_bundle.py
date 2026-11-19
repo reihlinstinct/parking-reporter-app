@@ -50,6 +50,28 @@ class LiveBundleTest(unittest.TestCase):
         finally:
             m.MAX_PHOTO = old
 
+    def test_encrypted_zip_flags_refuse_before_reading_payload(self):
+        # Set flag bit in both ZIP headers, without requiring private ciphertext.
+        data = bytearray(self.bundle())
+        import struct
+        for signature, offset in [(b'PK\x03\x04', 6), (b'PK\x01\x02', 8)]:
+            start = 0
+            while (start := data.find(signature, start)) >= 0:
+                flags = struct.unpack_from('<H', data, start + offset)[0]
+                struct.pack_into('<H', data, start + offset, flags | 1)
+                start += 4
+        with self.assertRaisesRegex(ValueError, 'plain regular file'):
+            m.validate_zip(bytes(data), m.sha(self.photo), m.sha(self.directory))
+
+    def test_malformed_or_wrong_shaped_address_json_refuses(self):
+        for directory in [b'{', b'null', b'[]', b'{"streets":[],"addresses":{}}']:
+            stream = io.BytesIO()
+            with zipfile.ZipFile(stream, 'w') as archive:
+                archive.writestr('photo.jpg', self.photo)
+                archive.writestr('addresses.json', directory)
+            with self.assertRaises(ValueError):
+                m.validate_zip(stream.getvalue(), m.sha(self.photo), m.sha(directory))
+
     def test_workflow_removes_private_token_and_fixture_fallback(self):
         workflow = Path('.github/workflows/live-emulator-e2e.yml').read_text()
         self.assertIn('python3 scripts/stage-live-bundle.py', workflow)

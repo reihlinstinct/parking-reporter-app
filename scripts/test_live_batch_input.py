@@ -60,6 +60,19 @@ class BatchInputTest(unittest.TestCase):
     def read(self, sha):
         return validate_zip(self.path, sha, {'1145', '1146'}, self.sha(self.addresses))
 
+    def test_legacy_plate_schema_remains_separate_from_modern_optional_plate(self):
+        from live_batch_input import validate_manifest
+        files = {'manifest.json': b'{}', 'addresses.json': self.addresses, 'photos/a.jpg': self.photo}
+        legacy = copy.deepcopy(self.manifest)
+        legacy['reports'][0]['plate'] = ''
+        with self.assertRaises(InvalidBatch):
+            validate_manifest(legacy, files, {'1145'})
+        modern = copy.deepcopy(legacy)
+        modern['schemaVersion'] = 2
+        self.assertEqual('', validate_manifest(modern, files, {'1145'})['reports'][0]['plate'])
+        # Schema version does not infer or authorize a topic's plate policy.
+        self.assertEqual('', modern['reports'][0]['plate'])
+
     def test_valid_no_side_effects(self):
         result = self.read(self.write())
         self.assertEqual(result['batchId'], 'synthetic')

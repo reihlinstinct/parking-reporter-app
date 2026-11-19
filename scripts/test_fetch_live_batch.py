@@ -104,6 +104,23 @@ class FetchTest(unittest.TestCase):
                         {'Location': 'https://other.invalid/'}, 'https://other.invalid/')
         # Offline refusal proof only. No approved private package was retrieved.
 
+    def test_symlink_in_destination_or_any_ancestor_refuses_before_fetch(self):
+        actual = Path(self.tmp.name) / 'actual'
+        actual.mkdir(mode=0o700)
+        link = Path(self.tmp.name) / 'link'
+        link.symlink_to(actual, target_is_directory=True)
+        for destination in [link / 'input.zip', link / 'nested' / 'input.zip']:
+            opener = Opener()
+            with self.assertRaisesRegex(ValueError, 'symlinks'):
+                stage(destination, self.env, opener)
+            self.assertEqual([], opener.calls)
+            self.assertEqual([], list(actual.iterdir()))
+        self.dest.parent.mkdir(mode=0o700)
+        self.dest.symlink_to(actual / 'not-created')
+        with self.assertRaisesRegex(ValueError, 'symlinks'):
+            stage(self.dest, self.env, Opener())
+        self.assertFalse((actual / 'not-created').exists())
+
     def test_no_auth_redirect(self):
         with self.assertRaisesRegex(ValueError, 'redirects are forbidden'):
             NoRedirect().redirect_request(None, None, 302, '', {}, 'https://other.invalid/')
