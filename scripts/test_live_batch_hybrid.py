@@ -49,6 +49,17 @@ class HybridTest(unittest.TestCase):
             run_hybrid(journal, self.m, ['a'], direct, None)
         self.assertEqual([], journal.mock_calls)
         self.assertEqual([], direct.mock_calls)
+    def test_duplicate_or_malformed_report_identity_stops_before_ports(self):
+        for reports in ([], None, [None], [{}], [dict(reportId=' ')],
+                        [dict(reportId='a'), dict(reportId='a')]):
+            with self.subTest(reports=reports), self.assertRaises(InvalidBatch):
+                run_hybrid(self.j, {'reports': reports}, ['a'], self.direct, self.ui)
+            self.assertEqual([], self.events)
+            self.assertEqual(0, self.j.db.execute('SELECT count(*) FROM reports').fetchone()[0])
+        for selected in ([{}], [None], ['a', []]):
+            with self.assertRaises(InvalidBatch):
+                run_hybrid(self.j, self.m, selected, self.direct, self.ui)
+            self.assertEqual([], self.events)
 
     def test_readonly_preflight_failure_never_reserves(self):
         def fail(reports): raise InvalidBatch('synthetic login failure')

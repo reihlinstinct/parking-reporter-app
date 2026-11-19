@@ -30,7 +30,25 @@ class ReviewGateTest(unittest.TestCase):
         self.assertFalse(evaluate(HEAD, [tab, review(id=2, user={'login': 'reihl-tab'}, state='DISMISSED')])[0])
         self.assertFalse(evaluate(HEAD, [tab, review(id=2, user={'login': 'reihl-poke'}, state='CHANGES_REQUESTED')])[0])
         workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/review-gate.yml').read_text()
-        self.assertIn("REVIEWERS = {'reihl', 'reihl-poke', 'reihl-folk', 'reihl-tab'}", workflow)
+        self.assertIn("REVIEWERS = {'reihl', 'reihl-poke', 'reihl-folk', 'reihl-tab', 'reihl-pally'}", workflow)
+
+    def test_pally_exact_head_pass_is_accepted(self):
+        passed = review(user={'login': 'reihl-pally', 'type': 'User'})
+        self.assertTrue(evaluate(HEAD, [passed])[0])
+
+    def test_pally_cannot_review_own_pr(self):
+        passed = review(user={'login': 'reihl-pally', 'type': 'User'})
+        self.assertFalse(evaluate(HEAD, [passed], author='reihl-pally')[0])
+
+    def test_pally_stale_head_is_rejected(self):
+        passed = review(user={'login': 'reihl-pally', 'type': 'User'})
+        self.assertFalse(evaluate('b' * 40, [passed])[0])
+
+    def test_pally_later_findings_blocks_even_another_pass(self):
+        passed = review(user={'login': 'reihl-pally', 'type': 'User'})
+        findings = review(id=2, user={'login': 'reihl-pally', 'type': 'User'},
+                          body='Verdict: FINDINGS')
+        self.assertFalse(evaluate(HEAD, [passed, findings, review(id=3)])[0])
 
     def test_exact_head_and_latest_dismissal(self):
         self.assertTrue(evaluate(HEAD, [review()])[0])
