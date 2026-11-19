@@ -18,7 +18,7 @@ fun AddressDataTools(busy: Boolean, online: Boolean, status: String,
                      onRefresh: () -> Unit, onImport: () -> Unit, onClear: () -> Unit) {
     val strings = LocalStrings.current
     Column(Modifier.testTag("address-data-tools")) {
-        Text(strings.t("settings.address.title"), style = MaterialTheme.typography.titleMedium)
+        Text(strings.t("settings.address.title"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("address-title"))
         Text(strings.t("settings.address.description"))
         Text(strings.t("settings.address.reset_hint"))
         TextButton(enabled = !busy && online, onClick = onRefresh, modifier = Modifier.testTag("address-refresh")) {

@@ -24,12 +24,18 @@ class AddressSettingsTest {
         }
         compose.onNodeWithTag("address-import").assertDoesNotExist()
         compose.onNodeWithText("חיבור 106 מתקדם").performScrollTo().performClick()
+        compose.onNodeWithTag("address-title").performScrollTo().assertIsDisplayed()
+        screenshot("address-advanced-settings-top.png")
         compose.onNodeWithTag("address-import").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("address-refresh").assertIsEnabled()
         compose.onNodeWithTag("address-clear").performScrollTo().assertIsDisplayed()
+        screenshot("address-advanced-settings-bottom.png")
+    }
+
+    private fun screenshot(name: String) {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        File(context.filesDir, "address-advanced-settings.png").outputStream().use {
-            compose.onNodeWithTag("address-data-tools").captureToImage().asAndroidBitmap()
+        File(context.filesDir, name).outputStream().use {
+            compose.onRoot().captureToImage().asAndroidBitmap()
                 .compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
         }
     }
