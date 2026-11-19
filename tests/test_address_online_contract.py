@@ -20,8 +20,10 @@ class OnlineAddressContractTest(unittest.TestCase):
         self.assertEqual(22627,points)
     def test_large_asset_not_packaged_and_upgrade_fixture_retained(self):
         build=(ROOT/'app/build.gradle.kts').read_text()
-        self.assertIn('getByName("main") { assets.exclude("addresses.json") }',build)
-        self.assertIn('"namespace-upgrade/**"',build)
+        self.assertIn('from("src/main/assets") { exclude("addresses.json") }',build)
+        self.assertIn('getByName("main") { assets.setSrcDirs(listOf(layout.buildDirectory.dir("generated/regional-main-assets").get().asFile)) }',build)
+        self.assertIn('getByName("androidTest") { assets.srcDir(layout.buildDirectory.dir("generated/address-test-assets").get().asFile) }',build)
+        self.assertNotIn('getByName("androidTest") { assets.setSrcDirs',build)
     def test_no_geocoder_fallback_from_app_shell_and_import_advanced_only(self):
         shell=(ROOT/'app/src/main/java/io/github/reihlinstinct/reporter/ui/AppShell.kt').read_text()
         settings=(ROOT/'app/src/main/java/io/github/reihlinstinct/reporter/ui/SettingsScreen.kt').read_text()

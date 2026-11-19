@@ -5,6 +5,15 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+val prepareRegionalMainAssets by tasks.registering(Sync::class) {
+    from("src/main/assets") { exclude("addresses.json") }
+    into(layout.buildDirectory.dir("generated/regional-main-assets"))
+}
+val prepareAddressTestAsset by tasks.registering(Sync::class) {
+    from("src/main/assets") { include("addresses.json") }
+    into(layout.buildDirectory.dir("generated/address-test-assets"))
+}
+
 android {
     namespace = "io.github.reihlinstinct.reporter"
     compileSdk = 37
@@ -26,15 +35,19 @@ android {
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     lint { abortOnError = true }
     sourceSets {
-        getByName("main") { assets.exclude("addresses.json") }
+        getByName("main") { assets.setSrcDirs(listOf(layout.buildDirectory.dir("generated/regional-main-assets").get().asFile)) }
         getByName("test") { resources.srcDir("src/main/assets") }
-        getByName("androidTest") { assets.srcDir("src/main/assets"); assets.include("addresses.json", "namespace-upgrade/**", "city-subjects-public-20261111.json") }
+        getByName("androidTest") { assets.srcDir(layout.buildDirectory.dir("generated/address-test-assets").get().asFile) }
     }
     buildTypes {
         debug {
             isTestCoverageEnabled = true
         }
     }
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn(prepareRegionalMainAssets, prepareAddressTestAsset)
 }
 
 tasks.register<JacocoReport>("jacocoDebugUnitTestReport") {
