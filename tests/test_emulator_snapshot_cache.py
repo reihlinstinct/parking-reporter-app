@@ -220,6 +220,26 @@ class CliTest(unittest.TestCase):
             rc = m.main(list(a), self.env if env is None else env)
         return rc, buf.getvalue()
 
+    def test_clean_diagnostic_guard_and_benchmark_without_flag(self):
+        branch = dict(self.env, GITHUB_REF='refs/heads/synthetic-benchmark')
+        rc, out = self.run_cli('write-manifest', '--avd-dir', str(self.avd),
+                               '--diagnose-clean-producer', env=branch)
+        self.assertEqual(3, rc)
+        self.assertIn('clean producer diagnostics require main', out)
+        self.assertFalse((self.avd / 'provenance.json').exists())
+        rc, out = self.run_cli('write-manifest', '--avd-dir', str(self.avd), env=branch)
+        self.assertEqual(0, rc)
+        self.assertEqual(branch['GITHUB_REF'], json.loads((self.avd / 'provenance.json').read_text())['producer_ref'])
+
+    def test_producer_flag_is_only_enabled_inside_main_condition(self):
+        workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/emulator-snapshot-producer.yml').read_text()
+        start = workflow.index('          diagnostic=()')
+        end = workflow.index('      - name: Publish', start)
+        block = workflow[start:end]
+        self.assertIn('if [ "$GITHUB_REF" = refs/heads/main ]; then\n            diagnostic=(--diagnose-clean-producer)\n          fi', block)
+        self.assertIn('"${diagnostic[@]}"', block)
+        self.assertEqual(1, block.count('--diagnose-clean-producer'))
+
     def test_roundtrip_and_source_change(self):
         rc, out = self.run_cli('write-manifest', '--avd-dir', str(self.avd))
         self.assertEqual((rc, out.strip()), (0, 'SNAPSHOT-MANIFEST-WRITTEN'))
