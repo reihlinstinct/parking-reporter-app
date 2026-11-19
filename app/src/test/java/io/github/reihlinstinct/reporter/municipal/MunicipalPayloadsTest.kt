@@ -35,6 +35,15 @@ class MunicipalPayloadsTest {
         coordinateY = 630500,
     )
 
+    @Test fun damagedUnicodeRefusesBeforeContactPayloadExists() {
+        for (name in listOf("\uFFFD\uFFFD", "synthetic\uD800", "synthetic\uDC00")) {
+            assertThrows(MunicipalInputException::class.java) { MunicipalPayloads.buildContact(reporter.copy(firstName = name)) }
+            assertThrows(MunicipalInputException::class.java) { MunicipalPayloads.buildContact(reporter.copy(lastName = name)) }
+            assertThrows(MunicipalInputException::class.java) { MunicipalPayloads.checkText(name, "Synthetic text") }
+        }
+        assertEquals("בדיקה 😀", MunicipalPayloads.checkText("בדיקה 😀", "Synthetic text"))
+    }
+
     @Test
     fun contactBodyMatchesGoldenBytes() {
         val body = MunicipalPayloads.buildContact(reporter)

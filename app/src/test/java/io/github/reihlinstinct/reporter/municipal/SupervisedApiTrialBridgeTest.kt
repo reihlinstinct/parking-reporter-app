@@ -42,7 +42,10 @@ class SupervisedApiTrialBridgeTest {
             val report = report(root); val payload = SupervisedApiTrialBridge.payload(report)
             for (field in listOf("CaseStreetCode", "CaseStreetName", "CaseHouseNumber")) assertEquals("", payload[field])
             assertEquals(report["locationDescription"], payload["CaseAddressText"])
-            assertEquals(Itm.toItm(31.8, 35.2).first, payload["CoordinateX"])
+            val itm: Pair<Int, Int> = Itm.toItm(31.8, 35.2)
+            assertTrue(payload["CoordinateX"] is Int)
+            assertTrue(payload["CoordinateY"] is Int)
+            assertEquals(itm.first, payload["CoordinateX"])
             assertEquals(Itm.toItm(31.8, 35.2).second, payload["CoordinateY"])
             assertFalse(payload.containsKey("VehicleNumber"))
             assertEquals(report["text"], payload["CaseDescription"])
@@ -51,6 +54,20 @@ class SupervisedApiTrialBridgeTest {
         } finally { root.deleteRecursively() }
     }
 
+    @Test fun coordinateEnvelopeMatchesPythonInclusiveEdges() {
+        val root = Files.createTempDirectory("synthetic-envelope").toFile()
+        try {
+            val r = report(root)
+            for (lat in listOf(31.65, 31.95)) for (lon in listOf(35.05, 35.35)) {
+                SupervisedApiTrialBridge.payload(r + mapOf("latitude" to lat, "longitude" to lon))
+            }
+            for ((lat, lon) in listOf(31.649999 to 35.2, 31.950001 to 35.2, 31.8 to 35.049999, 31.8 to 35.350001)) {
+                assertThrows(IllegalArgumentException::class.java) {
+                    SupervisedApiTrialBridge.payload(r + mapOf("latitude" to lat, "longitude" to lon))
+                }
+            }
+        } finally { root.deleteRecursively() }
+    }
     @Test fun prepareIsOfflineCreateAndAttachAreSeparateAndBurned() {
         val root = Files.createTempDirectory("synthetic-trial").toFile()
         try {

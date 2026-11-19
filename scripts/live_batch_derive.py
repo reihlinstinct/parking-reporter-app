@@ -156,7 +156,10 @@ def derive_manifest(m, files, directory, subjects, topic_policy):
     need(type(m.get('schemaVersion', 2)) is int and m.get('schemaVersion', 2) == 2)
     need(isinstance(m.get('reports'), list) and 1 <= len(m['reports']) <= 50)
     need(isinstance(directory, dict) and directory.get('version') == 1, 'unsupported address directory')
+    need(isinstance(topic_policy, dict), 'invalid independent topic policy')
     need(all(isinstance(k, str) and isinstance(v, dict) and isinstance(v.get('names', []), list) and all(isinstance(n, str) for n in v.get('names', [])) for k, v in topic_policy.items()), 'invalid independent topic policy')
+    need(isinstance(files, dict) and all(isinstance(k, str) and isinstance(v, bytes) for k, v in files.items()), 'invalid derivation files')
+    need(isinstance(subjects, set) and all(isinstance(s, str) for s in subjects), 'invalid derivation subjects')
     reports = []
     allowed = {'reportId', 'text', 'textSha256', 'plate', 'address', 'latitude', 'longitude', 'capturedAt', 'subjectCode', 'topic', 'photos'}
     for raw in m['reports']:

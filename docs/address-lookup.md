@@ -132,29 +132,45 @@ both sides is expected for addresses outside OSM/registry coverage).
 - The in-app attribution lives in
   `app/src/main/assets/i18n/strings.json` (`licenses.*` keys).
 
-## On-device lookup precedence and updates
+## Bundled production default (2026-11-18)
 
-The first installed candidate wins: app-specific external files directory,
-then noBackupFilesDir, then the bundled development asset. A present but stale
-external copy blocks submission even when a matching copy exists later in the
-list. This is deliberate fail-closed behavior; replace or remove the stale
-first copy rather than bypassing the pin. Missing and mismatched files have
-different UI messages.
+The APK now includes addresses.json at SHA-256
+`5eaa83a9eb9253798109555bf2f6ea6ab6ec941a86e86c15c6761b2e5ee046d4`:
+3,690 street rows and 22,627 address points. It is the same exact file used
+by the existing pinned production lane, not the regenerated reference build above.
 
-The pin covers the whole file byte-for-byte. Any regeneration or reformatting
-requires an app release carrying the new pin and coordinated installation of
-the matching private file. The file itself must not enter this public repo.
-Synthetic E2E uses the test-only in-memory directory seam from #185, not an
-override of the production pin or an installed-file mutation.
+Provenance: the owner stated on 2026-11-08 that we created this file and
+that its package was NOT supplied by the municipality, although it uses
+the municipality API. On 2026-11-18 the owner identified it as OSM-licensed
+and selected bundling the existing file rather than requiring manual import.
+Earlier comments describing it as municipality-supplied were inaccurate.
+Verification gap: the original generator and exact source snapshots for these
+bytes have not been recovered. OSM derivation of this legacy file is the owner's
+statement, not independently reproduced provenance. Do not confuse this file's
+hash/counts with the open generator's documented output above.
 
-## Manual live-emulator workflow
+Address points are distributed under ODbL1.0, attributed to
+© OpenStreetMap contributors, https://www.openstreetmap.org/copyright .
+The corresponding database itself is available as this repository's
+`app/src/main/assets/addresses.json` and inside the APK; derivative address
+databases retain ODbL share-alike. Street codes/names in the reproducible
+replacement come from the national registry under data.gov.il terms; exact
+legacy street-input provenance is part of the outstanding verification gap.
+The Settings licence screen names both sources and links the applicable notices.
 
-The protected `m0-trial-submit` environment supplies a temporary
-`PRIVATE_LOOKUP_READ_TOKEN`, scoped to Contents:read on the private source
-repository only. The workflow downloads the directory outside the evidence
-bundle, verifies the production whole-file pin, installs it in the app's
-`no_backup/addresses.json`, and verifies its device hash before instrumentation.
-Missing, wrong or unreadable data fails before any tap. No lookup data is
-committed or uploaded as an artifact; runner/device copies are removed.
-Revoke the temporary token after the night's test, verify 401, then remove
-the environment secret. Never copy it into repository-level secrets.
+The default loader reads and verifies the bundled file, without a download,
+manual provisioning or device-location access. A missing or mismatched asset
+refuses and disables exact-address search. A failed unique-address lookup also
+disables that search until its input changes. Optional Settings imports of a
+different schema-valid file need their own override policy and are follow-up,
+not a prerequisite to normal lookup.
+
+## Bounded-memory APK loading
+
+The Android bundled loader verifies the unchanged asset SHA-256 in an 8 KiB buffer,
+then reopens the immutable APK asset and streams address rows into the directory.
+It never holds the whole JSON source string and address-row tree together.
+Both the app and fresh-install instrumentation use this same loader.
+This fixes the API29 16 MiB heap exhaustion observed while duplicating the source
+text in integrated PR669. No larger heap, removed assertion, changed asset or pin
+is needed. The generic JVM string loader remains for contract tests.

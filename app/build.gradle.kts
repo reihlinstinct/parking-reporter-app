@@ -147,3 +147,9 @@ val testApiOutgoingPhoto by tasks.registering(Test::class) {
 tasks.matching { it.name == "testDebugUnitTest" }.configureEach {
     dependsOn(testApiOutgoingPhoto)
 }
+
+// Source-boundary unit tests must rerun for source-only edits, including androidTest.
+tasks.withType<Test>().configureEach {
+    inputs.files(fileTree("src/main") { include("**/*.kt", "**/*.java") })
+    inputs.files(fileTree("src/androidTest") { include("**/*.kt", "**/*.java") })
+}

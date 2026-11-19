@@ -54,6 +54,10 @@ jobs:
           python3 scripts/run_unittest_file.py scripts/test_live_batch_api.py
       - name: UI boundary adapter grant-order tests (fake device only)
         run: python3 scripts/test_live_batch_ui_adapter.py
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+        with:
+          distribution: temurin
+          java-version: '17'
       - name: Private bridge subprocess timeout and death tests (synthetic only)
         run: python3 scripts/test_batch_bridge_process.py
       - name: Test pre-start proof through encryption and shredding
@@ -88,6 +92,10 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_coverage_scope.py' -v
           python3 -m unittest discover -s tests -p 'test_upgrade*.py' -v
           python3 -m unittest discover -s tests -p 'test_namespace_upgrade_workflow.py' -v
+      - name: Standalone bridge dependency integrity tripwires
+        run: |
+          python3 -m unittest discover -s tests -p 'test_bridge_integrity.py' -v
+          python3 -m unittest discover -s tests -p 'test_trial_evidence_lifecycle.py' -v
       - name: Independent review verifier regression tests
         run: python3 -m unittest discover -s tests -p 'test_review_gate.py' -v
       - name: Architecture documentation source-map checks

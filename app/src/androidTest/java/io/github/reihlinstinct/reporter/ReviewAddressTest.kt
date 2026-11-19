@@ -1,5 +1,6 @@
 package io.github.reihlinstinct.reporter
 
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
@@ -33,6 +34,54 @@ class ReviewAddressTest {
         Evidence("address-fixture", "a".repeat(64), "2026-01-01T12:00:00+02:00", 31.77, 35.21),
         "1234567", "", "sidewalk_parking", "תיאור בדיקה בלבד", setOf("address_needs_confirmation"))
 
+    @Test fun unavailableAddressDataDisablesExactSearchEvenWithCallback() {
+        val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null), confirmedLatitude = null, confirmedLongitude = null)
+        compose.setContent { AppTheme { ReviewScreen(initial, null, {}, {},
+            manualAddressLookup = { _, _ -> error("must not be called") }, addressDataAvailable = false,
+            topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
+        compose.onNodeWithText("רחוב בירושלים").performScrollTo().performTextReplacement("אגריפס")
+        compose.onNodeWithText("מספר בית").performScrollTo().performTextReplacement("12")
+        compose.onNodeWithText("חפש כתובת מדויקת").performScrollTo().assertIsNotEnabled()
+        val out = File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir, "address-unavailable-disabled.png")
+        out.outputStream().use { compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
+    @Test fun failedLookupDisablesUntilInputChanges() {
+        val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null), confirmedLatitude = null, confirmedLongitude = null)
+        compose.setContent { AppTheme { ReviewScreen(initial, null, {}, {},
+            manualAddressLookup = { _, _ -> error("synthetic no match") },
+            topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
+        compose.onNodeWithText("רחוב בירושלים").performScrollTo().performTextReplacement("אגריפס")
+        compose.onNodeWithText("מספר בית").performScrollTo().performTextReplacement("12")
+        compose.onNodeWithText("חפש כתובת מדויקת").performScrollTo().performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("חפש כתובת מדויקת").assertIsNotEnabled()
+        compose.onNodeWithText("מספר בית").performScrollTo().performTextReplacement("14")
+        compose.onNodeWithText("חפש כתובת מדויקת").performScrollTo().assertIsEnabled()
+    }
+
+    @Test fun bundledDefaultResolvesOnFreshInstallWithoutImport() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val directory = io.github.reihlinstinct.reporter.municipal.BundledStreetDirectory.load(context.assets)
+        val address = directory.findConfirmedAddress("אגריפס", "12")
+        assertEquals("אגריפס 12", address.address)
+        val resolved = directory.resolve("אגריפס", "12", null)
+        assertEquals("613", resolved.streetCode)
+        assertEquals("address_lookup", resolved.coordinateSource)
+        org.junit.Assert.assertTrue(kotlin.math.abs(resolved.x - 220579) <= 1)
+        org.junit.Assert.assertTrue(kotlin.math.abs(resolved.y - 632269) <= 1)
+    }
+
+    @Test fun licencesShowBundledDataAttribution() {
+        compose.setContent { AppTheme { io.github.reihlinstinct.reporter.i18n.ProvideStringsIfMissing { io.github.reihlinstinct.reporter.ui.LicensesScreen({}) } } }
+        compose.onNodeWithText("רישיונות ומקורות מידע").assertExists()
+        compose.onNodeWithText("© OpenStreetMap contributors (ODbL 1.0)").performScrollTo().assertExists()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        File(context.filesDir, "bundled-address-licences.png").outputStream().use {
+            compose.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+        }
+    }
+
     // Issue #256: the Done key on the last single-line field clears focus and hides the keyboard.
     @Test fun imeDoneOnHouseNumberClearsFocus() {
         val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null),
@@ -43,6 +92,29 @@ class ReviewAddressTest {
         compose.onNodeWithText("מספר בית").performImeAction()
         compose.waitForIdle()
         compose.onNodeWithText("מספר בית").assertIsNotFocused()
+    }
+
+    @Test fun unresolvedManualAddressSavesOfflineAndReopensStillUnconfirmed() {
+        val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null),
+            confirmedLatitude = null, confirmedLongitude = null)
+        var saved: ReviewDraft? = null
+        compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {},
+            manualAddressLookup = { _, _ -> error("synthetic unavailable database") },
+            topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
+        compose.onNodeWithText("רחוב בירושלים").performScrollTo().performTextReplacement("רחוב בדיקה")
+        compose.onNodeWithText("מספר בית").performScrollTo().performTextReplacement("12")
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
+        compose.runOnIdle {
+            val persisted = io.github.reihlinstinct.reporter.ledger.DraftCodec.decode(
+                io.github.reihlinstinct.reporter.ledger.DraftCodec.encode(saved!!))
+            assertEquals("רחוב בדיקה", persisted.pendingStreet)
+            assertEquals("12", persisted.pendingHouse)
+            assertEquals("", persisted.address)
+            assertNull(persisted.confirmedLatitude)
+            org.junit.Assert.assertFalse(persisted.isReady())
+        }
+        compose.onNodeWithText("שלח").performScrollTo().assertIsNotEnabled()
     }
 
     @Test fun noGpsAddressRequiresExplicitConfirmationAndPreservesOriginal() {
