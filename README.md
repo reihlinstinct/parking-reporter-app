@@ -53,6 +53,8 @@ Plate recognition offers plate candidates, with manual fallback and required rev
 
 ### Emulator health and display cadence
 
+The separate [API29 retained-heap diagnostic](docs/API29_MEMORY_DIAGNOSIS.md) compares the full suite to isolated classes, with optional synthetic-only heap snapshots. It is diagnostic evidence, not a memory fix or replacement for the normal matrix.
+
 UI CI checks stable boot, focused window and active process ANR/crash state before
 starting tests. One bounded reboot is allowed before tests; persistent failure
 stops the job and preserves preflight diagnostics. App tests are never retried or
