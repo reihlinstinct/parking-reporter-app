@@ -86,6 +86,7 @@ jobs:
         if: steps.exists.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
+          python3 scripts/ci/clean_snapshot_read_marker.py --avd-dir "$HOME/.android/avd"
           python3 scripts/emulator_snapshot_cache.py write-manifest --avd-dir "$HOME/.android/avd"
       - name: Publish (exact key, AVD directory allowlist only)
         if: steps.exists.outputs.cache-hit != 'true'

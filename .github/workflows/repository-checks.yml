@@ -126,6 +126,7 @@ jobs:
       - name: Emulator snapshot cache key, provenance and benchmark tests (offline)
         run: |
           python3 -m unittest discover -s tests -p 'test_emulator_snapshot_cache.py' -v
+          python3 -m unittest discover -s tests -p 'test_snapshot_marker_cleanup.py' -v
           python3 -m unittest discover -s tests -p 'test_benchmark_snapshot_cache.py' -v
       - name: Offline OCR network-isolation behavioral regression tests
         run: /tmp/venv/bin/python -m unittest discover -s tests -p 'test_ocr_network_isolation.py' -v
