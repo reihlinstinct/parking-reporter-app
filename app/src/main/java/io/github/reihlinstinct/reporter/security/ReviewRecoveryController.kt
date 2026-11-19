@@ -35,12 +35,15 @@ class ReviewRecoveryController(
         internal val binding: ReviewRecoveryEnvelope.Binding)
 
     private val lock = Any()
+    private val generation = java.util.concurrent.atomic.AtomicLong(0)
+    private var acceptingEdits = false
     private var session: ReviewRecoveryWriter.Session? = null
     private var binding: ReviewRecoveryEnvelope.Binding? = null
     private var key: ByteArray? = null
     private var pendingPlain: ByteArray? = null
     private var pendingEdit: ReviewRecoveryWriter.Edit? = null
     private var cancelDebounce: (() -> Unit)? = null
+    private var cancelExpiry: (() -> Unit)? = null
     @Volatile var lastWriteFailed = false; private set
     val isActive: Boolean get() = synchronized(lock) { session != null }
 
@@ -64,13 +67,21 @@ class ReviewRecoveryController(
                 credentialResultOk, foreground, deviceUnlocked())) return false
         if (!enabled()) return false
         endSession(deleteArtifacts = true)
+        val epoch = generation.get()
         val dataKey = ByteArray(32).also { SecureRandom().nextBytes(it) }
         try {
             keys.deleteAll()
             val wrapped = keys.wrap(request.binding.sessionId, dataKey)
             val s = writer.start(request.binding)
             store.begin(request.binding, wrapped)
-            synchronized(lock) { session = s; binding = request.binding; key = dataKey.copyOf() }
+            synchronized(lock) {
+                if (generation.get() != epoch || !deviceUnlocked() ||
+                    !ReviewRecoveryEnvelope.isFresh(request.binding, elapsedMs(), bootCount(), appVersionCode())) {
+                    writer.fence(); return false
+                }
+                session = s; binding = request.binding; key = dataKey.copyOf(); acceptingEdits = true
+            }
+            arrangeExpiry(request.binding, epoch)
             lastWriteFailed = false
             return true
         } catch (e: Throwable) {
@@ -83,7 +94,7 @@ class ReviewRecoveryController(
      * Over-limit or failing input keeps the previous committed checkpoint and the user keeps editing in memory. */
     fun onEdit(snapshot: ReviewRecoveryCodec.Snapshot): EditResult {
         val s: ReviewRecoveryWriter.Session
-        synchronized(lock) { s = session ?: return EditResult.NOT_ACTIVE }
+        synchronized(lock) { if (!acceptingEdits) return EditResult.NOT_ACTIVE; s = session ?: return EditResult.NOT_ACTIVE }
         val b = synchronized(lock) { binding } ?: return EditResult.NOT_ACTIVE
         if (!ReviewRecoveryEnvelope.isFresh(b, elapsedMs(), bootCount(), appVersionCode())) {
             terminal(); return EditResult.NOT_ACTIVE
@@ -94,7 +105,7 @@ class ReviewRecoveryController(
             plain.fill(0); return EditResult.MEMORY_ONLY_FAILED
         }
         synchronized(lock) {
-            if (session !== s) { plain.fill(0); return EditResult.NOT_ACTIVE }
+            if (!acceptingEdits || session !== s) { plain.fill(0); return EditResult.NOT_ACTIVE }
             pendingPlain?.fill(0); pendingPlain = plain; pendingEdit = edit
             cancelDebounce?.invoke()
             cancelDebounce = schedule(debounceMs, Runnable { io(Runnable { flush() }) })
@@ -124,36 +135,66 @@ class ReviewRecoveryController(
      * isChangingConfigurations first. Fences new edits at once, flushes the newest captured state on I/O within
      * [stopGraceMs], then clears the key. Does not invalidate an outstanding auth ticket. */
     fun onProcessStop() {
-        synchronized(lock) { if (session == null) return; cancelDebounce?.invoke(); cancelDebounce = null }
+        val epoch: Long
+        synchronized(lock) {
+            if (session == null) return
+            acceptingEdits = false
+            epoch = generation.get()
+            cancelDebounce?.invoke(); cancelDebounce = null
+        }
         val done = java.util.concurrent.atomic.AtomicBoolean(false)
-        io(Runnable { try { flush() } finally { done.set(true); revoke() } })
-        schedule(stopGraceMs, Runnable { if (!done.get()) revoke() }) // timeout: fence and clear key even if I/O is stuck
+        io(Runnable { try { if (generation.get() == epoch) flush() } finally { done.set(true); revokeIfCurrent(epoch) } })
+        schedule(stopGraceMs, Runnable { if (!done.get()) revokeIfCurrent(epoch) }) // timeout: fence and clear key even if I/O is stuck
     }
 
     /** Screen-off or lock: stricter than stop. Clears the key and fences the writer immediately; no final write.
      * Keeps the last committed ciphertext. */
+    private fun arrangeExpiry(b: ReviewRecoveryEnvelope.Binding, epoch: Long) {
+        synchronized(lock) {
+            if (generation.get() != epoch) return
+            cancelExpiry?.invoke()
+            cancelExpiry = schedule((b.deadlineElapsedMs - elapsedMs()).coerceAtLeast(0), Runnable {
+                synchronized(lock) { if (binding?.sessionId == b.sessionId && elapsedMs() >= b.deadlineElapsedMs) terminal() }
+            })
+        }
+    }
+
+    private fun revokeIfCurrent(epoch: Long) = synchronized(lock) {
+        if (generation.get() == epoch) revoke()
+    }
+
     fun revoke() {
         synchronized(lock) {
+            generation.incrementAndGet()
+            acceptingEdits = false
             cancelDebounce?.invoke(); cancelDebounce = null
             pendingPlain?.fill(0); pendingPlain = null; pendingEdit = null
             key?.fill(0); key = null; session = null
         }
-        writer.revoke()
+        writer.fence()
     }
 
     /** Explicit Save success, Discard, leaving the report, replacement, Send start, expiry. Invalidates the
      * generation before deleting, cancels queued work, deletes the file and the alias. Safe to call twice.
      * Send start must not be blocked if deletion fails; deletion errors are swallowed here and the restore path
      * independently rejects stale checkpoints. */
-    fun terminal() { auth.invalidate(); endSession(deleteArtifacts = true) }
+    fun terminal() {
+        auth.invalidate(); revoke()
+        synchronized(lock) { binding = null; cancelExpiry?.invoke(); cancelExpiry = null }
+        io(Runnable { cleanupArtifacts() })
+    }
+
+    private fun cleanupArtifacts() {
+        try { writer.retire() } catch (e: Throwable) { /* fenced already; sweep retries */ }
+        try { store.deleteAll() } catch (e: Throwable) { }
+        try { keys.deleteAll() } catch (e: Throwable) { }
+    }
 
     private fun endSession(deleteArtifacts: Boolean) {
         revoke()
-        synchronized(lock) { binding = null }
+        synchronized(lock) { binding = null; cancelExpiry?.invoke(); cancelExpiry = null }
         if (deleteArtifacts) {
-            try { writer.retire() } catch (e: Throwable) { /* fenced already; sweep retries */ }
-            try { store.deleteAll() } catch (e: Throwable) { }
-            try { keys.deleteAll() } catch (e: Throwable) { }
+            cleanupArtifacts()
         }
     }
 
@@ -184,6 +225,7 @@ class ReviewRecoveryController(
         if (!auth.complete(request.ticket, request.binding, ReviewRecoveryAuthRequest.Operation.RESTORE_SESSION,
                 credentialResultOk, foreground, deviceUnlocked())) return null // cancel/late/stale: keep memory-only
         if (!enabled() || !deviceUnlocked()) return null
+        val epoch = generation.get()
         val parsed = store.read() ?: return null
         val b = parsed.binding
         if (b.sessionId != request.binding.sessionId ||
@@ -200,9 +242,13 @@ class ReviewRecoveryController(
             val snapshot = try { ReviewRecoveryCodec.decode(plain) }
                 catch (e: IllegalArgumentException) { discard(); return null }
                 catch (e: IOException) { discard(); return null }
-            val s = try { writer.start(b) } catch (e: Throwable) { discard(); return null }
+            val s = try { writer.resume(b) } catch (e: Throwable) { discard(); return null }
             store.begin(b, parsed.wrappedKey)
-            synchronized(lock) { session = s; binding = b; key = dataKey.copyOf() }
+            synchronized(lock) {
+                if (generation.get() != epoch || !deviceUnlocked()) { writer.fence(); return null }
+                session = s; binding = b; key = dataKey.copyOf(); acceptingEdits = true
+            }
+            arrangeExpiry(b, epoch)
             lastWriteFailed = false
             val edit = writer.capture(s)
             val sealed = ReviewRecoveryEnvelope.seal(plain, dataKey, b, elapsedMs(), bootCount(), appVersionCode())

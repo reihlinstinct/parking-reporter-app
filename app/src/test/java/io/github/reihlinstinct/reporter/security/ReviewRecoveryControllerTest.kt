@@ -34,15 +34,16 @@ class ReviewRecoveryControllerTest {
 
     private class Env(dir: File, val keys: FakeKeys = FakeKeys(), var now: Long = 10_000, var boot: Int? = 4) {
         var enabled = true; var secure = true; var unlocked = true
-        val ioQueue = ArrayDeque<Runnable>(); val timers = ArrayDeque<Runnable>()
+        data class Timer(val at: Long, val action: Runnable)
+        val ioQueue = ArrayDeque<Runnable>(); val timers = mutableListOf<Timer>()
         val store = ReviewRecoveryStore(dir)
         val auth = ReviewRecoveryAuthRequest { now }
         val writer = ReviewRecoveryWriter(store, { now }, { boot }, { 197 }, { unlocked })
         var counter = 0
         val controller = ReviewRecoveryController({ enabled }, { secure }, { unlocked }, store, keys, writer, auth,
             { now }, { boot }, { 197 }, { (++counter).toString(16).padStart(32, '0') },
-            { ioQueue.addLast(it) }, { _, r -> timers.addLast(r); { timers.remove(r) } })
-        fun runTimers() { while (timers.isNotEmpty()) timers.removeFirst().run() }
+            { ioQueue.addLast(it) }, { delay, r -> val t = Timer(now + delay, r); timers.add(t); { timers.remove(t); Unit } })
+        fun runTimers() { now += 300; val due = timers.filter { it.at <= now }; timers.removeAll(due.toSet()); due.forEach { it.action.run() } }
         fun runIo() { while (ioQueue.isNotEmpty()) ioQueue.removeFirst().run() }
         fun settle() { runTimers(); runIo() }
     }
@@ -101,7 +102,7 @@ class ReviewRecoveryControllerTest {
         val deadline = ReviewRecoveryContainer.decode(File(tmp.root, "review-recovery.bin").readBytes()).binding
         assertEquals(10_000 + ReviewRecoveryEnvelope.LIFETIME_MS, deadline.deadlineElapsedMs) // never extended
         e2.now = deadline.deadlineElapsedMs
-        assertEquals(NOT_ACTIVE, e2.controller.onEdit(snap())) // expired: terminal
+        assertEquals(NOT_ACTIVE, e2.controller.onEdit(snap())); e2.runIo() // expired: terminal
         assertTrue(files(e2, tmp.root).isEmpty()); assertTrue(e2.keys.aliases.isEmpty())
     }
 
@@ -190,6 +191,39 @@ class ReviewRecoveryControllerTest {
         val e = Env(tmp.root); start(e); e.controller.onEdit(snap()); e.settle()
         start(e); assertEquals(1, e.keys.aliases.size)
         assertFalse(File(tmp.root, "review-recovery.bin").exists()) // new session starts empty until first edit commits
+    }
+
+    @Test fun processStopRejectsFurtherEditsBeforeIoRuns() {
+        val e = Env(tmp.root); start(e); e.controller.onEdit(snap("before stop"))
+        e.controller.onProcessStop()
+        assertEquals(NOT_ACTIVE, e.controller.onEdit(snap("after stop")))
+        e.runIo()
+        val next = Env(tmp.root, e.keys, e.now, e.boot)
+        assertEquals("before stop", next.controller.completeRestore(next.controller.beginRestore()!!, true, true) { true }!!.text)
+    }
+
+    @Test fun terminalFencesBeforeDeferredCleanup() {
+        val e = Env(tmp.root); start(e); e.controller.onEdit(snap()); e.settle()
+        e.controller.terminal()
+        assertFalse(e.controller.isActive)
+        assertEquals(NOT_ACTIVE, e.controller.onEdit(snap("late")))
+        e.runIo(); assertTrue(files(e, tmp.root).isEmpty()); assertTrue(e.keys.aliases.isEmpty())
+    }
+
+    @Test fun writerResumeDoesNotDeleteLastCommittedCheckpoint() {
+        val e = Env(tmp.root); start(e); e.controller.onEdit(snap()); e.settle()
+        val file = File(tmp.root, ReviewRecoveryStore.NAME); val before = file.readBytes()
+        val parsed = e.store.read()!!
+        e.controller.revoke()
+        e.writer.resume(parsed.binding)
+        assertArrayEquals(before, file.readBytes())
+    }
+
+    @Test fun absoluteExpiryRetiresWithoutAnotherKeystroke() {
+        val e = Env(tmp.root); start(e); e.controller.onEdit(snap()); e.settle()
+        e.now = 10_000 + ReviewRecoveryEnvelope.LIFETIME_MS
+        e.runTimers(); e.runIo()
+        assertFalse(e.controller.isActive); assertTrue(files(e, tmp.root).isEmpty()); assertTrue(e.keys.aliases.isEmpty())
     }
 
     private companion object { val NOT_ACTIVE = ReviewRecoveryController.EditResult.NOT_ACTIVE }
