@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # Synthetic emulator diagnostics only. Never raise the heap or retry a failed test.
 set -euo pipefail
-mode=${1:?suite, snapshots or isolated required}
-case "$mode" in suite|snapshots|isolated) ;; *) exit 2 ;; esac
+mode=${1:?suite, fresh-suite, snapshots or isolated required}
+case "$mode" in suite|fresh-suite|snapshots|isolated) ;; *) exit 2 ;; esac
 out=app/build/reports/api29-memory
 mkdir -p "$out"
 adb logcat -c
 adb shell getprop dalvik.vm.heapgrowthlimit > "$out/heapgrowthlimit.txt"
 adb shell getprop dalvik.vm.heapsize > "$out/heapsize.txt"
+adb shell getprop > "$out/emulator-properties.txt"
+adb shell dumpsys package il.sidewalks.reporter > "$out/package-metadata.txt"
+adb shell ps -A > "$out/processes-before.txt"
 failed=0
 run_once() {
   local name=$1; shift
@@ -18,7 +21,13 @@ run_once() {
   if ! python3 scripts/test_summary.py --title "API29 memory diagnostic: $name" --instrumentation "$out/$name.txt" --check; then failed=1; fi
   if [ "$rc" -ne 0 ]; then failed=1; fi
 }
-if [ "$mode" = isolated ]; then
+if [ "$mode" = fresh-suite ]; then
+  # Same full suite after the same process/storage reset as isolated mode.
+  # No system property or app heap setting changes.
+  adb shell am force-stop il.sidewalks.reporter
+  adb shell pm clear il.sidewalks.reporter
+  run_once fresh-full-suite
+elif [ "$mode" = isolated ]; then
   for name in EntryPointsTest FirstRunScreenTest ReviewRecreationTest ReviewUnsavedBackTest; do
     # A fresh target process and private storage for each class. This diagnoses
     # dependence on suite history; it is not a replacement for the full suite.

@@ -9,7 +9,7 @@ The exact green #669 head and the failing main merge have identical source trees
 ```mermaid
 flowchart LR
     A[Exact PR head and pinned assets] --> B[Unmodified full suite with per-test memory metadata]
-    A --> C[Separate full suite with snapshots before tests 28 and 111]
+    A --> C[Separate full suite with snapshots before tests 24 and 27]
     A --> D[Four suspect classes each in a fresh target process and storage]
     B --> E[Compare order and Java or native growth]
     C --> F[Inspect retained allocations and ownership]
@@ -18,10 +18,11 @@ flowchart LR
     F --> G
 ```
 
-The `API29 retained heap diagnostic` workflow has three independent modes:
+The `API29 retained heap diagnostic` workflow has four independent modes:
 
 - `suite`: full suite, no forced GC or heap dumps. The listener logs Java used/committed/max bytes and native allocated bytes before and after each test.
-- `snapshots`: the same suite plus HPROF snapshots before ordinal 28 and 111. These are investigation checkpoints around prior failures, not stable test identities. The trace records the exact class and method at each ordinal. Dumping can force GC and change timing, so this mode must not substitute for the no-snapshot baseline.
+- `fresh-suite`: the full suite after the same force-stop and private-storage reset used by isolated mode. No heap or system-property setting changes. This distinguishes reset effects from test-history effects.
+- `snapshots`: the same suite plus HPROF snapshots before ordinal 24 and 27. These are investigation checkpoints around prior failures, not stable test identities. The trace records the exact class and method at each ordinal. Dumping can force GC and change timing, so this mode must not substitute for the no-snapshot baseline.
 - `isolated`: EntryPointsTest, FirstRunScreenTest, ReviewRecreationTest and ReviewUnsavedBackTest, each in a fresh target process and private storage. Passing here does not prove the full suite passes. This diagnoses dependence on suite history; it does not reduce normal coverage.
 
 No retry, heap increase, application change, municipal endpoint, reporter credentials or private photo is added. Normal API29/30/36 and display checks remain unchanged. The optional listener exists only in the test APK and is inactive unless explicitly selected. There is no device-user workflow or automatic profiler in the production app.
@@ -35,3 +36,7 @@ Read the unmodified-suite trace first. Correlate heap growth with test boundarie
 If the failure is reliably tied to a source change after test-history isolation, compare adjacent commits with the same tests, asset pin and emulator settings. Do not call a rollback a successful commit bisect. Do not close #684 with this diagnostic PR.
 
 The online-address/cache request is a separate feature. It may reduce retained address data but is not evidence that address data caused this failure.
+
+## First diagnostic evidence
+
+At head `2f169127`, the suite reproduced OOM at test 28. The four isolated classes passed, but the listener measured a 512 MiB Java maximum in isolated mode versus 16 MiB in suite mode, despite both devices reporting `dalvik.vm.heapsize=512m` and an empty `heapgrowthlimit` property. Therefore isolated PASS is not a matched-budget comparison and does not establish a suite-history leak. A fresh-full-suite control and complete emulator properties/package metadata have been added to investigate that difference without modifying the heap. The snapshot job failed resolving the pinned KSP plugin before tests, so it supplied no snapshot evidence. No culprit identified.

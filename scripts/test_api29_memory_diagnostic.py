@@ -61,6 +61,14 @@ class DiagnosticRunnerTest(unittest.TestCase):
         self.assertEqual(sum(c[:3] == ['shell', 'pm', 'clear'] for c in calls), 4)
         self.assertEqual(sum(c[:3] == ['shell', 'am', 'instrument'] for c in calls), 4)
 
+    def test_fresh_suite_has_one_reset_and_one_full_run(self):
+        result, calls = self.run_case('fresh-suite')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(sum(c[:3] == ['shell', 'pm', 'clear'] for c in calls), 1)
+        runs = [c for c in calls if c[:3] == ['shell', 'am', 'instrument']]
+        self.assertEqual(len(runs), 1)
+        self.assertNotIn('class', runs[0])
+
     def test_missing_snapshot_fails(self):
         result, _ = self.run_case('snapshots', NO_HEAP='1')
         self.assertNotEqual(result.returncode, 0)
