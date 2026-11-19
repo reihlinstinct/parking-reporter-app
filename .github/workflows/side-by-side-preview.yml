@@ -1,7 +1,7 @@
 name: Separate phone preview build
 on:
   pull_request:
-    branches: [fix/private-address-install]
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read

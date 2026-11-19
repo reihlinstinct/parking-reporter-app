@@ -22,6 +22,25 @@ class PreviewIdentityTest(unittest.TestCase):
         self.assertNotEqual(default, preview)
         self.assertIn('106', preview)
 
+    def test_replacement_debug_manifest_preserves_debug_contract(self):
+        import xml.etree.ElementTree as ET
+        default = ET.parse(ROOT / 'app/src/debug/AndroidManifest.xml').getroot().find('application')
+        preview = ET.parse(ROOT / 'app/src/sideBySidePreview/AndroidManifest.xml').getroot().find('application')
+        for key, value in default.attrib.items():
+            self.assertEqual(value, preview.get(key))
+        name = '{http://schemas.android.com/apk/res/android}name'
+        for child in default:
+            matches = [candidate for candidate in preview if candidate.tag == child.tag and candidate.get(name) == child.get(name)]
+            self.assertEqual(1, len(matches))
+            self.assertEqual(child.attrib, matches[0].attrib)
+
+    def test_ci_trigger_targets_current_main_not_old_stack(self):
+        workflow = (ROOT / '.github/workflows/side-by-side-preview.yml').read_text()
+        triggers = workflow.split('permissions:', 1)[0]
+        self.assertIn('branches: [main]', triggers)
+        self.assertNotIn('fix/private-address-install', triggers)
+        self.assertIn('workflow_dispatch:', triggers)
+
     def test_ci_publishes_both_standard_and_separate_artifacts(self):
         workflow = (ROOT / '.github/workflows/side-by-side-preview.yml').read_text()
         standard = (ROOT / '.github/workflows/android.yml').read_text()
