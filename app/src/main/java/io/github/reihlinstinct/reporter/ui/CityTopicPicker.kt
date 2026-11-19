@@ -3,6 +3,7 @@ package io.github.reihlinstinct.reporter.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,11 +37,10 @@ fun CityTopicPicker(topics: List<MunicipalSubject>, selected: String?, recent: L
             Column(Modifier.fillMaxWidth().heightIn(max = 600.dp).padding(16.dp)) {
                 Text(s.t("topics.title"), Modifier.testTag("picker-title"), style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(12.dp))
-                Text(s.t("topics.search"), Modifier.fillMaxWidth().testTag("picker-search-label"),
-                    style = MaterialTheme.typography.bodyMedium.copy(platformStyle = PlatformTextStyle(includeFontPadding = true)))
                 OutlinedTextField(query, { query = it },
                     modifier = Modifier.fillMaxWidth().testTag("picker-search-input"),
-                    label = { Text(s.t("topics.search")) }, singleLine = true)
+                    label = { Text(s.t("topics.search"), Modifier.testTag("picker-search-label"),
+                        maxLines = 1, overflow = TextOverflow.Ellipsis) }, singleLine = true)
                 Text(s.t("topics.results", mapOf("count" to results.size.toString())),
                     Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 LazyColumn(Modifier.weight(1f, fill = false).testTag("topic-results").selectableGroup()) {
