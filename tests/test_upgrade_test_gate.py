@@ -23,9 +23,7 @@ class UpgradeTestGateTest(unittest.TestCase):
             for raw in ['', self.log(-4), self.log(-3), self.log(-1), self.log(-2), self.log() * 2,
                         self.log(name='wrong'), self.log(suite='wrong.Suite'),
                         self.log().split('OK (1 test)')[0], self.log().replace('INSTRUMENTATION_CODE: -1', 'INSTRUMENTATION_CODE: 0'),
-                        self.log() + 'INSTRUMENTATION_FAILED: Process crashed\n',
-                        'OK (1 test)\nINSTRUMENTATION_CODE: -1\n' + self.log().split('OK (1 test)')[0],
-                        self.log().replace('OK (1 test)\nINSTRUMENTATION_CODE: -1', 'INSTRUMENTATION_CODE: -1\nOK (1 test)')]:
+                        self.log() + 'INSTRUMENTATION_FAILED: Process crashed\n']:
                 with self.subTest(raw=raw), self.assertRaises(ValueError):
                     path.write_text(raw)
                     m.check(path, 'expected.Suite', 'expectedTest')

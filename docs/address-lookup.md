@@ -164,13 +164,3 @@ refuses and disables exact-address search. A failed unique-address lookup also
 disables that search until its input changes. Optional Settings imports of a
 different schema-valid file need their own override policy and are follow-up,
 not a prerequisite to normal lookup.
-
-## Bounded-memory APK loading
-
-The Android bundled loader verifies the unchanged asset SHA-256 in an 8 KiB buffer,
-then reopens the immutable APK asset and streams address rows into the directory.
-It never holds the whole JSON source string and address-row tree together.
-Both the app and fresh-install instrumentation use this same loader.
-This fixes the API29 16 MiB heap exhaustion observed while duplicating the source
-text in integrated PR669. No larger heap, removed assertion, changed asset or pin
-is needed. The generic JVM string loader remains for contract tests.

@@ -29,9 +29,6 @@ data class ReviewDraft(
     val confirmedLongitude: Double? = evidence.longitude,
     val plateRequired: Boolean? = null,
     val plateClass: PlateClass = PlateClass.REGULAR,
-    val pendingStreet: String = "",
-    val pendingHouse: String = "",
-    val pendingCross: String = "",
 ) {
     fun needsPlate(): Boolean = plateRequired ?: TopicIdentity.needsPlate(subject)
     fun isReady(): Boolean = (unresolved - ReportTime.retiredWarnings).isEmpty() &&

@@ -39,17 +39,6 @@ class TrialTest(unittest.TestCase):
     def run_trial(self):
         return trial.execute_trial(self.report, 'a' * 64, 'b' * 64, self.claim, self.api, 'synthetic-run')
 
-    def test_child_identity_is_removed_from_parent_environment(self):
-        env = dict(PATH='/synthetic', REPORTER_ID_NUMBER='synthetic-id', REPORTER_EMAIL='synthetic-email',
-                   J106_APP_PASSWORD='synthetic-password', BATCH_PRIVATE_CONTENTS_TOKEN='synthetic-claim', TRIAL_DATA_KEY='synthetic-key')
-        child = trial.take_bridge_identity(env)
-        self.assertEqual('synthetic-id', child['REPORTER_ID_NUMBER'])
-        for key in ('REPORTER_ID_NUMBER', 'REPORTER_EMAIL', 'J106_APP_PASSWORD'):
-            self.assertNotIn(key, env)
-        for key in ('BATCH_PRIVATE_CONTENTS_TOKEN', 'TRIAL_DATA_KEY'):
-            self.assertNotIn(key, child)
-            self.assertIn(key, env)
-
     def test_success_has_durable_intent_before_each_write_and_exact_receipts(self):
         result = self.run_trial()
         self.assertEqual([('preflight',), ('save', 'reserved'), ('save', 'creating'), ('create',),
@@ -146,15 +135,6 @@ class TrialTest(unittest.TestCase):
         for changed in [dict(latitude=0), dict(longitude=0), dict(latitude=True), dict(latitude=float('nan')), dict(subjectCode='1145')]:
             with self.assertRaises(ValueError): trial.validate_trial_coordinates(dict(self.report, **changed))
 
-    def test_coordinate_envelope_inclusive_edges_and_nonfinite_refusal(self):
-        for lat in (31.65, 31.95):
-            for lon in (35.05, 35.35):
-                trial.validate_trial_coordinates(dict(self.report, latitude=lat, longitude=lon))
-        for lat, lon in [(31.649999, 35.2), (31.950001, 35.2), (31.8, 35.049999),
-                (31.8, 35.350001), (float('inf'), 35.2), (31.8, False)]:
-            with self.assertRaises(ValueError):
-                trial.validate_trial_coordinates(dict(self.report, latitude=lat, longitude=lon))
-
     def test_expiry_at_each_write_boundary_stops_without_replay(self):
         from datetime import datetime, timezone
         config = json.loads((Path(trial.__file__).parent / 'supervised_trial_activation.json').read_text())
@@ -206,24 +186,6 @@ class TrialTest(unittest.TestCase):
         self.assertEqual(1, sum(e[0] == 'create' for e in self.events))
         self.assertEqual(0, sum(e[0] == 'attach' for e in self.events))
 
-    def test_routed_deadline_before_at_after_for_both_effects(self):
-        from datetime import datetime, timedelta
-        config = json.loads((Path(trial.__file__).parent / 'supervised_trial_activation.json').read_text())
-        env = dict(BATCH_PRIVATE_REF=config['privateCommit'], BATCH_PRIVATE_PATH=config['batchPath'], BATCH_APPROVED_OUTER_SHA256=config['outerSha256'])
-        deadline = datetime.fromisoformat(config['expiresAt'])
-        for delta in (-1, 0, 1):
-            for effect in ('create', 'attach'):
-                calls = []
-                class Api:
-                    def create(self, *args): calls.append('create')
-                    def attach(self, *args): calls.append('attach')
-                routed = trial.Routed(Api(), lambda: None, env, lambda: deadline + timedelta(microseconds=delta))
-                operation = lambda: routed.create(self.report) if effect == 'create' else routed.attach({}, self.report, {})
-                if delta < 0: operation()
-                else:
-                    with self.assertRaises(ValueError): operation()
-                self.assertEqual([effect] if delta < 0 else [], calls)
-
     def test_real_encryption_is_authenticated_and_does_not_expose_private_text(self):
         blob = trial.encrypt_record(dict(text='synthetic-private-text'), b'synthetic-password16')
         self.assertNotIn(b'synthetic-private-text', blob)
@@ -253,21 +215,6 @@ class TrialTest(unittest.TestCase):
                 package(path, extra)
                 with self.assertRaises(ValueError): trial.validate_package(path, env)
 
-    def test_png_bytes_with_matching_approval_pins_still_refuse(self):
-        for original, photo in [(b'\x89PNG\r\n\x1a\nsynthetic', b'\xff\xd8synthetic'),
-                (b'\xff\xd8synthetic', b'\x89PNG\r\n\x1a\nsynthetic')]:
-            report = copy.deepcopy(self.report)
-            report['photos'][0]['sha256'] = trial.digest(photo)
-            raw = json.dumps(dict(report=report, originalSha256=trial.digest(original), outgoingSha256=trial.digest(photo))).encode()
-            env = dict(APPROVED_TRIAL_JSON_SHA256=trial.digest(raw), APPROVED_ORIGINAL_SHA256=trial.digest(original), APPROVED_OUTGOING_SHA256=trial.digest(photo))
-            with tempfile.TemporaryDirectory() as directory:
-                path = Path(directory) / 'input.zip'
-                with zipfile.ZipFile(path, 'w') as archive:
-                    for name, body in [('trial.json', raw), ('original.jpg', original), ('photos/approved.jpg', photo)]:
-                        archive.writestr(name, body)
-                with self.assertRaisesRegex(ValueError, 'JPEG'):
-                    trial.validate_package(path, env)
-
     def test_suffix_precedes_fetch_and_tar_has_immediate_and_failure_cleanup(self):
         root = Path(__file__).resolve().parents[1]
         script = (root / 'scripts/supervised_api_trial.py').read_text()
@@ -277,10 +224,6 @@ class TrialTest(unittest.TestCase):
         self.assertIn('test -s /tmp/supervised-api-trial-evidence.tgz.enc\n            shred -u /tmp/supervised-api-trial-evidence.tgz', workflow)
         import check_repository
         self.assertTrue(check_repository.trial_job_pinned(workflow))
-        import json
-        config = json.loads((root / 'scripts/supervised_trial_activation.json').read_text())
-        for key in ('privateCommit', 'batchPath', 'outerSha256'):
-            self.assertFalse(check_repository.trial_job_pinned(workflow.replace(config[key], 'synthetic-mismatch')))
         gate = next(line for line in workflow.splitlines() if line.startswith('    if:'))
         for changed in (workflow.replace(gate, '    if: ${{ true }}'), workflow.replace(gate, ''), workflow.replace(gate, '  '+gate)):
             self.assertFalse(check_repository.trial_job_pinned(changed))

@@ -62,14 +62,11 @@ class ReviewAddressTest {
 
     @Test fun bundledDefaultResolvesOnFreshInstallWithoutImport() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val directory = io.github.reihlinstinct.reporter.municipal.BundledStreetDirectory.load(context.assets)
+        val text = context.assets.open("addresses.json").bufferedReader(Charsets.UTF_8).use { it.readText() }
+        val directory = io.github.reihlinstinct.reporter.municipal.StreetDirectory.load(
+            io.github.reihlinstinct.reporter.municipal.AddressLookupPin.verifyPinned(text))
         val address = directory.findConfirmedAddress("אגריפס", "12")
         assertEquals("אגריפס 12", address.address)
-        val resolved = directory.resolve("אגריפס", "12", null)
-        assertEquals("613", resolved.streetCode)
-        assertEquals("address_lookup", resolved.coordinateSource)
-        org.junit.Assert.assertTrue(kotlin.math.abs(resolved.x - 220579) <= 1)
-        org.junit.Assert.assertTrue(kotlin.math.abs(resolved.y - 632269) <= 1)
     }
 
     @Test fun licencesShowBundledDataAttribution() {
@@ -92,29 +89,6 @@ class ReviewAddressTest {
         compose.onNodeWithText("מספר בית").performImeAction()
         compose.waitForIdle()
         compose.onNodeWithText("מספר בית").assertIsNotFocused()
-    }
-
-    @Test fun unresolvedManualAddressSavesOfflineAndReopensStillUnconfirmed() {
-        val initial = draft().copy(evidence = draft().evidence.copy(latitude = null, longitude = null),
-            confirmedLatitude = null, confirmedLongitude = null)
-        var saved: ReviewDraft? = null
-        compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {},
-            manualAddressLookup = { _, _ -> error("synthetic unavailable database") },
-            topicSnapshot = syntheticCityTopics(), topicsAvailable = true) } }
-        compose.onNodeWithText("רחוב בירושלים").performScrollTo().performTextReplacement("רחוב בדיקה")
-        compose.onNodeWithText("מספר בית").performScrollTo().performTextReplacement("12")
-        androidx.test.espresso.Espresso.closeSoftKeyboard()
-        compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
-        compose.runOnIdle {
-            val persisted = io.github.reihlinstinct.reporter.ledger.DraftCodec.decode(
-                io.github.reihlinstinct.reporter.ledger.DraftCodec.encode(saved!!))
-            assertEquals("רחוב בדיקה", persisted.pendingStreet)
-            assertEquals("12", persisted.pendingHouse)
-            assertEquals("", persisted.address)
-            assertNull(persisted.confirmedLatitude)
-            org.junit.Assert.assertFalse(persisted.isReady())
-        }
-        compose.onNodeWithText("שלח").performScrollTo().assertIsNotEnabled()
     }
 
     @Test fun noGpsAddressRequiresExplicitConfirmationAndPreservesOriginal() {

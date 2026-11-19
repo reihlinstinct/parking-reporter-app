@@ -46,6 +46,7 @@ import io.github.reihlinstinct.reporter.municipal.FileSubmissionStateStore
 import io.github.reihlinstinct.reporter.municipal.historyIdentifier
 import io.github.reihlinstinct.reporter.municipal.MunicipalClient
 import io.github.reihlinstinct.reporter.municipal.OkHttpMunicipalClient
+import io.github.reihlinstinct.reporter.municipal.AddressLookupPin
 import io.github.reihlinstinct.reporter.municipal.MunicipalInputException
 import io.github.reihlinstinct.reporter.municipal.StreetDirectory
 import io.github.reihlinstinct.reporter.municipal.SubmissionCoordinator
@@ -143,7 +144,8 @@ fun AppShell(
     // Bundled default: owner confirms our OSM-based file. See docs/address-lookup.md
     // for exact-byte provenance, attribution and the unrecovered-generator gap.
     fun loadStreetDirectory(context: android.content.Context): StreetDirectory =
-        io.github.reihlinstinct.reporter.municipal.BundledStreetDirectory.load(context.assets)
+        StreetDirectory.load(AddressLookupPin.verifyPinned(
+            context.assets.open("addresses.json").bufferedReader(Charsets.UTF_8).use { it.readText() }))
     fun submitReport(shown: ReviewDraft, outgoing: io.github.reihlinstinct.reporter.evidence.OutgoingImage?) {
         // Runs 42853563754 / 42880867432: the send tap never reached the
         // submit path. Log every gate so the next live run shows exactly
@@ -486,13 +488,6 @@ fun AppShell(
     }
     Scaffold(
         bottomBar = {
-            // Review is scrollable. Reserve a separate scaffold slot for save feedback
-            // so it cannot land below the form or overlap its contents.
-            if (page == "review" && status.isNotEmpty()) {
-                Surface(modifier = Modifier.navigationBarsPadding(), color = MaterialTheme.colorScheme.inverseSurface, contentColor = MaterialTheme.colorScheme.inverseOnSurface) {
-                    Text(status, color = MaterialTheme.colorScheme.inverseOnSurface, modifier = Modifier.fillMaxWidth().padding(16.dp).semantics { liveRegion = LiveRegionMode.Polite })
-                }
-            }
             if (page == "home" || page == "settings" || page == "reports") {
                 Column {
                 // Issue #295: one shared status slot above the bar on every page
@@ -646,6 +641,10 @@ fun AppShell(
                 topicsLoading = topicsLoading, openTopics = ::openCityTopics,
                 topicSelected = { topicRepository.selected(it) }, recentTopics = topicRepository.recentCodes(), topicAliases = topicAliases, plateEnables = topicRepository.plateEnables(), registryLookup = registryLookup,
                 sidewalkScorer = { bitmap -> withContext(Dispatchers.Default) { io.github.reihlinstinct.reporter.recognition.SidewalkSuggestion.score(context, bitmap) } })
+            // Save feedback lands in the shell status; the review page has no
+            // bottom bar, so it keeps its own announced slot (home/settings/
+            // reports share the one above the bar).
+            if (status.isNotEmpty()) Text(status, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         }
         "settings" -> SettingsScreen(profile, save = { value, touchedMunicipal, cleared ->
             persistSettings(value, touchedMunicipal, cleared)

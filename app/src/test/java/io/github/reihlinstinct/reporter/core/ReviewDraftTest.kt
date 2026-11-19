@@ -60,18 +60,6 @@ class ReviewDraftTest {
         assertFalse(draft().copy(plate = "").isReady())
         assertFalse(draft().edit(subject = "broken_sign").edit(subject = "sidewalk_parking").isReady())
     }
-    @Test fun unfinishedOfflineAddressRoundTripsWithoutAuthorizingSubmission() {
-        val d = draft().copy(address = "", confirmedLatitude = null, confirmedLongitude = null,
-            pendingStreet = "synthetic street", pendingHouse = "12", pendingCross = "synthetic crossing")
-        val decoded = io.github.reihlinstinct.reporter.ledger.DraftCodec.decode(io.github.reihlinstinct.reporter.ledger.DraftCodec.encode(d))
-        assertEquals(d, decoded)
-        assertFalse(decoded.isReady())
-        // Unconfirmed inputs do not change the municipal payload approval digest.
-        assertEquals(d.digest(), d.copy(pendingHouse = "14").digest())
-        val old = org.json.JSONObject(io.github.reihlinstinct.reporter.ledger.DraftCodec.encode(d))
-        listOf("pendingStreet", "pendingHouse", "pendingCross").forEach { old.remove(it) }
-        assertEquals("", io.github.reihlinstinct.reporter.ledger.DraftCodec.decode(old.toString()).pendingStreet)
-    }
     @Test fun badCoordinatesAndHashRejected() {
         assertThrows(IllegalArgumentException::class.java) { draft().evidence.copy(latitude = Double.NaN) }
         assertThrows(IllegalArgumentException::class.java) { draft().evidence.copy(longitude = 181.0) }

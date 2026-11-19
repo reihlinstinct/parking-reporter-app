@@ -183,20 +183,6 @@ def validate_trial_coordinates(report):
     need(report['subjectCode'] == '1137', 'only approved crosswalk topic permitted')
 
 
-def take_bridge_identity(env):
-    """Remove identity from the parent environment after preparing explicit child env.
-
-    Python still creates/holds the returned strings. This is lifetime/inheritance
-    minimization, not process isolation or guaranteed memory erasure.
-    """
-    keys = ('J106_SUBSCRIPTION_KEY', 'J106_APP_USERNAME', 'J106_APP_PASSWORD',
-            'REPORTER_FIRST_NAME', 'REPORTER_LAST_NAME', 'REPORTER_PHONE',
-            'REPORTER_ID_NUMBER', 'REPORTER_EMAIL')
-    child = {key: env.pop(key) for key in keys if key in env}
-    child.update({key: env[key] for key in ('PATH', 'JAVA_HOME', 'SUPERVISED_API_TRIAL') if key in env})
-    return child
-
-
 def main():
     root = Path('/tmp/supervised-api-trial')
     api = None
@@ -227,7 +213,10 @@ def main():
         classpath = Path('app/build/batch-bridge/classpath.txt').read_text().strip()
         need(bool(classpath), 'compiled production bridge unavailable')
         # Child receives only municipal identity, never private repository/encryption credentials.
-        env = take_bridge_identity(os.environ)
+        keys = ('PATH', 'JAVA_HOME', 'SUPERVISED_API_TRIAL', 'J106_SUBSCRIPTION_KEY', 'J106_APP_USERNAME',
+                'J106_APP_PASSWORD', 'REPORTER_FIRST_NAME', 'REPORTER_LAST_NAME', 'REPORTER_PHONE',
+                'REPORTER_ID_NUMBER', 'REPORTER_EMAIL')
+        env = {key: os.environ[key] for key in keys if key in os.environ}
         env['BATCH_PRIVATE_ROOT'] = str(root)
         with (root / 'bridge-private.stderr').open('wb') as error:
             api = BridgeAdapter(['java', '-cp', classpath,

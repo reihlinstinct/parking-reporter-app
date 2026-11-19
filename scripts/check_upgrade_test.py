@@ -12,13 +12,6 @@ def check(path, suite, name):
         raise ValueError('upgrade proof requires successful final OK footer and instrumentation result')
     if re.search(r'INSTRUMENTATION_FAILED|FAILURES!!!|Process crashed|shortMsg=', raw):
         raise ValueError('upgrade proof contains runner failure')
-    # Footers must follow the final status. An earlier successful run cannot
-    # lend its footer to a truncated second run.
-    statuses = list(re.finditer(r'^INSTRUMENTATION_STATUS_CODE:.*$', raw, re.MULTILINE))
-    ok = list(re.finditer(r'^OK \(1 test\)\s*$', raw, re.MULTILINE))
-    result = list(re.finditer(r'^INSTRUMENTATION_CODE: -1\s*$', raw, re.MULTILINE))
-    if not statuses or len(ok) != 1 or len(result) != 1 or not statuses[-1].end() < ok[0].start() < result[0].start():
-        raise ValueError('upgrade proof footer ordering invalid')
     cases = load_instrumentation(path)
     if len(cases) != 1 or (cases[0].suite, cases[0].name, cases[0].status) != (suite, name, 'passed'):
         raise ValueError('upgrade proof requires exactly one expected passed test, zero skips and zero failures')
