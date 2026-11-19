@@ -21,9 +21,13 @@ class AddressLookupPinTest {
     }
 
     @Test fun pinMatchesThePrivateFileWhenPresentLocally() {
-        // Shipping default must exist and match the production pin.
+        // The lookup is municipality-supplied private data and is NOT
+        // committed to this public repo, so this pins the real file only on a
+        // developer machine that has it (same pattern as
+        // BundledAddressLookupTest).
         val file = File("src/main/assets/addresses.json")
-        org.junit.Assert.assertTrue("required bundled address asset missing", file.isFile)
+        org.junit.Assume.assumeTrue(
+            "private lookup asset not present locally; skipping", file.isFile)
         AddressLookupPin.verifyPinned(file.readText(Charsets.UTF_8))
     }
 }

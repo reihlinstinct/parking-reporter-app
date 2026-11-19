@@ -31,7 +31,6 @@ import io.github.reihlinstinct.reporter.i18n.LocalStrings
 fun LicensesScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val strings = LocalStrings.current
-    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     val texts = remember {
         listOf("Apache-2.0.txt", "NOTICE.txt", "libjpeg.txt", "libpng.txt", "Leptonica.txt")
             .map { name ->
@@ -52,14 +51,8 @@ fun LicensesScreen(onBack: () -> Unit) {
         HorizontalDivider()
         Text(strings.t("licenses.osm.title"), style = MaterialTheme.typography.titleMedium)
         Text(strings.t("licenses.osm.body"), style = MaterialTheme.typography.bodySmall)
-        for (url in listOf("https://www.openstreetmap.org/copyright", "https://opendatacommons.org/licenses/odbl/1-0/")) {
-            TextButton(onClick = { uriHandler.openUri(url) }, modifier = Modifier.fillMaxWidth()) { Text(url) }
-        }
         Text(strings.t("licenses.registry.title"), style = MaterialTheme.typography.titleMedium)
         Text(strings.t("licenses.registry.body"), style = MaterialTheme.typography.bodySmall)
-        TextButton(onClick = { uriHandler.openUri("https://data.gov.il/terms-of-use") }, modifier = Modifier.fillMaxWidth()) {
-            Text("https://data.gov.il/terms-of-use")
-        }
         Text(strings.t("licenses.mlkit.title"), style = MaterialTheme.typography.titleMedium)
         Text(strings.t("licenses.mlkit.body"), style = MaterialTheme.typography.bodySmall)
         Text(strings.t("licenses.apache.title"), style = MaterialTheme.typography.titleMedium)
