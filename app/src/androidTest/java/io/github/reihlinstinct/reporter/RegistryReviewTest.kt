@@ -122,6 +122,38 @@ class RegistryReviewTest {
         // Semantics proof only. Actual TalkBack utterance count is still unverified.
     }
 
+    /** The standalone status case above does not prove its consuming review route. */
+    @Test fun pendingTagIsExposedInsideReviewWithoutChangingTheReport() {
+        val tag = CompletableDeferred<DisabilityLookupResult>()
+        val initial = draft()
+        var saved: ReviewDraft? = null
+        var submissions = 0
+        val lookup: RegistryLookup = { plate, publish -> readRegistrySnapshot(plate,
+            { tag.await() }, { snapshot(DisabilityTagType.TRIANGLE).vehicle!! }, publish) }
+        compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {},
+            onSubmit = { submissions++ }, topicSnapshot = syntheticCityTopics(),
+            topicsAvailable = true, registryLookup = lookup) } }
+        val pending = "בודק תג חניה לנכה..."
+        compose.onNodeWithText(pending).performScrollTo().assertIsDisplayed()
+        val polite = SemanticsMatcher.expectValue(
+            androidx.compose.ui.semantics.SemanticsProperties.LiveRegion,
+            androidx.compose.ui.semantics.LiveRegionMode.Polite)
+        compose.onAllNodes(polite and hasAnyDescendant(hasText(pending))).assertCountEquals(1)
+        compose.onNodeWithText("רישיון הרכב פג תוקף לפי המאגר").assertExists()
+        screenshot("registry-review-tag-pending.png")
+        compose.runOnIdle { tag.complete(DisabilityLookupResult.Found(DisabilityTagType.TRIANGLE)) }
+        compose.onNodeWithText("תג חניה לנכה, סמל משולש").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(pending).assertDoesNotExist()
+        screenshot("registry-review-tag-completed.png")
+        compose.onNodeWithText("שמור טיוטה").performScrollTo().performClick()
+        compose.runOnIdle {
+            assertEquals(initial.exactHebrewText, saved!!.exactHebrewText)
+            assertEquals(initial.plate, saved!!.plate)
+            assertEquals(0, submissions)
+        }
+        // A live-region node is not proof of TalkBack utterance count.
+    }
+
     @Test fun absentTagIsSilentButExpiredLicenceRemainsVisible() {
         val lookup: RegistryLookup = { _, _ -> RegistrySnapshot(DisabilityLookupResult.NotFound,
             snapshot(DisabilityTagType.TRIANGLE).vehicle, Instant.now()) }

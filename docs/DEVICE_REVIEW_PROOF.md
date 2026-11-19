@@ -16,3 +16,14 @@ is not a replacement for compact/landscape proof. Inspect the generated
 `shell-settings-real-ime-*` and `review-actions-real-ime-*` screenshots. A test
 implementation or passing geometry assertion without inspected screenshots is
 not visual proof. Do not adjust production padding until evidence shows the bug.
+
+## Pending tag in the review route (#397)
+
+`pendingTagIsExposedInsideReviewWithoutChangingTheReport` holds the tag lookup
+while the vehicle completes, checks the pending text inside the actual Review
+screen and its polite live-region ancestor, captures pending/completed states,
+and verifies that saving does not inject registry text or trigger Send. All
+registry answers are in-memory. Inspect both `registry-review-tag-*` screenshots.
+Actual TalkBack must still demonstrate one pending announcement and no repeated
+pending announcement when the result replaces it. Compose semantics alone cannot
+certify that. No issue closure is implied by adding this test.
