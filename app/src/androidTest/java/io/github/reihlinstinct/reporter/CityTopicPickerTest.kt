@@ -217,7 +217,7 @@ class CityTopicPickerTest {
 
     private fun assertPickerGeometry() {
         val title = compose.onNodeWithTag("picker-title").fetchSemanticsNode().boundsInRoot
-        val label = compose.onNodeWithTag("picker-search-label").fetchSemanticsNode().boundsInRoot
+        val label = compose.onNodeWithTag("picker-search-label", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val input = compose.onNodeWithTag("picker-search-input").fetchSemanticsNode().boundsInRoot
         assertTrue("Search label must not cross title", label.top >= title.bottom)
         assertTrue("Floating search label must fit within the field width", label.left >= input.left && label.right <= input.right)
