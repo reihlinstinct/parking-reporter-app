@@ -44,6 +44,7 @@ import io.github.reihlinstinct.reporter.i18n.ProvideStringsIfMissing
 
 @Composable
 fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft) -> Unit, onBack: () -> Unit, onSubmit: ((ReviewDraft) -> Unit)? = null, submitting: Boolean = false, submissionNote: String = "", missingCredentialKeys: List<String> = emptyList(), noDeviceCredential: Boolean = false, addressLookup: (suspend (Double, Double) -> List<io.github.reihlinstinct.reporter.evidence.AddressSuggestion>)? = null, plateRecognizer: (suspend () -> List<String>)? = null, manualAddressLookup: (suspend (String, String) -> io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress)? = null, crossingLookup: (suspend (String, String) -> io.github.reihlinstinct.reporter.municipal.StreetDirectory.IntersectionAddress)? = null,
+    streetSuggestions: ((String) -> List<String>)? = null,
     addressDataAvailable: Boolean = manualAddressLookup != null,
     topicSnapshot: io.github.reihlinstinct.reporter.core.CityTopicCache.Snapshot? = null,
     topicsAvailable: Boolean = false, topicsLoading: Boolean = false,
@@ -449,6 +450,16 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             }, modifier = Modifier.fillMaxWidth().testTag("use_current_location")) { Text(s.t("review.location.gps_button")) }
             if (freshCapture && gpsBusy) Text(s.t("review.location.gps_loading"))
             OutlinedTextField(manualStreet, { manualStreet = it; manualResult = null; crossingResult = null; manualGeneration++; manualError = false }, label = { Text(s.t("review.location.street")) }, modifier = Modifier.fillMaxWidth())
+            val localStreetSuggestions = remember(manualStreet, streetSuggestions) {
+                streetSuggestions?.invoke(manualStreet).orEmpty()
+            }
+            localStreetSuggestions.filter { it != manualStreet }.forEach { candidate ->
+                TextButton(onClick = {
+                    manualStreet = candidate
+                    manualResult = null; crossingResult = null
+                    manualGeneration++; manualError = false
+                }, modifier = Modifier.fillMaxWidth().testTag("street-suggestion")) { Text(candidate) }
+            }
             OutlinedTextField(manualHouse, { manualHouse = it; manualResult = null; crossingResult = null; manualGeneration++; manualError = false }, label = { Text(s.t("review.location.house")) }, modifier = Modifier.fillMaxWidth(),
                 singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }))
             if (crossingLookup != null) {

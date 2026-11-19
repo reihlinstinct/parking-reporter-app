@@ -636,6 +636,7 @@ fun AppShell(
             }
             val readyDirectory = streetsDirectory.takeUnless { addressLoading }
             ReviewScreen(value, image, ::saveDraft,
+                streetSuggestions = readyDirectory?.let { directory -> { query -> directory.suggestStreets(query) } },
                 addressDataAvailable = readyDirectory != null,
                 manualAddressLookup = readyDirectory?.let { directory -> { street, house -> directory.findConfirmedAddress(street, house) } },
                 crossingLookup = readyDirectory?.let { directory -> { a, b -> directory.findIntersectionAddress(a, b) } },
