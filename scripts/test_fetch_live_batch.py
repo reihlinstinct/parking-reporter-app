@@ -90,6 +90,26 @@ class FetchTest(unittest.TestCase):
             stage(self.dest, self.env, Opener(), encrypted_only=False)
         self.assertEqual(list(self.dest.parent.iterdir()), [])
 
+    def test_redirect_http_error_never_publishes_or_retries_encrypted_input(self):
+        import urllib.error
+        self.env['BATCH_PRIVATE_PATH'] += '.enc'
+        for code in (301, 302, 303, 307, 308):
+            with self.subTest(code=code):
+                failure = urllib.error.HTTPError('https://fixed.invalid/', code,
+                    'synthetic redirect', {'Location': 'https://other.invalid/'}, None)
+                opener = Opener(error=failure)
+                with self.assertRaisesRegex(ValueError, '^private batch staging failed$'):
+                    stage(self.dest, self.env, opener, encrypted_only=True)
+                self.assertEqual(1, len(opener.calls))
+                self.assertFalse(self.dest.exists())
+                self.assertEqual([], list(self.dest.parent.iterdir()))
+                request = opener.calls[0][0]
+                self.assertEqual('Bearer synthetic-not-a-real-secret', request.get_header('Authorization'))
+                with self.assertRaises(ValueError):
+                    NoRedirect().redirect_request(request, None, code, '',
+                        {'Location': 'https://other.invalid/'}, 'https://other.invalid/')
+        # Offline refusal proof only. No approved private package was retrieved.
+
     def test_symlink_in_destination_or_any_ancestor_refuses_before_fetch(self):
         self.env['BATCH_PRIVATE_PATH'] += '.enc'
         actual = Path(self.tmp.name) / 'actual'

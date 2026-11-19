@@ -1,6 +1,7 @@
 package io.github.reihlinstinct.reporter.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -8,8 +9,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,14 +56,16 @@ internal fun IsraeliPlate(plate: String, description: String, modifier: Modifier
     // Digits and the left IL band never mirror in RTL layouts.
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Surface(
-            modifier = modifier.semantics { text = AnnotatedString(description) },
+            modifier = modifier.semantics { text = AnnotatedString(description) }
+                .border(1.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(7.dp))
+                .padding(1.dp),
             shape = RoundedCornerShape(6.dp),
             color = IsraeliPlateStyle.Yellow,
             border = BorderStroke(2.dp, IsraeliPlateStyle.Ink),
         ) {
             Row(Modifier.height(IntrinsicSize.Min).clearAndSetSemantics { }) {
                 Box(
-                    Modifier.fillMaxHeight().width(28.dp).background(IsraeliPlateStyle.Band),
+                    Modifier.fillMaxHeight().widthIn(min = 28.dp).background(IsraeliPlateStyle.Band).padding(horizontal = 8.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(IsraeliPlateStyle.COUNTRY_MARK, color = IsraeliPlateStyle.BandText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
