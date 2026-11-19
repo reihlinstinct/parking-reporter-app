@@ -28,7 +28,7 @@ class RegistryReviewTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set(io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(InstrumentationRegistry.getInstrumentation().targetContext))
     }
-    private fun draft(plate: String = "1234567") = ReviewDraft(Evidence("registry-synthetic", "a".repeat(64), null, 31.0, 35.0),
+    private fun draft(plate: String = "1234567") = ReviewDraft(Evidence("registry-synthetic", "a".repeat(64), null, 31.77, 35.21),
         plate, "רחוב בדיקה 12", "municipal:1145", "רכב $plate חונה על המדרכה", emptySet())
     private fun snapshot(type: DisabilityTagType) = RegistrySnapshot(DisabilityLookupResult.Found(type),
         VehicleLookupResult.Found(VehicleRecord(PlateNumber.parse("1234567")!!, LocalDate.of(2020, 1, 1), null, null, null, null, null)),

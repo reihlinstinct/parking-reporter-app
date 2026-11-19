@@ -85,7 +85,6 @@ class FetchTest(unittest.TestCase):
 
     def test_redirect_http_error_never_publishes_or_retries_encrypted_input(self):
         import urllib.error
-        import urllib.request
         self.env['BATCH_PRIVATE_PATH'] += '.enc'
         for code in (301, 302, 303, 307, 308):
             with self.subTest(code=code):
