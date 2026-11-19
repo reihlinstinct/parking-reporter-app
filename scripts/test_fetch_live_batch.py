@@ -91,6 +91,7 @@ class FetchTest(unittest.TestCase):
         self.assertEqual(list(self.dest.parent.iterdir()), [])
 
     def test_symlink_in_destination_or_any_ancestor_refuses_before_fetch(self):
+        self.env['BATCH_PRIVATE_PATH'] += '.enc'
         actual = Path(self.tmp.name) / 'actual'
         actual.mkdir(mode=0o700)
         link = Path(self.tmp.name) / 'link'
