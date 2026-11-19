@@ -11,8 +11,8 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 
-/** UNCOMPILED, inactive (#358 slice 3). Platform adapters only. Needs `androidx.lifecycle:lifecycle-process`
- * (not currently a dependency; same version as the other lifecycle artifacts). No Activity state, no Bundle. */
+/** Compiled, inactive (#358 slice 3). Platform adapters use lifecycle-process, aligned with
+ * the other lifecycle artifacts. No Activity state, no Bundle. */
 object ReviewRecoveryPlatform {
     fun elapsedMs(): Long = SystemClock.elapsedRealtime()
     /** Null (fail closed) when the boot counter is unreadable. */

@@ -12,7 +12,7 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-/** UNCOMPILED, inactive. Android Keystore wrapper for the recovery session key (#358 slice 2).
+/** Compiled, inactive. Android Keystore wrapper for the recovery session key (#358 slice 2).
  * Dedicated alias namespace, never shared with settings or ledger aliases. The alias suffix is the validated
  * 32-hex session id, never read from an envelope without validation. Key policy: device credential, 30 s
  * validity window. That window does NOT prove a fresh prompt; the controller only calls wrap/unwrap after its

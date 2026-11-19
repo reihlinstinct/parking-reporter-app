@@ -3,7 +3,7 @@ package io.github.reihlinstinct.reporter.security
 import java.io.IOException
 import java.security.SecureRandom
 
-/** UNCOMPILED, inactive, disabled by default (#358 slice 3). Session, autosave and restore policy with every
+/** Compiled, inactive, disabled by default (#358 slice 3). Session, autosave and restore policy with every
  * platform dependency injected, so it is unit-testable on the JVM. No UI, no copy, no Bundle, no Send.
  * Nothing here marks a report approved or sends anything. When [enabled] is false no key, file or alias is
  * created. Threading: [onEdit], [terminal], [revoke], [onProcessStop], [beginStart], [beginRestore] run on Main
@@ -124,8 +124,8 @@ class ReviewRecoveryController(
         val edit: ReviewRecoveryWriter.Edit; val plain: ByteArray; val k: ByteArray; val b: ReviewRecoveryEnvelope.Binding
         synchronized(lock) {
             edit = pendingEdit ?: return; plain = pendingPlain ?: return
-            k = key?.copyOf() ?: run { pendingPlain?.fill(0); pendingPlain = null; pendingEdit = null; return }
             b = binding ?: return
+            k = key?.copyOf() ?: run { pendingPlain?.fill(0); pendingPlain = null; pendingEdit = null; return }
             pendingPlain = null; pendingEdit = null
         }
         try {

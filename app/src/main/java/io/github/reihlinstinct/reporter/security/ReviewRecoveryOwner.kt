@@ -9,6 +9,8 @@ import java.util.concurrent.Executors
 
 /** Process-wide ownership, never Activity/Bundle state. Activation is deliberately hard-off until reviewed
  * copy, credential/result routing, ledger validation and external process-kill proof are complete.
+ * Current Handler cleanup is best-effort across sleep/process death, never an exact deletion guarantee.
+ * Activation also requires report-bound restore discovery.
  * Disabled means no executor, timer, file, key, startup sweep or lifecycle receiver is created. */
 object ReviewRecoveryOwner {
     const val ENABLED = false
