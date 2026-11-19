@@ -7,7 +7,11 @@ Existing accepted cases must never be recreated or recovered by this lane.
 ## Branch and environment
 
 Create `submission/<first 24 hex characters of original photo SHA256>` at the
-current main commit only. Make no code or data commits on it. Do not open a PR
+approved fully green source commit. Leave `source_sha` blank to require current
+main, or explicitly pin the owner's selected green branch commit with its full
+40-character SHA. Moving main does not invalidate an explicitly pinned green
+source. The mirror must exactly match it and all technical checks on that source
+must have completed green; this is not permission to execute modified code. Make no code or data commits on it. Do not open a PR
 from it or merge it back to main. The immutable encrypted input stays in the
 existing private data repository; its exact ref, path and approved digests are
 manual workflow inputs. Do not put a plate, address, wording or photo in the
@@ -32,7 +36,7 @@ Other categories refuse; this does not activate the parked general batch writer.
 
 Before execution secrets are used, check the exact repository and account IDs,
 manual-dispatch event, first attempt, branch/photo binding, source SHA equality
-with live main, and completed green technical checks on that main commit.
+with the approved source, and completed green technical checks on that source commit.
 The legacy independent-review commit status is not a submission gate. The
 same source and expiry checks run again before each municipal write.
 
@@ -65,7 +69,7 @@ operation, so this lane does not add a repository-write permission to CI.
 Only the verified owner account may dispatch. There are no PR, fork or
 pull_request_target triggers in this workflow. Fork authors and accounts
 without write access cannot create these branches in the owner's repository
-or receive its secrets. The source must equal already-checked main, not a
+or receive its secrets. The source must equal the explicitly approved already-checked commit, not a
 modified branch with a similar name. The private claim token is confined to
 the fixed private repository and is not passed to the municipal child process.
 
