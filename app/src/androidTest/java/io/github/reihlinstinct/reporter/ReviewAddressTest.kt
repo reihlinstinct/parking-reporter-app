@@ -60,8 +60,8 @@ class ReviewAddressTest {
         compose.onNodeWithText("חפש כתובת מדויקת").performScrollTo().assertIsEnabled()
     }
 
-    @Test fun bundledDefaultResolvesOnFreshInstallWithoutImport() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
+    @Test fun pinnedTestFixtureResolvesWithoutNetwork() {
+        val context = InstrumentationRegistry.getInstrumentation().context
         val directory = io.github.reihlinstinct.reporter.municipal.BundledStreetDirectory.load(context.assets)
         val address = directory.findConfirmedAddress("אגריפס", "12")
         assertEquals("אגריפס 12", address.address)

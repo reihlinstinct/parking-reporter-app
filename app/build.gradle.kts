@@ -25,7 +25,11 @@ android {
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     lint { abortOnError = true }
-    sourceSets { getByName("test") { resources.srcDir("src/main/assets") } }
+    sourceSets {
+        getByName("main") { assets.exclude("addresses.json") }
+        getByName("test") { resources.srcDir("src/main/assets") }
+        getByName("androidTest") { assets.srcDir("src/main/assets"); assets.include("addresses.json", "namespace-upgrade/**", "city-subjects-public-20261111.json") }
+    }
     buildTypes {
         debug {
             isTestCoverageEnabled = true
