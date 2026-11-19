@@ -113,6 +113,8 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_emulator_preflight.py
       - name: API29 actual heap preflight regression tests
         run: python3 -m unittest discover -s tests -p test_api29_heap_preflight.py -v
+      - name: Bounded recovery proof regression tests
+        run: python3 -m unittest discover -s tests -p test_api29_recovery_proof.py -v
       - name: Offline submit preflight and VPN regression tests
         run: |
           /tmp/venv/bin/python -m unittest discover -s tests -p 'test_trial_submit_preflight.py' -v
