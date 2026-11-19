@@ -1,0 +1,71 @@
+name: API VPN login proof (inactive, no case writes)
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: READ_ONLY_LOGIN
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: live-emulator-e2e
+  cancel-in-progress: false
+jobs:
+  login-only:
+    # Activation and actual dispatch require separate review and user authority.
+    # A disabled job cannot receive environment secrets or make requests.
+    if: ${{ false }}
+    environment: m0-trial-submit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate immutable execution boundary before secrets
+        env:
+          CONFIRM_INPUT: ${{ inputs.confirm }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$CONFIRM_INPUT" = READ_ONLY_LOGIN
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Build login probe before private injection
+        run: |
+          sh scripts/prepare_wrapper.sh
+          sh gradlew --no-daemon :app:writeBatchBridgeClasspath
+      - name: Install existing VPN transport dependencies before tunnel
+        run: |
+          sudo apt-get update -qq > /dev/null 2>&1
+          sudo apt-get install -y strongswan xl2tpd ppp > /dev/null 2>&1
+      - name: Establish bounded VPN first, no direct login fallback
+        env:
+          VPN_L2TP_SERVER: ${{ secrets.VPN_L2TP_SERVER }}
+          VPN_L2TP_PSK: ${{ secrets.VPN_L2TP_PSK }}
+          VPN_L2TP_USERNAME: ${{ secrets.VPN_L2TP_USERNAME }}
+          VPN_L2TP_PASSWORD: ${{ secrets.VPN_L2TP_PASSWORD }}
+        run: |
+          sudo --preserve-env=VPN_L2TP_SERVER,VPN_L2TP_PSK,VPN_L2TP_USERNAME,VPN_L2TP_PASSWORD python3 trial/l2tp.py up-bounded
+          python3 -c 'from trial.l2tp import verify_municipal_routes; verify_municipal_routes()'
+      - name: Login once through final VPN egress, never create a case
+        env:
+          API_VPN_PROBE_CONFIRM: ${{ inputs.confirm }}
+          J106_SUBSCRIPTION_KEY: ${{ secrets.J106_SUBSCRIPTION_KEY }}
+          J106_APP_USERNAME: ${{ secrets.J106_APP_USERNAME }}
+          J106_APP_PASSWORD: ${{ secrets.J106_APP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # Route metadata is checked again immediately before credentials are used.
+          # No HTTP probe to third-party hosts and no direct-egress fallback.
+          python3 -c 'from trial.l2tp import verify_municipal_routes; verify_municipal_routes()'
+          java -cp "$(cat app/build/batch-bridge/classpath.txt)" io.github.reihlinstinct.reporter.municipal.ApiVpnLoginProbe
+      - name: Always remove tunnel and private config
+        if: always()
+        run: sudo python3 trial/l2tp.py down
+      - name: State proof limit
+        run: echo API_VPN_LOGIN_IS_NOT_CREATE_OR_ATTACHMENT_PROOF

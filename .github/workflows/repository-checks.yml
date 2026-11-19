@@ -51,6 +51,10 @@ jobs:
           python3 scripts/run_unittest_file.py scripts/test_api29_memory_diagnostic.py
           python3 scripts/run_unittest_file.py scripts/test_warm_gradle_plugins.py
           python3 scripts/run_unittest_file.py scripts/test_live_batch_derive.py
+      - name: Hybrid partition and write-boundary tests (offline only)
+        run: |
+          python3 scripts/test_live_batch_hybrid.py
+          python3 scripts/run_unittest_file.py scripts/test_api_vpn_login_proof.py
       - name: Hybrid and API-only write-boundary tests (offline only)
         run: |
           python3 scripts/test_live_batch_hybrid.py
