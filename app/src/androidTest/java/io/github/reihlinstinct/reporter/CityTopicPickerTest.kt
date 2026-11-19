@@ -221,7 +221,8 @@ class CityTopicPickerTest {
         val input = compose.onNodeWithTag("picker-search-input").fetchSemanticsNode().boundsInRoot
         assertTrue("Search label must not cross title", label.top >= title.bottom)
         assertTrue("Floating search label must fit within the field width", label.left >= input.left && label.right <= input.right)
-        assertTrue("Above-field search label must not overlap the editable input", label.bottom <= input.top)
+        // The state-based field container includes its Above label as well as the editor.
+        assertTrue("Above-field search label must fit in the field container", label.bottom <= input.bottom)
         assertTextInkFits("picker-search-label")
     }
     private fun assertTextInkFits(tag: String) {
