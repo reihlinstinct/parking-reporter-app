@@ -45,9 +45,9 @@ jobs:
           script: |
             mkdir -p app/build/reports/api29-memory
             adb logcat -b all -d -v threadtime > app/build/reports/api29-memory/initial-boot-logcat.txt
-            adb shell cat /vendor/etc/init/hw/init.ranchu.rc > app/build/reports/api29-memory/init-ranchu.txt
-            adb shell cat /init.rc > app/build/reports/api29-memory/init-main.txt
-            adb shell cat /system/build.prop > app/build/reports/api29-memory/system-build-properties.txt
+            adb shell su root cat /vendor/etc/init/hw/init.ranchu.rc > app/build/reports/api29-memory/init-ranchu.txt 2>&1 || echo "Optional init file unreadable" >> app/build/reports/api29-memory/init-ranchu.txt
+            adb shell su root cat /init.rc > app/build/reports/api29-memory/init-main.txt 2>&1 || echo "Optional init file unreadable" >> app/build/reports/api29-memory/init-main.txt
+            adb shell su root cat /system/build.prop > app/build/reports/api29-memory/system-build-properties.txt 2>&1 || echo "Optional property file unreadable" >> app/build/reports/api29-memory/system-build-properties.txt
             sh gradlew --no-daemon assembleDebug assembleDebugAndroidTest
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk

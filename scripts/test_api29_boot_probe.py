@@ -17,6 +17,13 @@ class BootProbeTest(unittest.TestCase):
                 target.main()
                 return __import__('json').loads((Path(directory)/'boot-probe-summary.json').read_text()), calls.call_args_list
 
+    def test_optional_init_files_use_root_and_cannot_abort_all_tests(self):
+        workflow = (Path(__file__).resolve().parents[1]/'.github/workflows/api29-memory.yml').read_text()
+        for line in workflow.splitlines():
+            if 'cat /init.rc' in line or 'cat /vendor/etc/init' in line or 'cat /system/build.prop' in line:
+                self.assertIn('shell su root cat', line)
+                self.assertIn('|| echo', line)
+
     def test_bounded_cold_probe_without_heap_property_changes(self):
         result, calls = self.run_probe([536870912]*8)
         self.assertEqual(result['status'], 'not_reproduced')
