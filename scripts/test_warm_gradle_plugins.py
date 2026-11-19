@@ -28,6 +28,10 @@ class PluginWarmTest(unittest.TestCase):
         pause = Mock()
         self.assertEqual(target.warm(run, pause), 1)
         self.assertEqual(run.call_count, 3)
+        commands = [c.args[0] for c in run.call_args_list]
+        self.assertNotIn('--refresh-dependencies', commands[0])
+        self.assertTrue(all('--refresh-dependencies' in c for c in commands[1:]))
+        self.assertTrue(all(c[-1] == 'help' for c in commands))
         self.assertEqual([c.args[0] for c in pause.call_args_list], [10, 30])
 
     def test_resolution_then_success(self):

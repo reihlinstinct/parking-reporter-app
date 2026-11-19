@@ -25,7 +25,13 @@ def warm(run=subprocess.run, pause=time.sleep):
         return 2
     for attempt in range(3):
         # `help` configures projects/plugins, but does not compile or run tests.
-        result = run(['sh', 'gradlew', '--no-daemon', 'help'], cwd=ROOT,
+        # Gradle caches missing artifacts. A later invocation must recheck those
+        # entries instead of returning the same negative-cache hit immediately.
+        command = ['sh', 'gradlew', '--no-daemon']
+        if attempt:
+            command.append('--refresh-dependencies')
+        command.append('help')
+        result = run(command, cwd=ROOT,
                      stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=180)
         print(result.stdout, end='', flush=True)
         if result.returncode == 0:
