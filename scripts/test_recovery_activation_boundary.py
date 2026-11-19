@@ -26,7 +26,8 @@ class ActivationBoundaryTest(unittest.TestCase):
         self.assertLess(send.index('authenticate(strings.t("shell.unlock.submit_title")'),
                         send.index('ReviewRecoveryOwner.controller?.terminal()'))
         self.assertLess(send.index('ReviewRecoveryOwner.controller?.terminal()'), send.index('SubmissionCoordinator('))
-        self.assertIn('if (page != "review") {\n            ReviewRotationState.clear()\n            io.github.reihlinstinct.reporter.security.ReviewRecoveryOwner.controller?.terminal()', source)
+        self.assertIn('if (previousRecoveryPage == "review" && page != "review") {\n            io.github.reihlinstinct.reporter.security.ReviewRecoveryOwner.controller?.terminal()', source)
+        self.assertIn('var previousRecoveryPage by remember { mutableStateOf(page) }', source)
 
 if __name__ == '__main__':
     unittest.main()

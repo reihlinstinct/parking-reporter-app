@@ -115,11 +115,15 @@ fun AppShell(
     val holdShell by rememberUpdatedState { if (page == "review") draft?.let { ReviewRotationState.holdShell(ReviewRotationState.Shell(it, original, revision)) } }
     DisposableEffect(Unit) { onDispose { if (shellActivity?.isChangingConfigurations == true) holdShell() } }
     // Any page other than Review ends the hold, so a rotation never leaves personal fields parked.
+    var previousRecoveryPage by remember { mutableStateOf(page) }
     LaunchedEffect(page) {
-        if (page != "review") {
-            ReviewRotationState.clear()
+        if (page != "review") ReviewRotationState.clear()
+        // Initial home after process death is not an exit from Review: retain the checkpoint for
+        // explicit authenticated reopen. Only an observed Review -> another page transition retires it.
+        if (previousRecoveryPage == "review" && page != "review") {
             io.github.reihlinstinct.reporter.security.ReviewRecoveryOwner.controller?.terminal()
         }
+        previousRecoveryPage = page
     }
     var records by remember { mutableStateOf<List<ReportRecord>>(emptyList()) }
     var saving by remember { mutableStateOf(false) }
