@@ -60,7 +60,16 @@ class ReviewAddressTest {
         compose.onNodeWithText("חפש כתובת מדויקת").performScrollTo().assertIsEnabled()
     }
 
+    @Test fun productionUsesRegionalIndexAndFullFileRemainsTestOnly() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val production = instrumentation.targetContext.assets.list("")!!.toSet()
+        org.junit.Assert.assertFalse(production.contains("addresses.json"))
+        org.junit.Assert.assertTrue(production.contains("address-index.json"))
+        org.junit.Assert.assertTrue(instrumentation.context.assets.list("")!!.contains("addresses.json"))
+    }
+
     @Test fun pinnedTestFixtureResolvesWithoutNetwork() {
+        // The full file is intentionally in the test APK only, not targetContext assets.
         val context = InstrumentationRegistry.getInstrumentation().context
         val directory = io.github.reihlinstinct.reporter.municipal.BundledStreetDirectory.load(context.assets)
         val address = directory.findConfirmedAddress("אגריפס", "12")
