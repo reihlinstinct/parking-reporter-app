@@ -124,12 +124,14 @@ class RegistryReviewTest {
 
     /** The standalone status case above does not prove its consuming review route. */
     @Test fun pendingTagIsExposedInsideReviewWithoutChangingTheReport() {
+        // Use a valid licence: an expired fixture legitimately adds a template sentence.
         val tag = CompletableDeferred<DisabilityLookupResult>()
         val initial = draft()
         var saved: ReviewDraft? = null
         var submissions = 0
         val lookup: RegistryLookup = { plate, publish -> readRegistrySnapshot(plate,
-            { tag.await() }, { snapshot(DisabilityTagType.TRIANGLE).vehicle!! }, publish) }
+            { tag.await() }, { VehicleLookupResult.Found(VehicleRecord(PlateNumber.parse("1234567")!!,
+                LocalDate.of(2099, 1, 1), null, null, null, null, null)) }, publish) }
         compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, {},
             onSubmit = { submissions++ }, topicSnapshot = syntheticCityTopics(),
             topicsAvailable = true, registryLookup = lookup) } }
@@ -139,7 +141,7 @@ class RegistryReviewTest {
             androidx.compose.ui.semantics.SemanticsProperties.LiveRegion,
             androidx.compose.ui.semantics.LiveRegionMode.Polite)
         compose.onAllNodes(polite and hasAnyDescendant(hasText(pending))).assertCountEquals(1)
-        compose.onNodeWithText("רישיון הרכב פג תוקף לפי המאגר").assertExists()
+        compose.onNodeWithText("רישיון הרכב בתוקף לפי המאגר").assertExists()
         screenshot("registry-review-tag-pending.png")
         compose.runOnIdle { tag.complete(DisabilityLookupResult.Found(DisabilityTagType.TRIANGLE)) }
         compose.onNodeWithText("תג חניה לנכה, סמל משולש").performScrollTo().assertIsDisplayed()

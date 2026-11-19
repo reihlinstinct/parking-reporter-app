@@ -661,7 +661,22 @@ fun AppShell(
                 topicSelected = { topicRepository.selected(it) }, recentTopics = topicRepository.recentCodes(), topicAliases = topicAliases, plateEnables = topicRepository.plateEnables(), registryLookup = registryLookup,
                 sidewalkScorer = { bitmap -> withContext(Dispatchers.Default) { io.github.reihlinstinct.reporter.recognition.SidewalkSuggestion.score(context, bitmap) } })
         }
-        "settings" -> SettingsScreen(profile, save = { value, touchedMunicipal, cleared ->
+        "settings" -> SettingsScreen(profile, deleteSavedPassport = { cleared ->
+            if (!hasDeviceCredential()) status = strings.t("shell.submit.no_device_lock")
+            else authenticate(strings.t("settings.passport.delete_title"), strings.t("settings.passport.delete_body")) {
+                try {
+                    // Explicit isolated delete, never the blank-preserving save merge. Fresh read after auth.
+                    val current = readSettings()
+                    if (current != null) {
+                        val updated = current.copy(passportNumber = "")
+                        saveSettings(updated)
+                        profile = updated
+                    }
+                    cleared()
+                    status = strings.t("settings.passport.deleted")
+                } catch (_: Exception) { status = strings.t("shell.status.settings_save_failed") }
+            }
+        }, save = { value, touchedMunicipal, cleared ->
             persistSettings(value, touchedMunicipal, cleared)
         }, back = { profile = null; page = "home" }, noDeviceCredential = !hasDeviceCredential(), debugTools = if (BuildConfig.DEBUG) {
             {

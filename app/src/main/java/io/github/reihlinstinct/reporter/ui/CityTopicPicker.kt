@@ -1,7 +1,7 @@
 package io.github.reihlinstinct.reporter.ui
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -44,9 +44,8 @@ fun CityTopicPicker(topics: List<MunicipalSubject>, selected: String?, recent: L
                 LazyColumn(Modifier.weight(1f, fill = false).testTag("topic-results")) {
                     items(results, key = { it.code }) { topic ->
                         Column(Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                            .clickable(role = Role.Button, onClick = { choose(topic) })
+                            .selectable(selected = topic.code == selected, role = Role.RadioButton, onClick = { choose(topic) })
                             .semantics {
-                                this.selected = topic.code == selected
                                 contentDescription = namesByCode.getValue(topic.code) + ". " + pathsByCode.getValue(topic.code)
                             }.padding(horizontal = 12.dp, vertical = 12.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)) {

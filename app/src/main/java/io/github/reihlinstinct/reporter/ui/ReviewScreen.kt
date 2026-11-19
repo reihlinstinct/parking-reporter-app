@@ -221,6 +221,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         io.github.reihlinstinct.reporter.evidence.CurrentLocation.freshCapture(initial.evidence.capturedAtIso, java.time.Instant.now(), java.time.ZoneId.systemDefault())
     }
     var gpsBusy by remember { mutableStateOf(false) }
+    var showLocationRationale by remember { mutableStateOf(false) }
     var gpsStatus by remember { mutableStateOf<String?>(null) }
     fun applyDeviceFix(fix: io.github.reihlinstinct.reporter.evidence.DeviceFix) {
         latitude = fix.latitude.toString(); longitude = fix.longitude.toString()
@@ -460,6 +461,17 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
         Text(reviewAddressText(s, draft.address))
         if (draft.unresolved.isNotEmpty()) Text(unresolvedText(s, draft.unresolved))
         }
+        if (showLocationRationale) AlertDialog(
+            onDismissRequest = { showLocationRationale = false },
+            title = { Text(s.t("review.location.permission_title")) },
+            text = { Text(s.t("review.location.permission_explain")) },
+            confirmButton = { TextButton(onClick = {
+                showLocationRationale = false
+                locationPermission.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION))
+            }) { Text(s.t("review.location.permission_continue")) } },
+            dismissButton = { TextButton(onClick = { showLocationRationale = false }) {
+                Text(s.t("review.location.permission_manual"))
+            } })
         gpsStatus?.let { Text(s.t(it), style = MaterialTheme.typography.bodySmall) }
         if (latitude.toDoubleOrNull() == null || longitude.toDoubleOrNull() == null) {
             Text(s.t("review.location.missing_plain"))
@@ -468,7 +480,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                     androidx.core.content.ContextCompat.checkSelfPermission(context, it) == android.content.pm.PackageManager.PERMISSION_GRANTED
                 }
                 if (granted) readDeviceFix()
-                else locationPermission.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION))
+                else showLocationRationale = true
             }, modifier = Modifier.fillMaxWidth().testTag("use_current_location")) { Text(s.t("review.location.gps_button")) }
             if (freshCapture && gpsBusy) Text(s.t("review.location.gps_loading"))
             OutlinedTextField(manualStreet, { manualStreet = it; manualResult = null; crossingResult = null; manualGeneration++; manualError = false }, label = { Text(s.t("review.location.street")) }, modifier = Modifier.fillMaxWidth())

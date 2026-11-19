@@ -65,9 +65,10 @@ class CityTopicPickerTest {
         compose.waitUntil(5_000) { matches().size == 1 }
         val nodes = matches()
         assertEquals("One Android accessibility target per city code", 1, nodes.size)
-        assertTrue("Android must expose the current choice as selected", nodes.single().isSelected)
+        assertTrue("Android must expose a checkable single choice", nodes.single().isCheckable)
+        assertTrue("Android must expose the current choice as checked", nodes.single().isChecked)
         assertTrue("Android must expose the selected choice as actionable", nodes.single().isClickable)
-        assertEquals("android.widget.Button", nodes.single().className?.toString())
+        assertEquals("android.widget.RadioButton", nodes.single().className?.toString())
     }
 
     @Test fun searchableMunicipalCatalogRecordingUsesMockRefreshNotLiveCity() {
