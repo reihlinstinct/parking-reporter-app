@@ -115,7 +115,12 @@ fun AppShell(
     val holdShell by rememberUpdatedState { if (page == "review") draft?.let { ReviewRotationState.holdShell(ReviewRotationState.Shell(it, original, revision)) } }
     DisposableEffect(Unit) { onDispose { if (shellActivity?.isChangingConfigurations == true) holdShell() } }
     // Any page other than Review ends the hold, so a rotation never leaves personal fields parked.
-    LaunchedEffect(page) { if (page != "review") ReviewRotationState.clear() }
+    LaunchedEffect(page) {
+        if (page != "review") {
+            ReviewRotationState.clear()
+            io.github.reihlinstinct.reporter.security.ReviewRecoveryOwner.controller?.terminal()
+        }
+    }
     var records by remember { mutableStateOf<List<ReportRecord>>(emptyList()) }
     var saving by remember { mutableStateOf(false) }
     suspend fun reload() { records = withContext(Dispatchers.IO) { database.reports().all() } }
@@ -185,6 +190,8 @@ fun AppShell(
         authenticate(strings.t("shell.unlock.submit_title"),
             strings.t("shell.unlock.submit_subtitle")) {
             Log.i("SUBMIT_FLOW", "submitReport authenticate callback: setting submitting=true")
+            // Recovery never survives the authenticated start of a submission attempt.
+            io.github.reihlinstinct.reporter.security.ReviewRecoveryOwner.controller?.terminal()
             submitting = true
             submissionNote = strings.t("shell.submit.sending")
             scope.launch(Dispatchers.Main) {
@@ -302,6 +309,7 @@ fun AppShell(
                         value.digest().takeIf { value.isReady() })
                 }
                 check(updated == 1)
+                io.github.reihlinstinct.reporter.security.ReviewRecoveryOwner.controller?.terminal()
                 revision += 1
                 draft = value; status = strings.t("shell.status.draft_saved")
                 reload()
@@ -323,6 +331,7 @@ fun AppShell(
     // camera (system Back, bottom nav, another entry) and is read only by a camera capture.
     LaunchedEffect(page) { if (page != "camera") pendingCategory = null }
     fun startReview(file: File, usePhotoLocation: Boolean = true, categoryHint: String? = null) {
+        io.github.reihlinstinct.reporter.security.ReviewRecoveryOwner.controller?.terminal()
         // One-shot starting choice from the assistant entry; the person can change it in review.
         val startSubject = categoryHint?.let { code ->
             io.github.reihlinstinct.reporter.core.ReportCategory.from(code)?.let { "municipal:" + it.municipalSubjectCode }

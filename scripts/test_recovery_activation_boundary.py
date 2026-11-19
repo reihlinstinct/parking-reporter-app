@@ -18,5 +18,15 @@ class ActivationBoundaryTest(unittest.TestCase):
         self.assertNotIn('onRecoveryEdit =', source)
         self.assertNotIn('recoverySnapshot =', source)
 
+    def test_terminal_hooks_cover_successful_save_authenticated_send_and_leave(self):
+        source = (ROOT / 'app/src/main/java/io/github/reihlinstinct/reporter/ui/AppShell.kt').read_text()
+        save = source.split('fun saveDraft(value: ReviewDraft)', 1)[1].split('fun openSettings', 1)[0]
+        self.assertLess(save.index('check(updated == 1)'), save.index('ReviewRecoveryOwner.controller?.terminal()'))
+        send = source.split('fun submitReport(', 1)[1].split('fun saveDraft', 1)[0]
+        self.assertLess(send.index('authenticate(strings.t("shell.unlock.submit_title")'),
+                        send.index('ReviewRecoveryOwner.controller?.terminal()'))
+        self.assertLess(send.index('ReviewRecoveryOwner.controller?.terminal()'), send.index('SubmissionCoordinator('))
+        self.assertIn('if (page != "review") {\n            ReviewRotationState.clear()\n            io.github.reihlinstinct.reporter.security.ReviewRecoveryOwner.controller?.terminal()', source)
+
 if __name__ == '__main__':
     unittest.main()
