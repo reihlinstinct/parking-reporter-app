@@ -53,6 +53,8 @@ Plate recognition offers plate candidates, with manual fallback and required rev
 
 ### Emulator health and display cadence
 
+Android/display CI uses a [bounded pinned-plugin preflight](docs/GRADLE_PLUGIN_RESOLUTION.md) before the original build/test commands. Only the exact KSP-resolution failure can retry before tasks start; app tests never retry.
+
 UI CI checks stable boot, focused window and active process ANR/crash state before
 starting tests. One bounded reboot is allowed before tests; persistent failure
 stops the job and preserves preflight diagnostics. App tests are never retried or
