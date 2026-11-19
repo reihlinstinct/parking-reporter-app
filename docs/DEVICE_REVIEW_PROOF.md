@@ -36,3 +36,16 @@ visible selected, clickable Button with the complete combined description.
 It does not substitute for TalkBack. Still verify Hebrew RTL focus order,
 complete paths, one focus stop per code and selected-state speech at normal and
 200% text. Preserve the existing glyph and geometry assertions.
+
+## API 36 editor evidence (#363)
+
+The existing tests already closed the IME normally, counted Settings callbacks
+and captured the unsaved dialog before asserting visibility. They now also
+assert the plate before Back and after IME closure, verify editing causes no save
+or exit, and capture Settings before the edit assertion, before the second save
+tap and before final result assertions. Phone state is asserted again after IME
+closure. Do not weaken final value/callback assertions or retry a failing test.
+
+Run both `ReviewUnsavedBackTest` and `SettingsScreenSecondSaveTest` on API 36.
+Inspect the captures with the instrumentation failure and window/IME state.
+No production cause has been established by these additional diagnostics.

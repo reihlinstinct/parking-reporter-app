@@ -38,8 +38,11 @@ class ReviewUnsavedBackTest {
         compose.setContent { AppTheme { ReviewScreen(initial, null, { saved = it }, { exits++ }) } }
         compose.onNodeWithText("ערוך").performClick()
         compose.onNodeWithText("מספר לוחית (ספרות בלבד)").performScrollTo().performTextReplacement("7654321")
+        compose.onNodeWithText("מספר לוחית (ספרות בלבד)").assertTextContains("7654321")
+        compose.runOnIdle { assertEquals(0, exits); assertEquals(initial, saved) }
         androidx.test.espresso.Espresso.closeSoftKeyboard()
         compose.waitForIdle()
+        compose.onNodeWithText("מספר לוחית (ספרות בלבד)").assertTextContains("7654321")
         compose.onNodeWithText("חזור").performScrollTo().performClick()
         capture("review-unsaved-before-visible-assert.png")
         compose.onNodeWithText("יש שינויים שלא נשמרו").assertIsDisplayed()
