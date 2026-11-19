@@ -3,6 +3,8 @@
 import re
 import subprocess
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,7 +19,27 @@ def retryable(output, version):
     return marker in output and artifact in output and '* What went wrong:' in output
 
 
-def warm(run=subprocess.run, pause=time.sleep):
+def central_probe(version, opener=None):
+    """Two fixed-origin HEADs after terminal KSP refusal, no body or response text."""
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, *args, **kwargs):
+            return None
+    opener = opener or urllib.request.build_opener(NoRedirect())
+    if not re.fullmatch(r'[0-9.]+', version):
+        return
+    for artifact in ('com.google.devtools.ksp.gradle.plugin', 'symbol-processing-gradle-plugin'):
+        url = f'https://repo.maven.apache.org/maven2/com/google/devtools/ksp/{artifact}/{version}/{artifact}-{version}.pom'
+        try:
+            with opener.open(urllib.request.Request(url, method='HEAD'), timeout=5) as response:
+                status = response.status
+        except urllib.error.HTTPError as error:
+            status = error.code
+        except (OSError, ValueError):
+            status = 'network-unavailable'
+        print(f'KSP Central HEAD {artifact}: {status}. Diagnostic only, not a build pass.', flush=True)
+
+
+def warm(run=subprocess.run, pause=time.sleep, probe=central_probe):
     source = (ROOT / 'build.gradle.kts').read_text()
     match = re.search(r'id\("com\.google\.devtools\.ksp"\) version "([0-9.]+)" apply false', source)
     if not match:
@@ -36,7 +58,10 @@ def warm(run=subprocess.run, pause=time.sleep):
         print(result.stdout, end='', flush=True)
         if result.returncode == 0:
             return 0
-        if attempt == 2 or not retryable(result.stdout, match.group(1)):
+        exact_ksp = retryable(result.stdout, match.group(1))
+        if attempt == 2 or not exact_ksp:
+            if exact_ksp:
+                probe(match.group(1))
             return result.returncode
         wait = (10, 30)[attempt]
         print(f'Pinned KSP resolution failed before tasks; retry {attempt + 2}/3 after {wait}s. No test retry.', flush=True)
