@@ -81,6 +81,15 @@ class SettingsSaveGateTest {
                 missingReason.performScrollTo().isDisplayed()
             }
         } catch (failure: Throwable) {
+            runCatching {
+                val instrumentation = InstrumentationRegistry.getInstrumentation()
+                instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
+                    try {
+                        File(instrumentation.targetContext.filesDir, "settings-save-missing-fields-device-failed.png")
+                            .outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                    } finally { bitmap.recycle() }
+                }
+            }
             runCatching { screenshot("settings-save-missing-fields-failed.png") }
             runCatching { missingReason.assertIsDisplayed() }.exceptionOrNull()
                 ?.takeIf { it !== failure }?.let(failure::addSuppressed)

@@ -275,7 +275,7 @@ class LiveEmulatorSubmissionTest {
                     // The app answered with a failure note. The persisted
                     // state record says how far the submission got:
                     // "prepared" (or no record) means CreateCase was never
-                    // reached, so nothing can exist at the city and a fixed
+                    // reached, so no case was created (an idempotent contact upsert may exist) and a fixed
                     // re-dispatch is safe; "creating"/"attaching" means the
                     // case may exist and only the 106 side can decide.
                     marker("SUBMIT_FAILED")

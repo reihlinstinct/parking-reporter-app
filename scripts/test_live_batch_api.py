@@ -94,6 +94,17 @@ class ApiBatchTest(unittest.TestCase):
         self.assertEqual([], self.events)
         self.assertEqual(0, self.journal.db.execute('SELECT count(*) FROM reports').fetchone()[0])
 
+    def test_cross_report_photo_and_bad_text_identity_refuse_before_preflight(self):
+        for field in ('shared-photo', 'textSha256'):
+            bad = copy.deepcopy(self.manifest)
+            if field == 'shared-photo':
+                bad['reports'][0]['photos'] = [copy.deepcopy(bad['reports'][1]['photos'][0])]
+            else:
+                bad['reports'][1]['textSha256'] = None
+            with self.assertRaises(InvalidBatch): run_api_batch(self.journal, bad, self.api)
+            self.assertEqual([], self.events)
+            self.assertEqual(0, self.journal.db.execute('SELECT count(*) FROM reports').fetchone()[0])
+
     def test_unknown_create_holds_and_never_moves_to_next_report(self):
         def fail(report):
             self.events.append(('unknown-create',))

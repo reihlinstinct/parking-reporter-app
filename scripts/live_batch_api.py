@@ -21,21 +21,25 @@ def run_api_batch(journal, manifest, api):
     need(isinstance(reports, list) and 1 <= len(reports) <= 50, 'invalid API report count')
     # Fail before even read-only adapter work when the small port contract is malformed.
     # Full approved text/original/outgoing/path validation still belongs to intake.
-    ids = set()
+    ids, all_photos = set(), set()
     for report in reports:
         need(isinstance(report, dict), 'invalid API report')
         report_id = report.get('reportId')
         need(isinstance(report_id, str) and bool(report_id.strip()) and report_id not in ids,
              'invalid or duplicate API report identity')
         ids.add(report_id)
+        text_hash = report.get('textSha256')
+        need(isinstance(text_hash, str) and re.fullmatch('[0-9a-f]{64}', text_hash) is not None,
+             'invalid API text identity')
         photos = report.get('photos')
         need(isinstance(photos, list), 'invalid API photos')
         hashes = set()
         for photo in photos:
             need(isinstance(photo, dict) and isinstance(photo.get('sha256'), str) and
                  re.fullmatch('[0-9a-f]{64}', photo['sha256']) is not None and
-                 photo['sha256'] not in hashes, 'invalid or duplicate API photo identity')
+                 photo['sha256'] not in hashes and photo['sha256'] not in all_photos, 'invalid or duplicate API photo identity')
             hashes.add(photo['sha256'])
+            all_photos.add(photo['sha256'])
     api.preflight(reports)
     journal.reserve(manifest)
     for report in reports:

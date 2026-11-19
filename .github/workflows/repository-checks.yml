@@ -89,6 +89,7 @@ jobs:
       - name: Regression test test summaries and strict installed-upgrade gates
         run: |
           python3 -m unittest discover -s tests -p 'test_test_summary.py' -v
+          python3 -m unittest discover -s tests -p 'test_coverage_scope.py' -v
           python3 -m unittest discover -s tests -p 'test_upgrade*.py' -v
           python3 -m unittest discover -s tests -p 'test_namespace_upgrade_workflow.py' -v
       - name: Standalone bridge dependency integrity tripwires
