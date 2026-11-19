@@ -32,7 +32,11 @@ class TwoCarCiBridge(private val client: MunicipalClient,
                 val t = client.login()
                 val subject = prepared!!["subjectCode"] as String
                 require(subject in CAR_SUBJECTS)
-                require(client.subjectCategories(t).any { it.code == subject })
+                val live = client.subjectCategories(t).filter { it.code == subject }
+                require(live.isNotEmpty())
+                //1068 is a vehicle report, never a generic no-plate incident adapter.
+                // Verify its current catalog identity before any contact/create write.
+                if (subject == "1068") require(live.all { it.name == "רכב גרוטאה" })
                 token = t
                 mapOf("success" to true)
             }
@@ -97,7 +101,7 @@ class TwoCarCiBridge(private val client: MunicipalClient,
 
     companion object {
         // Existing vehicle topics only. Live catalog membership is still required.
-        private val CAR_SUBJECTS = setOf("1144", ReportCategory.SIDEWALK_PARKING.municipalSubjectCode)
+        private val CAR_SUBJECTS = setOf("1144", ReportCategory.SIDEWALK_PARKING.municipalSubjectCode, "1068")
         fun payload(raw: Map<String, Any?>): LinkedHashMap<String, Any?> {
             require(raw.keys == setOf("reportId", "text", "subjectCode", "streetCode", "streetName", "houseNumber", "coordinateX", "coordinateY", "plate", "photos"))
             require(raw["subjectCode"] in CAR_SUBJECTS)

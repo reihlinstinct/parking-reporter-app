@@ -38,7 +38,7 @@ def validate_package(path, pin):
     need(set(trial) == {'report', 'originalSha256', 'outgoingSha256'}, 'case fields refused')
     need(trial['originalSha256'] == pin['originalSha256'] and trial['outgoingSha256'] == pin['outgoingSha256'], 'case identity refused')
     r = trial['report']
-    need(r['subjectCode'] in {'1144', '1145'} and re.fullmatch('[0-9]{7,8}', r['plate']) and r['plate'] in r['text'], 'case topic/plate refused')
+    need(r['subjectCode'] in {'1144', '1145', '1068'} and re.fullmatch('[0-9]{7,8}', r['plate']) and r['plate'] in r['text'], 'case topic/plate refused')
     need(r['photos'] == [{'path': 'photos/approved.jpg', 'sha256': pin['outgoingSha256']}], 'case photo binding refused')
     return trial, photo
 

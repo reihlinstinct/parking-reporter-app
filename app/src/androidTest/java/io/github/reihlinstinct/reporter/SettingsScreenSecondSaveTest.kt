@@ -61,6 +61,9 @@ class SettingsScreenSecondSaveTest {
         compose.setContent { AppTheme { SettingsScreen(profile.value, { s, touched, done -> saved = mergeReporterSettings(s, stored, touched); profile.value = saved; done() }, {}) } }
         compose.onNodeWithText("חיבור 106 מתקדם").performScrollTo().performClick()
         compose.onNodeWithText("סיסמת API").performScrollTo().performTextReplacement("")
+        // Match the sibling save test: do not tap while the IME changes the viewport.
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.waitForIdle()
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().performClick()
         compose.runOnIdle {
             // The user cleared this field in full view: blank means cleared.
