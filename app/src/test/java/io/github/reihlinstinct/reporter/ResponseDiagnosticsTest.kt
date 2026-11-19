@@ -5,6 +5,15 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ResponseDiagnosticsTest {
+    /** Synthetic checksum-valid fixture, never an identity sourced from a person. */
+    @Test fun syntheticLongNumericFixturePassesIsraeliChecksum() {
+        val fixture = "100000009"
+        val sum = fixture.mapIndexed { index, digit ->
+            val product = digit.digitToInt() * (if (index % 2 == 0) 1 else 2)
+            product / 10 + product % 10
+        }.sum()
+        assertEquals(0, sum % 10)
+    }
     @Test fun nestedSecretsAndActualValuesNeverSurvive() {
         val raw = """{"Success":false,"Token":"abc","nested":{"Password":"def","message":"known-secret"},"items":[{"Authorization":"Bearer xyz"}],"CaseNumberInCRM":"2000-0000000"}"""
         val redacted = ResponseDiagnostics.redactBody(raw, listOf("known-secret"))
@@ -18,9 +27,9 @@ class ResponseDiagnosticsTest {
         for (secret in listOf("NL-SECRET", "CR-SECRET", "LS-SECRET")) assertFalse(secret, redacted.contains(secret))
     }
     @Test fun sensitiveObjectsAndLongNumbersAreScrubbedWithoutErasingBooleanStatus() {
-        val raw = """{"Token":{"v":"OBJ-1","nested":["ARR-1",987654321,true]},"echo":"OBJ-1 ARR-1 987654321 true","numeric":987654321,"boolean":true}"""
+        val raw = """{"Token":{"v":"OBJ-1","nested":["ARR-1",100000009,true]},"echo":"OBJ-1 ARR-1 100000009 true","numeric":100000009,"boolean":true}"""
         val redacted = ResponseDiagnostics.redactBody(raw, emptyList())
-        for (secret in listOf("OBJ-1", "ARR-1", "987654321")) assertFalse(secret, redacted.contains(secret))
+        for (secret in listOf("OBJ-1", "ARR-1", "100000009")) assertFalse(secret, redacted.contains(secret))
     }
     @Test fun shortSensitiveNumbersDoNotCorruptUnrelatedDatesOrCounts() {
         val redacted = org.json.JSONObject(ResponseDiagnostics.redactBody(
