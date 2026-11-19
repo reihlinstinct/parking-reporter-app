@@ -2,6 +2,7 @@ package io.github.reihlinstinct.reporter
 
 import android.graphics.Bitmap
 import androidx.compose.ui.test.*
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.reihlinstinct.reporter.i18n.AppCatalog
@@ -41,12 +42,15 @@ class ApprovedCopySettingsTest {
         } } }
         val notice = catalog.t(french.code, "settings.language.machine_notice")
         compose.onNodeWithText(notice).performScrollTo().assertIsDisplayed()
+        compose.mainClock.advanceTimeBy(500)
+        compose.waitForIdle()
+        compose.onNodeWithText(notice).assertIsDisplayed()
         capture("french-machine-draft-notice.png")
     }
     private fun capture(name: String) {
         compose.waitForIdle()
         val inst = InstrumentationRegistry.getInstrumentation()
-        val bitmap = inst.uiAutomation.takeScreenshot()
+        val bitmap = compose.onNode(isRoot()).captureToImage().asAndroidBitmap()
         File(inst.targetContext.filesDir, name).outputStream().use {
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
         }

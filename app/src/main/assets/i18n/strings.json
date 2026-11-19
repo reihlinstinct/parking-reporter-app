@@ -819,7 +819,7 @@
       "ar": "التعرف على النص في الصور بواسطة Google ML Kit، وفقًا لشروط خدمة ML Kit (التي تتضمن شروط استخدام Google APIs): developers.google.com/ml-kit/terms",
       "ru": "Распознавание текста на изображениях с помощью Google ML Kit в соответствии с условиями использования ML Kit (включающими условия использования Google APIs): developers.google.com/ml-kit/terms",
       "am": "በምስሎች ላይ ያለውን ጽሑፍ መለየት በGoogle ML Kit፣ በML Kit የአገልግሎት ውሎች ሥር (የGoogle APIs የአገልግሎት ውሎችን ያካትታሉ): developers.google.com/ml-kit/terms",
-      "fr": "Reconnaissance de texte dans les images par Google ML Kit, soumise aux conditions d'utilisation de ML Kit (qui incluent les conditions d'utilisation des API Google) : developers.google.com/ml-kit/terms"
+      "fr": "Reconnaissance de texte dans les images par Google ML Kit, soumise aux conditions d'utilisation de ML Kit (qui incluent les conditions d'utilisation de Google APIs) : developers.google.com/ml-kit/terms"
     },
     "licenses.apache.title": {
       "he": "Apache-2.0 libraries",
