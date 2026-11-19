@@ -226,5 +226,24 @@ class ReviewRecoveryControllerTest {
         assertFalse(e.controller.isActive); assertTrue(files(e, tmp.root).isEmpty()); assertTrue(e.keys.aliases.isEmpty())
     }
 
+    @Test fun navigatingAfterRequestRejectsLateStartAndRestore() {
+        val e = Env(tmp.root)
+        val pending = e.controller.beginStart("synthetic-1", digest, hash, 7)!!
+        e.controller.terminal(); e.runIo()
+        assertFalse(e.controller.completeStart(pending, true, true))
+        start(e); e.controller.onEdit(snap()); e.settle()
+        val restore = e.controller.beginRestore()!!
+        e.controller.terminal(); e.runIo()
+        assertNull(e.controller.completeRestore(restore, true, true) { true })
+        assertFalse(e.controller.isActive); assertTrue(e.keys.aliases.isEmpty())
+    }
+
+    @Test fun promptProcessStopDoesNotInvalidateFreshMatchingRestoreResult() {
+        val e = Env(tmp.root); start(e); e.controller.onEdit(snap()); e.settle()
+        val request = e.controller.beginRestore()!!
+        e.controller.onProcessStop(); e.runIo()
+        assertEquals("synthetic second line", e.controller.completeRestore(request, true, true) { true }!!.text)
+    }
+
     private companion object { val NOT_ACTIVE = ReviewRecoveryController.EditResult.NOT_ACTIVE }
 }

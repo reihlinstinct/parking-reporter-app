@@ -45,6 +45,7 @@ import io.github.reihlinstinct.reporter.i18n.ProvideStringsIfMissing
 @Composable
 fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft) -> Unit, onBack: () -> Unit, onSubmit: ((ReviewDraft) -> Unit)? = null, submitting: Boolean = false, submissionNote: String = "", missingCredentialKeys: List<String> = emptyList(), noDeviceCredential: Boolean = false, addressLookup: (suspend (Double, Double) -> List<io.github.reihlinstinct.reporter.evidence.AddressSuggestion>)? = null, plateRecognizer: (suspend () -> List<String>)? = null, manualAddressLookup: (suspend (String, String) -> io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress)? = null, crossingLookup: (suspend (String, String) -> io.github.reihlinstinct.reporter.municipal.StreetDirectory.IntersectionAddress)? = null,
     streetSuggestions: ((String) -> List<String>)? = null,
+    recoveryActions: ReviewRecoveryActions? = null,
     // Disabled-by-default integration ports. Caller must authenticate/validate before supplying recovery.
     // A rotation's newer live state wins. These ports alone do not enable persistence or show a prompt.
     recoverySnapshot: io.github.reihlinstinct.reporter.security.ReviewRecoveryCodec.Snapshot? = null,
@@ -299,6 +300,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     val focusManager = LocalFocusManager.current
     val dismissKeyboard = { focusManager.clearFocus(); keyboard?.hide() }
     Column(Modifier.fillMaxSize().systemBarsPadding().imePaddingCompat().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        recoveryActions?.let { ReviewRecoveryControls(it) }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(s.t("review.title"), style = MaterialTheme.typography.titleLarge)
             TextButton(onClick = { if (editing) dismissKeyboard(); editing = !editing }) { Text(s.t(if (editing) "review.edit.done" else "review.edit.start")) }

@@ -45,6 +45,7 @@ jobs:
       - name: Minimal batch manifest derivation tests (offline only)
         run: |
           python3 scripts/test_recovery_activation_boundary.py
+          python3 scripts/test_recovery_copy.py
           python3 scripts/run_unittest_file.py scripts/test_history_audit.py
           python3 scripts/run_unittest_file.py scripts/test_prepare_hybrid_batch.py
           python3 scripts/run_unittest_file.py scripts/test_run_unittest_file.py

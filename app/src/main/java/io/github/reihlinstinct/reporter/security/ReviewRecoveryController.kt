@@ -30,12 +30,13 @@ class ReviewRecoveryController(
 ) {
     enum class EditResult { NOT_ACTIVE, QUEUED, MEMORY_ONLY_TOO_LARGE, MEMORY_ONLY_FAILED }
     class StartRequest internal constructor(internal val ticket: ReviewRecoveryAuthRequest.Ticket,
-        internal val binding: ReviewRecoveryEnvelope.Binding)
+        internal val binding: ReviewRecoveryEnvelope.Binding, internal val generation: Long)
     class RestoreRequest internal constructor(internal val ticket: ReviewRecoveryAuthRequest.Ticket,
-        internal val binding: ReviewRecoveryEnvelope.Binding)
+        internal val binding: ReviewRecoveryEnvelope.Binding, internal val generation: Long)
 
     private val lock = Any()
     private val generation = java.util.concurrent.atomic.AtomicLong(0)
+    private val navigationGeneration = java.util.concurrent.atomic.AtomicLong(0)
     private var acceptingEdits = false
     private var session: ReviewRecoveryWriter.Session? = null
     private var binding: ReviewRecoveryEnvelope.Binding? = null
@@ -58,16 +59,20 @@ class ReviewRecoveryController(
             ReviewRecoveryEnvelope.Binding(newSessionId(), reportId, initialDigest, originalHash, revision,
                 appVersionCode(), boot, now, now + ReviewRecoveryEnvelope.LIFETIME_MS)
         } catch (e: IllegalArgumentException) { return null }
-        return StartRequest(auth.begin(b, ReviewRecoveryAuthRequest.Operation.START_SESSION), b)
+        return synchronized(lock) { StartRequest(auth.begin(b, ReviewRecoveryAuthRequest.Operation.START_SESSION), b, navigationGeneration.get()) }
     }
 
     /** Step 2, off Main, only from the app's own RESULT_OK callback. Replaces any earlier session first. */
     fun completeStart(request: StartRequest, credentialResultOk: Boolean, foreground: Boolean): Boolean {
-        if (!auth.complete(request.ticket, request.binding, ReviewRecoveryAuthRequest.Operation.START_SESSION,
-                credentialResultOk, foreground, deviceUnlocked())) return false
-        if (!enabled()) return false
-        endSession(deleteArtifacts = true)
-        val epoch = generation.get()
+        val epoch = synchronized(lock) {
+            if (navigationGeneration.get() != request.generation ||
+                !auth.complete(request.ticket, request.binding, ReviewRecoveryAuthRequest.Operation.START_SESSION,
+                    credentialResultOk, foreground, deviceUnlocked()) || !enabled()) return false
+            revoke()
+            binding = null; cancelExpiry?.invoke(); cancelExpiry = null
+            generation.get()
+        }
+        cleanupArtifacts()
         val dataKey = ByteArray(32).also { SecureRandom().nextBytes(it) }
         try {
             keys.deleteAll()
@@ -179,7 +184,7 @@ class ReviewRecoveryController(
      * Send start must not be blocked if deletion fails; deletion errors are swallowed here and the restore path
      * independently rejects stale checkpoints. */
     fun terminal() {
-        auth.invalidate(); revoke()
+        synchronized(lock) { navigationGeneration.incrementAndGet(); auth.invalidate(); revoke() }
         synchronized(lock) { binding = null; cancelExpiry?.invoke(); cancelExpiry = null }
         io(Runnable { cleanupArtifacts() })
     }
@@ -211,7 +216,7 @@ class ReviewRecoveryController(
         if (!ReviewRecoveryEnvelope.isFresh(parsed.binding, elapsedMs(), bootCount(), appVersionCode())) {
             endSession(deleteArtifacts = true); return null
         }
-        return RestoreRequest(auth.begin(parsed.binding, ReviewRecoveryAuthRequest.Operation.RESTORE_SESSION), parsed.binding)
+        return synchronized(lock) { RestoreRequest(auth.begin(parsed.binding, ReviewRecoveryAuthRequest.Operation.RESTORE_SESSION), parsed.binding, navigationGeneration.get()) }
     }
 
     /** Off Main, only from the app's own RESULT_OK callback. [validate] must re-read the saved ledger row and
@@ -222,10 +227,12 @@ class ReviewRecoveryController(
      * restored state immediately. */
     fun completeRestore(request: RestoreRequest, credentialResultOk: Boolean, foreground: Boolean,
         validate: (ReviewRecoveryEnvelope.Binding) -> Boolean): ReviewRecoveryCodec.Snapshot? {
-        if (!auth.complete(request.ticket, request.binding, ReviewRecoveryAuthRequest.Operation.RESTORE_SESSION,
-                credentialResultOk, foreground, deviceUnlocked())) return null // cancel/late/stale: keep memory-only
-        if (!enabled() || !deviceUnlocked()) return null
-        val epoch = generation.get()
+        val epoch = synchronized(lock) {
+            if (navigationGeneration.get() != request.generation ||
+                !auth.complete(request.ticket, request.binding, ReviewRecoveryAuthRequest.Operation.RESTORE_SESSION,
+                    credentialResultOk, foreground, deviceUnlocked()) || !enabled()) return null
+            generation.get()
+        }
         val parsed = store.read() ?: return null
         val b = parsed.binding
         if (b.sessionId != request.binding.sessionId ||
