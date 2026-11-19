@@ -122,7 +122,7 @@ def load_jacoco(pattern):
         except ET.ParseError:
             continue
         found = {}
-        for counter in root.iter('counter'):
+        for counter in root.findall('counter'):
             kind = counter.get('type')
             if kind in ('INSTRUCTION', 'LINE', 'BRANCH'):
                 covered = int(counter.get('covered', 0)); missed = int(counter.get('missed', 0))

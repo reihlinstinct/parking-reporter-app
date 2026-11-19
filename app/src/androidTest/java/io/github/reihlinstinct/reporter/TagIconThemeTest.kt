@@ -59,6 +59,30 @@ class TagIconThemeTest {
             val file = File(context.filesDir, "tag-boundary-$resource-$dp-${if (background == Color.BLACK) "dark" else background.toUInt().toString(16)}.png")
             file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         }
+        // #355: derive side boundary positions from actual raster alpha, not a second
+        // hand-maintained triangle/tile geometry. Sample both sides at several heights.
+        for (resource in resources) for (dp in listOf(24, 32)) {
+            val size = (dp * context.resources.displayMetrics.density).toInt()
+            val raster = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            context.getDrawable(resource)!!.mutate().apply { setBounds(0, 0, size, size); draw(Canvas(raster)) }
+            fun light(c: Int): Double {
+                fun channel(v: Int): Double { val x = v / 255.0; return if (x <= .04045) x / 12.92 else Math.pow((x + .055) / 1.055, 2.4) }
+                return .2126 * channel(Color.red(c)) + .7152 * channel(Color.green(c)) + .0722 * channel(Color.blue(c))
+            }
+            for (fraction in listOf(.35, .60, .82)) {
+                val y = (fraction * size).toInt()
+                val opaque = (0 until size).filter { Color.alpha(raster.getPixel(it, y)) >= 240 }
+                assertTrue("actual contour must exist", opaque.size >= 4)
+                val band = maxOf(2, opaque.size / 3)
+                for (side in listOf(opaque.take(band), opaque.takeLast(band))) {
+                    assertTrue("light exterior must reach each side for dark surfaces",
+                        side.any { light(raster.getPixel(it, y)) > .8 })
+                    assertTrue("colored inner contour must reach each side for light surfaces",
+                        side.any { light(raster.getPixel(it, y)) < .2 })
+                }
+            }
+            raster.recycle()
+        }
         compose.setContent {
             Column {
                 for (dark in listOf(false, true)) {

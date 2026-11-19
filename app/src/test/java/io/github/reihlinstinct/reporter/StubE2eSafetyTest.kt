@@ -30,6 +30,16 @@ class StubE2eSafetyTest {
                 val optIn = "InstrumentationRegistry.getArguments().getString(\"namespaceUpgrade\")"
                 assertTrue("Upgrade test keeps its exact local opt-in", text.contains(optIn))
                 text.replace(optIn, "localUpgradeOptIn")
+            } else if (testFile.name == "MemoryTraceListener.kt") {
+                // Diagnostic-only metadata and synthetic heap snapshots, no live mode.
+                val metadata = "InstrumentationRegistry.getArguments().getString(\"memoryTrace\")"
+                val snapshots = "InstrumentationRegistry.getArguments().getString(\"memorySnapshots\")"
+                assertTrue(text.contains(metadata))
+                assertTrue(text.contains(snapshots))
+                assertFalse(text.contains("MunicipalClient"))
+                assertFalse(text.contains("ReporterSettings"))
+                assertFalse(text.contains("java.net"))
+                text.replace(metadata, "localMemoryTraceOptIn").replace(snapshots, "localSnapshotOptIn")
             } else text
             assertFalse("Live arguments in ${testFile.name}", checkedText.contains("getArguments("))
             assertFalse("Live endpoint flag in ${testFile.name}", text.contains("e2eLive"))

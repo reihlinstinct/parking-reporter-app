@@ -56,12 +56,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
         with:
           distribution: temurin
           java-version: '17'
           cache: gradle
       - run: sh scripts/prepare_wrapper.sh
+      - name: Warm pinned plugins before build or emulator tests
+        run: python3 scripts/warm_gradle_plugins.py
       - name: Build debug and verify release code generation
         run: |
           sh gradlew --no-daemon lintDebug testDebugUnitTest assembleDebug compileReleaseKotlin
@@ -119,12 +121,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
         with:
           distribution: temurin
           java-version: '17'
           cache: gradle
       - run: sh scripts/prepare_wrapper.sh
+      - name: Warm pinned plugins before build or emulator tests
+        run: python3 scripts/warm_gradle_plugins.py
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -143,6 +147,7 @@ jobs:
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             sh gradlew --stop || true
             python3 scripts/emulator_preflight.py --report-dir app/build/reports/androidTests
+            python3 scripts/api29_heap_preflight.py --report-dir app/build/reports/androidTests
             # Local OCR tests must work without emulator networking. On API 26
             # adbd is fragile: svc can take the whole session down (exit 137
             # on CI). Keep the command best-effort; the offline behavior is
@@ -167,6 +172,10 @@ jobs:
             # Dump the device log so app-side Log lines and compose tree dumps
             # from failing tests are readable without rerunning locally.
             adb logcat -d -v threadtime > app/build/reports/androidTests/logcat.txt || true
+            # #376: retain ART/native crash diagnostics before emulator teardown.
+            adb shell dumpsys dropbox --print SYSTEM_TOMBSTONE > app/build/reports/androidTests/native-tombstones.txt || true
+            adb shell dumpsys meminfo il.sidewalks.reporter > app/build/reports/androidTests/memory-after-tests.txt || true
+            adb shell getprop > app/build/reports/androidTests/emulator-properties.txt || true
             python3 scripts/test_summary.py --title 'Instrumented tests (emulator, API ${{ matrix.api }})' --instrumentation app/build/reports/androidTests/instrumentation.txt --check; echo $? > app/build/reports/androidTests/summary.rc
             for f in $(adb shell run-as il.sidewalks.reporter ls files/ | tr -d '\r' | grep '\.png$'); do adb shell run-as il.sidewalks.reporter cat "files/$f" > "app/build/reports/androidTests/screenshots/$f" || true; done
             # Best-effort: a crashed run must still reach the presence checks

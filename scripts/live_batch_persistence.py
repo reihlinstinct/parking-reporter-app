@@ -13,40 +13,72 @@ from pathlib import Path
 import sqlite3
 import tempfile
 import urllib.request
+import zlib
 
 from live_batch_input import InvalidBatch, need
 from live_batch_journal import BatchJournal
 
-MAGIC = b'parking-journal-aesgcm-v1\x00'
-AAD = b'reihlinstinct/parking-reports:journal/live-batch.sqlite.aesgcm:v1'
+# V1 remains readable; only V2 compressed envelopes are emitted.
+LEGACY_MAGIC = b'parking-journal-aesgcm-v1\x00'
+LEGACY_AAD = b'reihlinstinct/parking-reports:journal/live-batch.sqlite.aesgcm:v1'
+MAGIC = b'parking-journal-aesgcm-zlib-v2\x00'
+AAD = b'reihlinstinct/parking-reports:journal/live-batch.sqlite.aesgcm:v2'
 URL = 'https://api.github.com/repos/reihlinstinct/parking-reports/contents/journal/live-batch.sqlite.aesgcm'
-MAX_PLAIN = 768 * 1024
+LEGACY_MAX_PLAIN = 768 * 1024
+MAX_PLAIN = 8 * 1024 * 1024
+# Keep raw encrypted files within the Contents API's full-feature file-size limit.
+MAX_COMPRESSED = 768 * 1024
+MAX_ENVELOPE = len(MAGIC) + 8 + 44 + MAX_COMPRESSED
+MAX_RESPONSE = 2 * MAX_ENVELOPE + 4096
 
 
 def seal(data, password):
-    # Refuse oversized snapshots before loading optional crypto dependencies.
+    # Capacity refusal does not depend on importing crypto or deriving a key.
     need(isinstance(password, bytes) and len(password) >= 16, 'journal key unavailable')
-    need(0 < len(data) <= MAX_PLAIN, 'journal capacity exceeded')
+    need(isinstance(data, bytes) and 0 < len(data) <= MAX_PLAIN, 'journal capacity exceeded')
+    need(data.startswith(b'SQLite format 3\x00'), 'invalid journal database')
+    packed = zlib.compress(data, level=6)
+    need(len(packed) <= MAX_COMPRESSED, 'compressed journal capacity exceeded')
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
     from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
     from cryptography.hazmat.primitives import hashes
     salt, nonce = os.urandom(16), os.urandom(12)
+    header = MAGIC + len(data).to_bytes(8, 'big')
     key = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=200000).derive(password)
-    return MAGIC + salt + nonce + AESGCM(key).encrypt(nonce, data, AAD)
+    return header + salt + nonce + AESGCM(key).encrypt(nonce, packed, AAD + header)
 
 
 def unseal(blob, password):
+    need(isinstance(password, bytes) and len(password) >= 16, 'journal key unavailable')
+    need(isinstance(blob, bytes) and len(blob) <= MAX_ENVELOPE, 'invalid journal envelope')
+    legacy = blob.startswith(LEGACY_MAGIC)
+    if legacy:
+        need(len(LEGACY_MAGIC) + 44 < len(blob) <= len(LEGACY_MAGIC) + 44 + LEGACY_MAX_PLAIN,
+             'invalid journal envelope')
+        at, associated, expected = len(LEGACY_MAGIC), LEGACY_AAD, None
+    else:
+        need(blob.startswith(MAGIC) and len(blob) > len(MAGIC) + 8 + 44, 'invalid journal envelope')
+        at = len(MAGIC) + 8
+        expected = int.from_bytes(blob[len(MAGIC):at], 'big')
+        need(0 < expected <= MAX_PLAIN, 'journal capacity exceeded')
+        associated = AAD + blob[:at]
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
     from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
     from cryptography.hazmat.primitives import hashes
-    need(isinstance(password, bytes) and len(password) >= 16, 'journal key unavailable')
-    need(blob.startswith(MAGIC) and len(blob) <= MAX_PLAIN + len(MAGIC) + 44, 'invalid journal envelope')
-    at = len(MAGIC); salt, nonce = blob[at:at + 16], blob[at + 16:at + 28]
+    salt, nonce = blob[at:at + 16], blob[at + 16:at + 28]
     try:
         key = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=200000).derive(password)
-        data = AESGCM(key).decrypt(nonce, blob[at + 28:], AAD)
+        data = AESGCM(key).decrypt(nonce, blob[at + 28:], associated)
     except Exception:
         raise InvalidBatch('journal authentication failed') from None
+    if not legacy:
+        try:
+            decoder = zlib.decompressobj()
+            data = decoder.decompress(data, expected + 1)
+            need(len(data) == expected and decoder.eof and not decoder.unconsumed_tail
+                 and not decoder.unused_data, 'invalid compressed journal')
+        except zlib.error:
+            raise InvalidBatch('invalid compressed journal') from None
     need(data.startswith(b'SQLite format 3\x00'), 'invalid journal database')
     return data
 
@@ -71,8 +103,8 @@ class PrivateJournalContents:
             method='GET' if payload is None else 'PUT')
         try:
             with self.opener.open(request, timeout=45) as response:
-                data = response.read(2 * MAX_PLAIN + 4096)
-                need(len(data) < 2 * MAX_PLAIN + 4096, 'journal response too large')
+                data = response.read(MAX_RESPONSE)
+                need(len(data) < MAX_RESPONSE, 'journal response too large')
                 return json.loads(data)
         except Exception:
             raise InvalidBatch('private journal read or save unavailable; reconcile before continuing') from None
@@ -84,7 +116,7 @@ class PrivateJournalContents:
             revision = raw['sha']
             need(isinstance(revision, str) and len(revision) == 40, 'journal revision missing')
             content = base64.b64decode(''.join(raw['content'].split()), validate=True)
-            need(content and len(content) <= MAX_PLAIN + len(MAGIC) + 44, 'journal capacity exceeded')
+            need(content and len(content) <= MAX_ENVELOPE, 'journal capacity exceeded')
             return revision, content
         except (KeyError, TypeError, ValueError):
             raise InvalidBatch('private journal content invalid') from None
@@ -92,6 +124,7 @@ class PrivateJournalContents:
     def save(self, revision, blob):
         # GitHub Contents SHA is a compare-and-swap precondition. No blind PUT,
         # force push, automatic retries, branch creation or journal replacement.
+        need(isinstance(blob, bytes) and 0 < len(blob) <= MAX_ENVELOPE, 'journal capacity exceeded')
         result = self._request({'message': 'Persist encrypted live batch journal [skip ci]', 'branch': 'main',
                                 'sha': revision, 'content': base64.b64encode(blob).decode()})
         expected = hashlib.sha1(b'blob ' + str(len(blob)).encode() + b'\x00' + blob).hexdigest()
@@ -126,7 +159,9 @@ class DurableBatchJournal(BatchJournal):
                 self.db.backup(copy)
             finally:
                 copy.close()
-            blob = seal(Path(tmp).read_bytes(), self.password)
+            with open(tmp, 'rb') as snapshot:
+                data = snapshot.read(MAX_PLAIN + 1)
+            blob = seal(data, self.password)
             self.revision = self.remote.save(self.revision, blob)
         except BaseException:
             self.poisoned = True

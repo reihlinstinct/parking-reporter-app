@@ -19,6 +19,36 @@ class ProcessTest(unittest.TestCase):
         self.addCleanup(bridge.close)
         return bridge
 
+    def test_real_java_preserves_hebrew_environment_and_private_stdio(self):
+        import shutil
+        javac, java = shutil.which('javac'), shutil.which('java')
+        self.assertIsNotNone(javac, 'JDK required: this regression must not silently skip')
+        self.assertIsNotNone(java)
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'UnicodeProbe.java'
+            source.write_text(r'''import java.io.*;
+import java.nio.charset.StandardCharsets;
+public class UnicodeProbe {
+ public static void main(String[] args) throws Exception {
+  String expected="\u05d1\u05d3\u05d9\u05e7\u05d4";
+  String name=System.getenv("SYNTHETIC_NAME");
+  String line=new BufferedReader(new InputStreamReader(System.in,StandardCharsets.UTF_8)).readLine();
+  boolean ok=expected.equals(name) && line.contains(expected)
+    && "UTF-8".equals(System.getProperty("sun.jnu.encoding"));
+  System.out.println("{\"success\":"+ok+"}");
+ }
+}''', encoding='utf-8')
+            subprocess.run([javac, '-encoding', 'UTF-8', str(source)], check=True, capture_output=True, timeout=30)
+            for locale in (None, 'C'):
+                env = {'SYNTHETIC_NAME': 'בדיקה'}
+                if locale: env.update(LANG=locale, LC_ALL=locale)
+                original = dict(env)
+                with tempfile.TemporaryFile() as err:
+                    bridge = BridgeAdapter([java, '-cp', directory, 'UnicodeProbe'], env, err, timeout=5)
+                    try: self.assertEqual({'success': True}, bridge.request('prepare', synthetic='בדיקה'))
+                    finally: bridge.close()
+                self.assertEqual(original, env)
+
     def test_stop_timeout_keeps_session_poisoned(self):
         bridge = object.__new__(BridgeAdapter)
         bridge.poisoned = False
@@ -60,7 +90,7 @@ class ProcessTest(unittest.TestCase):
         with self.assertRaises(InvalidBatch): b.request('create')
 
     def test_malformed_negative_or_extra_responses_burn_session(self):
-        for response in ['not-json', '{"success":false}', '[]', '{"success":true}\\n{"success":true}']:
+        for response in ['{"success":false,"success":true}', '{"success":true,"case":{"id":NaN}}', 'not-json', '{"success":false}', '[]', '{"success":true}\\n{"success":true}']:
             with self.subTest(response=response):
                 b=self.bridge('import sys;sys.stdin.readline();print('+repr(response)+',flush=True)')
                 with self.assertRaises(InvalidBatch): b.request('create')

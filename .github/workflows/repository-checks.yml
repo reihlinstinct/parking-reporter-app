@@ -44,21 +44,34 @@ jobs:
         run: python3 scripts/test_live_instrumentation_capture.py
       - name: Minimal batch manifest derivation tests (offline only)
         run: |
-          python3 scripts/run_unittest_file.py scripts/test_legacy_held_aliases.py
           python3 scripts/run_unittest_file.py scripts/test_history_audit.py
           python3 scripts/run_unittest_file.py scripts/test_prepare_hybrid_batch.py
           python3 scripts/run_unittest_file.py scripts/test_run_unittest_file.py
+          python3 scripts/run_unittest_file.py scripts/test_api29_boot_probe.py
+          python3 scripts/run_unittest_file.py scripts/test_api29_memory_diagnostic.py
+          python3 scripts/run_unittest_file.py scripts/test_warm_gradle_plugins.py
           python3 scripts/run_unittest_file.py scripts/test_live_batch_derive.py
       - name: Hybrid partition and write-boundary tests (offline only)
         run: |
           python3 scripts/test_live_batch_hybrid.py
           python3 scripts/run_unittest_file.py scripts/test_api_vpn_login_proof.py
+      - name: Hybrid and API-only write-boundary tests (offline only)
+        run: |
+          python3 scripts/test_live_batch_hybrid.py
+          python3 scripts/run_unittest_file.py scripts/test_live_batch_api.py
       - name: UI boundary adapter grant-order tests (fake device only)
         run: python3 scripts/test_live_batch_ui_adapter.py
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+        with:
+          distribution: temurin
+          java-version: '17'
       - name: Private bridge subprocess timeout and death tests (synthetic only)
         run: python3 scripts/test_batch_bridge_process.py
       - name: Test pre-start proof through encryption and shredding
-        run: python3 scripts/test_live_prestart_proof.py
+        run: |
+          python3 scripts/test_live_prestart_proof.py
+          python3 scripts/run_unittest_file.py scripts/test_prove_live_pre_case_retry.py
+          python3 scripts/run_unittest_file.py scripts/test_live_retry_workflow_guard.py
       - name: Private live photo staging safety tests
         run: python3 scripts/test_fetch_live_photo.py
   python-smoke:
@@ -74,19 +87,30 @@ jobs:
         run: |
           python3 -m venv /tmp/venv
           /tmp/venv/bin/pip install --require-hashes -r requirements-lock.txt
-      - name: Encrypted durable journal CAS tests (no network)
-        run: /tmp/venv/bin/python scripts/test_live_batch_persistence.py
+      - name: Encrypted durable journal CAS and bounded capacity tests (no network)
+        run: |
+          /tmp/venv/bin/python scripts/run_unittest_file.py scripts/test_live_batch_persistence.py
+          /tmp/venv/bin/python scripts/run_unittest_file.py scripts/test_journal_capacity.py
+          /tmp/venv/bin/python scripts/run_unittest_file.py scripts/test_legacy_held_aliases.py
+          /tmp/venv/bin/python scripts/test_supervised_api_trial.py
       - name: Regression test test summaries and strict installed-upgrade gates
         run: |
           python3 -m unittest discover -s tests -p 'test_test_summary.py' -v
+          python3 -m unittest discover -s tests -p 'test_coverage_scope.py' -v
           python3 -m unittest discover -s tests -p 'test_upgrade*.py' -v
           python3 -m unittest discover -s tests -p 'test_namespace_upgrade_workflow.py' -v
+      - name: Standalone bridge dependency integrity tripwires
+        run: |
+          python3 -m unittest discover -s tests -p 'test_bridge_integrity.py' -v
+          python3 -m unittest discover -s tests -p 'test_trial_evidence_lifecycle.py' -v
       - name: Independent review verifier regression tests
         run: python3 -m unittest discover -s tests -p 'test_review_gate.py' -v
       - name: Architecture documentation source-map checks
         run: python3 -m unittest discover -s tests -p 'test_architecture_docs.py' -v
       - name: Encrypted live input bundle regression tests
         run: python3 -m unittest discover -s tests -p 'test_live_bundle.py' -v
+      - name: Native ELF alignment inspector regressions (synthetic APKs only)
+        run: python3 -m unittest discover -s tests -p 'test_native_alignment.py' -v
       - name: Mock municipal API server tests
         run: python3 -m unittest discover -s tests -p 'test_mock_municipal.py' -v
       - name: PRPKG2 contract schema and golden values
@@ -97,6 +121,10 @@ jobs:
         run: python3 -m unittest discover -s tests -p 'test_live_emulator_api.py' -v
       - name: Emulator health gate regression tests
         run: python3 -m unittest discover -s tests -p test_emulator_preflight.py
+      - name: API29 actual heap preflight regression tests
+        run: python3 -m unittest discover -s tests -p test_api29_heap_preflight.py -v
+      - name: Bounded recovery proof regression tests
+        run: python3 -m unittest discover -s tests -p test_api29_recovery_proof.py -v
       - name: Offline submit preflight and VPN regression tests
         run: |
           /tmp/venv/bin/python -m unittest discover -s tests -p 'test_trial_submit_preflight.py' -v
@@ -106,6 +134,7 @@ jobs:
       - name: Emulator snapshot cache key, provenance and benchmark tests (offline)
         run: |
           python3 -m unittest discover -s tests -p 'test_emulator_snapshot_cache.py' -v
+          python3 -m unittest discover -s tests -p 'test_snapshot_marker_cleanup.py' -v
           python3 -m unittest discover -s tests -p 'test_benchmark_snapshot_cache.py' -v
       - name: Offline OCR network-isolation behavioral regression tests
         run: /tmp/venv/bin/python -m unittest discover -s tests -p 'test_ocr_network_isolation.py' -v

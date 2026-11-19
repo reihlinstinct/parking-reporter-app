@@ -8,6 +8,16 @@ class MergeReporterSettingsTest {
     private val stored = ReporterSettings("א", "ב", "050", "0000000", "a@b.invalid",
         municipalSubscriptionKey = "synthetic-key", municipalUsername = "synthetic-user", municipalPassword = "synthetic-pass")
 
+    @Test fun clearingLegacyInvalidIdentityDoesNotSilentlyRepairIt() {
+        val legacy = stored.copy(idNumber = "000000019")
+        val unrelated = ReporterSettings("", "", "0501234567", "", "")
+        val merged = mergeReporterSettings(unrelated, legacy)
+        assertEquals("000000019", merged.idNumber)
+        org.junit.Assert.assertFalse(ReporterInput.validId(merged.idNumber))
+        val repaired = mergeReporterSettings(unrelated.copy(idNumber = "000000018"), legacy)
+        org.junit.Assert.assertTrue(ReporterInput.validId(repaired.idNumber))
+    }
+
     @Test
     fun blankPersonalFieldsKeepStoredValues() {
         val cleared = ReporterSettings("", "", "", "", "")

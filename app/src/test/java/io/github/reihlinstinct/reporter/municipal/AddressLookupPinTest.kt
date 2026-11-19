@@ -20,14 +20,20 @@ class AddressLookupPinTest {
         }
     }
 
+    @Test fun streamedPinRefusesChangedBytes() {
+        assertThrows(AddressLookupMismatchException::class.java) {
+            "synthetic invalid asset".byteInputStream().use { AddressLookupPin.verifyPinned(it) }
+        }
+    }
+
+    @Test fun streamedPinMatchesBundledBytesWithoutWholeTextCopy() {
+        File("src/main/assets/addresses.json").inputStream().use { AddressLookupPin.verifyPinned(it) }
+    }
+
     @Test fun pinMatchesThePrivateFileWhenPresentLocally() {
-        // The lookup is municipality-supplied private data and is NOT
-        // committed to this public repo, so this pins the real file only on a
-        // developer machine that has it (same pattern as
-        // BundledAddressLookupTest).
+        // Shipping default must exist and match the production pin.
         val file = File("src/main/assets/addresses.json")
-        org.junit.Assume.assumeTrue(
-            "private lookup asset not present locally; skipping", file.isFile)
+        org.junit.Assert.assertTrue("required bundled address asset missing", file.isFile)
         AddressLookupPin.verifyPinned(file.readText(Charsets.UTF_8))
     }
 }

@@ -40,6 +40,14 @@ def git(cwd, *a):
 
 
 class KeyTest(unittest.TestCase):
+    def test_directory_rejection_uses_redacted_classifier(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'trial-private-name').mkdir()
+            with self.assertRaisesRegex(m.CacheRejected, '^forbidden directory name in cache tree: sensitive_name_redacted$'):
+                m.scan_tree(root)
+
     def test_every_input_changes_the_key(self):
         base = m.cache_key(inputs())
         self.assertEqual(base, m.cache_key(inputs()))
@@ -125,6 +133,29 @@ class ScanTest(unittest.TestCase):
                 with self.assertRaises(m.CacheRejected):
                     m.scan_tree(self.root)
                 p.unlink()
+
+    def test_rejection_diagnostics_are_fixed_vocabulary_and_keep_every_file_blocked(self):
+        cases = {
+            'read-snapshot.txt': 'emulator_read_snapshot_txt',
+            'qemu.log': 'emulator_qemu_log',
+            'emulator.log': 'emulator_log',
+            'quickbootChoice.txt': 'emulator_quickboot_choice_txt',
+            'synthetic-private-label.txt': 'blocked_suffix_txt',
+            'synthetic-token-value.json': 'sensitive_name_redacted',
+            'synthetic-photo.jpg': 'blocked_suffix_jpg',
+        }
+        for name, label in cases.items():
+            with self.subTest(name=name):
+                file = self.root / name
+                file.write_text('synthetic private body never logged')
+                try:
+                    with self.assertRaises(m.CacheRejected) as raised:
+                        m.scan_tree(self.root)
+                    self.assertEqual('forbidden file name in cache tree: ' + label, str(raised.exception))
+                    self.assertNotIn(name, str(raised.exception))
+                    self.assertNotIn('private body', str(raised.exception))
+                finally:
+                    file.unlink()
 
     def test_symlink_and_bad_root_rejected(self):
         os.symlink('/etc/passwd', self.root / 'link.img')
@@ -229,9 +260,6 @@ class CliTest(unittest.TestCase):
         self.assertFalse((self.avd / 'provenance.json').exists())
 
 
-if __name__ == '__main__':
-    unittest.main()
-
 
 class WorkflowBoundaryTest(unittest.TestCase):
     root = Path(__file__).resolve().parents[1]
@@ -275,3 +303,7 @@ class WorkflowBoundaryTest(unittest.TestCase):
     def test_live_workflow_not_referencing_the_cache(self):
         t = self.text('.github/workflows/live-emulator-e2e.yml')
         self.assertNotIn('snapshot', t.lower())
+
+
+if __name__ == '__main__':
+    unittest.main()

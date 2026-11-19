@@ -9,7 +9,7 @@ import re
 import urllib.request
 
 CONTEXT = 'Independent review gate'
-REVIEWERS = {'reihl', 'reihl-poke', 'reihl-folk'}
+REVIEWERS = {'reihl', 'reihl-poke', 'reihl-folk', 'reihl-tab', 'reihl-pally'}
 PASS = re.compile(r'^Verdict:\s*PASS\b', re.I)
 VERDICT = re.compile(r'\bVerdict\b', re.I)
 BLOCK = re.compile(r'\b(?:FAIL|BLOCK|CHANGES\s+REQUESTED)\b', re.I)

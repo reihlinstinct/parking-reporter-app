@@ -29,9 +29,15 @@ class PlateCategoriesTest {
             if (reads == 1) error("synthetic fetch failure")
             CityTopicCache.Snapshot(listOf(MunicipalSubject("5164", "בדיקה", listOf("בדיקה"))), Instant.now(), "synthetic")
         }, enable = { code, _ -> enabled = code }, back = {}) } }
-        compose.waitUntil { reads == 1 }
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithText("נסה לרענן שוב").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.runOnIdle { assertEquals(1, reads) }
         compose.onNodeWithText("נסה לרענן שוב").performClick()
-        compose.waitUntil { reads == 2 }
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithText("בדיקה (5164)").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.runOnIdle { assertEquals(2, reads) }
         compose.onNodeWithText("בדיקה (5164)").assertExists()
         compose.onAllNodes(isToggleable()).onFirst().performClick()
         compose.runOnIdle { assertEquals("5164", enabled) }

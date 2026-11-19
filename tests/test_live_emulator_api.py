@@ -23,5 +23,7 @@ class LiveEmulatorApiTest(unittest.TestCase):
         text = (ROOT / '.github/workflows/live-emulator-e2e.yml').read_text()
         self.assertIn('workflow_dispatch:', text)
         self.assertIn('approved_sha256:', text)
-        self.assertIn('already went through a live run - refusing to re-dispatch', text)
+        self.assertIn('python3 scripts/prove_live_pre_case_retry.py --record', text)
+        self.assertIn('prior_photo" = "$APPROVED_PHOTO_SHA256_INPUT', text)
+        self.assertIn('shred -u "$proof_record"', text)
         self.assertIn('fail closed', text)

@@ -15,8 +15,8 @@ android {
         minSdk = 26
         targetSdk = 37
         if (providers.gradleProperty("previewArm64").isPresent) { ndk { abiFilters += "arm64-v8a" } }
-        versionCode = 198
-        versionName = "0.52.0"
+        versionCode = 199
+        versionName = "0.53.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures {
@@ -64,7 +64,7 @@ dependencies {
     implementation("androidx.appfunctions:appfunctions:1.0.0-rc01")
     ksp("androidx.appfunctions:appfunctions-compiler:1.0.0-rc01")
     implementation("com.google.mlkit:text-recognition:16.0.1")
-    implementation("com.google.ai.edge.litert:litert:1.4.2")
+    implementation("com.google.ai.edge.litert:litert:2.3.2")
     implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
     implementation("com.google.crypto.tink:tink-android:1.24.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
@@ -104,7 +104,7 @@ dependencies {
 // Inactive batch bridge: compile once before secrets, then use private stdio IPC.
 // This task does not run the bridge or make network calls.
 tasks.register("writeBatchBridgeClasspath") {
-    dependsOn("compileDebugUnitTestKotlin", "compileDebugJavaWithJavac")
+    dependsOn("compileDebugUnitTestKotlin", "compileDebugJavaWithJavac", "compileApiOutgoingPhoto")
     doLast {
         val roots = listOf(
             layout.buildDirectory.dir("tmp/kotlin-classes/debug").get().asFile,
@@ -112,10 +112,44 @@ tasks.register("writeBatchBridgeClasspath") {
             layout.buildDirectory.dir("intermediates/built_in_kotlinc/debug/classes").get().asFile,
             layout.buildDirectory.dir("intermediates/built_in_kotlinc/debugUnitTest/classes").get().asFile,
             layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes").get().asFile,
+            layout.buildDirectory.dir("batch-bridge/photo-classes").get().asFile,
         )
         val deps = configurations.getByName("debugUnitTestRuntimeClasspath").files
         val output = layout.buildDirectory.file("batch-bridge/classpath.txt").get().asFile
         output.parentFile.mkdirs()
         output.writeText((roots.filter { it.exists() } + deps).joinToString(File.pathSeparator))
     }
+}
+
+// Desktop ImageIO belongs to the CI JVM, never Android's restricted Java bootclasspath.
+// Never resolve Android's self-project unit runtime from a desktop Test task:
+// AGP publishes multiple artifact variants, so use a separate JVM-only JUnit scope.
+val apiOutgoingPhotoTestRuntime by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+dependencies { add(apiOutgoingPhotoTestRuntime.name, "junit:junit:4.13.2") }
+val compileApiOutgoingPhoto by tasks.registering(JavaCompile::class) {
+    source(rootProject.fileTree("scripts/jvm") { include("ApiOutgoingPhoto*.java") })
+    classpath = apiOutgoingPhotoTestRuntime
+    destinationDirectory.set(layout.buildDirectory.dir("batch-bridge/photo-classes"))
+    sourceCompatibility = "17"
+    targetCompatibility = "17"
+}
+val testApiOutgoingPhoto by tasks.registering(Test::class) {
+    dependsOn(compileApiOutgoingPhoto)
+    testClassesDirs = files(compileApiOutgoingPhoto.flatMap { it.destinationDirectory })
+    classpath = files(testClassesDirs, apiOutgoingPhotoTestRuntime)
+    useJUnit()
+    systemProperty("java.awt.headless", "true")
+    maxHeapSize = "512m"
+}
+tasks.matching { it.name == "testDebugUnitTest" }.configureEach {
+    dependsOn(testApiOutgoingPhoto)
+}
+
+// Source-boundary unit tests must rerun for source-only edits, including androidTest.
+tasks.withType<Test>().configureEach {
+    inputs.files(fileTree("src/main") { include("**/*.kt", "**/*.java") })
+    inputs.files(fileTree("src/androidTest") { include("**/*.kt", "**/*.java") })
 }

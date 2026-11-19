@@ -1,0 +1,157 @@
+name: One approved case from an ephemeral main mirror
+'on':
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: FILE_ONE_APPROVED_CASE
+        required: true
+        type: string
+      private_ref:
+        description: Immutable encrypted package commit
+        required: true
+        type: string
+      private_path:
+        description: Encrypted package path (opaque)
+        required: true
+        type: string
+      outer_sha256:
+        description: Approved encrypted package SHA256
+        required: true
+        type: string
+      json_sha256:
+        description: Approved exact report JSON SHA256
+        required: true
+        type: string
+      original_sha256:
+        description: Original photo SHA256
+        required: true
+        type: string
+      outgoing_sha256:
+        description: Approved JPEG SHA256
+        required: true
+        type: string
+      expires_at:
+        description: Approval expiry, timezone required, at most six hours
+        required: true
+        type: string
+      other_writers_fenced:
+        description: CONFIRMED
+        required: true
+        type: string
+permissions:
+  contents: read
+  checks: read
+concurrency:
+  group: live-emulator-e2e
+  cancel-in-progress: false
+jobs:
+  submission-source:
+    name: submission-source
+    if: ${{ github.repository_id == '1411863751' && github.actor_id == '337939899' && github.triggering_actor ==
+      'reihlinstinct' && startsWith(github.ref, 'refs/heads/submission/') && github.run_attempt == 1 }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+    - name: Verify owner, exact main SHA, green main CI and incident pins before execution secrets
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        SUBMISSION_CONFIRM: ${{ inputs.confirm }}
+        BATCH_PRIVATE_REF: ${{ inputs.private_ref }}
+        BATCH_PRIVATE_PATH: ${{ inputs.private_path }}
+        BATCH_APPROVED_OUTER_SHA256: ${{ inputs.outer_sha256 }}
+        APPROVED_TRIAL_JSON_SHA256: ${{ inputs.json_sha256 }}
+        APPROVED_ORIGINAL_SHA256: ${{ inputs.original_sha256 }}
+        APPROVED_OUTGOING_SHA256: ${{ inputs.outgoing_sha256 }}
+        SUBMISSION_EXPIRES_AT: ${{ inputs.expires_at }}
+        TRIAL_OTHER_WRITERS_FENCED: ${{ inputs.other_writers_fenced }}
+      run: python3 scripts/submission_branch.py --source-only
+  submit-one:
+    name: submit-one
+    needs: submission-source
+    environment: submission-no-review
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        persist-credentials: false
+    - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880
+      with:
+        distribution: temurin
+        java-version: '17'
+        cache: gradle
+    - name: Compile strict production bridge and locked tooling only (no test matrix)
+      run: 'sh scripts/verify_bridge_wrapper.sh
+
+        sh gradlew -p api-bridge --no-daemon --dependency-verification strict writeBatchBridgeClasspath
+
+        python3 -m venv /tmp/api-trial-venv
+
+        /tmp/api-trial-venv/bin/pip install --require-hashes -r requirements-lock.txt
+
+        sudo apt-get update -qq > /dev/null 2>&1
+
+        sudo apt-get install -y strongswan xl2tpd ppp > /dev/null 2>&1
+
+        '
+    - name: Mandatory VPN before any municipal request
+      env:
+        VPN_L2TP_SERVER: ${{ secrets.VPN_L2TP_SERVER }}
+        VPN_L2TP_PSK: ${{ secrets.VPN_L2TP_PSK }}
+        VPN_L2TP_USERNAME: ${{ secrets.VPN_L2TP_USERNAME }}
+        VPN_L2TP_PASSWORD: ${{ secrets.VPN_L2TP_PASSWORD }}
+      run: sudo --preserve-env=VPN_L2TP_SERVER,VPN_L2TP_PSK,VPN_L2TP_USERNAME,VPN_L2TP_PASSWORD python3 trial/l2tp.py
+        up-bounded
+    - name: File precisely one approved case, with durable no-replay claim
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        SUBMISSION_CONFIRM: ${{ inputs.confirm }}
+        BATCH_PRIVATE_REF: ${{ inputs.private_ref }}
+        BATCH_PRIVATE_PATH: ${{ inputs.private_path }}
+        BATCH_APPROVED_OUTER_SHA256: ${{ inputs.outer_sha256 }}
+        APPROVED_TRIAL_JSON_SHA256: ${{ inputs.json_sha256 }}
+        APPROVED_ORIGINAL_SHA256: ${{ inputs.original_sha256 }}
+        APPROVED_OUTGOING_SHA256: ${{ inputs.outgoing_sha256 }}
+        SUBMISSION_EXPIRES_AT: ${{ inputs.expires_at }}
+        TRIAL_OTHER_WRITERS_FENCED: ${{ inputs.other_writers_fenced }}
+        PRIVATE_LOOKUP_READ_TOKEN: ${{ secrets.BATCH_PRIVATE_CONTENTS_TOKEN }}
+        BATCH_PRIVATE_CONTENTS_TOKEN: ${{ secrets.BATCH_PRIVATE_CONTENTS_TOKEN }}
+        TRIAL_DATA_KEY: ${{ secrets.TRIAL_DATA_KEY }}
+        J106_SUBSCRIPTION_KEY: ${{ secrets.J106_SUBSCRIPTION_KEY }}
+        J106_APP_USERNAME: ${{ secrets.J106_APP_USERNAME }}
+        J106_APP_PASSWORD: ${{ secrets.J106_APP_PASSWORD }}
+        REPORTER_FIRST_NAME: ${{ secrets.REPORTER_FIRST_NAME }}
+        REPORTER_LAST_NAME: ${{ secrets.REPORTER_LAST_NAME }}
+        REPORTER_PHONE: ${{ secrets.REPORTER_PHONE }}
+        REPORTER_ID_NUMBER: ${{ secrets.REPORTER_ID_NUMBER }}
+        REPORTER_EMAIL: ${{ secrets.REPORTER_EMAIL }}
+      run: /tmp/api-trial-venv/bin/python scripts/submission_branch.py
+    - name: Encrypt all private diagnostics even on refusal or uncertainty
+      if: always()
+      env:
+        TRIAL_DATA_KEY: ${{ secrets.TRIAL_DATA_KEY }}
+      run: "set -euo pipefail\ntrap 'shred -u /tmp/supervised-api-trial-evidence.tgz 2>/dev/null || true' EXIT\n\
+        if [ -d /tmp/supervised-api-trial ]; then\n  tar czf /tmp/supervised-api-trial-evidence.tgz -C /tmp/supervised-api-trial\
+        \ .\n  openssl enc -aes-256-cbc -pbkdf2 -md sha256 -iter 200000 -salt -in /tmp/supervised-api-trial-evidence.tgz\
+        \ -out /tmp/supervised-api-trial-evidence.tgz.enc -pass env:TRIAL_DATA_KEY\n  test -s /tmp/supervised-api-trial-evidence.tgz.enc\n\
+        \  shred -u /tmp/supervised-api-trial-evidence.tgz\nfi\n"
+    - name: Upload encrypted evidence only
+      if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: single-submission-encrypted
+        path: /tmp/supervised-api-trial-evidence.tgz.enc
+        if-no-files-found: warn
+        retention-days: 14
+    - name: Always remove VPN and private staging
+      if: always()
+      run: 'sudo python3 trial/l2tp.py down || true
+
+        rm -rf /tmp/supervised-api-trial
+
+        shred -u /tmp/supervised-api-trial-evidence.tgz 2>/dev/null || true
+
+        '

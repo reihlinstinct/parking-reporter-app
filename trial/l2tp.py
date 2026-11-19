@@ -1,6 +1,7 @@
 """Optional owner-operated L2TP/IPsec PSK transport. No municipal API calls."""
 from __future__ import annotations
 
+import hashlib
 import ipaddress
 import json
 import os
@@ -222,11 +223,23 @@ def down() -> None:
             state=json.loads((ROOT/'state.json').read_text())
             run('ip','route','del',state['server']+'/32',check=False)
         except Exception:pass
-    # Hosted runners are disposable. Delete all generated secret/config material.
-    for path in ['/etc/ipsec.secrets','/etc/ipsec.conf','/etc/xl2tpd/xl2tpd.conf','/etc/strongswan.conf']:
-        try:Path(path).unlink(missing_ok=True)
-        except OSError:pass
+    # Never delete a pre-existing or subsequently replaced host configuration.
+    # The fixed inventory has hashes only, never secret contents or arbitrary paths.
+    try:
+        written = json.loads((ROOT / 'generated-config.json').read_text())
+    except (OSError, ValueError):
+        written = {}
+    for name, path in config_destinations().items():
+        try:
+            if name in written and hashlib.sha256(path.read_bytes()).hexdigest() == written[name]:
+                path.unlink()
+        except OSError: pass
     shutil.rmtree(ROOT,ignore_errors=True)
+
+def config_destinations():
+    return {'ipsec.conf': Path('/etc/ipsec.conf'), 'ipsec.secrets': Path('/etc/ipsec.secrets'),
+            'xl2tpd.conf': Path('/etc/xl2tpd/xl2tpd.conf'), 'strongswan.conf': Path('/etc/strongswan.conf')}
+
 
 def up(env: Mapping[str,str]) -> None:
     DIAGNOSTICS.clear()
@@ -248,12 +261,14 @@ def up(env: Mapping[str,str]) -> None:
     stage('pin_transport_route')
     run(*args)
     (ROOT/'state.json').write_text(json.dumps({'server':address}))
-    destinations={'ipsec.conf':Path('/etc/ipsec.conf'),'ipsec.secrets':Path('/etc/ipsec.secrets'),
-                  'xl2tpd.conf':Path('/etc/xl2tpd/xl2tpd.conf'),'strongswan.conf':Path('/etc/strongswan.conf'),
-                  'ppp-options':ROOT/'ppp-options'}
+    destinations = dict(config_destinations(), **{'ppp-options': ROOT / 'ppp-options'})
+    written = {}
     stage('write_private_config')
     for name,content in configs(address,psk,user,password).items():
         dest=destinations[name];dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text(content);dest.chmod(0o600)
+        if name in config_destinations():
+            written[name] = hashlib.sha256(content.encode()).hexdigest()
+            (ROOT / 'generated-config.json').write_text(json.dumps(written))
     # Kill switch: every HTTPS effect (including private ledger) must use PPP.
     # IPv6 HTTPS is rejected so no IPv6 route can bypass this IPv4-only profile.
     stage('install_https_killswitch')

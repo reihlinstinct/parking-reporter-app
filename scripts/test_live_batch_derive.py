@@ -51,6 +51,15 @@ class DeriveTest(unittest.TestCase):
             for name, data in self.files.items(): z.writestr(name, data)
         return validate_zip(p, hashlib.sha256(p.read_bytes()).hexdigest(), set(self.policy), hashlib.sha256(a).hexdigest(), topic_policy=self.policy)
 
+    def test_direct_derivation_boundary_refuses_malformed_dependencies(self):
+        from live_batch_derive import derive_manifest
+        from live_batch_input import InvalidBatch
+        for files, subjects, policy in [(None, set(self.policy), self.policy),
+                ({'photos/a.jpg': 'not bytes'}, set(self.policy), self.policy),
+                ({}, ['9000'], self.policy), ({}, set(self.policy), None)]:
+            with self.assertRaises(InvalidBatch):
+                derive_manifest(self.m, files, self.directory, subjects, policy)
+
     def test_smallest_address_input_has_no_photo_plate_time_hash_or_id(self):
         m = self.read(); r = m['reports'][0]
         self.assertEqual((r['latitude'], r['longitude']), (SYNTHETIC_LAT, SYNTHETIC_LON))
@@ -120,6 +129,17 @@ class DeriveTest(unittest.TestCase):
         for data in [b'\xff\xd8\xffsynthetic', exif(offset=b'\0' * 7), exif()[:30]]:
             self.assertIsNone(exif_capture(data))
         self.files['photos/a.jpg'] = b'\xff\xd8\xffsynthetic'; self.m['reports'][0]['photos'] = ['photos/a.jpg']
+        self.assertIsNone(self.read()['reports'][0]['capturedAt'])
+
+    def test_exif_malformed_timezone_is_not_normalized_into_capture_time(self):
+        for offset in (b'+01:99\0', b'-00:60\0', b'+14:01\0', b'-15:00\0'):
+            with self.subTest(offset=offset):
+                self.assertIsNone(exif_capture(exif(offset=offset)))
+        for offset in (b'+14:00\0', b'-14:00\0', b'+05:45\0', b'+00:00\0'):
+            with self.subTest(offset=offset):
+                self.assertIsNotNone(exif_capture(exif(offset=offset)))
+        self.files['photos/a.jpg'] = exif(offset=b'+01:99\0')
+        self.m['reports'][0]['photos'] = ['photos/a.jpg']
         self.assertIsNone(self.read()['reports'][0]['capturedAt'])
 
     def test_photo_hash_mismatch_and_duplicates_refused(self):

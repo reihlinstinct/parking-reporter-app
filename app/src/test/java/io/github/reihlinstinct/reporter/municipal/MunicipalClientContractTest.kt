@@ -125,6 +125,22 @@ class MunicipalClientContractTest {
         }
     }
 
+    @Test fun municipalWritesDoNotRetryOnRateLimitOrServerFailure() {
+        for (status in listOf(429, 500)) for (operation in listOf("create", "attach")) {
+            MockWebServer().apply { start() }.use { server ->
+                server.enqueue(MockResponse.Builder().code(status).addHeader("Retry-After", "0").body("synthetic-secret").build())
+                server.enqueue(MockResponse.Builder().body("{\"Success\":true}").build())
+                val api = client(server)
+                val failure = assertThrows(MunicipalApiException::class.java) {
+                    if (operation == "create") api.createCase("synthetic-token", LinkedHashMap(), MunicipalPayloads.buildReport(reportFields))
+                    else api.attachPhoto("synthetic-token", "synthetic-case", "synthetic-web", "synthetic.jpg", byteArrayOf(1))
+                }
+                assertFalse(failure.message!!.contains("synthetic-secret"))
+                assertEquals("$operation HTTP $status must stay single-shot", 1, server.requestCount)
+            }
+        }
+    }
+
     @Test
     fun httpErrorCarriesEndpointAndCodeOnly() {
         MockWebServer().apply { start() }.use { server ->

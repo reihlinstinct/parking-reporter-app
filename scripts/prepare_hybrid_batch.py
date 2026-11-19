@@ -14,7 +14,7 @@ def main(root=None):
     try:
         root.mkdir(mode=0o700, exist_ok=False)
         os.umask(0o077)
-        stage(root / 'input')
+        stage(root / 'input', encrypted_only=False)
         source = root / 'input'
         expected_outer = os.environ['BATCH_APPROVED_OUTER_SHA256']
         digest(expected_outer)

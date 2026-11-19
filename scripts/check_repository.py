@@ -17,8 +17,30 @@ REQUIRED = (
 )
 
 
+def trial_job_pinned(source: str) -> bool:
+    # Deliberately strict shape: activation must update this invariant in review.
+    lines = source.splitlines()
+    try:
+        start = lines.index('  trial:') + 1
+    except ValueError:
+        return False
+    job = []
+    for line in lines[start:]:
+        if re.match(r'^  [A-Za-z_][\w-]*:', line):
+            break
+        job.append(line)
+    gates = [line for line in job if re.match(r'^    if:', line)]
+    import json
+    config = json.loads((ROOT / 'scripts/supervised_trial_activation.json').read_text())
+    expected = "    if: ${{ github.ref == 'refs/heads/main' && inputs.confirm == 'GPS_ONLY_ONCE' && inputs.private_data_commit == '" + config['privateCommit'] + "' && inputs.batch_path == '" + config['batchPath'] + "' && inputs.approved_outer_sha256 == '" + config['outerSha256'] + "' }}"
+    return gates == [expected]
+
+
 def check() -> list[str]:
     errors: list[str] = []
+    trial = ROOT / '.github/workflows/supervised-api-trial.yml'
+    if not trial.is_file() or not trial_job_pinned(trial.read_text(encoding='utf-8')):
+        errors.append('Supervised API trial must remain pinned to the one reviewed encrypted package')
     for relative in REQUIRED:
         path = ROOT / relative
         if not path.is_file() or not path.read_text(encoding="utf-8").strip():

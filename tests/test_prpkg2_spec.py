@@ -3,6 +3,7 @@
 Python stdlib only. Everything is synthetic. The Kotlin code stays the reference; this test re-derives the
 golden values from the documented rules, so a drift in the values, the schema or the layout fails here.
 """
+import math
 import hashlib
 import json
 import re
@@ -44,7 +45,7 @@ def validate(value, schema, path="$"):
         if "pattern" in schema and not re.search(schema["pattern"], value):
             problems.append(f"{path}: pattern")
     elif kind == "number":
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
             return problems + [f"{path}: not a number"]
         if value < schema.get("minimum", float("-inf")) or value > schema.get("maximum", float("inf")):
             problems.append(f"{path}: out of range")
@@ -191,6 +192,14 @@ class SchemaTest(unittest.TestCase):
         for name, report in cases.items():
             with self.subTest(name):
                 self.assertNotEqual(validate(report, REPORT_SCHEMA), [], name)
+
+    def test_nonfinite_coordinate_numbers_are_not_schema_values(self):
+        for key in ('latitude', 'longitude'):
+            for value in (float('nan'), float('inf'), float('-inf'), True):
+                report = self.report()
+                report[key] = value
+                with self.subTest(key=key, value=value):
+                    self.assertNotEqual([], validate(report, REPORT_SCHEMA))
 
     def test_header_needs_exactly_its_two_keys(self):
         good = {"approval_digest": GOLDEN["approval_digest"], "report": self.report()}
