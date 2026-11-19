@@ -40,7 +40,7 @@ class CityTopicPickerTest {
         compose.onAllNodes(isSelected()).assertCountEquals(1)
         compose.onNode(isSelected()).assertHasClickAction()
             .assertContentDescriptionEquals("אחר. גינון › אחר\nתאורה › אחר")
-        assertAndroidSelectedChoice("אחר. גינון › אחר\nתאורה › אחר")
+        assertAndroidSelectedChoice("אחר. גינון › אחר\nתאורה › אחר", expectAlternative = true)
         compose.onNodeWithTag("picker-search-input").performTextInput("5164")
         compose.onAllNodes(isSelected()).assertCountEquals(1)
         assertAndroidSelectedChoice("אחר. גינון › אחר\nתאורה › אחר")
@@ -51,23 +51,46 @@ class CityTopicPickerTest {
 
     /** Check the Android accessibility bridge as well as Compose's internal tree.
      * This still cannot establish the spoken TalkBack order or utterance count. */
-    private fun assertAndroidSelectedChoice(label: String) {
+    private fun assertAndroidSelectedChoice(label: String, expectAlternative: Boolean = false) {
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
         fun matches(): List<android.view.accessibility.AccessibilityNodeInfo> {
             val result = mutableListOf<android.view.accessibility.AccessibilityNodeInfo>()
             fun visit(node: android.view.accessibility.AccessibilityNodeInfo) {
-                if (node.contentDescription?.toString() == label && node.isVisibleToUser) result += node
+                if (node.contentDescription?.toString() == label && node.isVisibleToUser) {
+                    // Compose may export the description as a synthetic label child. Its
+                    // checkable radio parent is the actual accessibility choice target.
+                    var target = node
+                    while (!target.isCheckable) {
+                        val parent = target.parent ?: break
+                        target = parent
+                    }
+                    if (target.isCheckable && result.none { it == target }) result += target
+                }
                 for (i in 0 until node.childCount) node.getChild(i)?.let { visit(it) }
             }
             automation.rootInActiveWindow?.let { visit(it) }
             return result
         }
-        compose.waitUntil(5_000) { matches().size == 1 }
+        compose.waitUntil(5_000) { matches().size == 1 && matches().single().isChecked }
         val nodes = matches()
         assertEquals("One Android accessibility target per city code", 1, nodes.size)
         assertTrue("Android must expose a checkable single choice", nodes.single().isCheckable)
         assertTrue("Android must expose the current choice as checked", nodes.single().isChecked)
-        assertTrue("Android must expose the selected choice as actionable", nodes.single().isClickable)
+        assertTrue("Android must expose an enabled selected choice", nodes.single().isEnabled)
+        // AndroidX intentionally marks an already-selected radio as not clickable.
+        // Its unselected sibling must remain a native actionable choice.
+        val parent = nodes.single().parent
+        assertNotNull("Radio choice has a list parent", parent)
+        fun hasActionableUnselectedRadio(node: android.view.accessibility.AccessibilityNodeInfo): Boolean {
+            if (node.isCheckable && !node.isChecked && node.isClickable && node.isEnabled) return true
+            return (0 until node.childCount).any { index ->
+                node.getChild(index)?.let { hasActionableUnselectedRadio(it) } == true
+            }
+        }
+        // Filtering by5164 intentionally removes the alternative row.
+        if (expectAlternative) {
+            assertTrue("Unselected city code remains actionable", hasActionableUnselectedRadio(parent!!))
+        }
         assertEquals("android.widget.RadioButton", nodes.single().className?.toString())
     }
 
