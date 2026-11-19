@@ -224,15 +224,19 @@ class CityTopicPickerTest {
         // The state-based field container includes its Above label as well as the editor.
         assertTrue("Above-field search label must fit in the field container", label.bottom <= input.bottom)
         assertTextInkFits("picker-search-label")
-        assertLabelAboveNativeEditorText(compose.onNodeWithTag("picker-search-label", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow)
+        val labelText = compose.onNodeWithTag("picker-search-label", useUnmergedTree = true)
+            .fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.Text].joinToString("") { it.text }
+        assertLabelAboveNativeEditorText(labelText)
     }
     /** Native character bounds locate the editable text, not the decoration container.
      * The field is populated with5164 by both geometry fixtures. */
-    private fun assertLabelAboveNativeEditorText(label: androidx.compose.ui.geometry.Rect) {
+    private fun assertLabelAboveNativeEditorText(labelText: String) {
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
         val candidates = mutableListOf<android.view.accessibility.AccessibilityNodeInfo>()
+        val labels = mutableListOf<android.view.accessibility.AccessibilityNodeInfo>()
         fun visit(node: android.view.accessibility.AccessibilityNodeInfo) {
             if (node.isEditable && node.text?.toString()?.contains("5164") == true) candidates += node
+            if (!node.isEditable && node.text?.toString() == labelText) labels += node
             for (index in 0 until node.childCount) node.getChild(index)?.let { visit(it) }
         }
         automation.rootInActiveWindow?.let { visit(it) }
@@ -250,21 +254,15 @@ class CityTopicPickerTest {
             android.view.accessibility.AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_KEY)
             ?.mapNotNull { it as? android.graphics.RectF }.orEmpty()
         assertEquals("All four editable characters must have bounds", 4, rects.size)
-        // boundsInWindow and native screen bounds differ by the application window offset.
-        val window = android.graphics.Rect()
-        val originalService = automation.serviceInfo
-        val originalFlags = originalService.flags
-        try {
-            originalService.flags = originalFlags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
-            automation.serviceInfo = originalService
-            compose.waitUntil(5_000) { automation.windows.any { it.id == editor.windowId } }
-            automation.windows.single { it.id == editor.windowId }.getBoundsInScreen(window)
-        } finally {
-            originalService.flags = originalFlags
-            automation.serviceInfo = originalService
-        }
-        assertTrue("Above label must finish before actual editable text starts",
-            label.bottom + window.top <= rects.minOf { it.top })
+        // Compare two native screen-space bounds. A Compose dialog's root/window
+        // coordinates cannot be translated by blindly adding the accessibility window
+        // rectangle, which may include decor or a different origin.
+        assertEquals("Exactly one native Above label", 1, labels.size)
+        val label = android.graphics.Rect()
+        labels.single().getBoundsInScreen(label)
+        assertTrue("Native Above label must be nonempty: $label", !label.isEmpty)
+        assertTrue("Above label must finish before actual editable text starts: label=$label chars=$rects",
+            label.bottom <= rects.minOf { it.top })
     }
 
     private fun assertTextInkFits(tag: String) {
