@@ -43,3 +43,7 @@ Wiring this into `live-emulator-e2e.yml` is a separate change that needs its own
 ## Tests
 
 `tests/test_emulator_snapshot_cache.py` and `tests/test_benchmark_snapshot_cache.py` run offline in repository checks: key sensitivity to every input, every provenance rejection, content scan, CLI round trip, benchmark arithmetic and the no-claim rule, and workflow boundary checks (no secrets, no environments, exact key, only the producer saves, live workflow untouched).
+
+Benchmark input checks reject repeated mode/run identities, non-finite or boolean
+phase values, and invalid cache sizes before computing a saving. Copying one
+run file under multiple names cannot meet the three-run evidence threshold.
