@@ -1,0 +1,70 @@
+name: Signed persistent preview
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: persistent-preview-signing
+  cancel-in-progress: false
+jobs:
+  preview:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Verify trusted main and separate preview configuration
+        env:
+          EXPECTED_REF: ${{ github.ref }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -eu
+          test "$EXPECTED_REF" = refs/heads/main
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          grep -F 'applicationIdSuffix = ".preview"' app/build.gradle.kts
+          test -s app/src/sideBySidePreview/AndroidManifest.xml
+          sh scripts/prepare_wrapper.sh
+      - name: Materialize encrypted repository signing identity
+        env:
+          PREVIEW_SIGNING_STORE_B64: ${{ secrets.PREVIEW_SIGNING_STORE_B64 }}
+          PREVIEW_SIGNING_DIRECTORY: ${{ runner.temp }}/persistent-preview-signing
+        run: python3 scripts/prepare_preview_signing.py
+      - name: Build preview with stable certificate
+        env:
+          PREVIEW_SIGNING_STORE_PATH: ${{ runner.temp }}/persistent-preview-signing/preview.p12
+          PREVIEW_SIGNING_PASSWORD: ${{ secrets.PREVIEW_SIGNING_PASSWORD }}
+        run: sh gradlew --no-daemon assembleDebug -PpreviewArm64 -PpreviewSideBySide -PpersistentPreviewSigning
+      - name: Verify preview package and pinned certificate
+        run: |
+          set -eu
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          "$AAPT" dump badging "$APK" > /tmp/signed-preview-badging.txt
+          grep -F "package: name='il.sidewalks.reporter.preview'" /tmp/signed-preview-badging.txt
+          "$APKSIGNER" verify --verbose --print-certs "$APK" > /tmp/signed-preview-certificate.txt
+          python3 scripts/verify_preview_certificate.py /tmp/signed-preview-certificate.txt docs/preview-certificate.sha256
+          cp docs/preview-certificate.sha256 app/build/outputs/apk/debug/certificate.sha256
+          sha256sum "$APK" > app/build/outputs/apk/debug/apk.sha256
+          git rev-parse HEAD > app/build/outputs/apk/debug/source-sha.txt
+      - name: Remove ephemeral signing material
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/persistent-preview-signing"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: persistent-signed-arm64-preview
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/debug/certificate.sha256
+            app/build/outputs/apk/debug/apk.sha256
+            app/build/outputs/apk/debug/source-sha.txt
+          if-no-files-found: error
+          retention-days: 14
