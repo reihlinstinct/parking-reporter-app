@@ -27,7 +27,9 @@ class AddressSettingsTest {
         compose.onNodeWithTag("address-title").performScrollTo().assertIsDisplayed()
         screenshot("address-advanced-settings-top.png")
         compose.onNodeWithTag("address-import").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithTag("address-refresh").assertIsEnabled()
+        screenshot("address-advanced-settings-import.png")
+        compose.onNodeWithTag("address-refresh").performScrollTo().assertIsDisplayed().assertIsEnabled()
+        screenshot("address-advanced-settings-refresh.png")
         compose.onNodeWithTag("address-clear").performScrollTo().assertIsDisplayed()
         screenshot("address-advanced-settings-bottom.png")
     }
