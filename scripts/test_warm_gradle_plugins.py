@@ -58,6 +58,38 @@ class PluginWarmTest(unittest.TestCase):
         target.central_probe('bad/version', opener)
         opener.open.assert_not_called()
 
+    def test_http_protocol_failure_never_prints_server_text(self):
+        import contextlib
+        import http.client
+        import io
+        for error in [http.client.BadStatusLine('SYNTHETIC_PRIVATE_SERVER_TEXT'),
+                      http.client.IncompleteRead(b'SYNTHETIC_PRIVATE_BODY'),
+                      http.client.RemoteDisconnected('SYNTHETIC_PRIVATE_REASON')]:
+            with self.subTest(error=type(error).__name__):
+                opener = MagicMock()
+                opener.open.side_effect = error
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    target.central_probe(VERSION, opener)
+                self.assertNotIn('SYNTHETIC_PRIVATE', output.getvalue())
+                self.assertEqual(2, output.getvalue().count('network-unavailable'))
+
+    def test_http_error_is_closed_without_reading_body(self):
+        import contextlib
+        import io
+        import urllib.error
+        body = MagicMock()
+        error = urllib.error.HTTPError('https://synthetic.invalid', 404, 'private reason', {}, body)
+        opener = MagicMock()
+        opener.open.side_effect = error
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            target.central_probe(VERSION, opener)
+        body.read.assert_not_called()
+        self.assertTrue(body.close.called)
+        self.assertNotIn('private reason', output.getvalue())
+        self.assertEqual(2, output.getvalue().count(': 404.'))
+
     def test_success_once_help_only(self):
         run = Mock(return_value=self.result(0, 'BUILD SUCCESSFUL'))
         pause = Mock()

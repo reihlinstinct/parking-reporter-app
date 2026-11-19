@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Warm pinned Gradle plugins before tests; only exact KSP resolution may retry."""
 import re
+import http.client
 import subprocess
 import time
 import urllib.error
@@ -33,8 +34,11 @@ def central_probe(version, opener=None):
             with opener.open(urllib.request.Request(url, method='HEAD'), timeout=5) as response:
                 status = response.status
         except urllib.error.HTTPError as error:
-            status = error.code
-        except (OSError, ValueError):
+            try:
+                status = error.code
+            finally:
+                error.close()
+        except (OSError, ValueError, http.client.HTTPException):
             status = 'network-unavailable'
         print(f'KSP Central HEAD {artifact}: {status}. Diagnostic only, not a build pass.', flush=True)
 
