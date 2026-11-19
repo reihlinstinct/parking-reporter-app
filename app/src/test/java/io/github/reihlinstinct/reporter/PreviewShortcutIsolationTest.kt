@@ -15,4 +15,12 @@ class PreviewShortcutIsolationTest {
         assertTrue(gradle.contains("res.srcDir(\"src/sideBySidePreview/res\")"))
     }
 
+    @Test fun previewWorkflowWarmsPluginsButDoesNotRetryBuildOrChangeVerification() {
+        val workflow = File("../.github/workflows/side-by-side-preview.yml").readText()
+        assertTrue(workflow.indexOf("python3 scripts/warm_gradle_plugins.py") < workflow.indexOf("assembleDebug"))
+        assertEquals(1, Regex("assembleDebug").findAll(workflow).count())
+        assertFalse(workflow.contains("dependency-verification off"))
+        assertFalse(workflow.contains("continue-on-error"))
+    }
+
 }

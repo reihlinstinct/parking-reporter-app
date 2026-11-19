@@ -22,6 +22,8 @@ jobs:
           java-version: '17'
           cache: gradle
       - run: sh scripts/prepare_wrapper.sh
+      - name: Resolve pinned plugins before building (bounded KSP-only retry)
+        run: python3 scripts/warm_gradle_plugins.py
       - name: Build separately identified arm64 preview
         run: sh gradlew --no-daemon assembleDebug -PpreviewArm64 -PpreviewSideBySide
       - name: Verify APK identity and pinned address asset
