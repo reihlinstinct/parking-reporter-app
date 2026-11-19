@@ -22,7 +22,8 @@ elif args and args[0]=='logcat':
  if '-d' in args and os.environ.get('NO_TRACE')!='1':print('API29_MEMORY synthetic metadata')
 elif args and args[0]=='exec-out':
  if os.environ.get('NO_HEAP')=='1':sys.exit(1)
- print('synthetic heap bytes')
+ if os.environ.get('BAD_HEAP')=='1':print('cat: no such file')
+ else:sys.stdout.buffer.write(b'JAVA PROFILE 1.0.3\\0synthetic')
 elif args[:2]==['shell','getprop']:print('16m')
 '''
 
@@ -61,6 +62,14 @@ class DiagnosticRunnerTest(unittest.TestCase):
         self.assertEqual(sum(c[:3] == ['shell', 'pm', 'clear'] for c in calls), 4)
         self.assertEqual(sum(c[:3] == ['shell', 'am', 'instrument'] for c in calls), 4)
 
+    def test_paired_keeps_full_suite_and_four_isolated_classes(self):
+        result, calls = self.run_case('paired')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        runs = [c for c in calls if c[:3] == ['shell', 'am', 'instrument']]
+        self.assertEqual(len(runs), 5)
+        self.assertNotIn('class', runs[0])
+        self.assertEqual(sum(c[:3] == ['shell', 'pm', 'clear'] for c in calls), 4)
+
     def test_fresh_suite_has_one_reset_and_one_full_run(self):
         result, calls = self.run_case('fresh-suite')
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -68,6 +77,15 @@ class DiagnosticRunnerTest(unittest.TestCase):
         runs = [c for c in calls if c[:3] == ['shell', 'am', 'instrument']]
         self.assertEqual(len(runs), 1)
         self.assertNotIn('class', runs[0])
+
+    def test_snapshot_magic_and_exact_ordinals(self):
+        result, calls = self.run_case('snapshots')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        pulls = [c[-1] for c in calls if c and c[0] == 'exec-out']
+        self.assertEqual(pulls, ['files/memory-diagnostic/before-24.hprof',
+                                 'files/memory-diagnostic/before-27.hprof'])
+        result, _ = self.run_case('snapshots', BAD_HEAP='1')
+        self.assertNotEqual(result.returncode, 0)
 
     def test_missing_snapshot_fails(self):
         result, _ = self.run_case('snapshots', NO_HEAP='1')

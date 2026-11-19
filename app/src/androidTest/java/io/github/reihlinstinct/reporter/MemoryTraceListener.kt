@@ -1,5 +1,9 @@
 package io.github.reihlinstinct.reporter
 
+import android.app.ActivityManager
+import android.content.Context
+import android.os.Build
+import android.os.Process
 import android.os.Debug
 import android.os.SystemClock
 import android.util.Log
@@ -38,7 +42,14 @@ class MemoryTraceListener : RunListener() {
 
     private fun record(phase: String, description: Description) {
         val runtime = Runtime.getRuntime()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val record = JSONObject()
+            .put("pid", Process.myPid()).put("is64Bit", Process.is64Bit())
+            .put("supportedAbis", Build.SUPPORTED_ABIS.joinToString(","))
+            .put("memoryClassMiB", manager.memoryClass)
+            .put("largeMemoryClassMiB", manager.largeMemoryClass)
+            .put("lowRamDevice", manager.isLowRamDevice)
             .put("phase", phase).put("ordinal", ordinal)
             .put("class", description.className).put("test", description.methodName)
             .put("elapsedMs", SystemClock.elapsedRealtime())

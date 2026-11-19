@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Synthetic emulator diagnostics only. Never raise the heap or retry a failed test.
 set -euo pipefail
-mode=${1:?suite, fresh-suite, snapshots or isolated required}
-case "$mode" in suite|fresh-suite|snapshots|isolated) ;; *) exit 2 ;; esac
+mode=${1:?suite, fresh-suite, snapshots, isolated or paired required}
+case "$mode" in suite|fresh-suite|snapshots|isolated|paired) ;; *) exit 2 ;; esac
 out=app/build/reports/api29-memory
 mkdir -p "$out"
 adb logcat -c
@@ -27,7 +27,9 @@ if [ "$mode" = fresh-suite ]; then
   adb shell am force-stop il.sidewalks.reporter
   adb shell pm clear il.sidewalks.reporter
   run_once fresh-full-suite
-elif [ "$mode" = isolated ]; then
+elif [ "$mode" = isolated ] || [ "$mode" = paired ]; then
+  # A matched-device comparison, still record and compare each process heap cap.
+  if [ "$mode" = paired ]; then run_once paired-full-suite; fi
   for name in EntryPointsTest FirstRunScreenTest ReviewRecreationTest ReviewUnsavedBackTest; do
     # A fresh target process and private storage for each class. This diagnoses
     # dependence on suite history; it is not a replacement for the full suite.
@@ -37,9 +39,17 @@ elif [ "$mode" = isolated ]; then
   done
 elif [ "$mode" = snapshots ]; then
   run_once full-suite-with-snapshots -e memorySnapshots 1
-  for ordinal in 28 111; do
+  for ordinal in 24 27; do
     if ! adb exec-out run-as il.sidewalks.reporter cat "files/memory-diagnostic/before-$ordinal.hprof" > "$out/before-$ordinal.hprof"; then failed=1; fi
-    if [ ! -s "$out/before-$ordinal.hprof" ]; then failed=1; fi
+    # adb can exit zero while run-as/cat writes an error message to stdout.
+    # Require the binary HPROF magic, not merely a nonempty redirected file.
+    if ! python3 - "$out/before-$ordinal.hprof" <<'PYHPROF'
+import pathlib
+import sys
+header = pathlib.Path(sys.argv[1]).read_bytes()[:32]
+sys.exit(0 if header.startswith(b"JAVA PROFILE 1.0.") and b"\0" in header else 1)
+PYHPROF
+    then failed=1; fi
   done
 else
   run_once full-suite

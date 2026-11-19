@@ -18,7 +18,7 @@ flowchart LR
     F --> G
 ```
 
-The `API29 retained heap diagnostic` workflow has four independent modes:
+The `API29 retained heap diagnostic` workflow has five independent modes:
 
 - `suite`: full suite, no forced GC or heap dumps. The listener logs Java used/committed/max bytes and native allocated bytes before and after each test.
 - `fresh-suite`: the full suite after the same force-stop and private-storage reset used by isolated mode. No heap or system-property setting changes. This distinguishes reset effects from test-history effects.
@@ -40,3 +40,11 @@ The online-address/cache request is a separate feature. It may reduce retained a
 ## First diagnostic evidence
 
 At head `2f169127`, the suite reproduced OOM at test 28. The four isolated classes passed, but the listener measured a 512 MiB Java maximum in isolated mode versus 16 MiB in suite mode, despite both devices reporting `dalvik.vm.heapsize=512m` and an empty `heapgrowthlimit` property. Therefore isolated PASS is not a matched-budget comparison and does not establish a suite-history leak. A fresh-full-suite control and complete emulator properties/package metadata have been added to investigate that difference without modifying the heap. The snapshot job failed resolving the pinned KSP plugin before tests, so it supplied no snapshot evidence. No culprit identified.
+
+## Second diagnostic evidence and measurement corrections
+
+At `31c2bff`, full-suite, fresh-suite and snapshots all passed with a measured512MiB cap. The isolated classes passed17tests with a16MiB cap. Sampled Java peaks in the three full-suite modes were about87–140MiB. Device properties still report heapsize512m with empty growthlimit. These runs remain unmatched, not proof of a leak or its absence.
+
+The snapshot artifact extraction incorrectly requested28/111 although the listener wrote24/27. Worse, `adb exec-out run-as ... cat` returned zero and the redirected nonempty error text passed the old file-size guard. Those artifacts are not HPROF evidence. Extraction now matches24/27 and requires the HPROF binary signature; synthetic tests cover nonempty error text.
+
+A `paired` mode now runs the full suite followed by the four isolated classes on the same emulator, with no heap change and no test retries. Every process records actual Runtime.maxMemory, PID, process bitness, supported ABIs, ActivityManager memory classes and low-RAM status. Same device alone does not prove the budgets match; compare these values before interpreting results. The varying16/512MiB process cap is an unresolved environment lead.
