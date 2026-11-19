@@ -34,7 +34,7 @@ def check_elf(data):
         file_offset, address, file_size, align = ((row[2], row[3], row[5], row[7]) if wide else (row[1], row[2], row[4], row[7]))
         if file_offset + file_size > len(data):
             raise ValueError('load segment exceeds file')
-        if align < PAGE or align & (align - 1) or (address - file_offset) % PAGE:
+        if align < PAGE or align & (align - 1) or (address - file_offset) % align:
             raise ValueError('load segment is not 16KiB aligned')
     if not loads:
         raise ValueError('ELF has no load segment')

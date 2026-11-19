@@ -30,6 +30,19 @@ class NativeAlignmentTest(unittest.TestCase):
             with self.subTest(values=values), self.assertRaises(ValueError):
                 check_elf(elf(**values))
 
+    def test_congruence_uses_declared_alignment_not_only_page_size(self):
+        for wide in (True, False):
+            for endian in ('<', '>'):
+                with self.subTest(wide=wide, endian=endian):
+                    # Within file bounds, and page-congruent, but violates p_align.
+                    bad = elf(wide, endian, align=32768, address=32768,
+                              file_offset=16384).ljust(16384, b'\0')
+                    with self.assertRaisesRegex(ValueError, 'aligned'):
+                        check_elf(bad)
+                    good = elf(wide, endian, align=32768, address=49152,
+                               file_offset=16384).ljust(16384, b'\0')
+                    self.assertEqual(1, check_elf(good))
+
     def test_truncation_bad_magic_and_program_table_refused(self):
         data = elf()
         for broken in (b'', b'not elf', data[:30], data[:-1], data[:4] + b'\x03' + data[5:]):
