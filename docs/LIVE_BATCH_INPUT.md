@@ -176,3 +176,14 @@ A hard process termination may leave a mode0600temporary file inside the private
 output directory, which is not an accepted effective manifest. A later run can
 still publish the requested final path. The derivation CI step uses
 `scripts/run_unittest_file.py`, which fails on zero tests and import/test errors.
+
+### Directory dependency validation (refs #610)
+
+Schema-v2 enrichment checks the consumed directory structure before either exact
+address lookup or coordinate lookup. Street rows need a name/code and typed
+optional aliases; address rows need finite, globally bounded numeric coordinates,
+a house value and a street name. Invalid directory dependencies produce a
+constant `InvalidBatch` refusal, including direct in-process derivation callers.
+A matching digest does not prove the directory shape is usable. Unknown metadata
+is still ignored. This is offline validation, not a trial-envelope change or an
+authorization to file. Synthetic tests cover both lookup paths and ZIP ingestion.

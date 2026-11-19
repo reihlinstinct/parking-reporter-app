@@ -29,6 +29,35 @@ def _norm(value):
     return ''.join(c for c in value if c.isalnum())
 
 
+def validate_directory(directory):
+    """Check consumed directory fields before lookup, even for direct callers.
+
+    A digest pins bytes, not their structure. Invalid dependencies must use the
+    same constant refusal as an invalid manifest, not leak values in TypeError.
+    Unknown metadata is ignored, as in the ZIP path.
+    """
+    from live_batch_input import need
+    need(isinstance(directory, dict) and type(directory.get('version')) is int
+         and directory['version'] == 1, 'unsupported address directory')
+    need(isinstance(directory.get('streets'), list)
+         and isinstance(directory.get('addresses'), list), 'invalid address directory')
+    for row in directory['streets']:
+        need(isinstance(row, dict), 'invalid address directory')
+        need(isinstance(row.get('StreetName'), str) and bool(row['StreetName'])
+             and type(row.get('StreetCode')) in (str, int), 'invalid address directory')
+        need(isinstance(row.get('StreetArabicName', ''), str)
+             and isinstance(row.get('aliases', []), list)
+             and all(isinstance(n, str) for n in row.get('aliases', [])),
+             'invalid address directory')
+    for row in directory['addresses']:
+        need(isinstance(row, list) and len(row) >= 4, 'invalid address directory')
+        need(all(type(v) in (int, float) and math.isfinite(v) for v in row[:2])
+             and -90 <= row[0] <= 90 and -180 <= row[1] <= 180,
+             'invalid address directory')
+        need(type(row[2]) in (str, int) and isinstance(row[3], str),
+             'invalid address directory')
+
+
 def address_location(address, directory):
     from live_batch_input import need
     need(isinstance(address, str), 'address required')
@@ -161,7 +190,7 @@ def derive_manifest(m, files, directory, subjects, topic_policy):
     need(isinstance(m, dict) and set(m) <= {'schemaVersion', 'batchId', 'reports'})
     need(type(m.get('schemaVersion', 2)) is int and m.get('schemaVersion', 2) == 2)
     need(isinstance(m.get('reports'), list) and 1 <= len(m['reports']) <= 50)
-    need(isinstance(directory, dict) and directory.get('version') == 1, 'unsupported address directory')
+    validate_directory(directory)
     need(isinstance(topic_policy, dict), 'invalid independent topic policy')
     need(all(isinstance(k, str) and isinstance(v, dict) and isinstance(v.get('names', []), list) and all(isinstance(n, str) for n in v.get('names', [])) for k, v in topic_policy.items()), 'invalid independent topic policy')
     need(isinstance(files, dict) and all(isinstance(k, str) and isinstance(v, bytes) for k, v in files.items()), 'invalid derivation files')

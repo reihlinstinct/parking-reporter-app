@@ -60,6 +60,42 @@ class DeriveTest(unittest.TestCase):
             with self.assertRaises(InvalidBatch):
                 derive_manifest(self.m, files, self.directory, subjects, policy)
 
+    def test_direct_directory_dependencies_refuse_with_constant_typed_error(self):
+        from live_batch_derive import derive_manifest
+        mutations = [
+            {'version': True}, {'streets': None}, {'addresses': {}},
+            {'streets': [None]}, {'streets': [{'StreetCode': '100'}]},
+            {'streets': [{'StreetCode': '100', 'StreetName': 'synthetic', 'aliases': 'bad'}]},
+            {'addresses': [None]}, {'addresses': [[31.0, 34.0]]},
+            {'addresses': [['not-a-coordinate', 34.0, '10', 'synthetic street']]},
+            {'addresses': [[float('nan'), 34.0, '10', 'synthetic street']]},
+            {'addresses': [[31.0, float('inf'), '10', 'synthetic street']]},
+            {'addresses': [[True, 34.0, '10', 'synthetic street']]},
+            {'addresses': [[91.0, 34.0, '10', 'synthetic street']]},
+            {'addresses': [[31.0, 34.0, {}, 'synthetic street']]},
+            {'addresses': [[31.0, 34.0, '10', None]]},
+        ]
+        for mutation in mutations:
+            directory = dict(self.directory, **mutation)
+            for coordinates_only in (False, True):
+                manifest = copy.deepcopy(self.m)
+                if coordinates_only:
+                    report = manifest['reports'][0]
+                    del report['address']
+                    report.update(latitude=SYNTHETIC_LAT, longitude=SYNTHETIC_LON)
+                with self.subTest(mutation=mutation, coordinates_only=coordinates_only):
+                    with self.assertRaises(InvalidBatch) as error:
+                        derive_manifest(manifest, {}, directory, set(self.policy), self.policy)
+                    self.assertIn(str(error.exception),
+                                  ('invalid address directory', 'unsupported address directory'))
+
+    def test_zip_directory_nonfinite_and_malformed_rows_are_typed_refusals(self):
+        for row in (None, [float('nan'), 34.0, '10', 'synthetic street'],
+                    ['malformed', 34.0, '10', 'synthetic street']):
+            self.directory['addresses'] = [row]
+            with self.assertRaises(InvalidBatch):
+                self.read()
+
     def test_smallest_address_input_has_no_photo_plate_time_hash_or_id(self):
         m = self.read(); r = m['reports'][0]
         self.assertEqual((r['latitude'], r['longitude']), (SYNTHETIC_LAT, SYNTHETIC_LON))
