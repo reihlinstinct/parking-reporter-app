@@ -72,6 +72,9 @@ class SettingsSaveGateTest {
             SettingsScreen(null, save = { _, _, _ -> }, back = {}, basicSetup = true)
         } }
         compose.onNodeWithText("שם פרטי").performTextInput("בדיקה")
+        // Finish the IME transition before scrolling to and asserting the reason.
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.waitForIdle()
         val missingReason = compose.onNode(hasText("חסרים או לא תקינים", substring = true))
         // API 36 IME/insets may still animate after text input and the first scroll (#409).
         // Re-evaluate the same visibility requirement against the settled viewport, not a sleep
