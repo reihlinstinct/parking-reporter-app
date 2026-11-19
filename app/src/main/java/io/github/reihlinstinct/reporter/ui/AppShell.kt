@@ -21,9 +21,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.room.Room
 import io.github.reihlinstinct.reporter.BuildConfig
@@ -144,13 +141,13 @@ fun AppShell(
     fun loadStreetDirectory(street: String): StreetDirectory = onlineAddresses.loadForStreets(listOf(street))
     var addressToolsStatus by remember { mutableStateOf("") }
     var addressToolsBusy by remember { mutableStateOf(false) }
-    fun addressAction(action: () -> Unit) {
+    fun addressAction(successKey: String = "settings.address.updated", action: () -> Unit) {
         if (addressToolsBusy) return
         addressToolsBusy = true
         scope.launch {
             val ok = withContext(Dispatchers.IO) { runCatching { action() }.isSuccess }
             streetsDirectory = null
-            addressToolsStatus = strings.t(if (ok) "settings.address.updated" else "settings.address.failed")
+            addressToolsStatus = strings.t(if (ok) successKey else "settings.address.failed")
             addressToolsBusy = false
         }
     }
@@ -244,9 +241,10 @@ fun AppShell(
                             return@withContext SubmissionCoordinator.Outcome.Blocked(
                                 SubmissionCoordinator.Reason.PASSPORT_DISCLOSURE_REQUIRED, "passport disclosure must be saved before sending")
                         }
-                        val directory = streetsDirectory
-                            ?: (streetDirectoryLoader?.invoke() ?: loadStreetDirectory(SubmissionCoordinator.splitAddress(shown.address)?.first ?: error("Address requires street and house")))
-                                .also { streetsDirectory = it }
+                        // Regional directories are scoped to this address. Never reuse one for a later report.
+                        val directory = streetDirectoryLoader?.invoke()
+                            ?: loadStreetDirectory(SubmissionCoordinator.splitAddress(shown.address)?.first
+                                ?: error("Address requires street and house"))
                         val file = original
                             ?: return@withContext SubmissionCoordinator.Outcome.Blocked(
                                 SubmissionCoordinator.Reason.INPUT_INVALID, "missing original")
@@ -699,12 +697,10 @@ fun AppShell(
         } else null, selectedLanguage = selectedLanguage, onLanguageSelected = languageController::select,
             onLicenses = { page = "licenses" }, plateCategoriesOnline = networkOnline,
             addressTools = {
-                Text(strings.t("settings.address.title"), style = MaterialTheme.typography.titleMedium)
-                Text(strings.t("settings.address.description"))
-                TextButton(enabled = !addressToolsBusy && networkOnline, onClick = { addressAction { onlineAddresses.refresh() } }) { Text(strings.t("settings.address.refresh")) }
-                TextButton(enabled = !addressToolsBusy, onClick = { importAddressFile.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }) { Text(strings.t("settings.address.import")) }
-                TextButton(enabled = !addressToolsBusy, onClick = { addressAction { onlineAddresses.clear() } }) { Text(strings.t("settings.address.clear")) }
-                if (addressToolsStatus.isNotBlank()) Text(addressToolsStatus, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                AddressDataTools(addressToolsBusy, networkOnline, addressToolsStatus,
+                    onRefresh = { addressAction("settings.address.cleared") { onlineAddresses.refresh() } },
+                    onImport = { importAddressFile.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
+                    onClear = { addressAction("settings.address.cleared") { onlineAddresses.clear() } })
             },
             onPlateCategories = { if (networkOnline) page = "plate-categories" })
         "plate-categories" -> PlateCategoriesScreen(networkOnline, topicRepository.plateEnables(), refresh = {
