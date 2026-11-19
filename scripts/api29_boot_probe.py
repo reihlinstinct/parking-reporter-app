@@ -67,6 +67,10 @@ def main():
         (OUT / 'boot-probe-summary.json').write_text(json.dumps(summary, indent=2))
         print('Cold boot', ordinal, 'runtimeMax', before['javaMaxBytes'],
               'memoryClassMiB', before['memoryClassMiB'], flush=True)
+        if before['javaMaxBytes'] not in (16777216, 536870912):
+            summary.update(status='stopped_unexpected_budget', unexpectedBudget=before['javaMaxBytes'])
+            (OUT / 'boot-probe-summary.json').write_text(json.dumps(summary, indent=2))
+            raise RuntimeError('Unexpected process budget; experiment stopped without intervention')
         if before['javaMaxBytes'] == 16777216:
             # A control intervention on this synthetic emulator only. No heap
             # property, app manifest, APK or production workflow is changed.

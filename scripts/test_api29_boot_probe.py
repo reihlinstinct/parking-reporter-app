@@ -48,6 +48,18 @@ class BootProbeTest(unittest.TestCase):
         writes = [c.args for c in calls if 'setprop' in c.args]
         self.assertEqual(writes, [('shell','su','root','setprop','ctl.restart','zygote')])
 
+    def test_unexpected_budget_is_explicitly_stopped(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(target, 'OUT', Path(directory)), patch.object(target, 'capture'), \
+                 patch.object(target, 'probe', return_value=dict(javaMaxBytes=67108864, memoryClassMiB=512)), \
+                 patch.object(target, 'adb') as calls:
+                with self.assertRaisesRegex(RuntimeError, 'Unexpected process budget'):
+                    target.main()
+                result = __import__('json').loads((Path(directory)/'boot-probe-summary.json').read_text())
+                self.assertEqual(result['status'], 'stopped_unexpected_budget')
+                self.assertEqual(result['unexpectedBudget'], 67108864)
+                calls.assert_not_called()
+
     def test_wrong_configured_budget_refuses_intervention(self):
         with self.assertRaisesRegex(RuntimeError, 'refuse control'):
             self.run_probe([16777216], configured='64m')
