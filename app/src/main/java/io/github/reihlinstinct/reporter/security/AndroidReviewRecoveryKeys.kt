@@ -59,7 +59,10 @@ class AndroidReviewRecoveryKeys : ReviewRecoveryKeys {
     override fun unwrap(sessionId: String, wrapped: ByteArray): ByteArray {
         val name = alias(sessionId)
         val loaded = try { store().getKey(name, null) } catch (e: Exception) {
-            throw ReviewRecoveryKeys.KeyException(false, "Recovery key store unavailable")
+            val permanent = generateSequence<Throwable>(e) { it.cause }.any {
+                it is KeyPermanentlyInvalidatedException
+            }
+            throw ReviewRecoveryKeys.KeyException(permanent, "Recovery key store unavailable")
         }
         val key = loaded as? SecretKey
             ?: throw ReviewRecoveryKeys.KeyException(true, "Recovery key missing")

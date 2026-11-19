@@ -45,6 +45,10 @@ import io.github.reihlinstinct.reporter.i18n.ProvideStringsIfMissing
 @Composable
 fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft) -> Unit, onBack: () -> Unit, onSubmit: ((ReviewDraft) -> Unit)? = null, submitting: Boolean = false, submissionNote: String = "", missingCredentialKeys: List<String> = emptyList(), noDeviceCredential: Boolean = false, addressLookup: (suspend (Double, Double) -> List<io.github.reihlinstinct.reporter.evidence.AddressSuggestion>)? = null, plateRecognizer: (suspend () -> List<String>)? = null, manualAddressLookup: (suspend (String, String) -> io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress)? = null, crossingLookup: (suspend (String, String) -> io.github.reihlinstinct.reporter.municipal.StreetDirectory.IntersectionAddress)? = null,
     streetSuggestions: ((String) -> List<String>)? = null,
+    // Disabled-by-default integration ports. Caller must authenticate/validate before supplying recovery.
+    // A rotation's newer live state wins. These ports alone do not enable persistence or show a prompt.
+    recoverySnapshot: io.github.reihlinstinct.reporter.security.ReviewRecoveryCodec.Snapshot? = null,
+    onRecoveryEdit: ((io.github.reihlinstinct.reporter.security.ReviewRecoveryCodec.Snapshot) -> Unit)? = null,
     addressDataAvailable: Boolean = manualAddressLookup != null,
     topicSnapshot: io.github.reihlinstinct.reporter.core.CityTopicCache.Snapshot? = null,
     topicsAvailable: Boolean = false, topicsLoading: Boolean = false,
@@ -55,7 +59,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     // Issue #358 part 2: state held across a rotation only (process memory, see ReviewRotationState).
-    val restored = remember(initial.evidence.stableId) { ReviewRotationState.take(initial) }
+    val restored = remember(initial.evidence.stableId) { ReviewRotationState.take(initial) ?: recoverySnapshot?.let { ReviewRecoveryMapping.held(initial, it) } }
     fun restoredNow() = restored?.takeIf { it.initial == initial }
     var plates by remember(initial.evidence.stableId) { mutableStateOf<List<String>>(restored?.plates.orEmpty()) }
     var sidewalkScore by remember(initial.evidence.stableId) { mutableStateOf<Float?>(null) }
@@ -82,7 +86,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     LaunchedEffect(topicSnapshot, plateEnables) { draft = policy(draft) }
     // The plate field shows what the user typed; the type (regular, police, CD, CC) is read from it by PlateDetect.
     fun plateShown(d: ReviewDraft) = if (d.plate.isBlank()) "" else PlateClasses.text(d.plate, d.plateClass)
-    var plateRaw by remember(initial.evidence.stableId) { mutableStateOf(plateShown(draft)) }
+    var plateRaw by remember(initial.evidence.stableId) { mutableStateOf(restored?.plateRaw ?: plateShown(draft)) }
     // Invariant: detect(plateRaw) equals what onValueChange stored, so this converges without a loop.
     // An outside change (OCR suggestion, restore) moves the field. Typing that already matches the draft leaves it alone.
     PlateDetect.detect(plateRaw).let { if ((it.plate != draft.plate || it.plateClass != draft.plateClass) && !(draft.plate.isBlank() && !PlateClasses.ready(it.plate, it.plateClass))) plateRaw = plateShown(draft) }
@@ -100,15 +104,15 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     var manualResult by remember(initial.evidence.stableId) { mutableStateOf<io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress?>(restored?.manualResult) }
     var manualBusy by remember { mutableStateOf(false) }
     // Optional crossing street: with a street and no house number the lookup finds the nearest numbered address.
-    var manualCross by remember(initial.evidence.stableId) { mutableStateOf(initial.pendingCross) }
+    var manualCross by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualCross ?: initial.pendingCross) }
     var crossingResult by remember(initial.evidence.stableId) { mutableStateOf<io.github.reihlinstinct.reporter.municipal.StreetDirectory.IntersectionAddress?>(null) }
     var manualError by remember { mutableStateOf(false) }
     // Tab review (#266): address warnings clear only when the field value
     // actually CHANGES from the value that carried the warning - a keystroke
     // that returns to the reviewed/suggested baseline is not a confirmation.
-    var addressBaseline by remember(initial.evidence.stableId) { mutableStateOf(initial.address) }
+    var addressBaseline by remember(initial.evidence.stableId) { mutableStateOf(restored?.addressBaseline ?: initial.address) }
     var pendingAddressWarnings by remember(initial.evidence.stableId) {
-        mutableStateOf(initial.unresolved.intersect(setOf(
+        mutableStateOf(restored?.pendingAddressWarnings ?: initial.unresolved.intersect(setOf(
             ReviewWarning.ADDRESS_NEEDS_CONFIRMATION.code,
             ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code)))
     }
@@ -139,7 +143,23 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     val holdOnRotation by rememberUpdatedState {
         ReviewRotationState.Held(initial, draft, latitude, longitude, manualStreet, manualHouse,
             savedManualStreet, savedManualHouse, ocrPrefilledPlate, gpsFilled, templateState, textTyped,
-            editing, plates, manualResult, confirmExit, plateEdits)
+            editing, plates, manualResult, confirmExit, plateEdits, plateRaw, manualCross, addressBaseline, pendingAddressWarnings)
+    }
+    // Capture raw fields and provenance together on Main, never foldedDraft() (which confirms input).
+    // No callback means no codec work, disk I/O, credential request or background recovery activity.
+    if (onRecoveryEdit != null) {
+        LaunchedEffect(draft, plateRaw, plateEdits, latitude, longitude, manualStreet, manualHouse,
+            manualCross, savedManualStreet, savedManualHouse, ocrPrefilledPlate, gpsFilled, textTyped,
+            editing, confirmExit, templateState, addressBaseline, pendingAddressWarnings) {
+            onRecoveryEdit(io.github.reihlinstinct.reporter.security.ReviewRecoveryCodec.Snapshot(
+                draft.plate, draft.plateClass.code, draft.plateRequired, draft.address, draft.subject,
+                draft.exactHebrewText, draft.unresolved, draft.confirmedTime, draft.confirmedLatitude,
+                draft.confirmedLongitude, plateRaw, plateEdits, latitude, longitude, manualStreet,
+                manualHouse, manualCross, savedManualStreet, savedManualHouse, ocrPrefilledPlate,
+                gpsFilled, textTyped, editing, confirmExit, templateState.tag,
+                templateState.rendered.map { io.github.reihlinstinct.reporter.security.ReviewRecoveryCodec.Sentence(it.id, it.text) },
+                templateState.frozen, addressBaseline, pendingAddressWarnings))
+        }
     }
     val rotationActivity = context.findActivity()
     DisposableEffect(initial.evidence.stableId) {
