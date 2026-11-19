@@ -31,8 +31,7 @@ class TwoCarCiBridge(private val client: MunicipalClient,
                 check(prepared != null && token == null)
                 val t = client.login()
                 val subject = prepared!!["subjectCode"] as String
-                val policy = ReportCategory.SIDEWALK_PARKING
-                require(subject == policy.municipalSubjectCode && policy.needsPlate)
+                require(subject in CAR_SUBJECTS)
                 require(client.subjectCategories(t).any { it.code == subject })
                 token = t
                 mapOf("success" to true)
@@ -97,9 +96,11 @@ class TwoCarCiBridge(private val client: MunicipalClient,
     }
 
     companion object {
+        // Existing vehicle topics only. Live catalog membership is still required.
+        private val CAR_SUBJECTS = setOf("1144", ReportCategory.SIDEWALK_PARKING.municipalSubjectCode)
         fun payload(raw: Map<String, Any?>): LinkedHashMap<String, Any?> {
             require(raw.keys == setOf("reportId", "text", "subjectCode", "streetCode", "streetName", "houseNumber", "coordinateX", "coordinateY", "plate", "photos"))
-            require(raw["subjectCode"] == ReportCategory.SIDEWALK_PARKING.municipalSubjectCode)
+            require(raw["subjectCode"] in CAR_SUBJECTS)
             val plate = raw["plate"] as String
             require(Regex("[0-9]{7,8}").matches(plate) && (raw["text"] as String).contains(plate))
             val x = (raw["coordinateX"] as Number).toInt(); val y = (raw["coordinateY"] as Number).toInt()

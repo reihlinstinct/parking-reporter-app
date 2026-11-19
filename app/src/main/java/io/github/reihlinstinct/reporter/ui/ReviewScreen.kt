@@ -44,7 +44,6 @@ import io.github.reihlinstinct.reporter.i18n.ProvideStringsIfMissing
 
 @Composable
 fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft) -> Unit, onBack: () -> Unit, onSubmit: ((ReviewDraft) -> Unit)? = null, submitting: Boolean = false, submissionNote: String = "", missingCredentialKeys: List<String> = emptyList(), noDeviceCredential: Boolean = false, addressLookup: (suspend (Double, Double) -> List<io.github.reihlinstinct.reporter.evidence.AddressSuggestion>)? = null, plateRecognizer: (suspend () -> List<String>)? = null, manualAddressLookup: (suspend (String, String) -> io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress)? = null, crossingLookup: (suspend (String, String) -> io.github.reihlinstinct.reporter.municipal.StreetDirectory.IntersectionAddress)? = null,
-    addressDataAvailable: Boolean = manualAddressLookup != null,
     topicSnapshot: io.github.reihlinstinct.reporter.core.CityTopicCache.Snapshot? = null,
     topicsAvailable: Boolean = false, topicsLoading: Boolean = false,
     openTopics: (() -> Unit)? = null, topicSelected: ((String) -> Unit)? = null,
@@ -94,12 +93,12 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     // True only after the user typed in the description field here; text that arrived with the draft is not theirs to protect.
     var textTyped by remember(initial.evidence.stableId) { mutableStateOf(restored?.textTyped ?: false) }
     var editing by remember(initial.evidence.stableId) { mutableStateOf(restored?.editing ?: false) }
-    var manualStreet by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualStreet ?: initial.pendingStreet) }
-    var manualHouse by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualHouse ?: initial.pendingHouse) }
+    var manualStreet by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualStreet.orEmpty()) }
+    var manualHouse by remember(initial.evidence.stableId) { mutableStateOf(restored?.manualHouse.orEmpty()) }
     var manualResult by remember(initial.evidence.stableId) { mutableStateOf<io.github.reihlinstinct.reporter.municipal.StreetDirectory.ConfirmableAddress?>(restored?.manualResult) }
     var manualBusy by remember { mutableStateOf(false) }
     // Optional crossing street: with a street and no house number the lookup finds the nearest numbered address.
-    var manualCross by remember(initial.evidence.stableId) { mutableStateOf(initial.pendingCross) }
+    var manualCross by remember(initial.evidence.stableId) { mutableStateOf("") }
     var crossingResult by remember(initial.evidence.stableId) { mutableStateOf<io.github.reihlinstinct.reporter.municipal.StreetDirectory.IntersectionAddress?>(null) }
     var manualError by remember { mutableStateOf(false) }
     // Tab review (#266): address warnings clear only when the field value
@@ -132,7 +131,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     val hasUnsavedEdits = (draftForEdits != savedDraft && draftForEdits != cleanDraft) ||
         latitude != initial.confirmedLatitude?.toString().orEmpty() ||
         longitude != initial.confirmedLongitude?.toString().orEmpty() ||
-        manualStreet != savedManualStreet || manualHouse != savedManualHouse || manualCross != initial.pendingCross
+        manualStreet != savedManualStreet || manualHouse != savedManualHouse
     // Kept only when the screen leaves composition because of a configuration change. Every other exit
     // (save, discard, back, process death) leaves nothing held.
     val holdOnRotation by rememberUpdatedState {
@@ -170,7 +169,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             ReviewWarning.SUGGESTED_ADDRESS_NEEDS_CONFIRMATION.code)) +
             if (lat == null || lon == null) draft.unresolved.intersect(setOf(
                 ReviewWarning.MISSING_GPS.code, ReviewWarning.LOCATION_NEEDS_CONFIRMATION.code)) else emptySet()
-        return folded.copy(unresolved = unsettled, pendingStreet = manualStreet, pendingHouse = manualHouse, pendingCross = manualCross)
+        return folded.copy(unresolved = unsettled)
     }
     fun confirmPendingEvidence() {
         draft = foldedDraft()
@@ -448,13 +447,13 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 else locationPermission.launch(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.ACCESS_COARSE_LOCATION))
             }, modifier = Modifier.fillMaxWidth().testTag("use_current_location")) { Text(s.t("review.location.gps_button")) }
             if (freshCapture && gpsBusy) Text(s.t("review.location.gps_loading"))
-            OutlinedTextField(manualStreet, { manualStreet = it; manualResult = null; crossingResult = null; manualGeneration++; manualError = false }, label = { Text(s.t("review.location.street")) }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(manualHouse, { manualHouse = it; manualResult = null; crossingResult = null; manualGeneration++; manualError = false }, label = { Text(s.t("review.location.house")) }, modifier = Modifier.fillMaxWidth(),
+            OutlinedTextField(manualStreet, { manualStreet = it; manualResult = null; crossingResult = null; manualGeneration++ }, label = { Text(s.t("review.location.street")) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(manualHouse, { manualHouse = it; manualResult = null; crossingResult = null; manualGeneration++ }, label = { Text(s.t("review.location.house")) }, modifier = Modifier.fillMaxWidth(),
                 singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }))
             if (crossingLookup != null) {
-                OutlinedTextField(manualCross, { manualCross = it; crossingResult = null; manualGeneration++; manualError = false }, label = { Text(s.t("review.location.cross_street")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(manualCross, { manualCross = it; crossingResult = null; manualGeneration++ }, label = { Text(s.t("review.location.cross_street")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 if (manualCross.isNotBlank() && manualHouse.isBlank()) {
-                    Button(enabled = addressDataAvailable && !manualError && !manualBusy && manualStreet.isNotBlank(), onClick = {
+                    Button(enabled = !manualBusy && manualStreet.isNotBlank(), onClick = {
                         val generation = manualGeneration
                         val a = manualStreet
                         val b = manualCross
@@ -487,7 +486,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                 }
             }
             Text(s.t("review.location.offline_note"), style = MaterialTheme.typography.bodySmall)
-            Button(enabled = addressDataAvailable && !manualError && !manualBusy && manualAddressLookup != null && manualStreet.isNotBlank() && manualHouse.isNotBlank(), onClick = {
+            Button(enabled = !manualBusy && manualAddressLookup != null && manualStreet.isNotBlank() && manualHouse.isNotBlank(), onClick = {
                 val generation = manualGeneration
                 val street = manualStreet
                 val house = manualHouse
@@ -501,8 +500,7 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
                     finally { manualBusy = false }
                 }
             }, modifier = Modifier.fillMaxWidth()) { Text(s.t("review.location.find_address")) }
-            if (!addressDataAvailable || manualAddressLookup == null || manualError) Text(s.t("review.location.lookup_failed"))
-            LaunchedEffect(addressDataAvailable) { if (addressDataAvailable) manualError = false }
+            if (manualAddressLookup == null || manualError) Text(s.t("review.location.lookup_failed"))
             manualResult?.let { result ->
                 Text(reviewAddressSuggestionText(s, result.address))
                 Text(s.t("review.location.confirm_note"))

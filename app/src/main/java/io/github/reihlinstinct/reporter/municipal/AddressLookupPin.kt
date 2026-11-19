@@ -2,9 +2,15 @@ package io.github.reihlinstinct.reporter.municipal
 
 import java.security.MessageDigest
 
-/** Exact bytes of the bundled production address database. A stale or modified
- * database cannot silently change address resolution. See docs/address-lookup.md
- * for source statements and the outstanding legacy generator verification gap. */
+/**
+ * Pins the on-device private address lookup (#165): the app refuses to
+ * resolve against a copy whose sha256 differs from the pipeline's current
+ * version-1 file, so a tampered or stale file cannot silently change
+ * address resolution. The file itself stays private (not committed); only
+ * its digest is public, matching the taxonomy fingerprint approach (#98).
+ * When the private data is regenerated, the pin changes in the same change
+ * that adopts the new file.
+ */
 class AddressLookupMismatchException : Exception("address lookup on device does not match the pinned copy")
 
 object AddressLookupPin {
@@ -15,19 +21,6 @@ object AddressLookupPin {
         MessageDigest.getInstance("SHA-256")
             .digest(text.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
-
-    /** Verify original bytes in a bounded buffer, before parsing or resolving any address. */
-    fun verifyPinned(input: java.io.InputStream) {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val buffer = ByteArray(8192)
-        while (true) {
-            val count = input.read(buffer)
-            if (count < 0) break
-            if (count > 0) digest.update(buffer, 0, count)
-        }
-        val actual = digest.digest().joinToString("") { "%02x".format(it) }
-        if (actual != EXPECTED_SHA256) throw AddressLookupMismatchException()
-    }
 
     /** Returns the text unchanged when pinned; refuses anything else. */
     fun verifyPinned(text: String): String {

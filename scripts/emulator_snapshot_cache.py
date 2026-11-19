@@ -165,7 +165,7 @@ def scan_tree(root: Path) -> None:
                 raise CacheRejected('forbidden file name in cache tree: ' + rejection_label(name))
         for d in dirnames:
             if FORBIDDEN_NAMES.search(d):
-                raise CacheRejected('forbidden directory name in cache tree: ' + rejection_label(d))
+                raise CacheRejected('forbidden directory name in cache tree: sensitive_name_redacted')
 
 
 def _sha256(path: Path) -> str:

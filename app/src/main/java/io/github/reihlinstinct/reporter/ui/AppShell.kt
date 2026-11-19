@@ -46,6 +46,7 @@ import io.github.reihlinstinct.reporter.municipal.FileSubmissionStateStore
 import io.github.reihlinstinct.reporter.municipal.historyIdentifier
 import io.github.reihlinstinct.reporter.municipal.MunicipalClient
 import io.github.reihlinstinct.reporter.municipal.OkHttpMunicipalClient
+import io.github.reihlinstinct.reporter.municipal.AddressLookupPin
 import io.github.reihlinstinct.reporter.municipal.MunicipalInputException
 import io.github.reihlinstinct.reporter.municipal.StreetDirectory
 import io.github.reihlinstinct.reporter.municipal.SubmissionCoordinator
@@ -140,10 +141,28 @@ fun AppShell(
     var streetsDirectory by remember { mutableStateOf<StreetDirectory?>(null) }
     var submitting by remember { mutableStateOf(false) }
     var submissionNote by remember(draft?.evidence?.stableId) { mutableStateOf("") }
-    // Bundled default: owner confirms our OSM-based file. See docs/address-lookup.md
-    // for exact-byte provenance, attribution and the unrecovered-generator gap.
-    fun loadStreetDirectory(context: android.content.Context): StreetDirectory =
-        io.github.reihlinstinct.reporter.municipal.BundledStreetDirectory.load(context.assets)
+    // The municipal address lookup is municipality-supplied private data
+    // whose licence for publication is unresolved: it is NOT committed to
+    // this public repo. Load the on-device private copy (pushed to the
+    // app-specific external dir, or the no-backup dir); the bundled asset is
+    // a dev-only fallback when a developer places the file there locally.
+    fun loadStreetDirectory(context: android.content.Context): StreetDirectory {
+        val candidates = listOf(
+            File(context.getExternalFilesDir(null), "addresses.json"),
+            File(context.noBackupFilesDir, "addresses.json"),
+        )
+        for (candidate in candidates) {
+            if (candidate.isFile) {
+                return StreetDirectory.load(AddressLookupPin.verifyPinned(candidate.readText(Charsets.UTF_8)))
+            }
+        }
+        val bundled = try {
+            context.assets.open("addresses.json").bufferedReader().readText()
+        } catch (_: Exception) {
+            throw MunicipalInputException("address lookup not installed on device")
+        }
+        return StreetDirectory.load(AddressLookupPin.verifyPinned(bundled))
+    }
     fun submitReport(shown: ReviewDraft, outgoing: io.github.reihlinstinct.reporter.evidence.OutgoingImage?) {
         // Runs 42853563754 / 42880867432: the send tap never reached the
         // submit path. Log every gate so the next live run shows exactly
@@ -486,13 +505,6 @@ fun AppShell(
     }
     Scaffold(
         bottomBar = {
-            // Review is scrollable. Reserve a separate scaffold slot for save feedback
-            // so it cannot land below the form or overlap its contents.
-            if (page == "review" && status.isNotEmpty()) {
-                Surface(modifier = Modifier.navigationBarsPadding(), color = MaterialTheme.colorScheme.inverseSurface, contentColor = MaterialTheme.colorScheme.inverseOnSurface) {
-                    Text(status, color = MaterialTheme.colorScheme.inverseOnSurface, modifier = Modifier.fillMaxWidth().padding(16.dp).semantics { liveRegion = LiveRegionMode.Polite })
-                }
-            }
             if (page == "home" || page == "settings" || page == "reports") {
                 Column {
                 // Issue #295: one shared status slot above the bar on every page
@@ -626,26 +638,23 @@ fun AppShell(
                     }
                 }
             }
-            var addressLoading by remember { mutableStateOf(true) }
-            LaunchedEffect(value.evidence.stableId) {
-                addressLoading = true
-                streetsDirectory = withContext(Dispatchers.IO) {
-                    runCatching { streetDirectoryLoader?.invoke() ?: loadStreetDirectory(context) }.getOrNull()
-                }
-                addressLoading = false
-            }
-            val readyDirectory = streetsDirectory.takeUnless { addressLoading }
-            ReviewScreen(value, image, ::saveDraft,
-                addressDataAvailable = readyDirectory != null,
-                manualAddressLookup = readyDirectory?.let { directory -> { street, house -> directory.findConfirmedAddress(street, house) } },
-                crossingLookup = readyDirectory?.let { directory -> { a, b -> directory.findIntersectionAddress(a, b) } },
-                onBack = { page = "home" },
+            ReviewScreen(value, image, ::saveDraft, manualAddressLookup = { street, house ->
+                val directory = streetsDirectory ?: (streetDirectoryLoader?.invoke() ?: loadStreetDirectory(context)).also { streetsDirectory = it }
+                directory.findConfirmedAddress(street, house)
+            }, crossingLookup = { a, b ->
+                val directory = streetsDirectory ?: (streetDirectoryLoader?.invoke() ?: loadStreetDirectory(context)).also { streetsDirectory = it }
+                directory.findIntersectionAddress(a, b)
+            }, onBack = { page = "home" },
                 onSubmit = { shown -> submitReport(shown, outgoing.takeIf { image != null }) },
                 submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, noDeviceCredential = noDeviceCredential,
                 topicSnapshot = topicSnapshot, topicsAvailable = topicsConnection,
                 topicsLoading = topicsLoading, openTopics = ::openCityTopics,
                 topicSelected = { topicRepository.selected(it) }, recentTopics = topicRepository.recentCodes(), topicAliases = topicAliases, plateEnables = topicRepository.plateEnables(), registryLookup = registryLookup,
                 sidewalkScorer = { bitmap -> withContext(Dispatchers.Default) { io.github.reihlinstinct.reporter.recognition.SidewalkSuggestion.score(context, bitmap) } })
+            // Save feedback lands in the shell status; the review page has no
+            // bottom bar, so it keeps its own announced slot (home/settings/
+            // reports share the one above the bar).
+            if (status.isNotEmpty()) Text(status, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         }
         "settings" -> SettingsScreen(profile, save = { value, touchedMunicipal, cleared ->
             persistSettings(value, touchedMunicipal, cleared)

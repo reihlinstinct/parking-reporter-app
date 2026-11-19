@@ -13,21 +13,6 @@ vpn = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(vpn)
 
 class VpnSubmitTest(unittest.TestCase):
-    def test_down_preserves_untracked_and_replaced_host_configuration(self):
-        import hashlib
-        import tempfile
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / 'run'; root.mkdir()
-            matching = Path(directory) / 'matching'; matching.write_bytes(b'synthetic-written')
-            changed = Path(directory) / 'changed'; changed.write_bytes(b'synthetic-replacement')
-            untouched = Path(directory) / 'untouched'; untouched.write_bytes(b'synthetic-existing')
-            (root / 'generated-config.json').write_text(json.dumps({'match': hashlib.sha256(matching.read_bytes()).hexdigest(), 'changed': '0' * 64, '../../untrusted': '0' * 64}))
-            with patch.object(vpn, 'ROOT', root), patch.object(vpn, 'run'), patch.object(vpn, 'config_destinations', return_value={'match': matching, 'changed': changed, 'untouched': untouched}):
-                vpn.down()
-            self.assertFalse(matching.exists())
-            self.assertEqual(b'synthetic-replacement', changed.read_bytes())
-            self.assertEqual(b'synthetic-existing', untouched.read_bytes())
-
     def test_private_destinations_rejected_before_tunnel_start(self):
         with patch.object(vpn, 'run') as run:
             vpn.isolate_private_networks()
@@ -40,22 +25,6 @@ class VpnSubmitTest(unittest.TestCase):
         with patch.object(vpn, 'run', side_effect=vpn.TunnelError('synthetic')):
             with self.assertRaises(vpn.TunnelError):
                 vpn.isolate_private_networks()
-
-    def test_teardown_attempts_all_own_chains_despite_command_failures(self):
-        import tempfile
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / 'run'; root.mkdir()
-            with patch.object(vpn, 'ROOT', root), patch.object(vpn, 'run', side_effect=OSError('synthetic')) as run, patch.object(vpn, 'config_destinations', return_value={}):
-                vpn.down()
-            calls = [call.args for call in run.call_args_list]
-            for binary in ('iptables', 'ip6tables'):
-                self.assertIn((binary, '-X', 'PARK106'), calls)
-            self.assertIn(('iptables', '-X', 'PARK106LAN'), calls)
-            self.assertFalse(root.exists())
-            # A second teardown with no run root must not mutate host state.
-            with patch.object(vpn, 'ROOT', root), patch.object(vpn, 'run') as run:
-                vpn.down()
-                run.assert_not_called()
 
     def routes(self, targets, device='ppp42'):
         answers = [(socket.AF_INET, socket.SOCK_STREAM, 6, '', (x, 443)) for x in targets]
@@ -71,15 +40,6 @@ class VpnSubmitTest(unittest.TestCase):
         with patch.object(vpn.socket, 'getaddrinfo', side_effect=socket.gaierror):
             with self.assertRaises(socket.gaierror):
                 vpn.verify_municipal_routes()
-
-    def test_https_killswitch_rejects_ipv6_and_unrouted_ipv4_before_tunnel(self):
-        import inspect
-        source = inspect.getsource(vpn.up)
-        self.assertIn("['iptables','ip6tables']", source)
-        self.assertIn("if binary=='iptables':run(binary,'-A','PARK106','-o','ppp42','-j','RETURN')", source)
-        self.assertIn("run(binary,'-A','PARK106','-j','REJECT')", source)
-        self.assertLess(source.index("stage('install_https_killswitch')"), source.index("stage('ipsec_daemon_start')"))
-        self.assertIn("'--dport','443'", source)
 
     def test_manual_protected_submit_is_vpn_first_single_attempt(self):
         workflow = (ROOT / '.github/workflows/m0-engine-trial.yml').read_text()

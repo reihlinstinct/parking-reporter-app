@@ -1,4 +1,4 @@
-"""One approved submission from an ephemeral exact-main branch, never a batch."""
+"""One approved submission from an ephemeral exact-green-source branch, never a batch."""
 import hashlib
 import json
 import os
@@ -71,20 +71,25 @@ def pin_inputs(env, now=None):
 
 def source_guard(env, read=github_read):
     pin = pin_inputs(env)
-    main = read('/git/ref/heads/main', env)
+    approved_source = env.get('SUBMISSION_SOURCE_SHA', '')
+    if approved_source:
+        need(re.fullmatch('[0-9a-f]{40}', approved_source) and approved_source == env['GITHUB_SHA'],
+             'approved green source SHA mismatch')
+    else:
+        approved_source = read('/git/ref/heads/main', env)['object']['sha']
     branch = read('/git/ref/heads/submission/' + pin['originalSha256'][:24], env)
-    need(main['object']['sha'] == env['GITHUB_SHA'] == branch['object']['sha'], 'branch is not exact current main')
+    need(approved_source == env['GITHUB_SHA'] == branch['object']['sha'], 'branch is not exact approved source')
     checks = read('/commits/' + env['GITHUB_SHA'] + '/check-runs?per_page=100', env)
     rows = checks.get('check_runs', [])
-    need(checks.get('total_count') == len(rows) and 0 < len(rows) <= 100, 'incomplete main check evidence')
+    need(checks.get('total_count') == len(rows) and 0 < len(rows) <= 100, 'incomplete source check evidence')
     # This workflow's own checks are necessarily running. Everything else must
-    # already have passed on the main commit. The legacy independent-review
+    # already have passed on the approved source commit. The legacy independent-review
     # commit status is not technical CI and is intentionally not read here.
     rows = [c for c in rows if c.get('name') not in {'submission-source', 'submit-one'}]
     names = {c['name'] for c in rows}
-    need(REQUIRED_CHECKS <= names, 'main technical checks missing')
+    need(REQUIRED_CHECKS <= names, 'source technical checks missing')
     need(all(c.get('status') == 'completed' and c.get('conclusion') in GOOD for c in rows),
-         'main technical CI is not green')
+         'source technical CI is not green')
     return pin
 
 
