@@ -231,7 +231,9 @@ class CityTopicPickerTest {
             androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { it(layouts) }
         assertTrue("Text layout must be inspected", layouts.isNotEmpty())
         for (layout in layouts) {
-            assertFalse("Text overflows its layout: $tag", layout.hasVisualOverflow)
+            assertFalse("Text overflows its layout: $tag size=${layout.size} lines=${layout.lineCount} " +
+                "height=${layout.multiParagraph.height} width=${layout.multiParagraph.width} " +
+                "constraints=${layout.layoutInput.constraints} overflowW=${layout.didOverflowWidth} overflowH=${layout.didOverflowHeight}", layout.hasVisualOverflow)
             for (i in layout.layoutInput.text.indices) {
                 if (layout.layoutInput.text[i].isWhitespace()) continue
                 val glyph = layout.getBoundingBox(i)
