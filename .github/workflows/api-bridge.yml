@@ -9,6 +9,8 @@ on:
       - 'app/src/test/resources/**'
       - 'scripts/jvm/**'
       - 'scripts/verify_bridge_wrapper.sh'
+      - 'scripts/test_kotlin_plugin_marker.py'
+      - 'scripts/fixtures/kotlin-jvm-marker-2.4.21/**'
       - 'scripts/supervised_api_trial.py'
       - 'scripts/test_supervised_api_trial.py'
       - 'scripts/two_car_ci*'
@@ -42,6 +44,7 @@ jobs:
       - name: Compile exact production bridge, run synthetic tests, resolve real runtime
         run: |
           set -euo pipefail
+          python3 scripts/test_kotlin_plugin_marker.py
           sh scripts/verify_bridge_wrapper.sh
           sh gradlew -p api-bridge --no-daemon --dependency-verification strict --info test writeBatchBridgeClasspath
           python3 scripts/test_submission_branch.py
