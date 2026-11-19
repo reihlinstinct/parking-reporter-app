@@ -683,10 +683,10 @@
     },
     "licenses.osm.body": {
       "he": "נקודות הכתובות מבוססות על OpenStreetMap, © תורמי OpenStreetMap, ברישיון ODbL 1.0. הנתונים זמינים בקוד המקור ונקראים לפי אזור, עם מטמון לשימוש ללא חיבור.",
-      "en": "Address points derive from OpenStreetMap, © OpenStreetMap contributors, under ODbL1.0. Data is available in the source repository and fetched by region with offline caching.",
-      "ar": "نقاط العناوين مشتقة من OpenStreetMap وفق ترخيص ODbL1.0. البيانات متاحة في مستودع المصدر وتُجلب حسب المنطقة مع تخزين دون اتصال.",
-      "ru": "Адресные точки основаны на OpenStreetMap по лицензии ODbL1.0. Данные доступны в репозитории и загружаются по районам с кэшированием.",
-      "am": "የአድራሻ ነጥቦች ከOpenStreetMap በODbL1.0 ፈቃድ የተገኙ ናቸው። ውሂቡ በክልል ይጫናል እና በመሸጎጫ ይቀመጣል።"
+      "en": "Address points derive from OpenStreetMap, © OpenStreetMap contributors, under ODbL 1.0. Data is available in the source repository and fetched by region with offline caching.",
+      "ar": "تستند نقاط العناوين إلى OpenStreetMap، © مساهمو OpenStreetMap، بموجب ODbL 1.0. البيانات متاحة في مستودع المصدر وتُجلب حسب المنطقة مع تخزين دون اتصال.",
+      "ru": "Адресные точки основаны на OpenStreetMap, © участники OpenStreetMap, по лицензии ODbL 1.0. Данные доступны в репозитории и загружаются по районам с кэшированием.",
+      "am": "የአድራሻ ነጥቦች በOpenStreetMap፣ © የOpenStreetMap አበርካቾች፣ በODbL 1.0 ፍቃድ ላይ የተመሰረቱ ናቸው። የአድራሻ ዳታቤዙ በምንጭ ማከማቻው ይገኛል። ውሂቡ በክልል ይጫናል እና በመሸጎጫ ይቀመጣል።"
     },
     "licenses.registry.title": {
       "he": "רשימת רחובות ישראל (data.gov.il)",

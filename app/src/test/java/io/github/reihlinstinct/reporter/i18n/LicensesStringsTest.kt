@@ -11,7 +11,7 @@ import org.junit.Test
  * page its link opens (the ML Kit Terms of Service at developers.google.com/ml-kit/terms,
  * which incorporate the Google APIs Terms of Service), and the Amharic OSM body uses
  * "derived" for the ODbL derivative database instead of the stray "የተራመደው". The OSM body
- * names the directly bundled database, without a false reproducibility claim.
+ * names the regionally fetched database, without a false reproducibility claim.
  */
 class LicensesStringsTest {
 
@@ -71,14 +71,14 @@ class LicensesStringsTest {
         }
     }
 
-    // The bundled legacy file is available directly, not reproduced by the open
+    // The source legacy file is available directly, not reproduced by the open
     // replacement generator. Keep the approved notice honest about that route.
     private val osmBody = linkedMapOf(
-        "עברית" to "נקודות הכתובות מבוססות על OpenStreetMap, © תורמי OpenStreetMap, ברישיון ODbL 1.0. מאגר הכתובות כלול בקוד המקור ובאפליקציה ומופץ באותו רישיון.",
-        "English" to "Address points are based on OpenStreetMap, © OpenStreetMap contributors, under ODbL 1.0. The address database is included in the source repository and app and distributed under the same licence.",
-        "العربية" to "تستند نقاط العناوين إلى OpenStreetMap، © مساهمو OpenStreetMap، بموجب ODbL 1.0. قاعدة العناوين مضمنة في مستودع المصدر والتطبيق وموزعة بموجب الترخيص نفسه.",
-        "Русский" to "Адресные точки основаны на OpenStreetMap, © участники OpenStreetMap, по лицензии ODbL 1.0. База адресов включена в исходный репозиторий и приложение и распространяется по той же лицензии.",
-        "አማርኛ" to "የአድራሻ ነጥቦች በOpenStreetMap፣ © የOpenStreetMap አበርካቾች፣ በODbL 1.0 ፍቃድ ላይ የተመሰረቱ ናቸው። የአድራሻ ዳታቤዙ በምንጭ ማከማቻው እና በመተግበሪያው ውስጥ ተካትቶ በዚያው ፍቃድ ይሰራጫል።",
+        "עברית" to "נקודות הכתובות מבוססות על OpenStreetMap, © תורמי OpenStreetMap, ברישיון ODbL 1.0. הנתונים זמינים בקוד המקור ונקראים לפי אזור, עם מטמון לשימוש ללא חיבור.",
+        "English" to "Address points derive from OpenStreetMap, © OpenStreetMap contributors, under ODbL 1.0. Data is available in the source repository and fetched by region with offline caching.",
+        "العربية" to "تستند نقاط العناوين إلى OpenStreetMap، © مساهمو OpenStreetMap، بموجب ODbL 1.0. البيانات متاحة في مستودع المصدر وتُجلب حسب المنطقة مع تخزين دون اتصال.",
+        "Русский" to "Адресные точки основаны на OpenStreetMap, © участники OpenStreetMap, по лицензии ODbL 1.0. Данные доступны в репозитории и загружаются по районам с кэшированием.",
+        "አማርኛ" to "የአድራሻ ነጥቦች በOpenStreetMap፣ © የOpenStreetMap አበርካቾች፣ በODbL 1.0 ፍቃድ ላይ የተመሰረቱ ናቸው። የአድራሻ ዳታቤዙ በምንጭ ማከማቻው ይገኛል። ውሂቡ በክልል ይጫናል እና በመሸጎጫ ይቀመጣል።",
     )
     @Test fun osmBodyIsPinnedInEveryPinnedLanguage() {
         for ((lang, pinned) in pinsByCode(osmBody)) assertEquals(pinned, value("licenses.osm.body", lang))
@@ -91,7 +91,7 @@ class LicensesStringsTest {
             assertFalse(text.contains("1381350"))
         }
         assertFalse(value("licenses.osm.body", code("English")).contains("reproduced exactly"))
-        assertTrue(value("licenses.osm.body", code("English")).contains("included in the source repository and app"))
+        assertTrue(value("licenses.osm.body", code("English")).contains("available in the source repository and fetched by region"))
     }
     @Test fun sourceLinksAreClickableAndUseTheNamedSources() {
         val source = I18nTestFiles.moduleFile("src/main/java/io/github/reihlinstinct/reporter/ui/LicensesScreen.kt").readText()

@@ -144,10 +144,13 @@ fun AppShell(
     fun addressAction(successKey: String = "settings.address.updated", action: () -> Unit) {
         if (addressToolsBusy) return
         addressToolsBusy = true
-        scope.launch {
+        scope.launch(Dispatchers.Main) {
             val ok = withContext(Dispatchers.IO) { runCatching { action() }.isSuccess }
             streetsDirectory = null
-            addressToolsStatus = strings.t(if (ok) successKey else "settings.address.failed")
+            addressToolsStatus = if (ok) when (successKey) {
+                "settings.address.cleared" -> strings.t("settings.address.cleared")
+                else -> strings.t("settings.address.updated")
+            } else strings.t("settings.address.failed")
             addressToolsBusy = false
         }
     }

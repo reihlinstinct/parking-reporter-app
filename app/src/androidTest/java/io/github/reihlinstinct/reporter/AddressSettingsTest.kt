@@ -3,7 +3,7 @@ package io.github.reihlinstinct.reporter
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.*
 import androidx.compose.ui.graphics.asAndroidBitmap
-import io.github.reihlinstinct.reporter.ui.AppTheme
+import io.github.reihlinstinct.reporter.ui.theme.AppTheme
 import io.github.reihlinstinct.reporter.ui.AddressDataTools
 import io.github.reihlinstinct.reporter.ui.SettingsScreen
 import org.junit.Rule
