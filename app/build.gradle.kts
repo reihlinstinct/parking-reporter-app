@@ -30,7 +30,12 @@ android {
     lint { abortOnError = true }
     sourceSets {
         getByName("test") { resources.srcDir("src/main/assets") }
-        if (sideBySidePreview) { getByName("debug") { manifest.srcFile("src/sideBySidePreview/AndroidManifest.xml") } }
+        if (sideBySidePreview) {
+            getByName("debug") {
+                manifest.srcFile("src/sideBySidePreview/AndroidManifest.xml")
+                res.srcDir("src/sideBySidePreview/res")
+            }
+        }
     }
     buildTypes {
         debug {
