@@ -175,14 +175,32 @@ This fixes the API29 16 MiB heap exhaustion observed while duplicating the sourc
 text in integrated PR669. No larger heap, removed assertion, changed asset or pin
 is needed. The generic JVM string loader remains for contract tests.
 
-## Regional online lookup (batch2, refs #700)
+## Regional online lookup (batch 2, refs #700)
 
-The default no longer packages or loads the2.3MBaddress-point file on first install. A419,211byte pinned street/region dependency index is bundled. It contains names, codes, aliases, region bounding boxes and SHA256values, not all point coordinates or polygon vertices. The two-pass verified loader remains available only for optional same-pin local import under advanced settings.
+The default no longer packages or loads the 2.3 MB address-point file on first install. A 419,211-byte pinned street/region dependency index is bundled. It contains names, codes, aliases, region bounding boxes and SHA-256 values, not point coordinates or polygon vertices. The verified full-file loader remains available only for optional same-pin local import under advanced settings.
 
-The public repository hosts243CBS2022statistical-area files and one explicitly labeled outside-coverage file. Each geographic file contains full unchanged WGS84polygon geometry and its address points; median11,359bytes, maximum54,391bytes. Total geographic files2,994,088bytes, plus16,712bytes outside coverage. Geometry is NOT simplified; these are statistical areas, not neighborhood names. Source and license attribution are in app/src/main/assets/licenses/CBS.txt.
+The repository hosts 243 CBS 2022 statistical-area files and one outside-coverage file. Each geographic file contains full WGS84 polygon geometry and its address points; median size is 11,359 bytes, maximum 54,391 bytes. Total geographic files are 2,994,088 bytes, plus 16,712 bytes outside coverage. Geometry is not simplified. These are statistical areas, not neighborhood names. Source/license attribution is in `app/src/main/assets/licenses/CBS.txt`.
 
-For GPS lookup, a local bounding-box index picks candidate region IDs with a conservative halo. Only those static IDs leave the device. Downloaded pinned geometry then runs local boundary-inclusive point-in-polygon, preserving holes and multipart regions. Outside CBScoverage never snaps to a nearest region and asks for a manual address. Manual street/crossing lookup loads all regions contributing points to either street, preserving full-city alias ambiguity and unique short-name tail matching.383of22,627source points are outside the2022CBScoverage and remain available in a labeled manual-lookup shard.
+For GPS lookup, a local bounding-box index picks candidate region IDs with a conservative halo. Only those static IDs leave the device. Downloaded pinned geometry then runs local boundary-inclusive point-in-polygon, preserving holes and multipart regions. Outside CBS coverage never snaps to a nearest region and asks for a manual address. Manual street/crossing lookup loads all regions contributing points to either street, preserving full-city alias ambiguity and unique short-name tail matching. The 383 of 22,627 source points outside coverage remain available in a labeled manual-lookup shard.
 
-Verified files are cached privately outside Android backup. Wrong hashes, oversize bodies, redirects, network failure or interrupted imports cannot replace a good cache. Offline lookup works for regions already cached, not every unvisited part of the city. An optional full approved local file can supply complete offline coverage. No reporter data, exact address string or exact GPS is sent to the file host. The host sees requested region IDs. No paid endpoint, API key or server deployment.
+Verified files are cached privately outside Android backup. Wrong hashes, oversize bodies, redirects, network failure or interrupted imports cannot replace a good cache. Offline lookup works for regions already cached, not every unvisited part of the city. An optional full approved local file can supply complete offline coverage. No reporter data, exact address string or exact GPS is sent to the file host. The host sees requested region IDs. No paid endpoint, API key or server deployment is needed.
 
-Limitations: the2022geography is not current-boundary proof. The current report model does not carry GPSaccuracy into the lookup, so the conservative halo is not a claim of uncertainty-aware polygon selection. Android compilation, UI screenshots, APKasset inspection and exact-head CI remain required before this batch is ready. Raw GitHub serving may be unavailable; refusal is visible and last-good cache is retained. The fixed main URL must expose the final pinned files after merge; no unmerged-feature activation is claimed.
+The refresh action removes cached files and any optional import, returning to online regional lookup on the next address request. It does not prefetch every region. The clear action removes both kinds of saved data without a network request. UI copy and the precise refresh semantics remain subject to review.
+
+Limitations: the 2022 geography does not prove current municipal boundaries. The current report model does not carry GPS accuracy into lookup, so the conservative halo is not uncertainty-aware polygon selection. Android compilation, actual UI screenshots, APK asset inspection and exact-head CI remain required before this batch is ready. Raw GitHub serving may be unavailable; refusal is visible and last-good cache is retained. The fixed main URL must expose the pinned files after merge; no unmerged-feature activation is claimed.
+
+### Reproducing the regional files
+
+`tools/address-lookup/sources/cbs-jerusalem-2022.geojson.gz` is a lossless compressed copy of the reviewed Jerusalem subset. After decompression, its SHA-256 must be `ad780e9e8a977ad7f55618a4a032af35053b8f3e013de9be7e7b9c7332e02310`. The generator checks this pin and the existing address-data pin before writing anything. Stable IDs are `cbs-` plus the source `YISHUV_STAT_2022` value. Geometry coordinates are carried through without simplification or rounding.
+
+```sh
+python tools/address-lookup/build_address_shards.py \
+  --dataset app/src/main/assets/addresses.json \
+  --polygons tools/address-lookup/sources/cbs-jerusalem-2022.geojson.gz \
+  --output /tmp/regional-addresses \
+  --allow-outside-cbs-coverage
+```
+
+The output index must match `app/src/main/assets/address-index.json`, SHA-256 `3d56c9386db6d48d655ce72141bc224da1233f6ba90374ba7f2471f084ef5dd8`. Every other output must match the corresponding file under `tools/address-lookup/data/v1/`. All 244 shard files and the index were reproduced byte-for-byte from these checked-in inputs.
+
+The compressed source is a disclosed technical derivative of the official CBS source linked in `licenses/CBS.txt`: select locality code 3000 from the 2022 geodatabase, convert EPSG:2039 to WGS84, normalize ring orientation, remove demographic columns, preserve all geometry without repair. The original ZIP hash is recorded with that attribution. Rebuilding this converted snapshot from the original geodatabase requires the same GIS conversion environment and is separate from the deterministic shard build above.

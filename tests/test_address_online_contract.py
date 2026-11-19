@@ -1,11 +1,27 @@
 """Offline source/asset contract checks; Android build and pixels remain separate proof."""
 from pathlib import Path
 import hashlib
+import gzip
 import json
 import unittest
 ROOT=Path(__file__).resolve().parents[1]
 
 class OnlineAddressContractTest(unittest.TestCase):
+    def test_all_published_polygons_preserve_pinned_cbs_source(self):
+        raw = gzip.decompress((ROOT / "tools/address-lookup/sources/cbs-jerusalem-2022.geojson.gz").read_bytes())
+        self.assertEqual("ad780e9e8a977ad7f55618a4a032af35053b8f3e013de9be7e7b9c7332e02310", hashlib.sha256(raw).hexdigest())
+        features = json.loads(raw)["features"]
+        self.assertEqual(243, len(features))
+        for feature in features:
+            rid = "cbs-" + str(feature["properties"]["YISHUV_STAT_2022"])
+            published = json.loads((ROOT / "tools/address-lookup/data/v1" / (rid + ".json")).read_bytes())
+            self.assertEqual(feature["geometry"]["coordinates"], published["polygons"])
+
+    def test_submission_does_not_publish_regional_directory_as_global(self):
+        shell = (ROOT / "app/src/main/java/io/github/reihlinstinct/reporter/ui/AppShell.kt").read_text()
+        self.assertNotIn(".also { streetsDirectory = it }", shell)
+        self.assertIn("val directory = streetDirectoryLoader?.invoke()", shell)
+
     def test_index_pin_and_all_geographic_files_match(self):
         raw=(ROOT/'app/src/main/assets/address-index.json').read_bytes()
         source=(ROOT/'app/src/main/java/io/github/reihlinstinct/reporter/municipal/OnlineStreetDirectory.kt').read_text()

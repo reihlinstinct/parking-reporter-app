@@ -5,6 +5,7 @@ Boundary input must be a separately reviewed WGS84 GeoJSON FeatureCollection.
 No geometry is inferred from street names. Uncovered points stop generation.
 """
 import argparse
+import gzip
 import hashlib
 import json
 import re
@@ -12,6 +13,7 @@ import unicodedata
 from pathlib import Path
 
 PIN = '5eaa83a9eb9253798109555bf2f6ea6ab6ec941a86e86c15c6761b2e5ee046d4'
+CBS_BOUNDARY_PIN = 'ad780e9e8a977ad7f55618a4a032af35053b8f3e013de9be7e7b9c7332e02310'
 FINALS = str.maketrans('ךםןףץ', 'כמנפצ')
 
 
@@ -64,7 +66,8 @@ def contains(polygons, point):
 def build(dataset, boundaries, allow_outside=False):
     regions = []
     for feature in boundaries['features']:
-        rid = str(feature['properties']['id'])
+        props = feature['properties']
+        rid = str(props.get('id') or 'cbs-' + str(props['YISHUV_STAT_2022']))
         if not re.fullmatch('[a-z0-9-]+', rid):
             raise ValueError('unsafe region id')
         geometry = feature['geometry']
@@ -126,7 +129,12 @@ def main():
     args=parser.parse_args()
     raw=args.dataset.read_bytes()
     if hashlib.sha256(raw).hexdigest()!=PIN:raise ValueError('dataset pin mismatch')
-    files=build(json.loads(raw),json.loads(args.polygons.read_bytes()),args.allow_outside_cbs_coverage)
+    boundary_raw = args.polygons.read_bytes()
+    if args.polygons.suffix == '.gz':
+        boundary_raw = gzip.decompress(boundary_raw)
+    if hashlib.sha256(boundary_raw).hexdigest() != CBS_BOUNDARY_PIN:
+        raise ValueError('CBS boundary snapshot pin mismatch')
+    files=build(json.loads(raw),json.loads(boundary_raw),args.allow_outside_cbs_coverage)
     args.output.mkdir(parents=True,exist_ok=True)
     for name,data in files.items():(args.output/name).write_bytes(data)
     print('index-sha256',hashlib.sha256(files['index.json']).hexdigest())
