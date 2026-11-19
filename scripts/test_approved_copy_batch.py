@@ -16,6 +16,14 @@ class ApprovedCopyBatchTest(unittest.TestCase):
             if k.startswith('registry.tag.'):
                 self.assertIn('карта',row['ru'].lower())
                 self.assertIn('ካርድ',row['am'])
+    def test_french_android_resource_apostrophes_are_escaped(self):
+        import re
+        import xml.etree.ElementTree as ET
+        for path in (ROOT / 'app/src/main/res/values-fr').glob('*.xml'):
+            for value in ET.parse(path).getroot().iter('string'):
+                text = ''.join(value.itertext())
+                self.assertIsNone(re.search(r"(?<!\\)'", text), str(path))
+
     def test_explicit_passport_delete_is_fresh_authenticated_and_isolated(self):
         shell=(ROOT/'app/src/main/java/io/github/reihlinstinct/reporter/ui/AppShell.kt').read_text()
         block=shell.split('deleteSavedPassport = { cleared ->',1)[1].split('}, save =',1)[0]
