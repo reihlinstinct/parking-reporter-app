@@ -17,6 +17,16 @@ class BootProbeTest(unittest.TestCase):
                 target.main()
                 return __import__('json').loads((Path(directory)/'boot-probe-summary.json').read_text()), calls.call_args_list
 
+    def test_emulator_action_each_script_line_is_standalone_shell(self):
+        import subprocess
+        workflow = (Path(__file__).resolve().parents[1]/'.github/workflows/api29-memory.yml').read_text()
+        block = workflow.split('          script: |', 1)[1].split('      - uses:', 1)[0]
+        lines = [line.strip().replace('${{ matrix.mode }}', 'boot-probe')
+                 for line in block.splitlines() if line.strip()]
+        for line in lines:
+            result = subprocess.run(['sh', '-n', '-c', line], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_optional_init_files_use_root_and_cannot_abort_all_tests(self):
         workflow = (Path(__file__).resolve().parents[1]/'.github/workflows/api29-memory.yml').read_text()
         for line in workflow.splitlines():

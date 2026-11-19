@@ -55,11 +55,7 @@ jobs:
             python3 scripts/emulator_preflight.py --report-dir app/build/reports/api29-memory
             adb shell svc wifi disable
             adb shell svc data disable
-            if [ '${{ matrix.mode }}' = boot-probe ]; then
-              python3 scripts/api29_boot_probe.py
-            else
-              bash scripts/api29_memory_diagnostic.sh ${{ matrix.mode }}
-            fi
+            if [ '${{ matrix.mode }}' = boot-probe ]; then python3 scripts/api29_boot_probe.py; else bash scripts/api29_memory_diagnostic.sh ${{ matrix.mode }}; fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
