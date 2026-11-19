@@ -157,6 +157,31 @@ class ScanTest(unittest.TestCase):
                 finally:
                     file.unlink()
 
+    def test_clean_producer_diagnostic_names_only_rejected_basename_and_still_refuses(self):
+        nested = self.root / 'synthetic-private-directory'
+        nested.mkdir()
+        (nested / 'synthetic-remaining.txt').write_text('NEVER_PRINT_CONTENT')
+        for enabled in (False, True):
+            output = io.StringIO()
+            with redirect_stdout(output), self.assertRaises(m.CacheRejected):
+                m.scan_tree(self.root, diagnose_clean_producer=enabled)
+            text = output.getvalue()
+            self.assertNotIn('NEVER_PRINT_CONTENT', text)
+            self.assertNotIn('synthetic-private-directory', text)
+            self.assertEqual(enabled, 'synthetic-remaining.txt' in text)
+        self.assertFalse((self.root / 'provenance.json').exists())
+
+    def test_diagnostic_escapes_control_characters_and_caps_name(self):
+        name = 'x' * 165 + '\n.txt'
+        (self.root / name).write_text('NEVER_PRINT')
+        output = io.StringIO()
+        with redirect_stdout(output), self.assertRaises(m.CacheRejected):
+            m.scan_tree(self.root, diagnose_clean_producer=True)
+        self.assertEqual(1, len(output.getvalue().splitlines()))
+        encoded = output.getvalue().split(' ', 1)[1]
+        self.assertEqual(name[:160], json.loads(encoded))
+        self.assertNotIn('NEVER_PRINT', encoded)
+
     def test_symlink_and_bad_root_rejected(self):
         os.symlink('/etc/passwd', self.root / 'link.img')
         with self.assertRaises(m.CacheRejected):
