@@ -27,3 +27,12 @@ registry answers are in-memory. Inspect both `registry-review-tag-*` screenshots
 Actual TalkBack must still demonstrate one pending announcement and no repeated
 pending announcement when the result replaces it. Compose semantics alone cannot
 certify that. No issue closure is implied by adding this test.
+
+## Picker projection (#362)
+
+The existing duplicate-code selection test now also inspects Android's
+AccessibilityNodeInfo projection before and after filtering, requiring one
+visible selected, clickable Button with the complete combined description.
+It does not substitute for TalkBack. Still verify Hebrew RTL focus order,
+complete paths, one focus stop per code and selected-state speech at normal and
+200% text. Preserve the existing glyph and geometry assertions.

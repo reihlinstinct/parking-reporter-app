@@ -40,11 +40,34 @@ class CityTopicPickerTest {
         compose.onAllNodes(isSelected()).assertCountEquals(1)
         compose.onNode(isSelected()).assertHasClickAction()
             .assertContentDescriptionEquals("אחר. גינון › אחר\nתאורה › אחר")
+        assertAndroidSelectedChoice("אחר. גינון › אחר\nתאורה › אחר")
         compose.onNodeWithTag("picker-search-input").performTextInput("5164")
         compose.onAllNodes(isSelected()).assertCountEquals(1)
+        assertAndroidSelectedChoice("אחר. גינון › אחר\nתאורה › אחר")
         compose.onNode(isSelected()).performClick()
         compose.runOnIdle { assertEquals("5164", chosen) }
         // This verifies Compose accessibility semantics, not spoken TalkBack order.
+    }
+
+    /** Check the Android accessibility bridge as well as Compose's internal tree.
+     * This still cannot establish the spoken TalkBack order or utterance count. */
+    private fun assertAndroidSelectedChoice(label: String) {
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        fun matches(): List<android.view.accessibility.AccessibilityNodeInfo> {
+            val result = mutableListOf<android.view.accessibility.AccessibilityNodeInfo>()
+            fun visit(node: android.view.accessibility.AccessibilityNodeInfo) {
+                if (node.contentDescription?.toString() == label && node.isVisibleToUser) result += node
+                for (i in 0 until node.childCount) node.getChild(i)?.let { visit(it) }
+            }
+            automation.rootInActiveWindow?.let { visit(it) }
+            return result
+        }
+        compose.waitUntil(5_000) { matches().size == 1 }
+        val nodes = matches()
+        assertEquals("One Android accessibility target per city code", 1, nodes.size)
+        assertTrue("Android must expose the current choice as selected", nodes.single().isSelected)
+        assertTrue("Android must expose the selected choice as actionable", nodes.single().isClickable)
+        assertEquals("android.widget.Button", nodes.single().className?.toString())
     }
 
     @Test fun searchableMunicipalCatalogRecordingUsesMockRefreshNotLiveCity() {
