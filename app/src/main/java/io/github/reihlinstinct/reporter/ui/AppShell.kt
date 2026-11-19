@@ -140,10 +140,28 @@ fun AppShell(
     var streetsDirectory by remember { mutableStateOf<StreetDirectory?>(null) }
     var submitting by remember { mutableStateOf(false) }
     var submissionNote by remember(draft?.evidence?.stableId) { mutableStateOf("") }
-    // Bundled default: owner confirms our OSM-based file. See docs/address-lookup.md
-    // for exact-byte provenance, attribution and the unrecovered-generator gap.
-    fun loadStreetDirectory(context: android.content.Context): StreetDirectory =
-        io.github.reihlinstinct.reporter.municipal.BundledStreetDirectory.load(context.assets)
+    val onlineAddresses = remember(context) { io.github.reihlinstinct.reporter.municipal.OnlineStreetDirectory(context) }
+    fun loadStreetDirectory(street: String): StreetDirectory = onlineAddresses.loadForStreets(listOf(street))
+    var addressToolsStatus by remember { mutableStateOf("") }
+    var addressToolsBusy by remember { mutableStateOf(false) }
+    fun addressAction(action: () -> Unit) {
+        if (addressToolsBusy) return
+        addressToolsBusy = true
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) { runCatching { action() }.isSuccess }
+            streetsDirectory = null
+            addressToolsStatus = strings.t(if (ok) "settings.address.updated" else "settings.address.failed")
+            addressToolsBusy = false
+        }
+    }
+    val importAddressFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) addressAction {
+            context.contentResolver.openInputStream(uri).use { input ->
+                requireNotNull(input) { "Address input unavailable" }
+                onlineAddresses.importLocal(input)
+            }
+        }
+    }
     fun submitReport(shown: ReviewDraft, outgoing: io.github.reihlinstinct.reporter.evidence.OutgoingImage?) {
         // Runs 42853563754 / 42880867432: the send tap never reached the
         // submit path. Log every gate so the next live run shows exactly
@@ -227,7 +245,7 @@ fun AppShell(
                                 SubmissionCoordinator.Reason.PASSPORT_DISCLOSURE_REQUIRED, "passport disclosure must be saved before sending")
                         }
                         val directory = streetsDirectory
-                            ?: (streetDirectoryLoader?.invoke() ?: loadStreetDirectory(context))
+                            ?: (streetDirectoryLoader?.invoke() ?: loadStreetDirectory(SubmissionCoordinator.splitAddress(shown.address)?.first ?: error("Address requires street and house")))
                                 .also { streetsDirectory = it }
                         val file = original
                             ?: return@withContext SubmissionCoordinator.Outcome.Blocked(
@@ -627,18 +645,33 @@ fun AppShell(
                 }
             }
             var addressLoading by remember { mutableStateOf(true) }
+            var addressIndexReady by remember { mutableStateOf(false) }
             LaunchedEffect(value.evidence.stableId) {
                 addressLoading = true
-                streetsDirectory = withContext(Dispatchers.IO) {
-                    runCatching { streetDirectoryLoader?.invoke() ?: loadStreetDirectory(context) }.getOrNull()
+                addressIndexReady = withContext(Dispatchers.IO) {
+                    runCatching {
+                        if (streetDirectoryLoader != null) streetsDirectory = streetDirectoryLoader.invoke()
+                        else onlineAddresses.prepare()
+                    }.isSuccess
                 }
                 addressLoading = false
             }
             val readyDirectory = streetsDirectory.takeUnless { addressLoading }
+            val addressReady = !addressLoading && addressIndexReady
             ReviewScreen(value, image, ::saveDraft,
-                addressDataAvailable = readyDirectory != null,
-                manualAddressLookup = readyDirectory?.let { directory -> { street, house -> directory.findConfirmedAddress(street, house) } },
-                crossingLookup = readyDirectory?.let { directory -> { a, b -> directory.findIntersectionAddress(a, b) } },
+                addressDataAvailable = addressReady,
+                addressLookup = { lat, lon ->
+                    val directory = streetDirectoryLoader?.invoke() ?: onlineAddresses.loadForLocation(lat, lon)
+                    val resolved = directory.resolve(null, null, lat to lon)
+                    listOf(io.github.reihlinstinct.reporter.evidence.AddressSuggestion(
+                        resolved.streetName, resolved.house, "${resolved.streetName} ${resolved.house}"))
+                },
+                manualAddressLookup = if (addressReady) { street, house ->
+                    (readyDirectory ?: onlineAddresses.loadForStreets(listOf(street))).findConfirmedAddress(street, house)
+                } else null,
+                crossingLookup = if (addressReady) { a, b ->
+                    (readyDirectory ?: onlineAddresses.loadForStreets(listOf(a, b))).findIntersectionAddress(a, b)
+                } else null,
                 onBack = { page = "home" },
                 onSubmit = { shown -> submitReport(shown, outgoing.takeIf { image != null }) },
                 submitting = submitting, submissionNote = submissionNote, missingCredentialKeys = missingCredentials, noDeviceCredential = noDeviceCredential,
@@ -665,6 +698,14 @@ fun AppShell(
             }
         } else null, selectedLanguage = selectedLanguage, onLanguageSelected = languageController::select,
             onLicenses = { page = "licenses" }, plateCategoriesOnline = networkOnline,
+            addressTools = {
+                Text(strings.t("settings.address.title"), style = MaterialTheme.typography.titleMedium)
+                Text(strings.t("settings.address.description"))
+                TextButton(enabled = !addressToolsBusy && networkOnline, onClick = { addressAction { onlineAddresses.refresh() } }) { Text(strings.t("settings.address.refresh")) }
+                TextButton(enabled = !addressToolsBusy, onClick = { importAddressFile.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }) { Text(strings.t("settings.address.import")) }
+                TextButton(enabled = !addressToolsBusy, onClick = { addressAction { onlineAddresses.clear() } }) { Text(strings.t("settings.address.clear")) }
+                if (addressToolsStatus.isNotBlank()) Text(addressToolsStatus, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+            },
             onPlateCategories = { if (networkOnline) page = "plate-categories" })
         "plate-categories" -> PlateCategoriesScreen(networkOnline, topicRepository.plateEnables(), refresh = {
             val settings = readSettings() ?: error("Settings unavailable")

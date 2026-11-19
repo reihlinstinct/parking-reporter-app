@@ -174,3 +174,15 @@ Both the app and fresh-install instrumentation use this same loader.
 This fixes the API29 16 MiB heap exhaustion observed while duplicating the source
 text in integrated PR669. No larger heap, removed assertion, changed asset or pin
 is needed. The generic JVM string loader remains for contract tests.
+
+## Regional online lookup (batch2, refs #700)
+
+The default no longer packages or loads the2.3MBaddress-point file on first install. A419,211byte pinned street/region dependency index is bundled. It contains names, codes, aliases, region bounding boxes and SHA256values, not all point coordinates or polygon vertices. The two-pass verified loader remains available only for optional same-pin local import under advanced settings.
+
+The public repository hosts243CBS2022statistical-area files and one explicitly labeled outside-coverage file. Each geographic file contains full unchanged WGS84polygon geometry and its address points; median11,359bytes, maximum54,391bytes. Total geographic files2,994,088bytes, plus16,712bytes outside coverage. Geometry is NOT simplified; these are statistical areas, not neighborhood names. Source and license attribution are in app/src/main/assets/licenses/CBS.txt.
+
+For GPS lookup, a local bounding-box index picks candidate region IDs with a conservative halo. Only those static IDs leave the device. Downloaded pinned geometry then runs local boundary-inclusive point-in-polygon, preserving holes and multipart regions. Outside CBScoverage never snaps to a nearest region and asks for a manual address. Manual street/crossing lookup loads all regions contributing points to either street, preserving full-city alias ambiguity and unique short-name tail matching.383of22,627source points are outside the2022CBScoverage and remain available in a labeled manual-lookup shard.
+
+Verified files are cached privately outside Android backup. Wrong hashes, oversize bodies, redirects, network failure or interrupted imports cannot replace a good cache. Offline lookup works for regions already cached, not every unvisited part of the city. An optional full approved local file can supply complete offline coverage. No reporter data, exact address string or exact GPS is sent to the file host. The host sees requested region IDs. No paid endpoint, API key or server deployment.
+
+Limitations: the2022geography is not current-boundary proof. The current report model does not carry GPSaccuracy into the lookup, so the conservative halo is not a claim of uncertainty-aware polygon selection. Android compilation, UI screenshots, APKasset inspection and exact-head CI remain required before this batch is ready. Raw GitHub serving may be unavailable; refusal is visible and last-good cache is retained. The fixed main URL must expose the final pinned files after merge; no unmerged-feature activation is claimed.

@@ -33,7 +33,7 @@ fun LicensesScreen(onBack: () -> Unit) {
     val strings = LocalStrings.current
     val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     val texts = remember {
-        listOf("Apache-2.0.txt", "NOTICE.txt", "libjpeg.txt", "libpng.txt", "Leptonica.txt")
+        listOf("CBS.txt", "Apache-2.0.txt", "NOTICE.txt", "libjpeg.txt", "libpng.txt", "Leptonica.txt")
             .map { name ->
                 name to try {
                     context.assets.open("licenses/$name").bufferedReader().readText()

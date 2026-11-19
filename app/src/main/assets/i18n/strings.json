@@ -682,11 +682,11 @@
       "am": "© OpenStreetMap contributors (ODbL 1.0)"
     },
     "licenses.osm.body": {
-      "he": "נקודות הכתובות מבוססות על OpenStreetMap, © תורמי OpenStreetMap, ברישיון ODbL 1.0. מאגר הכתובות כלול בקוד המקור ובאפליקציה ומופץ באותו רישיון.",
-      "en": "Address points are based on OpenStreetMap, © OpenStreetMap contributors, under ODbL 1.0. The address database is included in the source repository and app and distributed under the same licence.",
-      "ar": "تستند نقاط العناوين إلى OpenStreetMap، © مساهمو OpenStreetMap، بموجب ODbL 1.0. قاعدة العناوين مضمنة في مستودع المصدر والتطبيق وموزعة بموجب الترخيص نفسه.",
-      "ru": "Адресные точки основаны на OpenStreetMap, © участники OpenStreetMap, по лицензии ODbL 1.0. База адресов включена в исходный репозиторий и приложение и распространяется по той же лицензии.",
-      "am": "የአድራሻ ነጥቦች በOpenStreetMap፣ © የOpenStreetMap አበርካቾች፣ በODbL 1.0 ፍቃድ ላይ የተመሰረቱ ናቸው። የአድራሻ ዳታቤዙ በምንጭ ማከማቻው እና በመተግበሪያው ውስጥ ተካትቶ በዚያው ፍቃድ ይሰራጫል።"
+      "he": "נקודות הכתובות מבוססות על OpenStreetMap, © תורמי OpenStreetMap, ברישיון ODbL 1.0. הנתונים זמינים בקוד המקור ונקראים לפי אזור, עם מטמון לשימוש ללא חיבור.",
+      "en": "Address points derive from OpenStreetMap, © OpenStreetMap contributors, under ODbL1.0. Data is available in the source repository and fetched by region with offline caching.",
+      "ar": "نقاط العناوين مشتقة من OpenStreetMap وفق ترخيص ODbL1.0. البيانات متاحة في مستودع المصدر وتُجلب حسب المنطقة مع تخزين دون اتصال.",
+      "ru": "Адресные точки основаны на OpenStreetMap по лицензии ODbL1.0. Данные доступны в репозитории и загружаются по районам с кэшированием.",
+      "am": "የአድራሻ ነጥቦች ከOpenStreetMap በODbL1.0 ፈቃድ የተገኙ ናቸው። ውሂቡ በክልል ይጫናል እና በመሸጎጫ ይቀመጣል።"
     },
     "licenses.registry.title": {
       "he": "רשימת רחובות ישראל (data.gov.il)",
@@ -2164,6 +2164,55 @@
       "ar": "اقتراح تجريبي: يبدو أنه وقوف على الرصيف",
       "ru": "Экспериментальная подсказка: похоже на парковку на тротуаре",
       "am": "የሙከራ ጥቆማ፡ በእግረኛ መንገድ ላይ መኪና ማቆም ይመስላል"
+    },
+    "settings.address.title": {
+      "he": "נתוני כתובות",
+      "en": "Address data",
+      "ar": "بيانات العناوين",
+      "ru": "Данные адресов",
+      "am": "የአድራሻ ውሂብ"
+    },
+    "settings.address.description": {
+      "he": "הכתובות נקראות מקובץ באינטרנט ונשמרות לשימוש ללא חיבור. אפשר לטעון עותק מקומי תואם, אך אין צורך בכך.",
+      "en": "Addresses are read from an online file and cached for offline use. Importing a matching local copy is optional.",
+      "ar": "تُقرأ العناوين من ملف على الإنترنت وتُحفظ للاستخدام دون اتصال. استيراد نسخة محلية مطابقة اختياري.",
+      "ru": "Адреса загружаются из файла в интернете и сохраняются для работы без сети. Импорт подходящей локальной копии необязателен.",
+      "am": "አድራሻዎች ከመስመር ላይ ፋይል ይነበባሉ እና ያለ በይነመረብ ለመጠቀም ይቀመጣሉ። ተመሳሳይ የአካባቢ ቅጂ ማስገባት አማራጭ ነው።"
+    },
+    "settings.address.refresh": {
+      "he": "רענון מהאינטרנט",
+      "en": "Refresh online",
+      "ar": "تحديث من الإنترنت",
+      "ru": "Обновить из интернета",
+      "am": "ከበይነመረብ አድስ"
+    },
+    "settings.address.import": {
+      "he": "טעינת קובץ מקומי (אופציונלי)",
+      "en": "Import local file (optional)",
+      "ar": "استيراد ملف محلي (اختياري)",
+      "ru": "Импорт файла (необязательно)",
+      "am": "የአካባቢ ፋይል አስገባ (አማራጭ)"
+    },
+    "settings.address.clear": {
+      "he": "מחיקת המטמון",
+      "en": "Clear cache",
+      "ar": "مسح الذاكرة المؤقتة",
+      "ru": "Удалить кэш",
+      "am": "መሸጎጫውን አጽዳ"
+    },
+    "settings.address.updated": {
+      "he": "נתוני הכתובות עודכנו",
+      "en": "Address data updated",
+      "ar": "تم تحديث بيانات العناوين",
+      "ru": "Данные адресов обновлены",
+      "am": "የአድራሻ ውሂብ ተዘምኗል"
+    },
+    "settings.address.failed": {
+      "he": "לא ניתן לטעון נתוני כתובות",
+      "en": "Could not load address data",
+      "ar": "تعذر تحميل بيانات العناوين",
+      "ru": "Не удалось загрузить адреса",
+      "am": "የአድራሻ ውሂብ መጫን አልተቻለም"
     }
   }
 }

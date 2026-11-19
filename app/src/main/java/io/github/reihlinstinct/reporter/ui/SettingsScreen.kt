@@ -77,6 +77,7 @@ fun SettingsScreen(
     setupError: String = "",
     noDeviceCredential: Boolean = false,
     onPlateCategories: (() -> Unit)? = null, plateCategoriesOnline: Boolean = false,
+    addressTools: (@Composable () -> Unit)? = null,
 ) {
     var firstName by remember { mutableStateOf(initial?.firstName.orEmpty()) }
     var lastName by remember { mutableStateOf(initial?.lastName.orEmpty()) }
@@ -157,6 +158,7 @@ fun SettingsScreen(
         HorizontalDivider()
         TextButton(onClick = { advanced106 = !advanced106 }) { Text(s.t("settings.api.advanced")) }
         if (advanced106) {
+        addressTools?.invoke()
         if (onPlateCategories != null) {
             TextButton(enabled = plateCategoriesOnline, onClick = onPlateCategories) { Text(s.t("plate_categories.title")) }
             if (!plateCategoriesOnline) AnnouncedNote(s.t("plate_categories.network_required"))
