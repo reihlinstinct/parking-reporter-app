@@ -188,8 +188,8 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             geocodeStatus = if (suggestions.isEmpty()) "review.geocode.no_suggestions" else "review.geocode.check_house_number"
         } finally { geocoding = false }
     }
-    // The provider may receive coordinates. Keep geocoding opt-in, even
-    // though the resulting street/house lookup needs no coordinate typing.
+    // The production regional host receives only static region IDs, not GPS.
+    // Keep the address lookup explicit, including its first network request.
     var askAddressConsent by rememberSaveable(initial.evidence.stableId) {
         mutableStateOf(initial.address.isBlank() && initial.confirmedLatitude != null && initial.confirmedLongitude != null)
     }
