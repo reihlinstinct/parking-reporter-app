@@ -5,10 +5,10 @@ import org.junit.Test
 import java.nio.file.Files
 
 class TwoCarCiBridgeTest {
-    private class Client : MunicipalClient {
+    private class Client(val subjects: List<String> = listOf("1145")) : MunicipalClient {
         val calls = mutableListOf<String>()
         override fun login(): String { calls.add("login"); return "synthetic-token" }
-        override fun subjectCategories(token: String) = listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject("1145", "synthetic", emptyList(), true))
+        override fun subjectCategories(token: String) = subjects.map { io.github.reihlinstinct.reporter.core.MunicipalSubject(it, "synthetic", emptyList(), true) }
         override fun upsertContact(token: String, contact: LinkedHashMap<String, Any?>): Map<String, Any?> { calls.add("contact"); return mapOf("ContactIdInCRM" to "synthetic-contact") }
         override fun createCase(token: String, contact: LinkedHashMap<String, Any?>, report: LinkedHashMap<String, Any?>): Map<String, Any?> { calls.add("create"); return mapOf("CaseIdInCRM" to "00000000-0000-0000-0000-000000000000", "WebCaseIdInCRM" to "synthetic-web", "CaseNumberInCRM" to null) }
         override fun attachPhoto(token: String, caseIdInCRM: String, webCaseIdInCRM: String, fileName: String, jpeg: ByteArray) {
@@ -30,6 +30,23 @@ class TwoCarCiBridgeTest {
             assertEquals("1145",p["CaseSubjectCode"]);assertEquals("2",p["CaseHouseNumber"]);assertEquals(r["text"],p["CaseDescription"])
             assertThrows(IllegalArgumentException::class.java) { TwoCarCiBridge.payload(r+("subjectCode" to "1137")) }
             assertThrows(IllegalArgumentException::class.java) { TwoCarCiBridge.payload(r+("text" to "no plate")) }
+        } finally { root.deleteRecursively() }
+    }
+    @Test fun redWhiteTopicIsPreservedAndStillRequiresLiveCatalogMembership() {
+        val root=Files.createTempDirectory("synthetic-red-white").toFile()
+        try {
+            val r=report(root)+("subjectCode" to "1144")
+            assertEquals("1144", TwoCarCiBridge.payload(r)["CaseSubjectCode"])
+            val absent=Client();val refused=TwoCarCiBridge(absent, linkedMapOf(),root)
+            refused.call(mapOf("operation" to "prepare", "report" to r))
+            assertThrows(IllegalArgumentException::class.java) { refused.call(mapOf("operation" to "login")) }
+            assertEquals(listOf("login"),absent.calls)
+            val present=Client(listOf("1144"));val allowed=TwoCarCiBridge(present, linkedMapOf(),root)
+            allowed.call(mapOf("operation" to "prepare", "report" to r))
+            allowed.call(mapOf("operation" to "login"))
+            allowed.call(mapOf("operation" to "create", "report" to r))
+            assertEquals(listOf("login", "contact", "create"),present.calls)
+            assertThrows(IllegalArgumentException::class.java) { TwoCarCiBridge.payload(r+("plate" to "")) }
         } finally { root.deleteRecursively() }
     }
     @Test fun acceptedZeroCrmReceiptAttachesExactPairOnceButCannotRecreate() {
