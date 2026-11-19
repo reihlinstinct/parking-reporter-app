@@ -29,3 +29,7 @@ Local tests cover healthy/no-restart, 16 MiB recovery, persistent failure, stale
 Live acceptance is separate: artifacts must show `before.javaMaxBytes = 16777216`, `after.javaMaxBytes = 536870912`, distinct PIDs and the full suite passing. A healthy first boot proves only the no-restart path. A green workflow alone is not evidence that recovery ran. Formal exact-head review and the normal existing gate are required before merge.
 
 The restart is not a repair for app allocation leaks, an increased heap allowance, or a release-device workaround. Root access is confined to the disposable emulator. No paid services or private data are used.
+
+## Bounded recovery-proof follow-up
+
+The separate `API29 bounded recovery proof` workflow checks up to eight natural API29 boots in one emulator session. It never injects a heap property or alters the original app. Only an actually measured16MiB process triggers the merged preflight gate and its one runtime restart. A verified fresh512MiBprocess is followed by the full suite once. Eight healthy boots produce `not-reproduced`, not recovery evidence, even if CI is green. Unknown budgets and probe/recovery errors stop the run. The artifact records each cold probe and control metadata. The full suite is not retried and no merge gate is changed.
