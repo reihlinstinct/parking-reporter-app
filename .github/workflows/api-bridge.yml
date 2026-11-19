@@ -10,7 +10,6 @@ on:
       - 'scripts/jvm/**'
       - 'scripts/verify_bridge_wrapper.sh'
       - 'scripts/test_kotlin_plugin_marker.py'
-      - 'scripts/fixtures/kotlin-jvm-marker-2.4.21/**'
       - 'scripts/supervised_api_trial.py'
       - 'scripts/test_supervised_api_trial.py'
       - 'scripts/two_car_ci*'

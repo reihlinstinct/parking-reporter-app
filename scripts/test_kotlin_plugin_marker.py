@@ -6,7 +6,7 @@ import unittest
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
-FIXTURES = ROOT / 'scripts/fixtures/kotlin-jvm-marker-2.4.21'
+FIXTURES = ROOT / 'app/src/test/resources/gradle/kotlin-jvm-marker-2.4.21'
 NS = {'p': 'http://maven.apache.org/POM/4.0.0'}
 
 def semantics(data):
@@ -47,7 +47,7 @@ class MarkerTest(unittest.TestCase):
         self.assertIsNone(component.find('v:trusted-artifacts', ns))
 
     def test_dependency_mutation_is_not_equivalent(self):
-        data = (FIXTURES / 'gradle-plugin-portal.pom').read_bytes()
+        data = (FIXTURES / 'gradle-plugin-portal.xml').read_bytes()
         self.assertNotEqual(semantics(data), semantics(data.replace(b'<version>2.4.21</version>',
                             b'<version>2.4.22</version>')))
         with self.assertRaises(ValueError):

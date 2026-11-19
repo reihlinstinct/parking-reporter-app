@@ -2,13 +2,13 @@
   "fetched_utc": "2026-11-19T13:58:18.646719+00:00",
   "artifacts": [
     {
-      "file": "maven-central.pom",
+      "file": "maven-central.xml",
       "source": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/jvm/org.jetbrains.kotlin.jvm.gradle.plugin/2.4.21/org.jetbrains.kotlin.jvm.gradle.plugin-2.4.21.pom",
       "sha256": "8e08073d123182e69c07d24c6dca7b98cc53a37707a73a6af7be88e38218b42b",
       "bytes": 1376
     },
     {
-      "file": "gradle-plugin-portal.pom",
+      "file": "gradle-plugin-portal.xml",
       "source": "https://plugins.gradle.org/m2/org/jetbrains/kotlin/jvm/org.jetbrains.kotlin.jvm.gradle.plugin/2.4.21/org.jetbrains.kotlin.jvm.gradle.plugin-2.4.21.pom",
       "sha256": "c250047db1cbab6f0d801c44615172892bd3892aa9bc9cc8ef9ecaa4149fda67",
       "bytes": 673
