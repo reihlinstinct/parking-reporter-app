@@ -2723,7 +2723,7 @@
       "ar": "سيُحذف رقم جواز السفر من الملف الشخصي على هذا الجهاز. لن يتغير النص في البلاغات المحفوظة.",
       "ru": "Номер паспорта будет удалён из профиля на этом устройстве. Текст сохранённых обращений не изменится.",
       "am": "የፓስፖርት ቁጥሩ ከመሣሪያው መገለጫ ይሰረዛል። በተቀመጡ ሪፖርቶች ውስጥ ያለው ጽሑፍ አይቀየርም።",
-      "fr": "Supprimer le numéro de passeport enregistré dans ce profil ? Les rapports existants ne seront pas modifiés."
+      "fr": "Le numéro de passeport sera supprimé du profil sur cet appareil. Le texte des signalements enregistrés ne changera pas."
     },
     "settings.passport.delete_confirm": {
       "he": "מחק",
