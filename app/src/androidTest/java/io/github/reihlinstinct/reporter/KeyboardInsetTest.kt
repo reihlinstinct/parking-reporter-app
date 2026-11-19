@@ -75,7 +75,12 @@ class KeyboardInsetTest {
 
     @Test fun shellSettingsSaveStaysAboveRealIme() = shellSettingsKeyboardCase(1f)
 
-    @Test fun shellSettingsSaveStaysAboveRealImeAt200Percent() = shellSettingsKeyboardCase(2f)
+    @Test fun shellSettingsSaveStaysAboveRealImeAt200Percent() {
+        org.junit.Assume.assumeTrue(
+            "200% proof is manual/weekly, not every PR",
+            InstrumentationRegistry.getArguments().getString("extendedKeyboardMatrix") == "1")
+        shellSettingsKeyboardCase(2f)
+    }
 
     private fun shellSettingsKeyboardCase(fontScale: Float) {
         seedSyntheticCityTopics()
@@ -106,7 +111,7 @@ class KeyboardInsetTest {
         val initial = ReviewDraft(Evidence("ime-actions-synthetic", "a".repeat(64),
             "2026-01-01T12:00:00+02:00", 31.77, 35.21), "1234567", "רחוב בדיקה 1",
             "sidewalk_parking", "רכב 1234567 חונה על המדרכה", emptySet())
-        compose.setContent { AppTheme { ReviewScreen(initial, null, {}, {},
+        compose.setContent { AppTheme { ReviewScreen(initial, null, {}, {}, onSubmit = {},
             topicSnapshot = syntheticCityTopics(), topicsAvailable = true,
             registryLookup = { _, _ -> kotlinx.coroutines.awaitCancellation() }) } }
         compose.onNodeWithText("ערוך").performClick()
