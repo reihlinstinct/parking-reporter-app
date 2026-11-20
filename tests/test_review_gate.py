@@ -134,6 +134,19 @@ class ReviewGateTest(unittest.TestCase):
         gate.update(client, 123)
         self.assertEqual(client.statuses[-1], (HEAD, 'failure'))
 
+    def test_canonical_source_renderer_detects_any_allowlist_drift(self):
+        import importlib.util
+        root = Path(__file__).resolve().parents[1]
+        spec = importlib.util.spec_from_file_location("renderer", root / "scripts/ci/render_review_gate.py")
+        renderer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(renderer)
+        workflow = (root / ".github/workflows/review-gate.yml").read_text()
+        source = (root / "scripts/ci/review_gate.py").read_text()
+        self.assertEqual(workflow, renderer.render(workflow, source))
+        changed = source.replace("'reihl-pally'", "'synthetic-untrusted'")
+        self.assertNotEqual(workflow, renderer.render(workflow, changed))
+        with self.assertRaises(ValueError): renderer.render(workflow, source + "\nPYCODE\n")
+
     def test_workflow_has_no_pr_checkout_or_pr_script_import(self):
         root = Path(__file__).resolve().parents[1]
         workflow = (root / '.github/workflows/review-gate.yml').read_text()

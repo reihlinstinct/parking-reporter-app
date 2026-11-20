@@ -57,6 +57,19 @@ class ReviewRecoveryWriter(
         }
     }
 
+    /** Re-authorized existing checkpoint. The controller has already authenticated/decrypted and validated
+     * the ledger. Unlike replacement, a failed resume/write must retain the previous committed file. */
+    internal fun resume(binding: ReviewRecoveryEnvelope.Binding): Session = synchronized(mutex) {
+        session = null
+        check(fresh(binding) && deviceUnlocked()) { "Recovery writer unavailable" }
+        committedSequence = 0
+        Session(binding).also { latestSequence.set(0); session = it }
+    }
+
+    /** Main-safe immediate fence. A final write already inside finish may complete, but the serialized
+     * I/O retire runs after it and deletes it. No new capture/commit can start after this fence. */
+    fun fence() { session = null }
+
     /** Every captured edit gets a new token before encryption, fencing older encryptions immediately.
      * Non-blocking: never waits on the I/O mutex, so it is safe on Main. Must be called on the
      * snapshot thread, in snapshot order, so the token order follows the snapshot order. */

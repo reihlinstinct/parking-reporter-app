@@ -39,7 +39,7 @@ class ShellSettingsExtractionTest {
         "shell.nav.settings" to "הגדרות",
         "shell.home.title" to "דיווח ל-106 עיריית ירושלים",
         "shell.home.subtitle" to "צלם תמונה כדי להתחיל דיווח",
-        "shell.home.on_device_note" to "הניתוח נעשה במכשיר. תוכל לבדוק ולתקן לפני שליחה.",
+        "shell.home.on_device_note" to "הניתוח נעשה במכשיר בלבד",
         "shell.home.take_photo" to "צלם תמונה",
         "shell.home.upload_photo" to "העלה תמונה",
         "shell.home.test_build_note" to "גרסת בדיקה מקומית. אין שליחה.",
@@ -70,14 +70,14 @@ class ShellSettingsExtractionTest {
         "shell.debug.failed" to "הבדיקה המקומית נכשלה, אין שליחה",
         "settings.privacy.mlkit_note" to "Google ML Kit: התמונות והלוחיות נשארות במכשיר; נתוני שימוש וביצועים נשלחים ל-Google. ה-SDK עשוי לפנות לשרתיה לעדכונים.",
         "settings.privacy.title" to "הגדרות פרטיות",
-        "settings.privacy.description" to "כל מדווח מזין את פרטיו שלו. הפרטים מוצפנים במכשיר, ללא גיבוי. אין שליחה או בדיקת התחברות ממסך זה. פרטי הגישה העירוניים מוזנים ידנית ונשמרים מוצפנים במכשיר בלבד.",
+        "settings.privacy.description" to "הפרטים מוצפנים במכשיר ולא נשלחים ממסך זה.",
         "settings.field.first_name" to "שם פרטי",
         "settings.field.last_name" to "שם משפחה",
         "settings.field.id_number" to "מספר זהות",
         "settings.field.phone" to "טלפון",
         "settings.field.email" to "אימייל",
         "settings.api.title" to "גישת API עירונית (הזנה ידנית)",
-        "settings.api.description" to "המפתחות מוזנים ידנית ונשמרים מוצפנים במכשיר בלבד, ללא גיבוי. הם אינם חלק מהאפליקציה ואינם נשלחים למקום אחר. שליחה חיה אינה זמינה ותופעל רק באישור נפרד.",
+        "settings.api.description" to "המפתחות נשמרים מוצפנים במכשיר בלבד.",
         "settings.field.subscription_key" to "מפתח מנוי",
         "settings.field.api_username" to "שם משתמש API",
         "settings.field.api_password" to "סיסמת API",
@@ -161,7 +161,7 @@ class ShellSettingsExtractionTest {
         // SettingsScreen also links to the Licenses screen using that screen's own
         // title key (#163); it is not one of the two screens' shell./settings. keys.
         // Topic unlock reuses the same catalog texts as the picker (#301).
-        val ownUsed = used.filterNot { it.startsWith("plate_categories.") }.toSet() - "licenses.screen.title" - setOf("topics.connect_title", "topics.connection_needed") - setOf("setup.title", "setup.description", "setup.save_continue", "setup.later")
+        val ownUsed = used.filterNot { it.startsWith("plate_categories.") }.toSet() - "licenses.screen.title" - setOf("topics.connect_title", "topics.connection_needed", "common.cancel") - setOf("setup.title", "setup.description", "setup.save_continue", "setup.later")
         // The expected key set is derived - catalog keys versus keys the two screens
         // use - so adding a catalog key and using it needs no test edit. Both
         // directions are checked with the mismatch named, sorted, one per line (the
@@ -249,7 +249,8 @@ class ShellSettingsExtractionTest {
         assertEquals(1, Regex("""authenticate\(strings\.t\("shell\.unlock\.submit_title"\),\s*strings\.t\("shell\.unlock\.submit_subtitle"\)\)""").findAll(shell).count())
         assertEquals(2, Regex("""authenticate\(strings\.t\("shell\.unlock\.settings_title"\), strings\.t\("shell\.unlock\.settings_subtitle"\)\)""").findAll(shell).count())
         assertEquals(1, Regex("""authenticate\(strings\.t\("topics\.connect_title"\), strings\.t\("topics\.connection_needed"\)\)""").findAll(shell).count())
-        assertEquals("every authenticate call uses catalog texts", 4, Regex("""authenticate\(""").findAll(shell).count())
+        assertEquals(1, Regex("""authenticate\(strings\.t\("settings\.passport\.delete_title"\), strings\.t\("settings\.passport\.delete_body"\)\)""").findAll(shell).count())
+        assertEquals("every authenticate call uses catalog texts", 5, Regex("""authenticate\(""").findAll(shell).count())
     }
 
     private object SubmissionTokens {
@@ -258,11 +259,11 @@ class ShellSettingsExtractionTest {
 
     @Test
     fun appShellKeysUseTheShellPrefixAndSettingsKeysTheSettingsPrefix() {
-        val sharedTopicKeys = setOf("topics.connect_title", "topics.connection_needed")
+        val sharedTopicKeys = setOf("topics.connect_title", "topics.connection_needed", "settings.passport.delete_title", "settings.passport.delete_body", "settings.passport.deleted")
         assertTrue(keysUsedIn("AppShell.kt").all { it.startsWith("shell.") || it.startsWith("settings.address.") || it in sharedTopicKeys })
         // The one allowed exception is the Licenses-screen link button (#163), which
         // shows that screen's own licenses.screen.title rather than duplicating it.
-        assertTrue(keysUsedIn("SettingsScreen.kt").all { it.startsWith("settings.") || it.startsWith("setup.") || it.startsWith("plate_categories.") || it == "licenses.screen.title" })
+        assertTrue(keysUsedIn("SettingsScreen.kt").all { it.startsWith("settings.") || it.startsWith("setup.") || it.startsWith("plate_categories.") || it == "licenses.screen.title" || it == "common.cancel" })
     }
 
     @Test

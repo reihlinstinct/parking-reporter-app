@@ -78,6 +78,7 @@ fun SettingsScreen(
     noDeviceCredential: Boolean = false,
     onPlateCategories: (() -> Unit)? = null, plateCategoriesOnline: Boolean = false,
     addressTools: (@Composable () -> Unit)? = null,
+    deleteSavedPassport: ((() -> Unit) -> Unit)? = null,
 ) {
     var firstName by remember { mutableStateOf(initial?.firstName.orEmpty()) }
     var lastName by remember { mutableStateOf(initial?.lastName.orEmpty()) }
@@ -93,10 +94,20 @@ fun SettingsScreen(
     // saves as typed (blank = cleared); an untouched field keeps its stored value.
     var touchedMunicipal by remember { mutableStateOf(setOf<String>()) }
     var saved by remember { mutableStateOf(false) }
+    var confirmPassportDelete by remember { mutableStateOf(false) }
     var phoneFocused by remember { mutableStateOf(false) }
     var advanced106 by remember { mutableStateOf(false) }
     ProvideStringsIfMissing {
     val s = LocalStrings.current
+    if (confirmPassportDelete) AlertDialog(
+        onDismissRequest = { confirmPassportDelete = false },
+        title = { Text(s.t("settings.passport.delete_title")) },
+        text = { Text(s.t("settings.passport.delete_body")) },
+        confirmButton = { TextButton(enabled = !noDeviceCredential, onClick = {
+            confirmPassportDelete = false
+            deleteSavedPassport?.invoke { passport = ""; saved = false }
+        }) { Text(s.t("settings.passport.delete_confirm")) } },
+        dismissButton = { TextButton(onClick = { confirmPassportDelete = false }) { Text(s.t("common.cancel")) } })
     Column(Modifier.fillMaxSize().systemBarsPadding().imePaddingCompat().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (basicSetup) {
             Text(s.t("setup.title"), style = MaterialTheme.typography.headlineMedium)
@@ -154,6 +165,11 @@ fun SettingsScreen(
                 if (!focus.isFocused) phone = ReporterInput.canonicalPhone(phone)
             })
         OutlinedTextField(email, { email = it; saved = false }, label = { Text(s.t("settings.field.email")) }, isError = email.isNotBlank() && !ReporterInput.validEmail(email), supportingText = { if (email.isNotBlank() && !ReporterInput.validEmail(email)) AnnouncedNote(s.t("settings.email.invalid")) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, autoCorrectEnabled = false), modifier = Modifier.fillMaxWidth())
+        if (!basicSetup && deleteSavedPassport != null && !initial?.passportNumber.isNullOrBlank()) {
+            TextButton(enabled = !noDeviceCredential, onClick = { confirmPassportDelete = true }) {
+                Text(s.t("settings.passport.delete"))
+            }
+        }
         if (!basicSetup) {
         HorizontalDivider()
         TextButton(onClick = { advanced106 = !advanced106 }) { Text(s.t("settings.api.advanced")) }
@@ -259,6 +275,10 @@ private fun LanguagePicker(languages: List<Language>, selected: String?, onSelec
         languages.forEach { language ->
             LanguageOption(LanguageResolver.pickerLabel(language), language, selected == language.code) { onSelect(language.code) }
         }
+    }
+    // The notice follows the language actually in use (also when it came from the system default).
+    if (languages.firstOrNull { it.code == s.languageCode }?.machineDraft == true) {
+        Text(s.t("settings.language.machine_notice"), style = MaterialTheme.typography.bodySmall)
     }
 }
 

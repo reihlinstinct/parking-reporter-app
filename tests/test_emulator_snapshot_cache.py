@@ -157,6 +157,31 @@ class ScanTest(unittest.TestCase):
                 finally:
                     file.unlink()
 
+    def test_clean_producer_diagnostic_names_only_rejected_basename_and_still_refuses(self):
+        nested = self.root / 'synthetic-private-directory'
+        nested.mkdir()
+        (nested / 'synthetic-remaining.txt').write_text('NEVER_PRINT_CONTENT')
+        for enabled in (False, True):
+            output = io.StringIO()
+            with redirect_stdout(output), self.assertRaises(m.CacheRejected):
+                m.scan_tree(self.root, diagnose_clean_producer=enabled)
+            text = output.getvalue()
+            self.assertNotIn('NEVER_PRINT_CONTENT', text)
+            self.assertNotIn('synthetic-private-directory', text)
+            self.assertEqual(enabled, 'synthetic-remaining.txt' in text)
+        self.assertFalse((self.root / 'provenance.json').exists())
+
+    def test_diagnostic_escapes_control_characters_and_caps_name(self):
+        name = 'x' * 165 + '\n.txt'
+        (self.root / name).write_text('NEVER_PRINT')
+        output = io.StringIO()
+        with redirect_stdout(output), self.assertRaises(m.CacheRejected):
+            m.scan_tree(self.root, diagnose_clean_producer=True)
+        self.assertEqual(1, len(output.getvalue().splitlines()))
+        encoded = output.getvalue().split(' ', 1)[1]
+        self.assertEqual(name[:160], json.loads(encoded))
+        self.assertNotIn('NEVER_PRINT', encoded)
+
     def test_symlink_and_bad_root_rejected(self):
         os.symlink('/etc/passwd', self.root / 'link.img')
         with self.assertRaises(m.CacheRejected):
@@ -194,6 +219,26 @@ class CliTest(unittest.TestCase):
         with redirect_stdout(buf):
             rc = m.main(list(a), self.env if env is None else env)
         return rc, buf.getvalue()
+
+    def test_clean_diagnostic_guard_and_benchmark_without_flag(self):
+        branch = dict(self.env, GITHUB_REF='refs/heads/synthetic-benchmark')
+        rc, out = self.run_cli('write-manifest', '--avd-dir', str(self.avd),
+                               '--diagnose-clean-producer', env=branch)
+        self.assertEqual(3, rc)
+        self.assertIn('clean producer diagnostics require main', out)
+        self.assertFalse((self.avd / 'provenance.json').exists())
+        rc, out = self.run_cli('write-manifest', '--avd-dir', str(self.avd), env=branch)
+        self.assertEqual(0, rc)
+        self.assertEqual(branch['GITHUB_REF'], json.loads((self.avd / 'provenance.json').read_text())['producer_ref'])
+
+    def test_producer_flag_is_only_enabled_inside_main_condition(self):
+        workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/emulator-snapshot-producer.yml').read_text()
+        start = workflow.index('          diagnostic=()')
+        end = workflow.index('      - name: Publish', start)
+        block = workflow[start:end]
+        self.assertIn('if [ "$GITHUB_REF" = refs/heads/main ]; then\n            diagnostic=(--diagnose-clean-producer)\n          fi', block)
+        self.assertIn('"${diagnostic[@]}"', block)
+        self.assertEqual(1, block.count('--diagnose-clean-producer'))
 
     def test_roundtrip_and_source_change(self):
         rc, out = self.run_cli('write-manifest', '--avd-dir', str(self.avd))

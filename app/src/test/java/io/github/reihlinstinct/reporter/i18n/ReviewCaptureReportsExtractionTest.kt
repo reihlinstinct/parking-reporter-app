@@ -47,7 +47,7 @@ class ReviewCaptureReportsExtractionTest {
         "review.edit.start" to "ערוך",
         "review.edit.done" to "סיום עריכה",
         "review.image_description" to "צילום ראיה",
-        "review.category_note" to "זיהוי קטגוריה אוטומטי עדיין בפיתוח. בחר קטגוריה לבדיקה.",
+        "review.category_note" to "בחר קטגוריה לבדיקה",
         // Owner-approved wording, 2026-11-16 (#105/#109 slice 2). The other languages are machine drafts.
         "review.suggestion_hint" to "הצעה: {category} ({percent}% ביטחון)",
         // Derived from the approved hint by dropping the percent, per the owner's "תסתיר" (2026-11-16).
@@ -153,6 +153,7 @@ class ReviewCaptureReportsExtractionTest {
     private val languages = I18nTestFiles.languageCodes()
 
     private val sources = mapOf(
+        "ReviewRecoveryControls.kt" to "src/main/java/io/github/reihlinstinct/reporter/ui/ReviewRecoveryControls.kt",
         "ReviewScreen.kt" to "src/main/java/io/github/reihlinstinct/reporter/ui/ReviewScreen.kt",
         "ReviewTexts.kt" to "src/main/java/io/github/reihlinstinct/reporter/ui/ReviewTexts.kt",
         "ReportsScreen.kt" to "src/main/java/io/github/reihlinstinct/reporter/ui/ReportsScreen.kt",
@@ -187,7 +188,7 @@ class ReviewCaptureReportsExtractionTest {
 
     @Test
     fun everyUsedKeyExistsInAllFiveLanguagesAndEveryScreenKeyIsUsed() {
-        val used = keysNamedIn("ReviewScreen.kt") + keysNamedIn("ReviewTexts.kt") +
+        val used = keysNamedIn("ReviewRecoveryControls.kt") + keysNamedIn("ReviewScreen.kt") + keysNamedIn("ReviewTexts.kt") +
             keysNamedIn("ReportsScreen.kt") + keysNamedIn("CaptureScreen.kt")
         for (key in used) {
             val entry = catalog.rawEntry(key)
