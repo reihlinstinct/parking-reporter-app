@@ -1,6 +1,8 @@
 # Abandoned vehicle1068 execution candidate
 
-This branch starts at frozen683 commit1b6d473 and does not modify that branch.
+This PR ports only the approved three-commit1068 delta from #704 onto current main.
+The frozen683 branch remains untouched. The1144 bus-stop expansion from its older
+base is deliberately excluded; ordinary vehicle categories remain1145 and1068.
 It adds only municipal category1068 (רכב גרוטאה) to the existing one-case
 numbered-address vehicle contract. The actual plate must remain7or8digits and
 must occur in the exact approved description. The production bridge additionally
