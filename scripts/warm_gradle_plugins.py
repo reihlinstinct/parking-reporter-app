@@ -21,15 +21,17 @@ def retryable(output, version):
 
 
 def central_probe(version, opener=None):
-    """Two fixed-origin HEADs after terminal KSP refusal, no body or response text."""
+    """Bounded fixed-origin HEADs after refusal, no body or response text."""
     class NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, *args, **kwargs):
             return None
     opener = opener or urllib.request.build_opener(NoRedirect())
     if not re.fullmatch(r'[0-9.]+', version):
         return
-    for artifact in ('com.google.devtools.ksp.gradle.plugin', 'symbol-processing-gradle-plugin'):
-        url = f'https://repo.maven.apache.org/maven2/com/google/devtools/ksp/{artifact}/{version}/{artifact}-{version}.pom'
+    probes = [(host, artifact) for host in ('repo.maven.apache.org', 'repo1.maven.org')
+              for artifact in ('com.google.devtools.ksp.gradle.plugin', 'symbol-processing-gradle-plugin')]
+    for host, artifact in probes:
+        url = f'https://{host}/maven2/com/google/devtools/ksp/{artifact}/{version}/{artifact}-{version}.pom'
         try:
             with opener.open(urllib.request.Request(url, method='HEAD'), timeout=5) as response:
                 status = response.status
@@ -40,7 +42,7 @@ def central_probe(version, opener=None):
                 error.close()
         except (OSError, ValueError, http.client.HTTPException):
             status = 'network-unavailable'
-        print(f'KSP Central HEAD {artifact}: {status}. Diagnostic only, not a build pass.', flush=True)
+        print(f'KSP Central HEAD {host} {artifact}: {status}. Diagnostic only, not a build pass.', flush=True)
 
 
 def warm(run=subprocess.run, pause=time.sleep, probe=central_probe):
@@ -56,6 +58,10 @@ def warm(run=subprocess.run, pause=time.sleep, probe=central_probe):
         command = ['sh', 'gradlew', '--no-daemon']
         if attempt:
             command.append('--refresh-dependencies')
+        if attempt == 2:
+            # Public, secret-free preflight only. Expose Gradle's failing URL/status
+            # on terminal resolution failure instead of guessing another mirror.
+            command.append('--info')
         command.append('help')
         result = run(command, cwd=ROOT,
                      stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=180)

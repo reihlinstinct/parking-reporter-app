@@ -39,11 +39,12 @@ class PluginWarmTest(unittest.TestCase):
         opener = MagicMock()
         opener.open.return_value.__enter__.return_value.status = 200
         target.central_probe(VERSION, opener)
-        self.assertEqual(2, opener.open.call_count)
+        self.assertEqual(4, opener.open.call_count)
         for call in opener.open.call_args_list:
             request = call.args[0]
             self.assertEqual('HEAD', request.get_method())
-            self.assertTrue(request.full_url.startswith('https://repo.maven.apache.org/maven2/com/google/devtools/ksp/'))
+            self.assertIn(request.host, ('repo.maven.apache.org', 'repo1.maven.org'))
+            self.assertIn('/maven2/com/google/devtools/ksp/', request.full_url)
             self.assertEqual(5, call.kwargs['timeout'])
         opener.open.return_value.__enter__.return_value.read.assert_not_called()
 
@@ -55,9 +56,9 @@ class PluginWarmTest(unittest.TestCase):
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
             target.central_probe(VERSION, opener)
-        self.assertEqual(2, opener.open.call_count)
+        self.assertEqual(4, opener.open.call_count)
         self.assertNotIn('SYNTHETIC_PRIVATE', output.getvalue())
-        self.assertEqual(2, output.getvalue().count('network-unavailable'))
+        self.assertEqual(4, output.getvalue().count('network-unavailable'))
         opener.reset_mock()
         target.central_probe('bad/version', opener)
         opener.open.assert_not_called()
@@ -76,7 +77,7 @@ class PluginWarmTest(unittest.TestCase):
                 with contextlib.redirect_stdout(output):
                     target.central_probe(VERSION, opener)
                 self.assertNotIn('SYNTHETIC_PRIVATE', output.getvalue())
-                self.assertEqual(2, output.getvalue().count('network-unavailable'))
+                self.assertEqual(4, output.getvalue().count('network-unavailable'))
 
     def test_http_error_is_closed_without_reading_body(self):
         import contextlib
@@ -92,7 +93,7 @@ class PluginWarmTest(unittest.TestCase):
         body.read.assert_not_called()
         self.assertTrue(body.close.called)
         self.assertNotIn('private reason', output.getvalue())
-        self.assertEqual(2, output.getvalue().count(': 404.'))
+        self.assertEqual(4, output.getvalue().count(': 404.'))
 
     def test_success_once_help_only(self):
         run = Mock(return_value=self.result(0, 'BUILD SUCCESSFUL'))
@@ -112,6 +113,9 @@ class PluginWarmTest(unittest.TestCase):
         self.assertTrue(all('--refresh-dependencies' in c for c in commands[1:]))
         self.assertTrue(all(c[-1] == 'help' for c in commands))
         self.assertEqual([c.args[0] for c in pause.call_args_list], [10, 30])
+        self.assertNotIn('--info', commands[0])
+        self.assertNotIn('--info', commands[1])
+        self.assertIn('--info', commands[2])
 
     def test_resolution_then_success(self):
         run = Mock(side_effect=[self.result(1, RESOLUTION), self.result(0, 'ok')])
