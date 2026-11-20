@@ -11,14 +11,19 @@ public dependency bytes and Gradle resolution metadata, not transforms, compiled
 project output, Gradle user properties, init scripts, daemon state, credentials,
 AVDs, photos, or municipal receipts. Resolution metadata is needed with the JARs
 and POMs; caching only the KSP JAR does not make Gradle resolve its plugin marker.
-The Android entry includes the resolved dependency graph, not just two KSP files.
+The Android writer builds the debug app and androidTest APK before its size/save
+steps, resolving their runtime and code-generation dependencies, not just two KSP
+files. This same build runs on PRs to validate the task graph before main seeds it.
 A 768 MiB per-entry cap skips publication for oversized or symlinked trees.
-Skipping publication never skips or changes a build/test result.
+Size-check or save errors are nonfatal and prevent publication. They never skip
+or change a build/test result.
 
 ## Keys, producers and readers
 
 - Android build, emulator matrix and display jobs use the same exact key, bound
   to OS, architecture, root/app Gradle inputs and wrapper. No broad restore prefix.
+- The Android key also names an optional future `gradle/libs.versions.toml`; that
+  file is currently absent and `hashFiles` ignores it until it exists.
 - The bridge key binds its settings/build files, strict verification metadata,
   wrapper, OS and architecture. Its verification hashes and strict flags remain
   unchanged. A cache hit does not waive verification.

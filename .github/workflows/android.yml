@@ -73,7 +73,7 @@ jobs:
         run: python3 scripts/warm_gradle_plugins.py
       - name: Build debug and verify release code generation
         run: |
-          sh gradlew --no-daemon lintDebug testDebugUnitTest assembleDebug compileReleaseKotlin
+          sh gradlew --no-daemon lintDebug testDebugUnitTest assembleDebug assembleDebugAndroidTest compileReleaseKotlin
       - name: Retain generated assistant diagnostics
         if: always()
         run: |
@@ -112,9 +112,11 @@ jobs:
       # Only successful trusted-main jobs publish. PRs/matrices are readers.
       - name: Bound dependency cache before publishing
         id: dependency-cache-size
+        continue-on-error: true
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.dependency-cache.outputs.cache-hit != 'true'
         run: python3 scripts/dependency_cache_size.py
       - name: Publish exact successful dependency-only cache
+        continue-on-error: true
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.dependency-cache.outputs.cache-hit != 'true' && steps.dependency-cache-size.outputs.save == 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
