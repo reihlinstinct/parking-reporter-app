@@ -24,8 +24,10 @@ private-token grant to use a broad account token as a shortcut.
 
 Dispatch `submission-branch.yml` from that fresh branch exactly once. Confirm
 `FILE_ONE_APPROVED_CASE`, the exclusive writer fence, all approved package
-pins, and a timezone-bearing expiry no more than six hours away. This first
-lane supports the existing numbered-address car schema (topic 1145) only.
+pins, and a timezone-bearing expiry no more than six hours away. This
+lane supports the existing numbered-address car schema for sidewalk (1145) and
+red-white/no-stopping (1144) reports only. The exact selected code is preserved,
+plate/text binding remains required and the bridge verifies live catalog membership.
 Other categories refuse; this does not activate the parked general batch writer.
 
 Before execution secrets are used, check the exact repository and account IDs,
