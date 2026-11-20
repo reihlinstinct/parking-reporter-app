@@ -93,6 +93,7 @@ class EntryPointsTest {
             compose.onNodeWithText("רחוב בירושלים").performScrollTo().performTextReplacement("אגר")
             compose.waitUntil(15_000) { compose.onAllNodesWithText("אגריפס").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("אגריפס").performScrollTo().assertIsDisplayed()
+            FlowDriver(compose).screenshot("address-production-local-street-suggestions.png")
             // Merely completing a street name is not address confirmation or a point download.
             assertEquals(regionsBefore, cache.listFiles().orEmpty().filter { it.name.startsWith("region-") }
                 .associate { it.name to it.readBytes().toList() })

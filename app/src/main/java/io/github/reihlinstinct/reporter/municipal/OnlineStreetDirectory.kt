@@ -31,7 +31,7 @@ class OnlineStreetDirectory(private val context: Context) {
         .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false)
         .build()
 
-    fun prepare() { index }
+    fun prepare() { index.suggestStreets("") } // Warm the index-only directory on the caller's IO dispatcher.
     fun importLocal(input: InputStream) = imported.store(input)
     fun clear() {
         imported.clear()

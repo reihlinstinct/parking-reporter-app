@@ -34,6 +34,23 @@ class AddressSettingsTest {
         screenshot("address-advanced-settings-bottom.png")
     }
 
+    @Test fun regionalLookupConsentShowsApproximateAreaAndIpBeforeAnyFetch() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set("he")
+        val initial = io.github.reihlinstinct.reporter.core.ReviewDraft(
+            io.github.reihlinstinct.reporter.core.Evidence("region-consent-synthetic", "c".repeat(64),
+                "2026-01-01T12:00:00+02:00", 31.77, 35.21),
+            "1234567", "", "sidewalk_parking", "בדיקה", setOf("address_needs_confirmation")
+        ).copy(confirmedLatitude = 31.77, confirmedLongitude = 35.21)
+        var fetches = 0
+        compose.setContent { AppTheme { io.github.reihlinstinct.reporter.ui.ReviewScreen(
+            initial, null, {}, {}, addressLookup = { _, _ -> fetches++; emptyList() }) } }
+        compose.onNodeWithText("למצוא רחוב ומספר בית?").assertIsDisplayed()
+        compose.onNodeWithText("קובצי הכתובות יורדו מ-GitHub. מזהי האזורים מעידים על האזור המשוער של התמונה, ו-GitHub רואה גם את כתובת ה-IP שלך. לא נשלחים קואורדינטות מדויקות, כתובת שהקלדת או פרטי מדווח.").assertIsDisplayed()
+        org.junit.Assert.assertEquals(0,fetches)
+        screenshot("address-regional-consent.png")
+    }
+
     private fun screenshot(name: String) {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         File(context.filesDir, name).outputStream().use {

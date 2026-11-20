@@ -56,6 +56,7 @@ class OnlineAddressContractTest(unittest.TestCase):
         source=(ROOT/'app/src/main/java/io/github/reihlinstinct/reporter/municipal/OnlineStreetDirectory.kt').read_text()
         self.assertIn('index.loadForLocation(latitude, longitude, ::document)',source)
         self.assertIn('index.suggestStreets(query, limit)',source)
+        self.assertIn('fun prepare() { index.suggestStreets("") }',source)
         block=settings.split('if (advanced106) {',1)[1]
         self.assertIn('addressTools?.invoke()',block)
         self.assertNotIn('onlineAddresses.refresh()',shell.split('"settings" -> SettingsScreen',1)[0])
