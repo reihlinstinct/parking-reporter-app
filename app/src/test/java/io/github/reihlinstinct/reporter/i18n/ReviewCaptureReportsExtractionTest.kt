@@ -71,7 +71,8 @@ class ReviewCaptureReportsExtractionTest {
         "review.edit.suggest_plate" to "הצע לוחית מתוך הצילום",
         "review.edit.plate_field" to "מספר לוחית (ספרות בלבד)",
         "review.edit.address_field" to "רחוב ומספר בית שאישרת",
-        "review.edit.geocode_note" to "החיפוש מוריד נתוני כתובות לפי אזור ושומר אותם במכשיר. לשרת נשלח רק מזהה האזור, לא הקואורדינטות. יש לבדוק ולאשר את מספר הבית.",
+        // Approved regional/IP disclosure replaces the historical geocoder wording (PR702).
+        "review.edit.geocode_note" to "קובצי הכתובות יורדו מ-GitHub. מזהי האזורים מעידים על האזור המשוער של התמונה, ו-GitHub רואה גם את כתובת ה-IP שלך. לא נשלחים קואורדינטות מדויקות, כתובת שהקלדת או פרטי מדווח.",
         "review.edit.geocode_button" to "חפש הצעות כתובת לפי המיקום",
         "review.geocode.no_suggestions" to "אין הצעות, הזן כתובת שבדקת",
         "review.geocode.check_house_number" to "בדוק ואשר את מספר הבית בעצמך",

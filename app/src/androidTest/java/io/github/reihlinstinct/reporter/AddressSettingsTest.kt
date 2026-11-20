@@ -36,7 +36,7 @@ class AddressSettingsTest {
 
     @Test fun regionalLookupConsentShowsApproximateAreaAndIpBeforeAnyFetch() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set("he")
+        io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(context).set(io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(context))
         val initial = io.github.reihlinstinct.reporter.core.ReviewDraft(
             io.github.reihlinstinct.reporter.core.Evidence("region-consent-synthetic", "c".repeat(64),
                 "2026-01-01T12:00:00+02:00", 31.77, 35.21),
