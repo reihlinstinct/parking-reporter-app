@@ -1142,12 +1142,12 @@
       "fr": "Rue et numéro que vous avez confirmés"
     },
     "review.edit.geocode_note": {
-      "he": "החיפוש מוריד נתוני כתובות לפי אזור ושומר אותם במכשיר. לשרת נשלח רק מזהה האזור, לא הקואורדינטות. יש לבדוק ולאשר את מספר הבית.",
-      "en": "Lookup downloads regional address data and caches it on the device. Only region IDs, not coordinates, are sent to the host. Check and confirm the house number.",
-      "ar": "يُنزّل البحث بيانات العناوين حسب المنطقة ويحفظها على الجهاز. يُرسل معرّف المنطقة فقط، لا الإحداثيات. تحقّق من رقم المنزل وأكّده.",
-      "ru": "Поиск загружает адреса района и сохраняет их на устройстве. Сервер получает только идентификатор района, не координаты. Проверьте и подтвердите номер дома.",
-      "am": "ፍለጋው የክልል አድራሻ ውሂብን ያወርዳል እና በመሣሪያው ላይ ያስቀምጣል። ወደ አገልጋዩ የሚላከው የክልል መለያ ብቻ ነው፣ መጋጠሚያዎች አይደሉም። የቤቱን ቁጥር ያረጋግጡ።",
-      "fr": "Une recherche d'adresse envoie uniquement les coordonnées au fournisseur de localisation de l'appareil. Les numéros de maison ne sont que des suggestions."
+      "he": "קובצי הכתובות יורדו מ-GitHub. מזהי האזורים מעידים על האזור המשוער של התמונה, ו-GitHub רואה גם את כתובת ה-IP שלך. לא נשלחים קואורדינטות מדויקות, כתובת שהקלדת או פרטי מדווח.",
+      "en": "Address files are downloaded from GitHub. Region IDs reveal the approximate area of the photo, and GitHub also sees your IP address. Exact coordinates, the address you typed and reporter details are not sent.",
+      "ar": "تُنزل ملفات العناوين من GitHub. تكشف معرّفات المناطق المنطقة التقريبية للصورة، ويرى GitHub أيضًا عنوان IP الخاص بك. لا تُرسل الإحداثيات الدقيقة أو العنوان الذي كتبته أو بيانات المُبلّغ.",
+      "ru": "Файлы адресов загружаются с GitHub. Идентификаторы районов раскрывают примерный район снимка, а GitHub также видит ваш IP-адрес. Точные координаты, введённый адрес и данные заявителя не отправляются.",
+      "am": "የአድራሻ ፋይሎች ከGitHub ይወርዳሉ። የአካባቢ መለያዎች የፎቶውን ግምታዊ አካባቢ ያሳያሉ፣ GitHub የIP አድራሻዎንም ያያል። ትክክለኛ መጋጠሚያዎች፣ የጻፉት አድራሻ እና የሪፖርት አቅራቢው ዝርዝሮች አይላኩም።",
+      "fr": "Les fichiers d'adresses sont téléchargés depuis GitHub. Les identifiants de zones révèlent la zone approximative de la photo, et GitHub voit aussi votre adresse IP. Les coordonnées exactes, l'adresse saisie et les informations du déclarant ne sont pas envoyées."
     },
     "review.edit.geocode_button": {
       "he": "חפש הצעות כתובת לפי המיקום",

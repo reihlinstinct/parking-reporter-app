@@ -44,7 +44,7 @@ class OnlineStreetDirectory(private val context: Context) {
 
     fun loadForStreets(names: List<String>): StreetDirectory {
         if (imported.available()) return BundledStreetDirectory.load { imported.verifiedFile().inputStream() }
-        return load(index.forStreets(names))
+        return index.loadForStreets(names, ::document)
     }
 
     fun suggestStreets(query: String, limit: Int = 5) = index.suggestStreets(query, limit)
@@ -70,12 +70,6 @@ class OnlineStreetDirectory(private val context: Context) {
         val root = PythonJson.loads(cache.verifiedFile().readText(Charsets.UTF_8)) as Map<String, Any?>
         require(root["version"] == 1L)
         return root
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun load(ids: Set<String>): StreetDirectory {
-        val rows = ids.sorted().flatMap { document(it)["addresses"] as List<Any?> }.distinct()
-        return StreetDirectory.loadRows(index.streets, rows.asSequence())
     }
 
     companion object {

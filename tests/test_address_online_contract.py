@@ -34,6 +34,13 @@ class OnlineAddressContractTest(unittest.TestCase):
             self.assertEqual(region['sha256'],hashlib.sha256(data).hexdigest())
             points+=len(json.loads(data)['addresses'])
         self.assertEqual(22627,points)
+    def test_v1_release_bytes_are_immutable(self):
+        # A new dataset needs a new directory/version. Never rotate v1 hashes in place:
+        # installed APKs must keep resolving their pinned static URLs.
+        raw=(ROOT/'app/src/main/assets/address-index.json').read_bytes()
+        self.assertEqual('3d56c9386db6d48d655ce72141bc224da1233f6ba90374ba7f2471f084ef5dd8',hashlib.sha256(raw).hexdigest())
+        self.assertEqual(raw,(ROOT/'tools/address-lookup/data/v1/index.json').read_bytes())
+
     def test_large_asset_not_packaged_and_upgrade_fixture_retained(self):
         build=(ROOT/'app/build.gradle.kts').read_text()
         self.assertIn('from("src/main/assets") { exclude("addresses.json") }',build)

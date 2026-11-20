@@ -41,6 +41,13 @@ class AddressShardIndex(json: String) {
         return selected
     }
 
+    /** Submission needs every contributing street shard, not just prior GPS candidates. */
+    @Suppress("UNCHECKED_CAST")
+    fun loadForStreets(names: List<String>, document: (String) -> Map<String, Any?>): StreetDirectory {
+        val rows = forStreets(names).sorted().flatMap { document(it)["addresses"] as List<Any?> }.distinct()
+        return StreetDirectory.loadRows(streets, rows.asSequence())
+    }
+
     /** Only candidates, never a claim of point-in-polygon membership. Full geometry is in each shard. */
     fun candidates(latitude: Double, longitude: Double): Set<String> {
         require(latitude.isFinite() && latitude in -90.0..90.0)
