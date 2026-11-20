@@ -61,6 +61,9 @@ class EntryPointsTest {
 
     @Test fun sharedPhotoStartsReviewPrefilledWithProductionLocalStreetSuggestions() {
         cleanLedgerAndOriginals()
+        val cache = File(InstrumentationRegistry.getInstrumentation().targetContext.noBackupFilesDir, "address-data")
+        val regionsBefore = cache.listFiles().orEmpty().filter { it.name.startsWith("region-") }
+            .associate { it.name to it.readBytes().toList() }
         try {
             // TestShareProvider (test APK, exported) generates and serves the JPEG.
             val uri = Uri.parse("content://il.sidewalks.reporter.testshare/shared-entry-synthetic.jpg")
@@ -91,8 +94,8 @@ class EntryPointsTest {
             compose.waitUntil(15_000) { compose.onAllNodesWithText("אגריפס").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("אגריפס").performScrollTo().assertIsDisplayed()
             // Merely completing a street name is not address confirmation or a point download.
-            val cache = File(InstrumentationRegistry.getInstrumentation().targetContext.noBackupFilesDir, "address-data")
-            assertTrue(cache.listFiles().orEmpty().none { it.name.startsWith("region-") })
+            assertEquals(regionsBefore, cache.listFiles().orEmpty().filter { it.name.startsWith("region-") }
+                .associate { it.name to it.readBytes().toList() })
         } finally {
             cleanLedgerAndOriginals()
         }
