@@ -292,7 +292,14 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     if (askAddressConsent) {
         AlertDialog(onDismissRequest = { askAddressConsent = false },
             title = { Text(s.t("review.location.lookup_title")) },
-            text = { Text(s.t("review.edit.geocode_note")) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    // Each paragraph stays reachable at large font scales, while actions remain visible.
+                    s.t("review.edit.geocode_note").split(". ").forEachIndexed { index, paragraph ->
+                        Text(paragraph + if (index < s.t("review.edit.geocode_note").split(". ").lastIndex) "." else "")
+                    }
+                }
+            },
             confirmButton = { TextButton(onClick = { askAddressConsent = false; scope.launch { findAddress() } }) { Text(s.t("review.location.lookup_yes")) } },
             dismissButton = { TextButton(onClick = { askAddressConsent = false }) { Text(s.t("review.location.lookup_later")) } })
     }
