@@ -46,7 +46,7 @@ def pin_inputs(env, now=None):
          'only a new manual dispatch is allowed')
     need(env.get('GITHUB_ACTOR_ID') == OWNER_ID and env.get('GITHUB_TRIGGERING_ACTOR') == 'reihlinstinct',
          'actor refused')
-    need(env.get('SUBMISSION_CONFIRM') == 'FILE_ONE_APPROVED_CASE' and
+    need(env.get('SUBMISSION_CONFIRM') in {'FILE_ONE_APPROVED_CASE', 'FILE_ONE_APPROVED_CABLE_HAZARD'} and
          env.get('TRIAL_OTHER_WRITERS_FENCED') == 'CONFIRMED', 'approval or writer fence missing')
     sha = env.get('GITHUB_SHA', '')
     need(re.fullmatch('[0-9a-f]{40}', sha), 'source SHA refused')
@@ -111,9 +111,10 @@ def main():
         subprocess.run(['openssl', 'enc', '-d', '-aes-256-cbc', '-pbkdf2', '-md', 'sha256', '-iter', '200000',
                         '-in', str(root / 'input.zip.enc'), '-out', str(root / 'input.zip'), '-pass', 'env:TRIAL_DATA_KEY'],
                        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=60)
-        # The first version handles the existing exact numbered-address car
-        # schema only. Other report shapes fail closed, not silently converted.
-        trial, photo = validate_package(root / 'input.zip', pin)
+        # Parking stays unchanged. Cable hazards require a distinct dispatch confirmation
+        # and an exact event/category path, verified live again before any case write.
+        cable_hazard = env['SUBMISSION_CONFIRM'] == 'FILE_ONE_APPROVED_CABLE_HAZARD'
+        trial, photo = validate_package(root / 'input.zip', pin, cable_hazard=cable_hazard)
         (root / 'photos').mkdir(mode=0o700)
         (root / 'photos/approved.jpg').write_bytes(photo)
         sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -125,7 +126,7 @@ def main():
         keys = ('PATH', 'JAVA_HOME', 'J106_SUBSCRIPTION_KEY', 'J106_APP_USERNAME', 'J106_APP_PASSWORD',
                 'REPORTER_FIRST_NAME', 'REPORTER_LAST_NAME', 'REPORTER_PHONE', 'REPORTER_ID_NUMBER', 'REPORTER_EMAIL')
         child = {k: env[k] for k in keys if k in env}
-        child.update(CAR_CI_AUTHORIZED='TWO_CAR_ONCE', BATCH_PRIVATE_ROOT=str(root))
+        child.update(CAR_CI_AUTHORIZED='CABLE_HAZARD_ONCE' if cable_hazard else 'TWO_CAR_ONCE', BATCH_PRIVATE_ROOT=str(root))
         from live_batch_hybrid import BridgeAdapter
         cp = Path('app/build/batch-bridge/classpath.txt').read_text().strip()
         need(bool(cp), 'production bridge unavailable')

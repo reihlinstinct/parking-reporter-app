@@ -3,7 +3,7 @@ name: One approved case from an ephemeral main mirror
   workflow_dispatch:
     inputs:
       confirm:
-        description: FILE_ONE_APPROVED_CASE
+        description: FILE_ONE_APPROVED_CASE or FILE_ONE_APPROVED_CABLE_HAZARD
         required: true
         type: string
       private_ref:
