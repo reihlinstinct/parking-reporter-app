@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import re
+import stat
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
@@ -39,6 +40,7 @@ ALLOWED_EXACT = {'hardware-qemu.ini', 'config.ini', 'provenance.json', 'screensh
 # Diagnostic labels are fixed vocabulary only, never raw directory/file names.
 # Recognition here is NOT permission to cache the file.
 KNOWN_REJECTED_METADATA = {
+    'qemu-version.txt': 'emulator_qemu_version_txt',
     'read-snapshot.txt': 'emulator_read_snapshot_txt',
     'qemu.log': 'emulator_qemu_log',
     'emulator.log': 'emulator_log',
@@ -143,6 +145,39 @@ def verify_manifest(manifest, expected_inputs: dict, now: datetime,
         raise CacheRejected('snapshot is older than 72 hours')
 
 
+def diagnose_qemu_version(path: Path) -> str:
+    """Classify only an exact producer metadata file, never emit its bytes.
+
+    Recognition is not permission to cache, remove or alter this file. Cap the
+    read, refuse links and special files, and log only a fixed vocabulary.
+    """
+    if path.name != 'qemu-version.txt':
+        return 'not_exact_name'
+    descriptor = None
+    try:
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        info = os.fstat(descriptor)
+        if not stat.S_ISREG(info.st_mode):
+            return 'not_regular'
+        if info.st_size > 16:
+            return 'over_16_bytes'
+        value = os.read(descriptor, 17)
+        if len(value) > 16:
+            return 'over_16_bytes'
+        if value == b'2':
+            return 'exact_ascii_2'
+        if value == b'2\n':
+            return 'exact_ascii_2_lf'
+        if not value:
+            return 'empty'
+        return 'other_bounded_value'
+    except OSError:
+        return 'unreadable'
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
 def scan_tree(root: Path, diagnose_clean_producer=False) -> None:
     """Reject anything in the tree that is not plain AVD content."""
     root = Path(root)
@@ -165,6 +200,8 @@ def scan_tree(root: Path, diagnose_clean_producer=False) -> None:
                 if diagnose_clean_producer:
                     # Opt-in only for the clean, credential-free producer. Never read content.
                     print('CLEAN-PRODUCER-REJECTED-BASENAME', json.dumps(name[:160], ensure_ascii=True))
+                    if name == 'qemu-version.txt':
+                        print('CLEAN-PRODUCER-QEMU-VERSION-SHAPE', diagnose_qemu_version(p))
                 raise CacheRejected('forbidden file name in cache tree: ' + rejection_label(name))
         for d in dirnames:
             if FORBIDDEN_NAMES.search(d):
