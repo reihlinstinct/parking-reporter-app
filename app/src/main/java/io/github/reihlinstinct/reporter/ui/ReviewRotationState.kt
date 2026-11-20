@@ -35,6 +35,11 @@ object ReviewRotationState {
         val confirmExit: Boolean = false,
         /** User plate edits survive rotation so automatic OCR cannot undo a deliberate clear. */
         val plateEdits: Int = 0,
+        val plateRaw: String? = null,
+        val manualCross: String = initial.pendingCross,
+        val addressBaseline: String = initial.address,
+        val pendingAddressWarnings: Set<String> = initial.unresolved.intersect(setOf(
+            "address_needs_confirmation", "suggested_address_needs_confirmation")),
     )
 
     class Shell(val draft: ReviewDraft, val original: File?, val revision: Long)

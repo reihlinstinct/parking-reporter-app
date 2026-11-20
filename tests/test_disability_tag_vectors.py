@@ -32,10 +32,12 @@ class DisabilityTagVectorTest(unittest.TestCase):
             self.assertEqual('#FFFFFF', svg_paths[0][0])
             self.assertTrue(any(e.tag.endswith('title') and e.text for e in svg))
 
-    def test_contrast_and_five_language_labels(self):
+    def test_contrast_and_all_catalog_language_labels(self):
         for color in ['#12449A', '#087F5B', '#17231F']:
             self.assertGreaterEqual(1.05 / (luminance(color) + .05), 4.5)
-        strings = json.loads((ROOT / 'app/src/main/assets/i18n/strings.json').read_text())['strings']
+        catalog = json.loads((ROOT / 'app/src/main/assets/i18n/strings.json').read_text())
+        strings = catalog['strings']
+        languages = {language['code'] for language in catalog['languages']}
         for key in ['registry.tag.triangle_icon', 'registry.tag.wheelchair_icon']:
-            self.assertEqual({'he', 'en', 'ar', 'ru', 'am'}, set(strings[key]))
+            self.assertEqual(languages, set(strings[key]))
             self.assertTrue(all(strings[key].values()))

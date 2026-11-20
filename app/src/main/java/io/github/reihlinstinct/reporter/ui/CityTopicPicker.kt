@@ -1,7 +1,10 @@
 package io.github.reihlinstinct.reporter.ui
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,7 +24,8 @@ fun CityTopicPicker(topics: List<MunicipalSubject>, selected: String?, recent: L
                     aliases: Map<String, List<String>>, dismiss: () -> Unit, choose: (MunicipalSubject) -> Unit) {
     io.github.reihlinstinct.reporter.i18n.ProvideStringsIfMissing {
     val s = LocalStrings.current
-    var query by remember { mutableStateOf("") }
+    val search = rememberTextFieldState()
+    val query = search.text.toString()
     val pathsByCode = remember(topics) { topics.groupBy { it.code }.mapValues { (_, rows) ->
         rows.map { it.path.joinToString(" › ") }.distinct().joinToString("\n")
     } }
@@ -35,18 +39,18 @@ fun CityTopicPicker(topics: List<MunicipalSubject>, selected: String?, recent: L
             Column(Modifier.fillMaxWidth().heightIn(max = 600.dp).padding(16.dp)) {
                 Text(s.t("topics.title"), Modifier.testTag("picker-title"), style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(12.dp))
-                Text(s.t("topics.search"), Modifier.fillMaxWidth().testTag("picker-search-label"),
-                    style = MaterialTheme.typography.bodyMedium.copy(platformStyle = PlatformTextStyle(includeFontPadding = true)))
-                OutlinedTextField(query, { query = it },
-                    modifier = Modifier.fillMaxWidth().testTag("picker-search-input").semantics { contentDescription = s.t("topics.search") }, singleLine = true)
+                OutlinedTextField(state = search,
+                    modifier = Modifier.fillMaxWidth().testTag("picker-search-input"),
+                    labelPosition = TextFieldLabelPosition.Above(),
+                    label = { Text(s.t("topics.search"), Modifier.fillMaxWidth().testTag("picker-search-label"),
+                        style = MaterialTheme.typography.bodySmall.copy(platformStyle = PlatformTextStyle(includeFontPadding = true))) }, lineLimits = TextFieldLineLimits.SingleLine)
                 Text(s.t("topics.results", mapOf("count" to results.size.toString())),
                     Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                LazyColumn(Modifier.weight(1f, fill = false).testTag("topic-results")) {
+                LazyColumn(Modifier.weight(1f, fill = false).testTag("topic-results").selectableGroup()) {
                     items(results, key = { it.code }) { topic ->
                         Column(Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                            .clickable(role = Role.Button, onClick = { choose(topic) })
+                            .selectable(selected = topic.code == selected, role = Role.RadioButton, onClick = { choose(topic) })
                             .semantics {
-                                this.selected = topic.code == selected
                                 contentDescription = namesByCode.getValue(topic.code) + ". " + pathsByCode.getValue(topic.code)
                             }.padding(horizontal = 12.dp, vertical = 12.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)) {

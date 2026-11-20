@@ -77,6 +77,10 @@ enum class PluralFamily(
     /** 0 and 1 are one, everything else other. */
     ONE_IS_0_1("one_is_0_1", setOf(PluralCategory.ONE, PluralCategory.OTHER)),
 
+    /** CLDR French integers: 0/1 one, nonzero multiples of one million many.
+     * https://www.unicode.org/cldr/charts/47/grammar/fr.html */
+    FRENCH_INTEGER("french_integer", setOf(PluralCategory.ONE, PluralCategory.MANY, PluralCategory.OTHER)),
+
     /** 1 is one, 2 is two, everything else other (CLDR 42 and later). */
     ONE_TWO_OTHER("one_two_other", setOf(PluralCategory.ONE, PluralCategory.TWO, PluralCategory.OTHER), acceptsManyAsOther = true),
 
@@ -123,6 +127,11 @@ object PluralRules {
                 mod10 == 1L && mod100 != 11L -> PluralCategory.ONE
                 mod10 in 2L..4L && mod100 !in 12L..14L -> PluralCategory.FEW
                 else -> PluralCategory.MANY
+            }
+            PluralFamily.FRENCH_INTEGER -> when {
+                n == 0L || n == 1L -> PluralCategory.ONE
+                n % 1_000_000L == 0L -> PluralCategory.MANY
+                else -> PluralCategory.OTHER
             }
             PluralFamily.ONE_IS_0_1 -> if (n == 0L || n == 1L) PluralCategory.ONE else PluralCategory.OTHER
             PluralFamily.ONE_IS_1, null -> if (n == 1L) PluralCategory.ONE else PluralCategory.OTHER
