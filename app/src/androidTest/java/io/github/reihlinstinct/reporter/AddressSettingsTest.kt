@@ -46,7 +46,7 @@ class AddressSettingsTest {
         compose.setContent { AppTheme { io.github.reihlinstinct.reporter.ui.ReviewScreen(
             initial, null, {}, {}, addressLookup = { _, _ -> fetches++; emptyList() }) } }
         compose.onNodeWithText("למצוא רחוב ומספר בית?").assertIsDisplayed()
-        compose.onNodeWithText("קובצי הכתובות יורדו מ-GitHub. מזהי האזורים מעידים על האזור המשוער של התמונה, ו-GitHub רואה גם את כתובת ה-IP שלך. לא נשלחים קואורדינטות מדויקות, כתובת שהקלדת או פרטי מדווח.").assertIsDisplayed()
+        compose.onNode(hasAnyAncestor(isDialog()) and hasText("קובצי הכתובות יורדו מ-GitHub. מזהי האזורים מעידים על האזור המשוער של התמונה, ו-GitHub רואה גם את כתובת ה-IP שלך. לא נשלחים קואורדינטות מדויקות, כתובת שהקלדת או פרטי מדווח.")).assertIsDisplayed()
         org.junit.Assert.assertEquals(0,fetches)
         screenshot("address-regional-consent.png")
     }
