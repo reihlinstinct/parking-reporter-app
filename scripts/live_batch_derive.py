@@ -51,8 +51,10 @@ def validate_directory(directory):
              'invalid address directory')
     for row in directory['addresses']:
         need(isinstance(row, list) and len(row) >= 4, 'invalid address directory')
-        need(all(type(v) in (int, float) and math.isfinite(v) for v in row[:2])
-             and -90 <= row[0] <= 90 and -180 <= row[1] <= 180,
+        # Compare ranges before float conversion: JSON integers are unbounded.
+        need(all(type(v) in (int, float) for v in row[:2])
+             and -90 <= row[0] <= 90 and -180 <= row[1] <= 180
+             and all(math.isfinite(v) for v in row[:2]),
              'invalid address directory')
         need(type(row[2]) in (str, int) and isinstance(row[3], str),
              'invalid address directory')
@@ -60,6 +62,7 @@ def validate_directory(directory):
 
 def address_location(address, directory):
     from live_batch_input import need
+    validate_directory(directory)
     need(isinstance(address, str), 'address required')
     parts = address.rsplit(' ', 1)
     need(len(parts) == 2, 'exact street and house required')
@@ -91,8 +94,10 @@ ADDRESS_AMBIGUITY_METERS = 20
 def coordinates_address(lat, lon, directory):
     """Resolve a nearby unique address while retaining the caller's supplied point."""
     from live_batch_input import need
-    need(type(lat) in (int, float) and type(lon) in (int, float) and math.isfinite(lat) and math.isfinite(lon), 'invalid coordinates')
+    validate_directory(directory)
+    need(type(lat) in (int, float) and type(lon) in (int, float), 'invalid coordinates')
     need(-90 <= lat <= 90 and -180 <= lon <= 180, 'invalid coordinates')
+    need(math.isfinite(lat) and math.isfinite(lon), 'invalid coordinates')
     def distance(a, b):
         # Local distances only, no external geocoder or broad nearest-street guess.
         return math.hypot((a - lat) * 111320, (b - lon) * 111320 * math.cos(math.radians(lat)))
