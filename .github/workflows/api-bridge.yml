@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'api-bridge/**'
+      - 'scripts/dependency_cache_size.py'
+      - 'scripts/test_dependency_caches.py'
       - 'app/src/main/java/io/github/reihlinstinct/reporter/municipal/**'
       - 'app/src/main/java/io/github/reihlinstinct/reporter/core/**'
       - 'app/src/test/java/io/github/reihlinstinct/reporter/municipal/**'
@@ -39,7 +41,14 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
+      - name: Restore exact dependency-only cache
+        id: dependency-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            !~/.gradle/caches/modules-2/**/*.lock
+          key: ${{ runner.os }}-${{ runner.arch }}-bridge-modules-v1-${{ hashFiles('api-bridge/*.gradle.kts', 'api-bridge/gradle/verification-metadata.xml', 'gradle/wrapper/**') }}
       - name: Compile exact production bridge, run synthetic tests, resolve real runtime
         run: |
           set -euo pipefail
@@ -57,3 +66,17 @@ jobs:
           # Positive control: the same expression must detect a synthetic app task.
           printf '%s\n' ':app:compileDebugKotlin' > /tmp/bridge-positive-task.txt
           grep -Eq ':app:|Android|ksp|compose|OCR' /tmp/bridge-positive-task.txt
+
+      # Only successful trusted-main jobs publish. PRs/matrices are readers.
+      - name: Bound dependency cache before publishing
+        id: dependency-cache-size
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.dependency-cache.outputs.cache-hit != 'true'
+        run: python3 scripts/dependency_cache_size.py
+      - name: Publish exact successful dependency-only cache
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.dependency-cache.outputs.cache-hit != 'true' && steps.dependency-cache-size.outputs.save == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            !~/.gradle/caches/modules-2/**/*.lock
+          key: ${{ runner.os }}-${{ runner.arch }}-bridge-modules-v1-${{ hashFiles('api-bridge/*.gradle.kts', 'api-bridge/gradle/verification-metadata.xml', 'gradle/wrapper/**') }}
