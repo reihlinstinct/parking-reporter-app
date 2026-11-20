@@ -46,7 +46,7 @@ def pin_inputs(env, now=None):
          'only a new manual dispatch is allowed')
     need(env.get('GITHUB_ACTOR_ID') == OWNER_ID and env.get('GITHUB_TRIGGERING_ACTOR') == 'reihlinstinct',
          'actor refused')
-    need(env.get('SUBMISSION_CONFIRM') in {'FILE_ONE_APPROVED_CASE', 'FILE_ONE_APPROVED_CABLE_HAZARD'} and
+    need(env.get('SUBMISSION_CONFIRM') in {'FILE_ONE_APPROVED_CASE', 'FILE_ONE_APPROVED_CABLE_HAZARD', 'FILE_ONE_APPROVED_ABANDONED_BICYCLE'} and
          env.get('TRIAL_OTHER_WRITERS_FENCED') == 'CONFIRMED', 'approval or writer fence missing')
     sha = env.get('GITHUB_SHA', '')
     need(re.fullmatch('[0-9a-f]{40}', sha), 'source SHA refused')
@@ -119,7 +119,8 @@ def main():
         # Parking stays unchanged. Cable hazards require a distinct dispatch confirmation
         # and an exact event/category path, verified live again before any case write.
         cable_hazard = env['SUBMISSION_CONFIRM'] == 'FILE_ONE_APPROVED_CABLE_HAZARD'
-        trial, photo = validate_package(root / 'input.zip', pin, cable_hazard=cable_hazard)
+        abandoned_bicycle = env['SUBMISSION_CONFIRM'] == 'FILE_ONE_APPROVED_ABANDONED_BICYCLE'
+        trial, photo = validate_package(root / 'input.zip', pin, cable_hazard=cable_hazard, abandoned_bicycle=abandoned_bicycle)
         (root / 'photos').mkdir(mode=0o700)
         (root / 'photos/approved.jpg').write_bytes(photo)
         sys.path.insert(0, str(Path(__file__).resolve().parents[1]))

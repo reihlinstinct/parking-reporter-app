@@ -5,10 +5,10 @@ import org.junit.Test
 import java.nio.file.Files
 
 class TwoCarCiBridgeTest {
-    private class Client(val hazardPath: List<String>? = null, val hazardCode: String = "5164", val hazardName: String = "אחר") : MunicipalClient {
+    private class Client(val hazardPath: List<String>? = null, val bicyclePath: List<String>? = null, val hazardCode: String = "5164", val hazardName: String = "אחר") : MunicipalClient {
         val calls = mutableListOf<String>()
         override fun login(): String { calls.add("login"); return "synthetic-token" }
-        override fun subjectCategories(token: String) = if (hazardPath != null) listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject(hazardCode, hazardName, hazardPath, false)) else listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject("1145", "synthetic", emptyList(), true))
+        override fun subjectCategories(token: String) = if (bicyclePath != null) listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject("1015", bicyclePath.last(), bicyclePath, false)) else if (hazardPath != null) listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject(hazardCode, hazardName, hazardPath, false)) else listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject("1145", "synthetic", emptyList(), true))
         override fun upsertContact(token: String, contact: LinkedHashMap<String, Any?>): Map<String, Any?> { calls.add("contact"); return mapOf("ContactIdInCRM" to "synthetic-contact") }
         override fun createCase(token: String, contact: LinkedHashMap<String, Any?>, report: LinkedHashMap<String, Any?>): Map<String, Any?> { calls.add("create"); return mapOf("CaseIdInCRM" to "00000000-0000-0000-0000-000000000000", "WebCaseIdInCRM" to "synthetic-web", "CaseNumberInCRM" to null) }
         override fun attachPhoto(token: String, caseIdInCRM: String, webCaseIdInCRM: String, fileName: String, jpeg: ByteArray) {
@@ -52,6 +52,37 @@ class TwoCarCiBridgeTest {
             val c=Client(TwoCarCiBridge.CABLE_PATH);val b=TwoCarCiBridge(c,linkedMapOf(),root,true)
             b.call(mapOf("operation" to "prepare","report" to r));b.call(mapOf("operation" to "login"))
             assertThrows(IllegalArgumentException::class.java) { b.call(mapOf("operation" to "create","report" to (r+("text" to "changed")))) }
+            b.call(mapOf("operation" to "create","report" to r))
+            assertThrows(IllegalStateException::class.java) { b.call(mapOf("operation" to "create","report" to r)) }
+            assertEquals(listOf("login","contact","create"),c.calls)
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test fun bicycleRequiresNullPlateDescriptionAndExactLiveCategoryBeforeWrite() {
+        val root=Files.createTempDirectory("synthetic-bicycle").toFile()
+        try {
+            val description="Synthetic green-marked mountain bicycle locked to a tree."
+            val r=report(root)+mapOf("subjectCode" to "1015", "plate" to null, "text" to description,
+                "eventType" to "abandoned_bicycle", "subjectPath" to TwoCarCiBridge.BICYCLE_PATH,
+                "distinguishingDescription" to description)
+            assertEquals("1015",TwoCarCiBridge.payload(r,abandonedBicycle=true)["CaseSubjectCode"])
+            assertThrows(IllegalArgumentException::class.java) { TwoCarCiBridge.payload(r) }
+            assertThrows(IllegalArgumentException::class.java) { TwoCarCiBridge.payload(r,true,true) }
+            for (change in listOf(mapOf("plate" to "1234567"), mapOf("plate" to ""),mapOf("subjectCode" to "1145"),
+                mapOf("eventType" to "parking"),mapOf("distinguishingDescription" to "short"),mapOf("distinguishingDescription" to "x".repeat(40)),
+                mapOf("text" to (description+" סימון הפנייה")),mapOf("subjectPath" to listOf("ניקיון","אחר")))) {
+                assertThrows(IllegalArgumentException::class.java) { TwoCarCiBridge.payload(r+change,abandonedBicycle=true) }
+            }
+            for (c in listOf(Client(),Client(bicyclePath=listOf("ניקיון","אחר")))) {
+                val b=TwoCarCiBridge(c,linkedMapOf(),root,abandonedBicycle=true)
+                b.call(mapOf("operation" to "prepare","report" to r))
+                assertThrows(IllegalArgumentException::class.java) { b.call(mapOf("operation" to "login")) }
+                assertEquals(listOf("login"),c.calls)
+                assertThrows(IllegalStateException::class.java) { b.call(mapOf("operation" to "create","report" to r)) }
+            }
+            val c=Client(bicyclePath=TwoCarCiBridge.BICYCLE_PATH);val b=TwoCarCiBridge(c,linkedMapOf(),root,abandonedBicycle=true)
+            b.call(mapOf("operation" to "prepare","report" to r));b.call(mapOf("operation" to "login"))
+            assertThrows(IllegalArgumentException::class.java) { b.call(mapOf("operation" to "create","report" to r+("text" to "changed"))) }
             b.call(mapOf("operation" to "create","report" to r))
             assertThrows(IllegalStateException::class.java) { b.call(mapOf("operation" to "create","report" to r)) }
             assertEquals(listOf("login","contact","create"),c.calls)
