@@ -46,6 +46,41 @@ class EncryptedPackageTest {
         plain[plain.lastIndex] = 5
         assertThrows(java.security.GeneralSecurityException::class.java) { device.publicKeysetHandle.getPrimitive(PublicKeyVerify::class.java).verify(signature, EncryptedPackage.context + plain) }
     }
+    @Test fun publishedGoldenVectorMatchesProductionSenderAndReceiver() {
+        val golden = javaClass.getResourceAsStream("/golden.json")!!.bufferedReader(Charsets.UTF_8)
+            .use { JSONObject(it.readText()) }
+        val expectedPhoto = golden.getJSONObject("photo")
+        assertEquals(expectedPhoto.getInt("length"), photo.size)
+        assertEquals(expectedPhoto.getString("sha256"), EncryptedPackage.sha256(photo))
+        assertEquals(golden.getString("review_digest"), draft().digest())
+        val report = EncryptedPackage.reviewedReport(draft(), reporter, photo)
+        val canonical = EncryptedPackage.canonical(report)
+        assertEquals(golden.getString("canonical_report"), canonical)
+        assertEquals(golden.getInt("canonical_report_bytes"), canonical.toByteArray(Charsets.UTF_8).size)
+        val approval = EncryptedPackage.approvalDigest(report)
+        assertEquals(golden.getString("approval_digest"), approval)
+        val expectedHeader = EncryptedPackage.canonical(JSONObject().put("report", report)
+            .put("approval_digest", approval)).toByteArray(Charsets.UTF_8)
+        assertEquals(golden.getInt("header_bytes"), expectedHeader.size)
+        assertEquals(golden.getString("header_sha256"), EncryptedPackage.sha256(expectedHeader))
+
+        // Check bytes emitted by the actual randomized sender, not a copied encoder.
+        val (upload, receiver, device) = seal()
+        val signed = receiver.getPrimitive(HybridDecrypt::class.java).decrypt(bytes(upload), EncryptedPackage.context)
+        val buffer = ByteBuffer.wrap(signed)
+        val signature = ByteArray(buffer.int); buffer.get(signature)
+        val plain = ByteArray(buffer.remaining()); buffer.get(plain)
+        device.publicKeysetHandle.getPrimitive(PublicKeyVerify::class.java)
+            .verify(signature, EncryptedPackage.context + plain)
+        assertEquals(golden.getInt("plain_bytes"), plain.size)
+        assertEquals(golden.getString("plain_sha256"), EncryptedPackage.sha256(plain))
+        val received = OfflineReceiver.open(upload.manifest(), (0 until upload.count).map { upload.chunk(it, 7) },
+            upload.completion(7), 7, "synthetic-receiver", "synthetic-device",
+            receiver.getPrimitive(HybridDecrypt::class.java), device.publicKeysetHandle.getPrimitive(PublicKeyVerify::class.java))
+        assertEquals(golden.getString("canonical_report"), EncryptedPackage.canonical(received.report))
+        assertArrayEquals(photo, received.jpeg)
+    }
+
     @Test fun approvalBindsProfileAndOutgoingPhotoSeparatelyFromLocalReview() {
         val r = EncryptedPackage.reviewedReport(draft(), reporter, photo); val digest = EncryptedPackage.approvalDigest(r)
         r.getJSONObject("reporter").put("phone", "synthetic-change")

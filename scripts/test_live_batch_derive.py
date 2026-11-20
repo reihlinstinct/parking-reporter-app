@@ -60,6 +60,93 @@ class DeriveTest(unittest.TestCase):
             with self.assertRaises(InvalidBatch):
                 derive_manifest(self.m, files, self.directory, subjects, policy)
 
+    def test_direct_directory_dependencies_refuse_with_constant_typed_error(self):
+        from live_batch_derive import derive_manifest
+        mutations = [
+            {'version': True}, {'streets': None}, {'addresses': {}},
+            {'streets': [None]}, {'streets': [{'StreetCode': '100'}]},
+            {'streets': [{'StreetCode': '100', 'StreetName': 'synthetic', 'aliases': 'bad'}]},
+            {'addresses': [None]}, {'addresses': [[31.0, 34.0]]},
+            {'addresses': [['not-a-coordinate', 34.0, '10', 'synthetic street']]},
+            {'addresses': [[float('nan'), 34.0, '10', 'synthetic street']]},
+            {'addresses': [[31.0, float('inf'), '10', 'synthetic street']]},
+            {'addresses': [[True, 34.0, '10', 'synthetic street']]},
+            {'addresses': [[91.0, 34.0, '10', 'synthetic street']]},
+            {'addresses': [[31.0, 34.0, {}, 'synthetic street']]},
+            {'addresses': [[31.0, 34.0, '10', None]]},
+        ]
+        for mutation in mutations:
+            directory = dict(self.directory, **mutation)
+            for coordinates_only in (False, True):
+                manifest = copy.deepcopy(self.m)
+                if coordinates_only:
+                    report = manifest['reports'][0]
+                    del report['address']
+                    report.update(latitude=SYNTHETIC_LAT, longitude=SYNTHETIC_LON)
+                with self.subTest(mutation=mutation, coordinates_only=coordinates_only):
+                    with self.assertRaises(InvalidBatch) as error:
+                        derive_manifest(manifest, {}, directory, set(self.policy), self.policy)
+                    self.assertIn(str(error.exception),
+                                  ('invalid address directory', 'unsupported address directory'))
+
+    def test_zip_directory_nonfinite_and_malformed_rows_are_typed_refusals(self):
+        for row in (None, [float('nan'), 34.0, '10', 'synthetic street'],
+                    ['malformed', 34.0, '10', 'synthetic street']):
+            self.directory['addresses'] = [row]
+            with self.assertRaises(InvalidBatch):
+                self.read()
+
+    def test_huge_directory_integers_refuse_direct_helpers_derivation_and_pinned_zip(self):
+        from live_batch_derive import address_location, coordinates_address, derive_manifest
+        for value in (10**400, -10**400):
+            for axis in (0, 1):
+                directory = {'version': 1, 'streets': [{'StreetCode': '100', 'StreetName': 'synthetic street'}],
+                             'addresses': [[SYNTHETIC_LAT, SYNTHETIC_LON, '10', 'synthetic street']]}
+                directory['addresses'][0][axis] = value
+                coordinates_manifest = copy.deepcopy(self.m)
+                coordinates_report = coordinates_manifest['reports'][0]
+                del coordinates_report['address']
+                coordinates_report.update(latitude=SYNTHETIC_LAT, longitude=SYNTHETIC_LON)
+                operations = [
+                    lambda: derive_manifest(coordinates_manifest, {}, directory, set(self.policy), self.policy),
+                    lambda: address_location('synthetic street 10', directory),
+                    lambda: coordinates_address(SYNTHETIC_LAT, SYNTHETIC_LON, directory),
+                    lambda: derive_manifest(self.m, {}, directory, set(self.policy), self.policy),
+                ]
+                self.directory = directory
+                operations.append(self.read)
+                for operation in operations:
+                    with self.subTest(axis=axis, negative=value < 0, operation=operation):
+                        with self.assertRaises(InvalidBatch) as error:
+                            operation()
+                        self.assertEqual('invalid address directory', str(error.exception))
+                original_manifest = self.m
+                try:
+                    self.m = coordinates_manifest
+                    with self.assertRaises(InvalidBatch) as error:
+                        self.read()
+                    self.assertEqual('invalid address directory', str(error.exception))
+                finally:
+                    self.m = original_manifest
+
+    def test_public_helpers_validate_malformed_directory_without_derivation_wrapper(self):
+        from live_batch_derive import address_location, coordinates_address
+        for directory in (None, {'version': True}, dict(self.directory, streets=[None]),
+                          dict(self.directory, addresses=[['not-coordinate', 34, '10', 'synthetic street']])):
+            for operation in (lambda: address_location('synthetic street 10', directory),
+                              lambda: coordinates_address(SYNTHETIC_LAT, SYNTHETIC_LON, directory)):
+                with self.assertRaises(InvalidBatch) as error:
+                    operation()
+                self.assertIn(str(error.exception), ('unsupported address directory', 'invalid address directory'))
+
+    def test_public_coordinate_helper_refuses_huge_input_with_constant_error(self):
+        from live_batch_derive import coordinates_address
+        for value in (10**400, -10**400):
+            for point in ((value, SYNTHETIC_LON), (SYNTHETIC_LAT, value)):
+                with self.assertRaises(InvalidBatch) as error:
+                    coordinates_address(*point, self.directory)
+                self.assertEqual('invalid coordinates', str(error.exception))
+
     def test_smallest_address_input_has_no_photo_plate_time_hash_or_id(self):
         m = self.read(); r = m['reports'][0]
         self.assertEqual((r['latitude'], r['longitude']), (SYNTHETIC_LAT, SYNTHETIC_LON))
