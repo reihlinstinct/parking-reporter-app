@@ -23,7 +23,8 @@ def binding(env, now=None):
     return matches[0]
 
 
-def validate_package(path, pin):
+def validate_package(path, pin, *, cable_hazard=False, abandoned_bicycle=False):
+    need(not (cable_hazard and abandoned_bicycle), 'conflicting case modes')
     need(path.stat().st_size <= 30 * 1024 * 1024, 'case package too large')
     with zipfile.ZipFile(path) as z:
         es = z.infolist(); names = {'trial.json', 'original.jpg', 'photos/approved.jpg'}
@@ -38,7 +39,27 @@ def validate_package(path, pin):
     need(set(trial) == {'report', 'originalSha256', 'outgoingSha256'}, 'case fields refused')
     need(trial['originalSha256'] == pin['originalSha256'] and trial['outgoingSha256'] == pin['outgoingSha256'], 'case identity refused')
     r = trial['report']
-    need(r['subjectCode'] in {'1145', '1068'} and re.fullmatch('[0-9]{7,8}', r['plate']) and r['plate'] in r['text'], 'case topic/plate refused')
+    if abandoned_bicycle:
+        need(r['plate'] is None and r['subjectCode'] == '1015' and r.get('eventType') == 'abandoned_bicycle'
+             and r.get('subjectPath') == ['ניקיון', 'גזם / גרוטאות', 'אשפה - גרוטאות /מקרר/מכונת כביסה'], 'bicycle category refused')
+        description = r.get('distinguishingDescription')
+        need(isinstance(description, str) and 30 <= len(description.strip()) <= 1000 and description in r['text'], 'bicycle description refused')
+        need(not any(marker in r['text'] for marker in ('לא נמסר לי שניתן דוח', 'סימון הפנייה', 'מחדל האכיפה')), 'parking paragraph refused')
+        need(set(r) == {'reportId', 'text', 'subjectCode', 'streetCode', 'streetName', 'houseNumber',
+                        'coordinateX', 'coordinateY', 'plate', 'photos', 'eventType', 'subjectPath', 'distinguishingDescription'}, 'bicycle fields refused')
+    else:
+        need(isinstance(r['plate'], str) and re.fullmatch('[0-9]{7,8}', r['plate']), 'case plate refused')
+        identifier_present = (any(token.replace('-', '') == r['plate'] for token in
+            re.findall(r'(?<![0-9-])[0-9]+(?:-[0-9]+)*(?![0-9-])', r['text']))
+            if cable_hazard else r['plate'] in r['text'])
+        need(identifier_present, 'case identifier refused')
+        if cable_hazard:
+            need(r['subjectCode'] == '5164' and r.get('eventType') == 'charging_cable_sidewalk_hazard'
+                 and r.get('subjectPath') == ['כבישים מדרכות', 'אחר'], 'cable hazard category refused')
+            need(set(r) == {'reportId', 'text', 'subjectCode', 'streetCode', 'streetName', 'houseNumber',
+                            'coordinateX', 'coordinateY', 'plate', 'photos', 'eventType', 'subjectPath'}, 'hazard fields refused')
+        else:
+            need(r['subjectCode'] in {'1145', '1068'}, 'case topic/plate refused')
     need(r['photos'] == [{'path': 'photos/approved.jpg', 'sha256': pin['outgoingSha256']}], 'case photo binding refused')
     return trial, photo
 
