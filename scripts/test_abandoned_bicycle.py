@@ -23,6 +23,13 @@ class BicycleTest(unittest.TestCase):
             for mutation in [dict(plate='1234567'),dict(plate=''),dict(subjectCode='1145'),dict(eventType='parking'),dict(subjectPath=['ניקיון','אחר']),dict(distinguishingDescription='short'),dict(distinguishingDescription='x'*40),dict(text=description+' סימון הפנייה'),dict(extra='unexpected')]:
                 pin=package(dict(report,**mutation))
                 with self.assertRaises(ValueError):validate_package(path,pin,abandoned_bicycle=True)
+            # Keep the marker vocabulary in parity with TwoCarCiBridge.kt.
+            for marker in ('לא נמסר לי שניתן דוח', 'סימון הפנייה', 'מחדל האכיפה'):
+                pin=package(dict(report,text=description+' '+marker))
+                with self.assertRaises(ValueError):validate_package(path,pin,abandoned_bicycle=True)
+            for invalid in ('short', ' '*30+'short'+' '*30, 'x'*1001):
+                pin=package(dict(report,text=invalid,distinguishingDescription=invalid))
+                with self.assertRaises(ValueError):validate_package(path,pin,abandoned_bicycle=True)
             for field in ('plate','distinguishingDescription','subjectPath'):
                 missing=copy.deepcopy(report);del missing[field];pin=package(missing)
                 with self.assertRaises((ValueError,KeyError)):validate_package(path,pin,abandoned_bicycle=True)

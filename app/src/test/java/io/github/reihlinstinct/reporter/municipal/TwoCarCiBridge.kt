@@ -35,7 +35,10 @@ class TwoCarCiBridge(private val client: MunicipalClient,
                 val policy = ReportCategory.SIDEWALK_PARKING
                 require(if (abandonedBicycle) subject == "1015" else if (cableHazard) subject == "5164" else subject == policy.municipalSubjectCode && policy.needsPlate)
                 val live = client.subjectCategories(t)
-                if (abandonedBicycle) require(live.any { it.code == "1015" && it.name == BICYCLE_PATH.last() && it.path == BICYCLE_PATH })
+                if (abandonedBicycle) {
+                    val bicycleRows = live.filter { it.code == "1015" }
+                    require(bicycleRows.size == 1 && bicycleRows.single().name == BICYCLE_PATH.last() && bicycleRows.single().path == BICYCLE_PATH)
+                }
                 else if (cableHazard) require(live.any { it.code == "5164" && it.name == "אחר" && it.path == CABLE_PATH })
                 else require(live.any { it.code == subject })
                 token = t

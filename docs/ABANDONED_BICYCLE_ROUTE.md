@@ -8,8 +8,9 @@ change parking categories, or authorize any municipal report.
 - Exact code: `1015`, event type `abandoned_bicycle`.
 - Exact captured category path: `ניקיון` / `גזם / גרוטאות` /
   `אשפה - גרוטאות /מקרר/מכונת כביסה`.
-- Login must return that exact code, leaf name and full path before the claim,
-  contact registration or Create. A changed catalog stops without filing.
+- Login must return exactly one1015 row, with that leaf name and full path, before the claim,
+  contact registration or Create. Missing, duplicate, renamed or differently parented1015 rows stop without filing. Other unrelated catalog changes do not block.
+  Create transmits only the code; intended team routing remains unverified.
 - `plate` must be JSON null. An empty string or vehicle identifier is refused.
 - A separate `distinguishingDescription` of 30 to 1000 characters must appear
   verbatim in the approved text. Describe the particular bicycle and location.
