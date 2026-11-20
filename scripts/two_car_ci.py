@@ -23,7 +23,7 @@ def binding(env, now=None):
     return matches[0]
 
 
-def validate_package(path, pin):
+def validate_package(path, pin, *, cable_hazard=False):
     need(path.stat().st_size <= 30 * 1024 * 1024, 'case package too large')
     with zipfile.ZipFile(path) as z:
         es = z.infolist(); names = {'trial.json', 'original.jpg', 'photos/approved.jpg'}
@@ -38,7 +38,14 @@ def validate_package(path, pin):
     need(set(trial) == {'report', 'originalSha256', 'outgoingSha256'}, 'case fields refused')
     need(trial['originalSha256'] == pin['originalSha256'] and trial['outgoingSha256'] == pin['outgoingSha256'], 'case identity refused')
     r = trial['report']
-    need(r['subjectCode'] == '1145' and re.fullmatch('[0-9]{7,8}', r['plate']) and r['plate'] in r['text'], 'case topic/plate refused')
+    need(re.fullmatch('[0-9]{7,8}', r['plate']) and (any(token.replace('-', '') == r['plate'] for token in re.findall(r'(?<![0-9-])[0-9]+(?:-[0-9]+)*(?![0-9-])', r['text'])) if cable_hazard else r['plate'] in r['text']), 'case identifier refused')
+    if cable_hazard:
+        need(r['subjectCode'] == '5164' and r.get('eventType') == 'charging_cable_sidewalk_hazard'
+             and r.get('subjectPath') == ['כבישים מדרכות', 'אחר'], 'cable hazard category refused')
+        need(set(r) == {'reportId', 'text', 'subjectCode', 'streetCode', 'streetName', 'houseNumber',
+                        'coordinateX', 'coordinateY', 'plate', 'photos', 'eventType', 'subjectPath'}, 'hazard fields refused')
+    else:
+        need(r['subjectCode'] == '1145', 'case topic/plate refused')
     need(r['photos'] == [{'path': 'photos/approved.jpg', 'sha256': pin['outgoingSha256']}], 'case photo binding refused')
     return trial, photo
 

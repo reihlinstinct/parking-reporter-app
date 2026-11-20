@@ -7,7 +7,8 @@ import io.github.reihlinstinct.reporter.core.ReportCategory
  * Unknown municipal acceptance: never invent a street/house to satisfy validation.
  */
 class TwoCarCiBridge(private val client: MunicipalClient,
-    private val contact: LinkedHashMap<String, Any?>, private val root: File) {
+    private val contact: LinkedHashMap<String, Any?>, private val root: File,
+    private val cableHazard: Boolean = false) {
     private var token: String? = null
     private var prepared: Map<String, Any?>? = null
     private var created = false
@@ -20,7 +21,7 @@ class TwoCarCiBridge(private val client: MunicipalClient,
             "prepare" -> {
                 check(token == null && !created)
                 val raw = request["report"] as Map<String, Any?>
-                payload(raw)
+                payload(raw, cableHazard)
                 val photos = raw["photos"] as List<Map<String, Any?>>
                 require(photos.size == 1)
                 photo(photos.single())
@@ -32,8 +33,10 @@ class TwoCarCiBridge(private val client: MunicipalClient,
                 val t = client.login()
                 val subject = prepared!!["subjectCode"] as String
                 val policy = ReportCategory.SIDEWALK_PARKING
-                require(subject == policy.municipalSubjectCode && policy.needsPlate)
-                require(client.subjectCategories(t).any { it.code == subject })
+                require(if (cableHazard) subject == "5164" else subject == policy.municipalSubjectCode && policy.needsPlate)
+                val live = client.subjectCategories(t)
+                if (cableHazard) require(live.any { it.code == "5164" && it.name == "אחר" && it.path == CABLE_PATH })
+                else require(live.any { it.code == subject })
                 token = t
                 mapOf("success" to true)
             }
@@ -48,7 +51,7 @@ class TwoCarCiBridge(private val client: MunicipalClient,
                 val id = registered["ContactIdInCRM"] as? String
                 require(!id.isNullOrBlank())
                 c["ContactIdInCRM"] = id
-                val result = client.createCase(t, c, payload(raw))
+                val result = client.createCase(t, c, payload(raw, cableHazard))
                 createdCase = linkedMapOf(
                     "CaseIdInCRM" to result["CaseIdInCRM"], "WebCaseIdInCRM" to result["WebCaseIdInCRM"],
                     "CaseNumberInCRM" to result["CaseNumberInCRM"])
@@ -97,11 +100,16 @@ class TwoCarCiBridge(private val client: MunicipalClient,
     }
 
     companion object {
-        fun payload(raw: Map<String, Any?>): LinkedHashMap<String, Any?> {
-            require(raw.keys == setOf("reportId", "text", "subjectCode", "streetCode", "streetName", "houseNumber", "coordinateX", "coordinateY", "plate", "photos"))
-            require(raw["subjectCode"] == ReportCategory.SIDEWALK_PARKING.municipalSubjectCode)
+        val CABLE_PATH = listOf("כבישים מדרכות", "אחר")
+        fun payload(raw: Map<String, Any?>, cableHazard: Boolean = false): LinkedHashMap<String, Any?> {
+            val baseKeys = setOf("reportId", "text", "subjectCode", "streetCode", "streetName", "houseNumber", "coordinateX", "coordinateY", "plate", "photos")
+            require(raw.keys == baseKeys + if (cableHazard) setOf("eventType", "subjectPath") else emptySet())
+            if (cableHazard) {
+                require(raw["subjectCode"] == "5164" && raw["eventType"] == "charging_cable_sidewalk_hazard" && raw["subjectPath"] == CABLE_PATH)
+            } else require(raw["subjectCode"] == ReportCategory.SIDEWALK_PARKING.municipalSubjectCode)
             val plate = raw["plate"] as String
-            require(Regex("[0-9]{7,8}").matches(plate) && (raw["text"] as String).contains(plate))
+            val text = raw["text"] as String
+            require(Regex("[0-9]{7,8}").matches(plate) && (if (cableHazard) Regex("(?<![0-9-])[0-9]+(?:-[0-9]+)*(?![0-9-])").findAll(text).any { it.value.replace("-", "") == plate } else text.contains(plate)))
             val x = (raw["coordinateX"] as Number).toInt(); val y = (raw["coordinateY"] as Number).toInt()
             require(x in 200000..240000 && y in 610000..650000)
             return MunicipalPayloads.buildReport(MunicipalPayloads.ReportFields(
@@ -112,7 +120,8 @@ class TwoCarCiBridge(private val client: MunicipalClient,
         @JvmStatic fun main(args: Array<String>) {
             try {
                 fun env(name: String) = System.getenv(name)?.takeIf { it.isNotBlank() } ?: error("missing private configuration")
-                require(args.isEmpty() && env("CAR_CI_AUTHORIZED") == "TWO_CAR_ONCE")
+                val mode = env("CAR_CI_AUTHORIZED")
+                require(args.isEmpty() && mode in setOf("TWO_CAR_ONCE", "CABLE_HAZARD_ONCE"))
                 val bridge = TwoCarCiBridge(OkHttpMunicipalClient(env("J106_SUBSCRIPTION_KEY"),
                     env("J106_APP_USERNAME"), env("J106_APP_PASSWORD"), diagnostic = { response ->
                         File(env("BATCH_PRIVATE_ROOT"), "response-private.jsonl").appendText(PythonJson.dumps(linkedMapOf(
@@ -120,7 +129,7 @@ class TwoCarCiBridge(private val client: MunicipalClient,
                             "failure" to response.failure)) + "\n")
                     }),
                     MunicipalPayloads.buildContact(MunicipalPayloads.Reporter(env("REPORTER_FIRST_NAME"), env("REPORTER_LAST_NAME"),
-                        env("REPORTER_PHONE"), env("REPORTER_ID_NUMBER"), env("REPORTER_EMAIL"))), File(env("BATCH_PRIVATE_ROOT")))
+                        env("REPORTER_PHONE"), env("REPORTER_ID_NUMBER"), env("REPORTER_EMAIL"))), File(env("BATCH_PRIVATE_ROOT")), mode == "CABLE_HAZARD_ONCE")
                 val reader = System.`in`.bufferedReader()
                 while (true) {
                     val line = StringBuilder()
