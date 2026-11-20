@@ -43,6 +43,16 @@ class SourceTest(unittest.TestCase):
         for kw in [dict(main='d'*40),dict(branch='d'*40)]:
             with self.assertRaises(ValueError):self.guard(**kw)
 
+    def test_explicit_green_source_does_not_wait_for_main(self):
+        env=dict(self.env,SUBMISSION_SOURCE_SHA='a'*40)
+        self.assertEqual('b'*64,self.guard(env,main='d'*40)['originalSha256'])
+        for value in ('main','d'*40,'A'*40):
+            with self.assertRaises(ValueError):self.guard(dict(env,SUBMISSION_SOURCE_SHA=value))
+        with self.assertRaises(ValueError):self.guard(env,branch='d'*40)
+        with self.assertRaises(ValueError):self.guard(env,checks=self.checks[:-1])
+        with self.assertRaises(ValueError):
+            self.guard(env,checks=self.checks+[dict(name='extra',status='completed',conclusion='failure')])
+
     def test_red_pending_missing_or_truncated_main_evidence_refused(self):
         for kw in [dict(checks=self.checks[:-1]),dict(total=101),
                    dict(checks=self.checks+[dict(name='extra',status='in_progress',conclusion=None)]),

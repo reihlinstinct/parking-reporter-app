@@ -1,10 +1,14 @@
-name: One approved case from an ephemeral main mirror
+name: One approved case from an ephemeral green source mirror
 'on':
   workflow_dispatch:
     inputs:
       confirm:
         description: FILE_ONE_APPROVED_CASE
         required: true
+        type: string
+      source_sha:
+        description: Exact approved green source commit, blank means current main
+        required: false
         type: string
       private_ref:
         description: Immutable encrypted package commit
@@ -55,9 +59,10 @@ jobs:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       with:
         persist-credentials: false
-    - name: Verify owner, exact main SHA, green main CI and incident pins before execution secrets
+    - name: Verify owner, exact approved source SHA, green source CI and incident pins before execution secrets
       env:
         GITHUB_TOKEN: ${{ github.token }}
+        SUBMISSION_SOURCE_SHA: ${{ inputs.source_sha }}
         SUBMISSION_CONFIRM: ${{ inputs.confirm }}
         BATCH_PRIVATE_REF: ${{ inputs.private_ref }}
         BATCH_PRIVATE_PATH: ${{ inputs.private_path }}
@@ -108,6 +113,7 @@ jobs:
     - name: File precisely one approved case, with durable no-replay claim
       env:
         GITHUB_TOKEN: ${{ github.token }}
+        SUBMISSION_SOURCE_SHA: ${{ inputs.source_sha }}
         SUBMISSION_CONFIRM: ${{ inputs.confirm }}
         BATCH_PRIVATE_REF: ${{ inputs.private_ref }}
         BATCH_PRIVATE_PATH: ${{ inputs.private_path }}
