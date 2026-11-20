@@ -46,6 +46,17 @@ class MarkerTest(unittest.TestCase):
         self.assertEqual({row['sha256'] for row in rows}, hashes)
         self.assertIsNone(component.find('v:trusted-artifacts', ns))
 
+    def test_bridge_alternate_is_official_and_kotlin_only(self):
+        text = (ROOT / 'api-bridge/settings.gradle.kts').read_text()
+        self.assertEqual(2, text.count('name = "KotlinCentralAlternate"'))
+        self.assertEqual(2, text.count('url = uri("https://repo1.maven.org/maven2")'))
+        self.assertEqual(2, text.count('content { includeGroupByRegex("org\\\\.jetbrains\\\\.kotlin(\\\\..*)?") }'))
+        self.assertNotIn('allowInsecureProtocol', text)
+        self.assertIn('gradlePluginPortal()', text)
+        self.assertIn('FAIL_ON_PROJECT_REPOS', text)
+        workflow = (ROOT / '.github/workflows/api-bridge.yml').read_text()
+        self.assertIn('--dependency-verification strict', workflow)
+
     def test_dependency_mutation_is_not_equivalent(self):
         data = (FIXTURES / 'gradle-plugin-portal.xml').read_bytes()
         self.assertNotEqual(semantics(data), semantics(data.replace(b'<version>2.4.21</version>',
