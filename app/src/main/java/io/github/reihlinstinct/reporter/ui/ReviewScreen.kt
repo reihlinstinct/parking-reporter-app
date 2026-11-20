@@ -210,8 +210,8 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
             geocodeStatus = if (suggestions.isEmpty()) "review.geocode.no_suggestions" else "review.geocode.check_house_number"
         } finally { geocoding = false }
     }
-    // The provider may receive coordinates. Keep geocoding opt-in, even
-    // though the resulting street/house lookup needs no coordinate typing.
+    // The production regional host receives only static region IDs, not GPS.
+    // Keep the address lookup explicit, including its first network request.
     var askAddressConsent by rememberSaveable(initial.evidence.stableId) {
         mutableStateOf(initial.address.isBlank() && initial.confirmedLatitude != null && initial.confirmedLongitude != null)
     }
@@ -292,7 +292,14 @@ fun ReviewScreen(initial: ReviewDraft, image: ImageBitmap?, onSave: (ReviewDraft
     if (askAddressConsent) {
         AlertDialog(onDismissRequest = { askAddressConsent = false },
             title = { Text(s.t("review.location.lookup_title")) },
-            text = { Text(s.t("review.edit.geocode_note")) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    // Each paragraph stays reachable at large font scales, while actions remain visible.
+                    s.t("review.edit.geocode_note").split(". ").forEachIndexed { index, paragraph ->
+                        Text(paragraph + if (index < s.t("review.edit.geocode_note").split(". ").lastIndex) "." else "")
+                    }
+                }
+            },
             confirmButton = { TextButton(onClick = { askAddressConsent = false; scope.launch { findAddress() } }) { Text(s.t("review.location.lookup_yes")) } },
             dismissButton = { TextButton(onClick = { askAddressConsent = false }) { Text(s.t("review.location.lookup_later")) } })
     }

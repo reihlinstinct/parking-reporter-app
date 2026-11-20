@@ -155,7 +155,7 @@ class ShellSettingsExtractionTest {
         // source participates in the same catalog-use gate (no unused-key exemption).
         val assistantSource = I18nTestFiles.moduleFile("src/main/java/io/github/reihlinstinct/reporter/assistant/AssistantEntrySettings.kt").readText()
         val assistantKeys = Regex(""""(settings\.assistant\.[a-z_]+)"""").findAll(assistantSource).map { it.groupValues[1] }.toSet()
-        val used = keysUsedIn("AppShell.kt") + keysUsedIn("SettingsScreen.kt") + assistantKeys
+        val used = keysUsedIn("AppShell.kt") + keysUsedIn("SettingsScreen.kt") + keysUsedIn("AddressDataTools.kt") + assistantKeys
         val screenKeys = catalog.keys.filter { it.startsWith("shell.") || it.startsWith("settings.") }.toSet()
         for (key in used) assertTrue("$key is used but missing from strings.json", catalog.rawEntry(key) != null)
         // SettingsScreen also links to the Licenses screen using that screen's own
@@ -260,7 +260,7 @@ class ShellSettingsExtractionTest {
     @Test
     fun appShellKeysUseTheShellPrefixAndSettingsKeysTheSettingsPrefix() {
         val sharedTopicKeys = setOf("topics.connect_title", "topics.connection_needed", "settings.passport.delete_title", "settings.passport.delete_body", "settings.passport.deleted")
-        assertTrue(keysUsedIn("AppShell.kt").all { it.startsWith("shell.") || it in sharedTopicKeys })
+        assertTrue(keysUsedIn("AppShell.kt").all { it.startsWith("shell.") || it.startsWith("settings.address.") || it in sharedTopicKeys })
         // The one allowed exception is the Licenses-screen link button (#163), which
         // shows that screen's own licenses.screen.title rather than duplicating it.
         assertTrue(keysUsedIn("SettingsScreen.kt").all { it.startsWith("settings.") || it.startsWith("setup.") || it.startsWith("plate_categories.") || it == "licenses.screen.title" || it == "common.cancel" })

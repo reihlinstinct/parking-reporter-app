@@ -5,6 +5,14 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+val prepareRegionalMainAssets by tasks.registering(Sync::class) {
+    from("src/main/assets") { exclude("addresses.json") }
+    into(layout.buildDirectory.dir("generated/regional-main-assets"))
+}
+val prepareAddressTestAsset by tasks.registering(Sync::class) {
+    from("src/main/assets") { include("addresses.json") }
+    into(layout.buildDirectory.dir("generated/address-test-assets"))
+}
 val persistentPreviewSigning = providers.gradleProperty("persistentPreviewSigning").isPresent
 if (persistentPreviewSigning) {
     check(providers.gradleProperty("previewSideBySide").isPresent) {
@@ -32,11 +40,15 @@ android {
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     lint { abortOnError = true }
-    sourceSets { getByName("test") {
-        resources.srcDir("src/main/assets")
-        // The committed public vectors are the test input, never a copied fixture.
-        resources.srcDir("../docs/prpkg2-spec")
-    } }
+    sourceSets {
+        getByName("main") { assets.setSrcDirs(listOf(layout.buildDirectory.dir("generated/regional-main-assets").get().asFile)) }
+        getByName("test") {
+            resources.srcDir("src/main/assets")
+            // The committed public vectors are the test input, never a copied fixture.
+            resources.srcDir("../docs/prpkg2-spec")
+        }
+        getByName("androidTest") { assets.srcDir(layout.buildDirectory.dir("generated/address-test-assets").get().asFile) }
+    }
     signingConfigs {
         if (persistentPreviewSigning) {
             create("persistentPreview") {
@@ -57,6 +69,10 @@ android {
             isTestCoverageEnabled = true
         }
     }
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn(prepareRegionalMainAssets, prepareAddressTestAsset)
 }
 
 tasks.register<JacocoReport>("jacocoDebugUnitTestReport") {

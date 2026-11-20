@@ -59,8 +59,11 @@ class EntryPointsTest {
         assertTrue(tile.exported)
     }
 
-    @Test fun sharedPhotoStartsReviewPrefilled() {
+    @Test fun sharedPhotoStartsReviewPrefilledWithProductionLocalStreetSuggestions() {
         cleanLedgerAndOriginals()
+        val cache = File(InstrumentationRegistry.getInstrumentation().targetContext.noBackupFilesDir, "address-data")
+        val regionsBefore = cache.listFiles().orEmpty().filter { it.name.startsWith("region-") }
+            .associate { it.name to it.readBytes().toList() }
         try {
             // TestShareProvider (test APK, exported) generates and serves the JPEG.
             val uri = Uri.parse("content://il.sidewalks.reporter.testshare/shared-entry-synthetic.jpg")
@@ -82,6 +85,18 @@ class EntryPointsTest {
                 throw e
             }
             compose.onNodeWithText("בדיקת הדיווח").assertExists()
+            // No streetDirectoryLoader injection: exercise the production regional index path.
+            if (compose.onAllNodesWithText("למצוא רחוב ומספר בית?").fetchSemanticsNodes().isNotEmpty())
+                compose.onNodeWithText("לא עכשיו").performClick()
+            if (compose.onAllNodesWithText("ערוך").fetchSemanticsNodes().isNotEmpty())
+                compose.onNodeWithText("ערוך").performScrollTo().performClick()
+            compose.onNodeWithText("רחוב בירושלים").performScrollTo().performTextReplacement("אגר")
+            compose.waitUntil(15_000) { compose.onAllNodesWithText("אגריפס").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithText("אגריפס").performScrollTo().assertIsDisplayed()
+            FlowDriver(compose).screenshot("address-production-local-street-suggestions.png")
+            // Merely completing a street name is not address confirmation or a point download.
+            assertEquals(regionsBefore, cache.listFiles().orEmpty().filter { it.name.startsWith("region-") }
+                .associate { it.name to it.readBytes().toList() })
         } finally {
             cleanLedgerAndOriginals()
         }

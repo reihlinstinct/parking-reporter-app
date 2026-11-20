@@ -782,11 +782,11 @@
       "fr": "© OpenStreetMap contributors (ODbL 1.0)"
     },
     "licenses.osm.body": {
-      "he": "נקודות הכתובות מבוססות על OpenStreetMap, © תורמי OpenStreetMap, ברישיון ODbL 1.0. מאגר הכתובות כלול בקוד המקור ובאפליקציה ומופץ באותו רישיון.",
-      "en": "Address points are based on OpenStreetMap, © OpenStreetMap contributors, under ODbL 1.0. The address database is included in the source repository and app and distributed under the same licence.",
-      "ar": "تستند نقاط العناوين إلى OpenStreetMap، © مساهمو OpenStreetMap، بموجب ODbL 1.0. قاعدة العناوين مضمنة في مستودع المصدر والتطبيق وموزعة بموجب الترخيص نفسه.",
-      "ru": "Адресные точки основаны на OpenStreetMap, © участники OpenStreetMap, по лицензии ODbL 1.0. База адресов включена в исходный репозиторий и приложение и распространяется по той же лицензии.",
-      "am": "የአድራሻ ነጥቦች በOpenStreetMap፣ © የOpenStreetMap አበርካቾች፣ በODbL 1.0 ፍቃድ ላይ የተመሰረቱ ናቸው። የአድራሻ ዳታቤዙ በምንጭ ማከማቻው እና በመተግበሪያው ውስጥ ተካትቶ በዚያው ፍቃድ ይሰራጫል።",
+      "he": "נקודות הכתובות מבוססות על OpenStreetMap, © תורמי OpenStreetMap, ברישיון ODbL 1.0. הנתונים זמינים בקוד המקור ונקראים לפי אזור, עם מטמון לשימוש ללא חיבור.",
+      "en": "Address points derive from OpenStreetMap, © OpenStreetMap contributors, under ODbL 1.0. Data is available in the source repository and fetched by region with offline caching.",
+      "ar": "تستند نقاط العناوين إلى OpenStreetMap، © مساهمو OpenStreetMap، بموجب ODbL 1.0. البيانات متاحة في مستودع المصدر وتُجلب حسب المنطقة مع تخزين دون اتصال.",
+      "ru": "Адресные точки основаны на OpenStreetMap, © участники OpenStreetMap, по лицензии ODbL 1.0. Данные доступны в репозитории и загружаются по районам с кэшированием.",
+      "am": "የአድራሻ ነጥቦች በOpenStreetMap፣ © የOpenStreetMap አበርካቾች፣ በODbL 1.0 ፍቃድ ላይ የተመሰረቱ ናቸው። የአድራሻ ዳታቤዙ በምንጭ ማከማቻው ይገኛል። ውሂቡ በክልል ይጫናል እና በመሸጎጫ ይቀመጣል።",
       "fr": "Les points d'adresse sont basés sur OpenStreetMap, © contributeurs d'OpenStreetMap, sous licence ODbL 1.0. La base d'adresses est incluse dans le dépôt source et l'application, et distribuée sous la même licence."
     },
     "licenses.registry.title": {
@@ -1142,12 +1142,12 @@
       "fr": "Rue et numéro que vous avez confirmés"
     },
     "review.edit.geocode_note": {
-      "he": "חיפוש כתובת שולח קואורדינטות בלבד לספק המיקום של המכשיר. מספרי בית הם הצעות בלבד.",
-      "en": "An address search sends only coordinates to the device's location provider. House numbers are suggestions only.",
-      "ar": "يرسل البحث عن العنوان الإحداثيات فقط إلى مزوّد الموقع في الجهاز. أرقام المنازل اقتراحات فقط.",
-      "ru": "Поиск адреса передаёт поставщику геоданных устройства только координаты. Номера домов — только варианты.",
-      "am": "የአድራሻ ፍለጋ መጋጠሚያዎችን ብቻ ለመሣሪያው የአካባቢ አቅራቢ ይልካል። የቤት ቁጥሮች ጥቆማዎች ብቻ ናቸው።",
-      "fr": "Une recherche d'adresse envoie uniquement les coordonnées au fournisseur de localisation de l'appareil. Les numéros de maison ne sont que des suggestions."
+      "he": "קובצי הכתובות יורדו מ-GitHub. מזהי האזורים מעידים על האזור המשוער של התמונה, ו-GitHub רואה גם את כתובת ה-IP שלך. לא נשלחים קואורדינטות מדויקות, כתובת שהקלדת או פרטי מדווח.",
+      "en": "Address files are downloaded from GitHub. Region IDs reveal the approximate area of the photo, and GitHub also sees your IP address. Exact coordinates, the address you typed and reporter details are not sent.",
+      "ar": "تُنزل ملفات العناوين من GitHub. تكشف معرّفات المناطق المنطقة التقريبية للصورة، ويرى GitHub أيضًا عنوان IP الخاص بك. لا تُرسل الإحداثيات الدقيقة أو العنوان الذي كتبته أو بيانات المُبلّغ.",
+      "ru": "Файлы адресов загружаются с GitHub. Идентификаторы районов раскрывают примерный район снимка, а GitHub также видит ваш IP-адрес. Точные координаты, введённый адрес и данные заявителя не отправляются.",
+      "am": "የአድራሻ ፋይሎች ከGitHub ይወርዳሉ። የአካባቢ መለያዎች የፎቶውን ግምታዊ አካባቢ ያሳያሉ፣ GitHub የIP አድራሻዎንም ያያል። ትክክለኛ መጋጠሚያዎች፣ የጻፉት አድራሻ እና የሪፖርት አቅራቢው ዝርዝሮች አይላኩም።",
+      "fr": "Les fichiers d'adresses sont téléchargés depuis GitHub. Les identifiants de zones révèlent la zone approximative de la photo, et GitHub voit aussi votre adresse IP. Les coordonnées exactes, l'adresse saisie et les informations du déclarant ne sont pas envoyées."
     },
     "review.edit.geocode_button": {
       "he": "חפש הצעות כתובת לפי המיקום",
@@ -1910,11 +1910,11 @@
       "fr": "Numéro de maison"
     },
     "review.location.offline_note": {
-      "he": "החיפוש משתמש במאגר הכתובות שהותקן במכשיר. אין שימוש במיקום המכשיר ואין שינוי בתמונה.",
-      "en": "Search uses the address data installed on this device. It does not use device location or change the photo.",
-      "ar": "يستخدم البحث بيانات العناوين المثبتة على الجهاز، دون استخدام موقع الجهاز أو تغيير الصورة.",
-      "ru": "Поиск использует адресные данные на устройстве. Местоположение устройства не используется, фото не меняется.",
-      "am": "ፍለጋው በመሣሪያው ላይ ያለውን የአድራሻ መረጃ ይጠቀማል። የመሣሪያውን አካባቢ አይጠቀምም፣ ፎቶውንም አይቀይርም።",
+      "he": "החיפוש משתמש בנתוני כתובות לפי אזור, מהאינטרנט או מהמטמון. אין שימוש במיקום המכשיר ואין שינוי בתמונה.",
+      "en": "Lookup uses regional address data from the internet or cache. It does not use device location or change the photo.",
+      "ar": "يستخدم البحث بيانات العناوين الإقليمية من الإنترنت أو الذاكرة المؤقتة. لا يستخدم موقع الجهاز ولا يغيّر الصورة.",
+      "ru": "Поиск использует адреса районов из интернета или кэша. Местоположение устройства не используется, фото не меняется.",
+      "am": "ፍለጋው ከበይነመረብ ወይም ከመሸጎጫ የክልል አድራሻ ውሂብን ይጠቀማል። የመሣሪያውን አካባቢ አይጠቀምም እና ፎቶውን አይቀይርም።",
       "fr": "La recherche utilise les données d'adresses installées sur cet appareil. Elle n'utilise pas la position de l'appareil et ne modifie pas la photo."
     },
     "review.location.find_address": {
@@ -1966,11 +1966,11 @@
       "fr": "המקום בצומת הרחובות {street_a} ו-{street_b}. הכתובת שצוינה היא הקרובה לצומת."
     },
     "review.location.lookup_failed": {
-      "he": "לא נמצאה כתובת יחידה, או שמאגר הכתובות אינו מותקן. בדוק רחוב ומספר בית. אין לנחש מיקום.",
-      "en": "No unique address was found, or address data is not installed. Check street and house number. Do not guess a location.",
-      "ar": "لم يُعثر على عنوان واحد، أو بيانات العناوين غير مثبتة. تحقق من الشارع ورقم المبنى. لا تخمن الموقع.",
-      "ru": "Не найден однозначный адрес, либо адресные данные не установлены. Проверьте улицу и номер дома. Не угадывайте местоположение.",
-      "am": "አንድ ግልጽ አድራሻ አልተገኘም ወይም መረጃው አልተጫነም። መንገዱንና ቁጥሩን ያረጋግጡ። አካባቢን አይገምቱ።",
+      "he": "לא נמצאה כתובת יחידה, או שנתוני האזור אינם זמינים. בדוק את החיבור, הרחוב ומספר הבית. אין לנחש מיקום.",
+      "en": "No unique address was found, or regional data is unavailable. Check the connection, street and house number. Do not guess a location.",
+      "ar": "لم يُعثر على عنوان فريد أو أن بيانات المنطقة غير متاحة. تحقّق من الاتصال والشارع ورقم المنزل. لا تخمّن الموقع.",
+      "ru": "Однозначный адрес не найден или данные района недоступны. Проверьте подключение, улицу и номер дома. Не угадывайте местоположение.",
+      "am": "አንድ ብቸኛ አድራሻ አልተገኘም ወይም የክልሉ ውሂብ አይገኝም። ግንኙነቱን፣ መንገዱን እና የቤቱን ቁጥር ያረጋግጡ። አካባቢ አይገምቱ።",
       "fr": "Aucune adresse unique n'a été trouvée, ou les données d'adresses ne sont pas installées. Vérifiez la rue et le numéro. Ne devinez pas un lieu."
     },
     "review.location.gps_button": {
@@ -2740,6 +2740,78 @@
       "ru": "Номер паспорта удалён из профиля. Сохранённые обращения не изменены.",
       "am": "የፓስፖርት ቁጥሩ ከመገለጫው ተወግዷል። የተቀመጡ ሪፖርቶች አልተቀየሩም።",
       "fr": "Numéro de passeport supprimé du profil. Les signalements enregistrés restent inchangés."
+    },
+    "settings.address.title": {
+      "he": "נתוני כתובות",
+      "en": "Address data",
+      "ar": "بيانات العناوين",
+      "ru": "Данные адресов",
+      "am": "የአድራሻ ውሂብ",
+      "fr": "Données d'adresses"
+    },
+    "settings.address.description": {
+      "he": "הכתובות נקראות מקובץ באינטרנט ונשמרות לשימוש ללא חיבור. אפשר לטעון עותק מקומי תואם, אך אין צורך בכך.",
+      "en": "Addresses are read from an online file and cached for offline use. Importing a matching local copy is optional.",
+      "ar": "تُقرأ العناوين من ملف على الإنترنت وتُحفظ للاستخدام دون اتصال. استيراد نسخة محلية مطابقة اختياري.",
+      "ru": "Адреса загружаются из файла в интернете и сохраняются для работы без сети. Импорт подходящей локальной копии необязателен.",
+      "am": "አድራሻዎች ከመስመር ላይ ፋይል ይነበባሉ እና ያለ በይነመረብ ለመጠቀም ይቀመጣሉ። ተመሳሳይ የአካባቢ ቅጂ ማስገባት አማራጭ ነው።",
+      "fr": "Les adresses sont lues dans un fichier en ligne et mises en cache pour une utilisation hors ligne. L'importation d'une copie locale correspondante est facultative."
+    },
+    "settings.address.refresh": {
+      "he": "חזרה לטעינה אזורית מהאינטרנט",
+      "en": "Return to online regional lookup",
+      "ar": "العودة إلى البحث الإقليمي عبر الإنترنت",
+      "ru": "Вернуться к загрузке районов из интернета",
+      "am": "ወደ መስመር ላይ የክልል ፍለጋ ተመለስ",
+      "fr": "Revenir à la recherche régionale en ligne"
+    },
+    "settings.address.import": {
+      "he": "טעינת קובץ מקומי (אופציונלי)",
+      "en": "Import local file (optional)",
+      "ar": "استيراد ملف محلي (اختياري)",
+      "ru": "Импорт файла (необязательно)",
+      "am": "የአካባቢ ፋይል አስገባ (አማራጭ)",
+      "fr": "Importer un fichier local (facultatif)"
+    },
+    "settings.address.clear": {
+      "he": "מחיקת המטמון והקובץ המקומי",
+      "en": "Remove cache and local file",
+      "ar": "حذف الذاكرة المؤقتة والملف المحلي",
+      "ru": "Удалить кэш и локальный файл",
+      "am": "መሸጎጫውን እና የአካባቢ ፋይሉን ሰርዝ",
+      "fr": "Supprimer le cache et le fichier local"
+    },
+    "settings.address.updated": {
+      "he": "נתוני הכתובות עודכנו",
+      "en": "Address data updated",
+      "ar": "تم تحديث بيانات العناوين",
+      "ru": "Данные адресов обновлены",
+      "am": "የአድራሻ ውሂብ ተዘምኗል",
+      "fr": "Données d'adresses mises à jour"
+    },
+    "settings.address.failed": {
+      "he": "לא ניתן לטעון נתוני כתובות",
+      "en": "Could not load address data",
+      "ar": "تعذر تحميل بيانات العناوين",
+      "ru": "Не удалось загрузить адреса",
+      "am": "የአድራሻ ውሂብ መጫን አልተቻለም",
+      "fr": "Impossible de charger les données d'adresses"
+    },
+    "settings.address.reset_hint": {
+      "he": "החזרה לטעינה מהאינטרנט מוחקת את המטמון ואת הקובץ המקומי, אם נטען. האזור הדרוש ייטען בבקשת הכתובת הבאה.",
+      "en": "Returning online removes cached regions and any imported local file. The required region loads on the next address request.",
+      "ar": "تؤدي العودة إلى الإنترنت إلى حذف المناطق المحفوظة وأي ملف محلي مستورد. تُحمّل المنطقة المطلوبة عند طلب العنوان التالي.",
+      "ru": "Возврат к интернету удалит кэш районов и импортированный файл. Нужный район загрузится при следующем запросе адреса.",
+      "am": "ወደ መስመር ላይ መመለስ የተቀመጡ ክልሎችን እና የገባ የአካባቢ ፋይልን ይሰርዛል። የሚፈለገው ክልል በሚቀጥለው የአድራሻ ጥያቄ ይጫናል።",
+      "fr": "Le retour en ligne supprime les régions en cache et tout fichier local importé. La région nécessaire sera chargée à la prochaine recherche d'adresse."
+    },
+    "settings.address.cleared": {
+      "he": "הנתונים השמורים נמחקו. האזור הדרוש ייטען בבקשת הכתובת הבאה.",
+      "en": "Saved data removed. The required region loads on the next address request.",
+      "ar": "حُذفت البيانات المحفوظة. تُحمّل المنطقة المطلوبة عند طلب العنوان التالي.",
+      "ru": "Сохранённые данные удалены. Нужный район загрузится при следующем запросе адреса.",
+      "am": "የተቀመጠ ውሂብ ተሰርዟል። የሚፈለገው ክልል በሚቀጥለው የአድራሻ ጥያቄ ይጫናል።",
+      "fr": "Données enregistrées supprimées. La région nécessaire sera chargée à la prochaine recherche d'adresse."
     }
   }
 }

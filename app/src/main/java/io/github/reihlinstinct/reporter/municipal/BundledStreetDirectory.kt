@@ -7,8 +7,12 @@ import android.util.JsonToken
 /** Two bounded passes over the immutable APK asset: verify bytes, then stream address rows. */
 object BundledStreetDirectory {
     fun load(assets: AssetManager): StreetDirectory {
-        assets.open("addresses.json").use { AddressLookupPin.verifyPinned(it) }
-        return JsonReader(assets.open("addresses.json").bufferedReader(Charsets.UTF_8)).use { reader ->
+        return load { assets.open("addresses.json") }
+    }
+
+    fun load(open: () -> java.io.InputStream): StreetDirectory {
+        open().use { AddressLookupPin.verifyPinned(it) }
+        return JsonReader(open().bufferedReader(Charsets.UTF_8)).use { reader ->
             reader.beginObject()
             requireName(reader, "version")
             if (reader.nextInt() != 1) throw MunicipalInputException("Unsupported address lookup format.")

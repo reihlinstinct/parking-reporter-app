@@ -92,7 +92,11 @@
     },
     "tools": {
       "allow": [
-        "*.py"
+        "*.py",
+        "*.json"
+      ],
+      "allow_paths": [
+        "tools/address-lookup/sources/cbs-jerusalem-2022.geojson.gz"
       ]
     },
     "trial": {
