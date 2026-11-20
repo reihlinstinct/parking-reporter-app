@@ -136,6 +136,7 @@ class ScanTest(unittest.TestCase):
 
     def test_rejection_diagnostics_are_fixed_vocabulary_and_keep_every_file_blocked(self):
         cases = {
+            'qemu-version.txt': 'emulator_qemu_version_txt',
             'read-snapshot.txt': 'emulator_read_snapshot_txt',
             'qemu.log': 'emulator_qemu_log',
             'emulator.log': 'emulator_log',
@@ -170,6 +171,43 @@ class ScanTest(unittest.TestCase):
             self.assertNotIn('synthetic-private-directory', text)
             self.assertEqual(enabled, 'synthetic-remaining.txt' in text)
         self.assertFalse((self.root / 'provenance.json').exists())
+
+    def test_qemu_version_diagnostic_is_bounded_opt_in_and_still_rejects(self):
+        path = self.root / 'qemu-version.txt'
+        for value, expected in ((b'2', 'exact_ascii_2'), (b'2\n', 'exact_ascii_2_lf'),
+                                (b'', 'empty'), (b'NEVER_PRINT', 'other_bounded_value'),
+                                (b'PRIVATE' * 1000, 'over_16_bytes')):
+            path.write_bytes(value)
+            for enabled in (False, True):
+                output = io.StringIO()
+                with redirect_stdout(output), self.assertRaises(m.CacheRejected):
+                    m.scan_tree(self.root, diagnose_clean_producer=enabled)
+                self.assertEqual(value, path.read_bytes())
+                self.assertEqual(enabled, ('CLEAN-PRODUCER-QEMU-VERSION-SHAPE ' + expected) in output.getvalue())
+                self.assertNotIn('NEVER_PRINT', output.getvalue())
+                self.assertNotIn('PRIVATE', output.getvalue())
+        path.unlink()
+        (self.root / 'QEMU-VERSION.txt').write_bytes(b'2')
+        output = io.StringIO()
+        with redirect_stdout(output), self.assertRaises(m.CacheRejected):
+            m.scan_tree(self.root, diagnose_clean_producer=True)
+        self.assertNotIn('QEMU-VERSION-SHAPE', output.getvalue())
+
+    def test_qemu_version_diagnostic_never_follows_links_or_reads_special_nodes(self):
+        path = self.root / 'qemu-version.txt'
+        target = self.root / 'target.img'
+        target.write_bytes(b'2')
+        path.symlink_to(target)
+        self.assertEqual('unreadable', m.diagnose_qemu_version(path))
+        with self.assertRaises(m.CacheRejected):
+            m.scan_tree(self.root, diagnose_clean_producer=True)
+        path.unlink()
+        os.mkfifo(path)
+        self.assertEqual('not_regular', m.diagnose_qemu_version(path))
+        path.unlink()
+        path.mkdir()
+        self.assertEqual('not_regular', m.diagnose_qemu_version(path))
+        self.assertEqual('not_exact_name', m.diagnose_qemu_version(target))
 
     def test_diagnostic_escapes_control_characters_and_caps_name(self):
         name = 'x' * 165 + '\n.txt'
