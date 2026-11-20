@@ -5,10 +5,10 @@ import org.junit.Test
 import java.nio.file.Files
 
 class TwoCarCiBridgeTest {
-    private class Client(val hazardPath: List<String>? = null, val bicyclePath: List<String>? = null, val duplicateBicyclePath: List<String>? = null, val hazardCode: String = "5164", val hazardName: String = "אחר") : MunicipalClient {
+    private class Client(val hazardPath: List<String>? = null, val bicyclePath: List<String>? = null, val duplicateBicyclePath: List<String>? = null, val hazardCode: String = "5164", val hazardName: String = "אחר", val subjects: List<String> = listOf("1145"), val abandonedName: String = "רכב גרוטאה", val mixedAbandonedIdentity: Boolean = false) : MunicipalClient {
         val calls = mutableListOf<String>()
         override fun login(): String { calls.add("login"); return "synthetic-token" }
-        override fun subjectCategories(token: String) = if (bicyclePath != null) (listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject("1015", bicyclePath.last(), bicyclePath, false)) + if (duplicateBicyclePath == null) emptyList() else listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject("1015", duplicateBicyclePath.last(), duplicateBicyclePath, false))) else if (hazardPath != null) listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject(hazardCode, hazardName, hazardPath, false)) else listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject("1145", "synthetic", emptyList(), true))
+        override fun subjectCategories(token: String) = if (bicyclePath != null) (listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject("1015", bicyclePath.last(), bicyclePath, false)) + if (duplicateBicyclePath == null) emptyList() else listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject("1015", duplicateBicyclePath.last(), duplicateBicyclePath, false))) else if (hazardPath != null) listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject(hazardCode, hazardName, hazardPath, false)) else subjects.mapIndexed { index, code -> io.github.reihlinstinct.reporter.core.MunicipalSubject(code, if (code == "1068") { if (mixedAbandonedIdentity && index > 0) "changed category" else abandonedName } else "synthetic", emptyList(), true) }
         override fun upsertContact(token: String, contact: LinkedHashMap<String, Any?>): Map<String, Any?> { calls.add("contact"); return mapOf("ContactIdInCRM" to "synthetic-contact") }
         override fun createCase(token: String, contact: LinkedHashMap<String, Any?>, report: LinkedHashMap<String, Any?>): Map<String, Any?> { calls.add("create"); return mapOf("CaseIdInCRM" to "00000000-0000-0000-0000-000000000000", "WebCaseIdInCRM" to "synthetic-web", "CaseNumberInCRM" to null) }
         override fun attachPhoto(token: String, caseIdInCRM: String, webCaseIdInCRM: String, fileName: String, jpeg: ByteArray) {
@@ -93,6 +93,29 @@ class TwoCarCiBridgeTest {
             b.call(mapOf("operation" to "create","report" to r))
             assertThrows(IllegalStateException::class.java) { b.call(mapOf("operation" to "create","report" to r)) }
             assertEquals(listOf("login","contact","create"),c.calls)
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test fun abandonedVehiclePreserves1068AndRequiresLiveIdentityBeforeAnyWrite() {
+        val root=Files.createTempDirectory("synthetic-abandoned-car").toFile()
+        try {
+            val r=report(root)+("subjectCode" to "1068")
+            assertEquals("1068", TwoCarCiBridge.payload(r)["CaseSubjectCode"])
+            for (client in listOf(Client(), Client(subjects=listOf("1068"), abandonedName="changed category"),
+                    Client(subjects=listOf("1068", "1068"), mixedAbandonedIdentity = true))) {
+                val b=TwoCarCiBridge(client, linkedMapOf(), root)
+                b.call(mapOf("operation" to "prepare", "report" to r))
+                assertThrows(IllegalArgumentException::class.java) { b.call(mapOf("operation" to "login")) }
+                assertEquals(listOf("login"), client.calls)
+                assertThrows(IllegalStateException::class.java) { b.call(mapOf("operation" to "create", "report" to r)) }
+            }
+            val client=Client(subjects=listOf("1068"));val b=TwoCarCiBridge(client, linkedMapOf(), root)
+            b.call(mapOf("operation" to "prepare", "report" to r))
+            b.call(mapOf("operation" to "login"))
+            b.call(mapOf("operation" to "create", "report" to r))
+            assertEquals(listOf("login", "contact", "create"), client.calls)
+            assertThrows(IllegalArgumentException::class.java) { TwoCarCiBridge.payload(r+("plate" to "")) }
+            assertThrows(IllegalArgumentException::class.java) { TwoCarCiBridge.payload(r+("subjectCode" to "1015")) }
         } finally { root.deleteRecursively() }
     }
 

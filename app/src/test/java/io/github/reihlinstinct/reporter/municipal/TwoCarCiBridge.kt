@@ -33,14 +33,18 @@ class TwoCarCiBridge(private val client: MunicipalClient,
                 val t = client.login()
                 val subject = prepared!!["subjectCode"] as String
                 val policy = ReportCategory.SIDEWALK_PARKING
-                require(if (abandonedBicycle) subject == "1015" else if (cableHazard) subject == "5164" else subject == policy.municipalSubjectCode && policy.needsPlate)
+                require(if (abandonedBicycle) subject == "1015" else if (cableHazard) subject == "5164" else subject in CAR_SUBJECTS)
                 val live = client.subjectCategories(t)
                 if (abandonedBicycle) {
                     val bicycleRows = live.filter { it.code == "1015" }
                     require(bicycleRows.size == 1 && bicycleRows.single().name == BICYCLE_PATH.last() && bicycleRows.single().path == BICYCLE_PATH)
                 }
                 else if (cableHazard) require(live.any { it.code == "5164" && it.name == "אחר" && it.path == CABLE_PATH })
-                else require(live.any { it.code == subject })
+                else {
+                    val vehicleRows = live.filter { it.code == subject }
+                    require(vehicleRows.isNotEmpty())
+                    if (subject == "1068") require(vehicleRows.all { it.name == "רכב גרוטאה" })
+                }
                 token = t
                 mapOf("success" to true)
             }
@@ -104,6 +108,7 @@ class TwoCarCiBridge(private val client: MunicipalClient,
     }
 
     companion object {
+        private val CAR_SUBJECTS = setOf(ReportCategory.SIDEWALK_PARKING.municipalSubjectCode, "1068")
         val CABLE_PATH = listOf("כבישים מדרכות", "אחר")
         val BICYCLE_PATH = listOf("ניקיון", "גזם / גרוטאות", "אשפה - גרוטאות /מקרר/מכונת כביסה")
         fun payload(raw: Map<String, Any?>, cableHazard: Boolean = false, abandonedBicycle: Boolean = false): LinkedHashMap<String, Any?> {
@@ -114,7 +119,7 @@ class TwoCarCiBridge(private val client: MunicipalClient,
                 require(raw["subjectCode"] == "1015" && raw["eventType"] == "abandoned_bicycle" && raw["subjectPath"] == BICYCLE_PATH)
             } else if (cableHazard) {
                 require(raw["subjectCode"] == "5164" && raw["eventType"] == "charging_cable_sidewalk_hazard" && raw["subjectPath"] == CABLE_PATH)
-            } else require(raw["subjectCode"] == ReportCategory.SIDEWALK_PARKING.municipalSubjectCode)
+            } else require(raw["subjectCode"] in CAR_SUBJECTS)
             val text = raw["text"] as String
             if (abandonedBicycle) {
                 require(raw["plate"] == null)

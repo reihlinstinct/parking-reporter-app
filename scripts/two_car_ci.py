@@ -59,7 +59,7 @@ def validate_package(path, pin, *, cable_hazard=False, abandoned_bicycle=False):
             need(set(r) == {'reportId', 'text', 'subjectCode', 'streetCode', 'streetName', 'houseNumber',
                             'coordinateX', 'coordinateY', 'plate', 'photos', 'eventType', 'subjectPath'}, 'hazard fields refused')
         else:
-            need(r['subjectCode'] == '1145', 'case topic/plate refused')
+            need(r['subjectCode'] in {'1145', '1068'}, 'case topic/plate refused')
     need(r['photos'] == [{'path': 'photos/approved.jpg', 'sha256': pin['outgoingSha256']}], 'case photo binding refused')
     return trial, photo
 
