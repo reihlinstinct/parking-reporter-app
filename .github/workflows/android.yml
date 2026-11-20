@@ -60,13 +60,20 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
+      - name: Restore exact dependency-only cache
+        id: dependency-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            !~/.gradle/caches/modules-2/**/*.lock
+          key: ${{ runner.os }}-${{ runner.arch }}-android-modules-v1-${{ hashFiles('settings.gradle.kts', 'build.gradle.kts', 'app/build.gradle.kts', 'gradle.properties', 'gradle/libs.versions.toml', 'gradle/wrapper/**') }}
       - run: sh scripts/prepare_wrapper.sh
       - name: Warm pinned plugins before build or emulator tests
         run: python3 scripts/warm_gradle_plugins.py
       - name: Build debug and verify release code generation
         run: |
-          sh gradlew --no-daemon lintDebug testDebugUnitTest assembleDebug compileReleaseKotlin
+          sh gradlew --no-daemon lintDebug testDebugUnitTest assembleDebug assembleDebugAndroidTest compileReleaseKotlin
       - name: Retain generated assistant diagnostics
         if: always()
         run: |
@@ -102,6 +109,21 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
+      # Only successful trusted-main jobs publish. PRs/matrices are readers.
+      - name: Bound dependency cache before publishing
+        id: dependency-cache-size
+        continue-on-error: true
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.dependency-cache.outputs.cache-hit != 'true'
+        run: python3 scripts/dependency_cache_size.py
+      - name: Publish exact successful dependency-only cache
+        continue-on-error: true
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.dependency-cache.outputs.cache-hit != 'true' && steps.dependency-cache-size.outputs.save == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            !~/.gradle/caches/modules-2/**/*.lock
+          key: ${{ runner.os }}-${{ runner.arch }}-android-modules-v1-${{ hashFiles('settings.gradle.kts', 'build.gradle.kts', 'app/build.gradle.kts', 'gradle.properties', 'gradle/libs.versions.toml', 'gradle/wrapper/**') }}
   emulator-matrix:
     name: emulator (${{ matrix.api }})
     needs: [changes]
@@ -125,7 +147,14 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
+      - name: Restore exact dependency-only cache
+        id: dependency-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches/modules-2
+            !~/.gradle/caches/modules-2/**/*.lock
+          key: ${{ runner.os }}-${{ runner.arch }}-android-modules-v1-${{ hashFiles('settings.gradle.kts', 'build.gradle.kts', 'app/build.gradle.kts', 'gradle.properties', 'gradle/libs.versions.toml', 'gradle/wrapper/**') }}
       - run: sh scripts/prepare_wrapper.sh
       - name: Warm pinned plugins before build or emulator tests
         run: python3 scripts/warm_gradle_plugins.py
