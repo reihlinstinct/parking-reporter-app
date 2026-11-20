@@ -44,7 +44,7 @@ Built by `EncryptedPackage.reviewedReport` (`EncryptedPackage.kt:31-43`). The re
 | `outgoing_sha256` | 64 lowercase hex: SHA-256 of the JPEG bytes in this package (checked, line 98) |
 | `review_digest` | 64 lowercase hex: `ReviewDraft.digest()` (below) |
 | `plate` | string, at most 8 chars; 7-8 digits when the category needs a plate, otherwise empty (`ReviewDraft.kt:33`) |
-| `address`, `subject`, `exact_text`, `time` | string, 1-4000 chars; `subject` must be a known category code (`ReportCategory`), `time` must parse as an ISO-8601 offset date-time |
+| `address`, `subject`, `exact_text`, `time` | string, 1-4000 chars; `subject` must be a known category code (`ReportCategory`), `time` must parse as an ISO-8601 offset date-time or an original offset-free EXIF wall time (no inferred offset) |
 | `latitude`, `longitude` | number, finite, in range |
 | `reporter` | object with exactly `first`, `last`, `phone`, `id`, `email`; each a non-blank string of at most 256 chars |
 
@@ -116,7 +116,7 @@ Canonical report:
 
 Escaping vector (org.json 20260814): the string `a/b</c"d\e`, newline, U+0001, U+2028, U+0085, `é` canonicalises to `"a/b<\/c\"d\\e\n\u0001\u2028\u0085é"`.
 
-How these were checked (2026-11-08, `main` at `51d6d88`): recomputed independently in Python from the rules above, and asserted from Kotlin in a local unit test against the real `EncryptedPackage` and `ReviewDraft`; both agree. That test is not in the repository, so CI does not yet guard these values. The ciphertext and signature cannot be golden: ECIES and ECDSA are randomised, and `main` has no constant test keys.
+How these were checked (2026-11-08, `main` at `51d6d88`): recomputed independently in Python from the rules above, and asserted from Kotlin in a local unit test against the real `EncryptedPackage` and `ReviewDraft`; both agree. The committed `EncryptedPackageTest.publishedGoldenVectorMatchesProductionSenderAndReceiver` now checks these deterministic values against the sender and receiver using the shared golden resource. The ciphertext and signature cannot be golden: ECIES and ECDSA are randomised, and `main` has no constant test keys.
 
 ## Known gaps and caveats
 
@@ -131,7 +131,7 @@ Under `docs/prpkg2-spec/`:
 - `report.schema.json` and `header.schema.json`: JSON Schema (2020-12) for the report and the header. They describe structure only; the receiver also checks the known category code, the ISO-8601 time, `id` equal to the manifest package, and canonical form.
 - `golden.json`: the synthetic golden values from the table above (photo, digests, header, `plain`), with the inputs needed to rebuild them.
 
-The test implements the org.json `quote` rules and Java `Double.toString` (JDK 19+ shortest-digit form) for the golden values; `golden.json` also holds the escaping vector and number vectors above, so a port can check its own canonicalisation against them. `tests/test_prpkg2_spec.py` (run in repository-checks, Python stdlib only) re-derives every golden value from the rules on this page, validates the golden report against the schemas and checks that 13 malformed reports and 3 malformed headers are rejected. The Kotlin code stays the reference: if it changes a rule or a value, this page, these files and that test must change in the same pull request. There is not yet a Kotlin test that reads `golden.json`; that is the remaining gap for a full sync guarantee.
+The test implements the org.json `quote` rules and Java `Double.toString` (JDK 19+ shortest-digit form) for the golden values; `golden.json` also holds the escaping vector and number vectors above, so a port can check its own canonicalisation against them. `tests/test_prpkg2_spec.py` (run in repository-checks, Python stdlib only) re-derives every golden value from the rules on this page, validates the golden report against the schemas and checks that 13 malformed reports and 3 malformed headers are rejected. The Kotlin code stays the reference: if it changes a rule or a value, this page, these files and that test must change in the same pull request. `EncryptedPackageTest.publishedGoldenVectorMatchesProductionSenderAndReceiver` reads that same committed `golden.json` as a JVM test resource, checks the photo, review/report/approval/header and plaintext digests against production code, and verifies a real encrypted round trip through the receiver. Gradle tracks the resource so changes invalidate the test inputs. The Android platform JSON escaping caveat above still applies.
 
 ## Version policy
 
@@ -142,7 +142,7 @@ The test implements the org.json `quote` rules and Java `Double.toString` (JDK 1
 
 ## Not yet done for issue #10
 
-Publication at a stable public URL (GitHub Pages is not enabled on this repository and stays off until the owner decides otherwise), and a Kotlin test that reads `docs/prpkg2-spec/golden.json` so the sync check also covers the Kotlin side.
+Publication at a stable public URL. GitHub Pages settings were not inspected or changed by this patch; publication is not claimed. The shared golden-resource JVM check is implemented, with the normal Android JVM test run still required on this head.
 
 The offline synthetic schema checker rejects non-finite coordinate numbers as
 well as booleans, strings and out-of-range numbers. This tightens the contract

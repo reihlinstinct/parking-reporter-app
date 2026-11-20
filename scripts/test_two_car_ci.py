@@ -1,9 +1,10 @@
 """Synthetic-only fixed-case controller boundary tests."""
-import copy
+import copy, hashlib, json, tempfile, zipfile
+from pathlib import Path
 import unittest
 from datetime import datetime, timezone
 from unittest.mock import patch
-from two_car_ci import execute, binding
+from two_car_ci import execute, binding, validate_package
 
 
 class Claim:
@@ -81,6 +82,37 @@ class FixedCaseTest(unittest.TestCase):
             if n==3:raise ValueError('expired')
         with self.assertRaises(ValueError):self.run_case(c,a,guard)
         self.assertEqual(c.rows[-1]['state'],'attaching');self.assertEqual(c.rows[-1]['case']['WebCaseIdInCRM'],'synthetic-web');self.assertEqual(a.calls,['preflight','create'])
+
+    def test_package_topics_preserve_explicit_vehicle_categories_only(self):
+        original=b'synthetic original';photo=b'\xff\xd8synthetic jpeg'
+        sha=lambda b:hashlib.sha256(b).hexdigest()
+        with tempfile.TemporaryDirectory() as d:
+            path=Path(d)/'input.zip'
+            for subject in ('1144','1145','1068','1015','1137','unknown'):
+                report=dict(subjectCode=subject,plate='1234567',text='synthetic vehicle 1234567',
+                    photos=[dict(path='photos/approved.jpg',sha256=sha(photo))])
+                raw=json.dumps(dict(report=report,originalSha256=sha(original),outgoingSha256=sha(photo))).encode()
+                with zipfile.ZipFile(path,'w') as z:
+                    z.writestr('trial.json',raw);z.writestr('original.jpg',original);z.writestr('photos/approved.jpg',photo)
+                pin=dict(trialSha256=sha(raw),originalSha256=sha(original),outgoingSha256=sha(photo))
+                if subject in ('1145','1068'):
+                    self.assertEqual(subject,validate_package(path,pin)[0]['report']['subjectCode'])
+                else:
+                    with self.assertRaises(ValueError):validate_package(path,pin)
+
+    def test_abandoned_vehicle_still_requires_a_real_plate_in_text(self):
+        original=b'synthetic original';photo=b'\xff\xd8synthetic jpeg'
+        sha=lambda b:hashlib.sha256(b).hexdigest()
+        with tempfile.TemporaryDirectory() as d:
+            path=Path(d)/'input.zip'
+            for plate,text in [('', 'no plate'), ('1234567', 'not identified'), ('unknown','unknown')]:
+                report=dict(subjectCode='1068',plate=plate,text=text,
+                    photos=[dict(path='photos/approved.jpg',sha256=sha(photo))])
+                raw=json.dumps(dict(report=report,originalSha256=sha(original),outgoingSha256=sha(photo))).encode()
+                with zipfile.ZipFile(path,'w') as z:
+                    z.writestr('trial.json',raw);z.writestr('original.jpg',original);z.writestr('photos/approved.jpg',photo)
+                pin=dict(trialSha256=sha(raw),originalSha256=sha(original),outgoingSha256=sha(photo))
+                with self.assertRaises(ValueError):validate_package(path,pin)
 
     def test_activation_refuses_unknown_slot_and_expiry(self):
         env={'CAR_CI_AUTHORIZED':'TWO_CAR_ONCE','TRIAL_OTHER_WRITERS_FENCED':'CONFIRMED','CAR_SLOT':'car1'}

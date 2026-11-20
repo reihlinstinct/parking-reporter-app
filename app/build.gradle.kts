@@ -30,8 +30,8 @@ android {
         minSdk = 26
         targetSdk = 37
         if (providers.gradleProperty("previewArm64").isPresent) { ndk { abiFilters += "arm64-v8a" } }
-        versionCode = 200
-        versionName = "0.53.1"
+        versionCode = 201
+        versionName = "0.54.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures {
@@ -42,7 +42,11 @@ android {
     lint { abortOnError = true }
     sourceSets {
         getByName("main") { assets.setSrcDirs(listOf(layout.buildDirectory.dir("generated/regional-main-assets").get().asFile)) }
-        getByName("test") { resources.srcDir("src/main/assets") }
+        getByName("test") {
+            resources.srcDir("src/main/assets")
+            // The committed public vectors are the test input, never a copied fixture.
+            resources.srcDir("../docs/prpkg2-spec")
+        }
         getByName("androidTest") { assets.srcDir(layout.buildDirectory.dir("generated/address-test-assets").get().asFile) }
     }
     signingConfigs {

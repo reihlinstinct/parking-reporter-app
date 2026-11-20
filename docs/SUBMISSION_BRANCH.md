@@ -25,8 +25,12 @@ private-token grant to use a broad account token as a shortcut.
 Dispatch `submission-branch.yml` from that fresh branch exactly once. Confirm
 `FILE_ONE_APPROVED_CASE`, the exclusive writer fence, all approved package
 pins, and a timezone-bearing expiry no more than six hours away. This first
-lane supports the existing numbered-address car schema (topic 1145) only.
-Other categories refuse; this does not activate the parked general batch writer.
+lane defaults to the existing numbered-address car schema (topic 1145).
+The separate `FILE_ONE_APPROVED_CABLE_HAZARD` confirmation admits only the exact
+cable event and captured path documented in `CABLE_HAZARD_ROUTE.md`; it maps to
+`CABLE_HAZARD_ONCE` in the JVM. This checks live catalog availability, not routing:
+Create sends code5164 only and the city chooses its bucket. Other categories
+refuse; this does not activate the parked general batch writer.
 
 Before execution secrets are used, check the exact repository and account IDs,
 manual-dispatch event, first attempt, branch/photo binding, source SHA equality
