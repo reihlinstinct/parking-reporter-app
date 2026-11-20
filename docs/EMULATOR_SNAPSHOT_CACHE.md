@@ -51,3 +51,8 @@ run file under multiple names cannot meet the three-run evidence threshold.
 ## Disposable emulator marker cleanup
 
 After clean emulator shutdown, the producer removes only regular files named exactly `read-snapshot.txt` inside its disposable AVD tree before writing the manifest. It never reads their contents, follows directory symlinks or removes symlink markers. All other files and all cache-content, credential/PII, symlink and provenance checks remain unchanged. The marker is still forbidden in a published or restored cache; this is producer cleanup, not a validator exception. No private evidence is processed.
+
+
+### Clean producer refusal diagnosis
+
+The main-only producer opts into `write-manifest --diagnose-clean-producer`. On rejection it prints only the rejected basename, JSON escaped and capped at 160 characters, never the directory path or file contents. This is limited to the fresh synthetic producer that has no credentials or private inputs. Consumers retain redacted fixed-vocabulary diagnostics. Validation, the allowlist and cache-save ordering are unchanged: a rejected file still stops publication. This diagnostic does not guess which file failed run 44515878752; one reviewed producer run is needed to identify it before any further cleanup change.

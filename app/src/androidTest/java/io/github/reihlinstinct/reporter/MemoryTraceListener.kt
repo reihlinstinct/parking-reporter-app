@@ -25,8 +25,8 @@ class MemoryTraceListener : RunListener() {
         // A separate perturbed run only. Heap dumps can force GC and change timing.
         if (InstrumentationRegistry.getArguments().getString("memorySnapshots") == "1" && ordinal in setOf(24, 27)) {
             val root = File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir, "memory-diagnostic")
-            check(root.isDirectory || root.mkdirs())
             try {
+                check(root.isDirectory || root.mkdirs())
                 Debug.dumpHprofData(File(root, "before-$ordinal.hprof").absolutePath)
                 record("snapshot-complete", description)
             } catch (failure: Exception) {

@@ -11,7 +11,7 @@ class BootProbeTest(unittest.TestCase):
             rows = iter([dict(javaMaxBytes=n, memoryClassMiB=512) for n in maxima])
             with patch.object(target, 'OUT', Path(directory)), \
                  patch.object(target, 'adb', return_value=configured) as calls, \
-                 patch.object(target, 'ready'), patch.object(target, 'capture'), \
+                 patch.object(target, 'ready'), patch.object(target, 'capture'), patch.object(target, 'disable_radios'), \
                  patch.object(target, 'probe', side_effect=lambda _: next(rows)), \
                  patch.object(target.time, 'sleep'):
                 target.main()
@@ -47,6 +47,32 @@ class BootProbeTest(unittest.TestCase):
         self.assertEqual(result['status'], 'reproduced_with_control')
         writes = [c.args for c in calls if 'setprop' in c.args]
         self.assertEqual(writes, [('shell','su','root','setprop','ctl.restart','zygote')])
+
+    def test_radio_isolation_is_verified_and_fails_closed(self):
+        with patch.object(target, 'adb', side_effect=['', '', '0', '0']) as calls:
+            target.disable_radios()
+            self.assertEqual(calls.call_args_list[0].args, ('shell', 'svc', 'wifi', 'disable'))
+            self.assertEqual(calls.call_args_list[1].args, ('shell', 'svc', 'data', 'disable'))
+        with patch.object(target, 'adb', return_value='1'), patch.object(target.time, 'sleep'):
+            with self.assertRaisesRegex(RuntimeError, 'Radio isolation'):
+                target.disable_radios()
+
+    def test_every_cold_and_control_probe_is_preceded_by_radio_check(self):
+        source = Path(target.__file__).read_text()
+        self.assertIn('disable_radios()\n        capture(label)', source)
+        self.assertIn("disable_radios()\n            capture('warm-control')", source)
+
+    def test_unexpected_budget_is_explicitly_stopped(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(target, 'OUT', Path(directory)), patch.object(target, 'capture'), patch.object(target, 'disable_radios'), \
+                 patch.object(target, 'probe', return_value=dict(javaMaxBytes=67108864, memoryClassMiB=512)), \
+                 patch.object(target, 'adb') as calls:
+                with self.assertRaisesRegex(RuntimeError, 'Unexpected process budget'):
+                    target.main()
+                result = __import__('json').loads((Path(directory)/'boot-probe-summary.json').read_text())
+                self.assertEqual(result['status'], 'stopped_unexpected_budget')
+                self.assertEqual(result['unexpectedBudget'], 67108864)
+                calls.assert_not_called()
 
     def test_wrong_configured_budget_refuses_intervention(self):
         with self.assertRaisesRegex(RuntimeError, 'refuse control'):
