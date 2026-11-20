@@ -40,6 +40,14 @@ class StubE2eSafetyTest {
                 assertFalse(text.contains("ReporterSettings"))
                 assertFalse(text.contains("java.net"))
                 text.replace(metadata, "localMemoryTraceOptIn").replace(snapshots, "localSnapshotOptIn")
+            } else if (testFile.name == "KeyboardInsetTest.kt") {
+                // Narrow local-only opt-in for extra synthetic IME geometry. Never a live endpoint.
+                val optIn = "InstrumentationRegistry.getArguments().getString(\"extendedKeyboardMatrix\")"
+                assertTrue(text.contains(optIn))
+                assertTrue(text.contains("municipalClientFactory = { error("))
+                assertFalse(text.contains("SecureSettings"))
+                assertFalse(text.contains("OkHttpMunicipalClient"))
+                text.replace(optIn, "localExtendedKeyboardOptIn")
             } else text
             assertFalse("Live arguments in ${testFile.name}", checkedText.contains("getArguments("))
             assertFalse("Live endpoint flag in ${testFile.name}", text.contains("e2eLive"))

@@ -61,7 +61,8 @@
         "docs/assets/guide/settings.png",
         "docs/prpkg2-spec/golden.json",
         "docs/prpkg2-spec/header.schema.json",
-        "docs/prpkg2-spec/report.schema.json"
+        "docs/prpkg2-spec/report.schema.json",
+        "docs/preview-certificate.sha256"
       ]
     },
     "gradle": {

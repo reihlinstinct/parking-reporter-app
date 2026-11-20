@@ -54,6 +54,13 @@ class PluralRulesTest {
         listOf(ONE, ONE, OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, OTHER, OTHER),
     )
 
+    @Test fun frenchMillionBoundaries() {
+        val f = PluralFamily.FRENCH_INTEGER
+        for (n in listOf(0L, 1L)) assertEquals(ONE, PluralRules.categoryOf(f, n))
+        for (n in listOf(2L, 999_999L, 1_000_001L, Long.MAX_VALUE)) assertEquals(OTHER, PluralRules.categoryOf(f, n))
+        for (n in listOf(1_000_000L, 2_000_000L, -1_000_000L)) assertEquals(MANY, PluralRules.categoryOf(f, n))
+    }
+
     @Test
     fun noFamilyCountsOneAsOne() {
         assertEquals(ONE, PluralRules.categoryOf(null, 1))
@@ -86,6 +93,7 @@ class PluralRulesTest {
             "العربية" to PluralFamily.ARABIC_6,
             "Русский" to PluralFamily.SLAVIC_ONE_FEW_MANY,
             "አማርኛ" to PluralFamily.ONE_IS_0_1,
+            "Français" to PluralFamily.FRENCH_INTEGER,
         )
         for ((name, family) in pinned) assertEquals(name, family, c.language(I18nTestFiles.codeNamed(name))!!.plural)
     }
@@ -115,5 +123,9 @@ class PluralRulesTest {
         assertEquals("0 reports", c.tp(en, "common.reports_count", 0))
         assertEquals("0 ሪፖርት", c.tp(am, "common.reports_count", 0))
         assertEquals("2 ሪፖርቶች", c.tp(am, "common.reports_count", 2))
+        val fr = I18nTestFiles.codeNamed("Français")
+        assertEquals("0 signalement", c.tp(fr, "common.reports_count", 0))
+        assertEquals("1 signalement", c.tp(fr, "common.reports_count", 1))
+        assertEquals("2 signalements", c.tp(fr, "common.reports_count", 2))
     }
 }

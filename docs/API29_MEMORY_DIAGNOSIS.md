@@ -1,6 +1,6 @@
 # API29 retained-heap diagnosis (#684)
 
-Status: manual diagnostic only. The observed 16 MiB startup budget was traced to emulator initialization, not app retention. The merged API29 heap preflight (#690), with natural recovery proof in #691, protects normal CI.
+Status: manual diagnostic only. The observed 16 MiB startup cap was traced to emulator initialization. Whether app retention or suite history contributes to other failures remains unproved. The merged API29 heap preflight (#690), with natural recovery proof in #691, protects normal CI.
 
 Run this unmitigated diagnostic only with `workflow_dispatch`. Its purpose is to retain the original bad state for investigation, so it still fails when an OOM reproduces. It does not run automatically on pull requests. Normal Android API29/30/36, display and offline runner regression checks remain required; no failure is converted into a pass.
 
@@ -63,3 +63,7 @@ Sources inspected:
 A separate `boot-probe` diagnostic records initial boot logs and actual init files, then samples up to8cold boots using one tiny instrumentation test without UI/address loading. If Runtime.maxMemory is16MiB while the configured property is512m, it records before/after a warm zygote restart on that synthetic device only. This is a control intervention, not a production CI fix. No heap property, application manifest, dependency or minimum SDK changes. No test failure is retried; each boot's observation is retained. A cold run without the mismatch is explicitly not-reproduced, never proof that the race is absent. A restart that does not restore512MiB is not claimed to do so.
 
 At422025e all five diagnostic modes and normalCI passed. Paired full suite sampled about106MiB Java used before GC, compared to about38MiB peak in the isolated classes, all with the same512MiB actual cap. Different test histories and GC headroom still prevent calling that difference a retained leak. Valid HPROFs are now available; early histogram inspection is not a retained-owner verdict.
+
+## Diagnostic follow-ups (#696)
+
+This experiment is workflow_dispatch-only. It is never dispatched by ordinary PR CI. Optional snapshot-directory failures are caught and logged, while the snapshot workflow still requires valid dump files. Unknown process caps now stop with `stopped_unexpected_budget`, not a not-reproduced result. Every cold/control probe disables Wi-Fi and mobile data and verifies both settings are zero before collecting synthetic evidence. No heap property, normal matrix or retry policy changes.

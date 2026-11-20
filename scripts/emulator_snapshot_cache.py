@@ -143,7 +143,7 @@ def verify_manifest(manifest, expected_inputs: dict, now: datetime,
         raise CacheRejected('snapshot is older than 72 hours')
 
 
-def scan_tree(root: Path) -> None:
+def scan_tree(root: Path, diagnose_clean_producer=False) -> None:
     """Reject anything in the tree that is not plain AVD content."""
     root = Path(root)
     if not root.is_dir() or root.is_symlink():
@@ -162,6 +162,9 @@ def scan_tree(root: Path) -> None:
             if lower in ALLOWED_EXACT:
                 continue
             if FORBIDDEN_NAMES.search(name) or lower.endswith(FORBIDDEN_SUFFIXES):
+                if diagnose_clean_producer:
+                    # Opt-in only for the clean, credential-free producer. Never read content.
+                    print('CLEAN-PRODUCER-REJECTED-BASENAME', json.dumps(name[:160], ensure_ascii=True))
                 raise CacheRejected('forbidden file name in cache tree: ' + rejection_label(name))
         for d in dirnames:
             if FORBIDDEN_NAMES.search(d):
@@ -233,6 +236,7 @@ def main(argv=None, env=None) -> int:
     sub.add_parser('key')
     p = sub.add_parser('write-manifest')
     p.add_argument('--avd-dir', required=True)
+    p.add_argument('--diagnose-clean-producer', action='store_true')
     p = sub.add_parser('verify')
     p.add_argument('--avd-dir', required=True)
     # Live consumers keep the default. Only the mock benchmark passes its own
@@ -247,7 +251,9 @@ def main(argv=None, env=None) -> int:
         avd = Path(args.avd_dir)
         manifest_path = avd / 'provenance.json'
         if args.cmd == 'write-manifest':
-            scan_tree(avd)
+            if args.diagnose_clean_producer and env.get('GITHUB_REF') != 'refs/heads/main':
+                raise CacheRejected('clean producer diagnostics require main')
+            scan_tree(avd, diagnose_clean_producer=args.diagnose_clean_producer)
             m = build_manifest(inputs, datetime.now(timezone.utc), env['GITHUB_REF'], env['GITHUB_SHA'])
             manifest_path.write_text(json.dumps(m, sort_keys=True, indent=1) + '\n')
             print('SNAPSHOT-MANIFEST-WRITTEN')
