@@ -18,18 +18,19 @@ class PluginWarmTest(unittest.TestCase):
 
     def test_ksp_routes_exclusively_to_central_in_both_scopes(self):
         text = (target.ROOT / 'settings.gradle.kts').read_text()
-        # Balanced braces retain nested repository blocks; compare the whole
-        # exclusive scope, so moving the fallback out or adding a repo fails.
-        blocks = []
-        for match in re.finditer(r'exclusiveContent\s*\{', text):
+        text = re.sub(r'(?m)^\s*//.*$', '', text)
+        expected_exclusive = 'exclusiveContent{forRepositories(mavenCentral(),maven{name="KspCentralAlternate";url=uri("https://repo1.maven.org/maven2")})filter{includeGroup("com.google.devtools.ksp")}}'
+        def scope(name):
+            match = re.search(name + r'\s*\{', text)
+            self.assertIsNotNone(match)
             depth, end = 1, match.end()
             while depth and end < len(text):
                 depth += (text[end] == '{') - (text[end] == '}')
                 end += 1
             self.assertEqual(0, depth)
-            blocks.append(re.sub(r'\s+', '', text[match.end():end-1]))
-        expected = 'forRepositories(mavenCentral(),maven{name="KspCentralAlternate";url=uri("https://repo1.maven.org/maven2")})filter{includeGroup("com.google.devtools.ksp")}'
-        self.assertEqual([expected, expected], blocks)
+            return re.sub(r'\s+', '', text[match.end():end-1])
+        self.assertEqual('repositories{' + expected_exclusive + 'google()mavenCentral()gradlePluginPortal()}', scope('pluginManagement'))
+        self.assertEqual('repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)repositories{' + expected_exclusive + 'google()mavenCentral()maven{url=uri("https://jitpack.io")content{includeGroup("cz.adaptech.tesseract4android")}}}', scope('dependencyResolutionManagement'))
         self.assertNotIn('allowInsecureProtocol', text)
         self.assertNotIn('isAllowInsecureProtocol', text)
         self.assertIn('google()', text)

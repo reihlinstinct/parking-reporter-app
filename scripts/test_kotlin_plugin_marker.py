@@ -1,6 +1,7 @@
 """Pin both official Kotlin marker encodings without widening dependency verification."""
 import hashlib
 import json
+import re
 from pathlib import Path
 import unittest
 import xml.etree.ElementTree as ET
@@ -25,6 +26,12 @@ def semantics(data):
         deps.append(tuple(field(dep, key) for key in ('groupId', 'artifactId', 'version')))
     return tuple(field(doc, key) for key in ('modelVersion', 'groupId', 'artifactId', 'version', 'packaging')), deps
 
+def reject_trust_bypass(metadata):
+    ns = {'v': metadata.tag.split('}')[0][1:]}
+    if metadata.find('v:configuration/v:trusted-artifacts', ns) is not None:
+        raise ValueError('Configuration-level trust rule bypasses verification')
+
+
 class MarkerTest(unittest.TestCase):
     def test_exact_official_hashes_and_semantics(self):
         rows = json.loads((FIXTURES / 'provenance.json').read_text())['artifacts']
@@ -44,18 +51,30 @@ class MarkerTest(unittest.TestCase):
         hashes = {element.get('value') for element in artifact.iter()
                   if element.tag.split('}')[-1] in {'sha256', 'also-trust'}}
         self.assertEqual({row['sha256'] for row in rows}, hashes)
-        self.assertIsNone(component.find('v:trusted-artifacts', ns))
+        reject_trust_bypass(metadata)
 
     def test_bridge_alternate_is_official_and_kotlin_only(self):
         text = (ROOT / 'api-bridge/settings.gradle.kts').read_text()
-        self.assertEqual(2, text.count('name = "KotlinCentralAlternate"'))
-        self.assertEqual(2, text.count('url = uri("https://repo1.maven.org/maven2")'))
-        self.assertEqual(2, text.count('content { includeGroupByRegex("org\\\\.jetbrains\\\\.kotlin(\\\\..*)?") }'))
-        self.assertNotIn('allowInsecureProtocol', text)
-        self.assertIn('gradlePluginPortal()', text)
-        self.assertIn('FAIL_ON_PROJECT_REPOS', text)
+        # Compare ordered complete scopes; extra/moved repositories must fail.
+        text = re.sub(r'(?m)^\s*//.*$', '', text)
+        compact = re.sub(r'\s+', '', text)
+        alternate = 'maven{name="KotlinCentralAlternate"url=uri("https://repo1.maven.org/maven2")content{includeGroupByRegex("org\\\\.jetbrains\\\\.kotlin(\\\\..*)?")}}'
+        expected = ('pluginManagement{repositories{mavenCentral()' + alternate + 'gradlePluginPortal()}}'
+                    'dependencyResolutionManagement{repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)repositories{mavenCentral()' + alternate + '}}'
+                    'rootProject.name="MunicipalApiBridge"')
+        self.assertEqual(expected, compact)
         workflow = (ROOT / '.github/workflows/api-bridge.yml').read_text()
         self.assertIn('--dependency-verification strict', workflow)
+
+    def test_configuration_trust_exception_trips_guard(self):
+        metadata = ET.parse(ROOT / 'api-bridge/gradle/verification-metadata.xml').getroot()
+        ns = {'v': metadata.tag.split('}')[0][1:]}
+        config = metadata.find('v:configuration', ns)
+        trusted = ET.SubElement(config, '{' + ns['v'] + '}trusted-artifacts')
+        ET.SubElement(trusted, '{' + ns['v'] + '}trust', group='synthetic.example')
+        self.assertIsNotNone(metadata.find('v:configuration/v:trusted-artifacts', ns))
+        with self.assertRaisesRegex(ValueError, 'bypasses verification'):
+            reject_trust_bypass(metadata)
 
     def test_dependency_mutation_is_not_equivalent(self):
         data = (FIXTURES / 'gradle-plugin-portal.xml').read_bytes()
