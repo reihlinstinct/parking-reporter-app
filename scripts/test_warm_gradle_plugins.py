@@ -1,4 +1,5 @@
 import subprocess
+import re
 import unittest
 from unittest.mock import Mock, MagicMock
 import warm_gradle_plugins as target
@@ -17,11 +18,18 @@ class PluginWarmTest(unittest.TestCase):
 
     def test_ksp_routes_exclusively_to_central_in_both_scopes(self):
         text = (target.ROOT / 'settings.gradle.kts').read_text()
-        self.assertEqual(2, text.count('exclusiveContent {'))
-        self.assertEqual(2, text.count('filter { includeGroup("com.google.devtools.ksp") }'))
-        self.assertEqual(2, text.count('forRepositories('))
-        self.assertEqual(2, text.count('url = uri("https://repo1.maven.org/maven2")'))
-        self.assertEqual(2, text.count('name = "KspCentralAlternate"'))
+        # Balanced braces retain nested repository blocks; compare the whole
+        # exclusive scope, so moving the fallback out or adding a repo fails.
+        blocks = []
+        for match in re.finditer(r'exclusiveContent\s*\{', text):
+            depth, end = 1, match.end()
+            while depth and end < len(text):
+                depth += (text[end] == '{') - (text[end] == '}')
+                end += 1
+            self.assertEqual(0, depth)
+            blocks.append(re.sub(r'\s+', '', text[match.end():end-1]))
+        expected = 'forRepositories(mavenCentral(),maven{name="KspCentralAlternate";url=uri("https://repo1.maven.org/maven2")})filter{includeGroup("com.google.devtools.ksp")}'
+        self.assertEqual([expected, expected], blocks)
         self.assertNotIn('allowInsecureProtocol', text)
         self.assertNotIn('isAllowInsecureProtocol', text)
         self.assertIn('google()', text)

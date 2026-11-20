@@ -21,7 +21,7 @@ def retryable(output, version):
 
 
 def central_probe(version, opener=None):
-    """Bounded fixed-origin HEADs after refusal, no body or response text."""
+    """Bounded fixed-origin HEADs after terminal refusal, no body or response text."""
     class NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, *args, **kwargs):
             return None

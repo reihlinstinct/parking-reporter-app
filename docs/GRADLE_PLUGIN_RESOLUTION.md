@@ -42,3 +42,11 @@ Sources:
 - https://github.com/google/ksp/issues/2021
 - https://repo.maven.apache.org/maven2/com/google/devtools/ksp/com.google.devtools.ksp.gradle.plugin/2.3.14/com.google.devtools.ksp.gradle.plugin-2.3.14.pom
 - https://repo.maven.apache.org/maven2/com/google/devtools/ksp/symbol-processing-gradle-plugin/2.3.14/symbol-processing-gradle-plugin-2.3.14.pom
+
+The captured Kotlin JVM marker POM fixtures live under
+`app/src/test/resources/gradle/kotlin-jvm-marker-2.4.21/` because they are
+read-only evidence consumed by the project's repository checks alongside its
+other test resources. They are not a Maven repository, a dependency cache or
+root dependency-verification metadata. The root Android build currently pins
+versions and official HTTPS origins, not artifact hashes. The separate
+`api-bridge/gradle/verification-metadata.xml` protects only that standalone build.

@@ -3,7 +3,8 @@ pluginManagement {
         // KSP's marker and implementation are published on Maven Central.
         // Keep this group off Google and the Plugin Portal redirect path.
         // Both are official Central hosts. A runner edge can return a false404
-        // from one; strict dependency verification still pins every artifact.
+        // from one. The version is pinned in build.gradle.kts, but this root
+        // Android build has no dependency-verification metadata.
         exclusiveContent {
             forRepositories(
                 mavenCentral(),
