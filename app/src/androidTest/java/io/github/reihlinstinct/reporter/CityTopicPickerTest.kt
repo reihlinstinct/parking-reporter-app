@@ -19,7 +19,12 @@ class CityTopicPickerTest {
         var chosen: MunicipalSubject? = null
         compose.setContent { AppTheme { CityTopicPicker(syntheticCityTopics().topics, null, emptyList(),
             mapOf("1280" to listOf("התקנת עמודים")), {}, { chosen = it }) } }
+        compose.onNodeWithTag("topic-results").assert(
+            SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.SelectableGroup))
+        compose.onNodeWithTag("picker-search-input").assert(
+            SemanticsMatcher.keyNotDefined(androidx.compose.ui.semantics.SemanticsProperties.ContentDescription))
         compose.onNodeWithTag("picker-search-input").performTextInput("התקנת עמודים")
+        compose.onNodeWithTag("picker-search-input").assertTextContains("התקנת עמודים")
         compose.waitUntil(5_000) { compose.onNodeWithText("\u20661\u2069 תוצאות").isDisplayed() }
         compose.onNodeWithText("\u20661\u2069 תוצאות").assertIsDisplayed()
             .assert(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.LiveRegion,
@@ -40,11 +45,61 @@ class CityTopicPickerTest {
         compose.onAllNodes(isSelected()).assertCountEquals(1)
         compose.onNode(isSelected()).assertHasClickAction()
             .assertContentDescriptionEquals("אחר. גינון › אחר\nתאורה › אחר")
+        assertAndroidSelectedChoice("אחר. גינון › אחר\nתאורה › אחר", expectAlternative = true)
         compose.onNodeWithTag("picker-search-input").performTextInput("5164")
         compose.onAllNodes(isSelected()).assertCountEquals(1)
+        assertAndroidSelectedChoice("אחר. גינון › אחר\nתאורה › אחר")
         compose.onNode(isSelected()).performClick()
         compose.runOnIdle { assertEquals("5164", chosen) }
         // This verifies Compose accessibility semantics, not spoken TalkBack order.
+    }
+
+    /** Check the Android accessibility bridge as well as Compose's internal tree.
+     * This still cannot establish the spoken TalkBack order or utterance count. */
+    private fun assertAndroidSelectedChoice(label: String, expectAlternative: Boolean = false) {
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        fun matches(): List<android.view.accessibility.AccessibilityNodeInfo> {
+            val result = mutableListOf<android.view.accessibility.AccessibilityNodeInfo>()
+            fun visit(node: android.view.accessibility.AccessibilityNodeInfo) {
+                if (node.contentDescription?.toString() == label && node.isVisibleToUser) {
+                    // Compose may export the description as a synthetic label child. Its
+                    // checkable radio parent is the actual accessibility choice target.
+                    var target = node
+                    while (!target.isCheckable) {
+                        val parent = target.parent ?: break
+                        target = parent
+                    }
+                    if (target.isCheckable && result.none { it == target }) result += target
+                }
+                for (i in 0 until node.childCount) node.getChild(i)?.let { visit(it) }
+            }
+            automation.rootInActiveWindow?.let { visit(it) }
+            return result
+        }
+        compose.waitUntil(5_000) { matches().size == 1 && matches().single().isChecked }
+        val nodes = matches()
+        assertEquals("One Android accessibility target per city code", 1, nodes.size)
+        assertTrue("Android must expose a checkable single choice", nodes.single().isCheckable)
+        assertTrue("Android must expose the current choice as checked", nodes.single().isChecked)
+        assertTrue("Android must expose an enabled selected choice", nodes.single().isEnabled)
+        // AndroidX intentionally marks an already-selected radio as not clickable.
+        // Its unselected sibling must remain a native actionable choice.
+        val parent = nodes.single().parent
+        assertNotNull("Radio choice has a list parent", parent)
+        fun hasActionableUnselectedRadio(node: android.view.accessibility.AccessibilityNodeInfo): Boolean {
+            if (node.isCheckable && !node.isChecked && node.isClickable && node.isEnabled) return true
+            return (0 until node.childCount).any { index ->
+                node.getChild(index)?.let { hasActionableUnselectedRadio(it) } == true
+            }
+        }
+        // Filtering by5164 intentionally removes the alternative row.
+        if (expectAlternative) {
+            assertTrue("Unselected city code remains actionable", hasActionableUnselectedRadio(parent!!))
+        }
+        // AndroidX keeps composite selectable rows as android.view.View when
+        // they have independently exposed text children. Checked/checkable and
+        // one-target identity above are the state contract, not a widget class.
+        assertEquals("android.view.View", nodes.single().className?.toString())
     }
 
     @Test fun searchableMunicipalCatalogRecordingUsesMockRefreshNotLiveCity() {
@@ -162,19 +217,29 @@ class CityTopicPickerTest {
 
     private fun assertPickerGeometry() {
         val title = compose.onNodeWithTag("picker-title").fetchSemanticsNode().boundsInRoot
-        val label = compose.onNodeWithTag("picker-search-label").fetchSemanticsNode().boundsInRoot
+        val label = compose.onNodeWithTag("picker-search-label", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val input = compose.onNodeWithTag("picker-search-input").fetchSemanticsNode().boundsInRoot
         assertTrue("Search label must not cross title", label.top >= title.bottom)
-        assertTrue("Search input must start below external label", input.top >= label.bottom)
+        assertTrue("Floating search label must fit within the field width", label.left >= input.left && label.right <= input.right)
+        // The state-based field container includes its Above label as well as the editor.
+        assertTrue("Above-field search label must fit in the field container", label.bottom <= input.bottom)
         assertTextInkFits("picker-search-label")
+        // This proves decoration/label bounds and text ink fit, not separation
+        // from the inner editor glyphs. Native accessibility character rectangles
+        // for the state-based field are anchored to the outer Above-label origin
+        // on current Compose, so they cannot establish that separation. Inspect
+        // the captured compact/foldable screenshots for the remaining visual claim.
     }
+
     private fun assertTextInkFits(tag: String) {
         val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
         compose.onNodeWithTag(tag, useUnmergedTree = true).performSemanticsAction(
             androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { it(layouts) }
         assertTrue("Text layout must be inspected", layouts.isNotEmpty())
         for (layout in layouts) {
-            assertFalse("Text overflows its layout: $tag", layout.hasVisualOverflow)
+            assertFalse("Text overflows its layout: $tag size=${layout.size} lines=${layout.lineCount} " +
+                "height=${layout.multiParagraph.height} width=${layout.multiParagraph.width} " +
+                "constraints=${layout.layoutInput.constraints} overflowW=${layout.didOverflowWidth} overflowH=${layout.didOverflowHeight}", layout.hasVisualOverflow)
             for (i in layout.layoutInput.text.indices) {
                 if (layout.layoutInput.text[i].isWhitespace()) continue
                 val glyph = layout.getBoundingBox(i)

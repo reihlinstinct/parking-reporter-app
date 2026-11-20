@@ -38,11 +38,17 @@ class SettingsScreenSecondSaveTest {
         compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().performClick()
         compose.runOnIdle { assertEquals("first save callback", 1, saves) }
         compose.onNodeWithText("טלפון").performScrollTo().performTextReplacement("0500000001")
+        capture("settings-second-save-before-edit-assert.png")
         compose.onNodeWithText("טלפון").assertTextContains("0500000001")
+        compose.runOnIdle { assertEquals("Editing alone cannot save", 1, saves) }
         // Finish the IME transition before locating/tapping the scrolled save button.
         androidx.test.espresso.Espresso.closeSoftKeyboard()
         compose.waitForIdle()
-        compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().performClick()
+        compose.onNodeWithText("טלפון").assertTextContains("0500000001")
+        compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo()
+        capture("settings-second-save-before-click.png")
+        compose.onNodeWithText("אמת זהות ושמור מוצפן").performClick()
+        capture("settings-second-save-before-result-assert.png")
         compose.runOnIdle {
             assertEquals("second save callback", 2, saves)
             assertEquals("+972500000001", saved?.phone)
@@ -69,4 +75,14 @@ class SettingsScreenSecondSaveTest {
             assertEquals("synthetic-api-user", saved?.municipalUsername)
         }
     }
+    private fun capture(name: String) {
+        compose.waitForIdle()
+        val instrumentation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+        val bitmap = instrumentation.uiAutomation.takeScreenshot()
+        java.io.File(instrumentation.targetContext.filesDir, name).outputStream().use {
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+        }
+        bitmap.recycle()
+    }
+
 }

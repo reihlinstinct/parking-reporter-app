@@ -33,6 +33,22 @@ class StreetDirectory private constructor(
 
     data class ConfirmableAddress(val address: String, val latitude: Double, val longitude: Double)
 
+    /** Local bounded suggestions, never a confirmed address or a network query. */
+    fun suggestStreets(query: String, limit: Int = 5): List<String> {
+        require(limit in 1..20)
+        val wanted = normalize(query)
+        if (wanted.length < 2) return emptyList()
+        return aliases.entries.asSequence()
+            .filter { (alias, codes) -> codes.size == 1 && alias.contains(wanted) }
+            .mapNotNull { (alias, codes) -> streets[codes.single()]?.let { name ->
+                Triple(if (alias.startsWith(wanted)) 0 else 1, name, codes.single())
+            } }
+            .sortedWith(compareBy<Triple<Int, String, String>> { it.first }.thenBy { it.second }.thenBy { it.third })
+            .distinctBy { it.third }
+            .map { it.second }
+            .take(limit).toList()
+    }
+
     /** Offline explicit address lookup, never device location or nearest-house guessing. */
     fun findConfirmedAddress(street: String, house: String): ConfirmableAddress {
         val resolved = resolve(street, house, null)

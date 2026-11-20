@@ -87,7 +87,7 @@ class StringsAssetTest {
             assertEquals(language.code, expected, language.layoutDirection)
         }
         // Direction pins for the languages shipped today, named by their own names.
-        val pinned = mapOf("עברית" to TextDir.RTL, "English" to TextDir.LTR, "العربية" to TextDir.RTL, "Русский" to TextDir.LTR, "አማርኛ" to TextDir.LTR)
+        val pinned = mapOf("עברית" to TextDir.RTL, "English" to TextDir.LTR, "العربية" to TextDir.RTL, "Русский" to TextDir.LTR, "አማርኛ" to TextDir.LTR, "Français" to TextDir.LTR)
         for ((name, dir) in pinned) assertEquals(name, dir, catalog.language(I18nTestFiles.codeNamed(name))!!.dir)
         assertEquals(LayoutDirection.Rtl, Language("x", "x", TextDir.RTL, false, null).layoutDirection)
         assertEquals(LayoutDirection.Ltr, Language("y", "y", TextDir.LTR, false, null).layoutDirection)

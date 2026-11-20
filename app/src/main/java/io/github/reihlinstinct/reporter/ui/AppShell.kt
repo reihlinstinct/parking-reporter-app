@@ -115,7 +115,16 @@ fun AppShell(
     val holdShell by rememberUpdatedState { if (page == "review") draft?.let { ReviewRotationState.holdShell(ReviewRotationState.Shell(it, original, revision)) } }
     DisposableEffect(Unit) { onDispose { if (shellActivity?.isChangingConfigurations == true) holdShell() } }
     // Any page other than Review ends the hold, so a rotation never leaves personal fields parked.
-    LaunchedEffect(page) { if (page != "review") ReviewRotationState.clear() }
+    var previousRecoveryPage by remember { mutableStateOf(page) }
+    LaunchedEffect(page) {
+        if (page != "review") ReviewRotationState.clear()
+        // Initial home after process death is not an exit from Review: retain the checkpoint for
+        // explicit authenticated reopen. Only an observed Review -> another page transition retires it.
+        if (previousRecoveryPage == "review" && page != "review") {
+            io.github.reihlinstinct.reporter.security.ReviewRecoveryOwner.controller?.terminal()
+        }
+        previousRecoveryPage = page
+    }
     var records by remember { mutableStateOf<List<ReportRecord>>(emptyList()) }
     var saving by remember { mutableStateOf(false) }
     suspend fun reload() { records = withContext(Dispatchers.IO) { database.reports().all() } }
@@ -185,6 +194,8 @@ fun AppShell(
         authenticate(strings.t("shell.unlock.submit_title"),
             strings.t("shell.unlock.submit_subtitle")) {
             Log.i("SUBMIT_FLOW", "submitReport authenticate callback: setting submitting=true")
+            // Recovery never survives the authenticated start of a submission attempt.
+            io.github.reihlinstinct.reporter.security.ReviewRecoveryOwner.controller?.terminal()
             submitting = true
             submissionNote = strings.t("shell.submit.sending")
             scope.launch(Dispatchers.Main) {
@@ -302,6 +313,7 @@ fun AppShell(
                         value.digest().takeIf { value.isReady() })
                 }
                 check(updated == 1)
+                io.github.reihlinstinct.reporter.security.ReviewRecoveryOwner.controller?.terminal()
                 revision += 1
                 draft = value; status = strings.t("shell.status.draft_saved")
                 reload()
@@ -323,6 +335,7 @@ fun AppShell(
     // camera (system Back, bottom nav, another entry) and is read only by a camera capture.
     LaunchedEffect(page) { if (page != "camera") pendingCategory = null }
     fun startReview(file: File, usePhotoLocation: Boolean = true, categoryHint: String? = null) {
+        io.github.reihlinstinct.reporter.security.ReviewRecoveryOwner.controller?.terminal()
         // One-shot starting choice from the assistant entry; the person can change it in review.
         val startSubject = categoryHint?.let { code ->
             io.github.reihlinstinct.reporter.core.ReportCategory.from(code)?.let { "municipal:" + it.municipalSubjectCode }
@@ -635,7 +648,11 @@ fun AppShell(
                 addressLoading = false
             }
             val readyDirectory = streetsDirectory.takeUnless { addressLoading }
+            val stableStreetSuggestions: ((String) -> List<String>)? = remember(readyDirectory) {
+                readyDirectory?.let { directory -> { query -> directory.suggestStreets(query) } }
+            }
             ReviewScreen(value, image, ::saveDraft,
+                streetSuggestions = stableStreetSuggestions,
                 addressDataAvailable = readyDirectory != null,
                 manualAddressLookup = readyDirectory?.let { directory -> { street, house -> directory.findConfirmedAddress(street, house) } },
                 crossingLookup = readyDirectory?.let { directory -> { a, b -> directory.findIntersectionAddress(a, b) } },
@@ -647,7 +664,22 @@ fun AppShell(
                 topicSelected = { topicRepository.selected(it) }, recentTopics = topicRepository.recentCodes(), topicAliases = topicAliases, plateEnables = topicRepository.plateEnables(), registryLookup = registryLookup,
                 sidewalkScorer = { bitmap -> withContext(Dispatchers.Default) { io.github.reihlinstinct.reporter.recognition.SidewalkSuggestion.score(context, bitmap) } })
         }
-        "settings" -> SettingsScreen(profile, save = { value, touchedMunicipal, cleared ->
+        "settings" -> SettingsScreen(profile, deleteSavedPassport = { cleared ->
+            if (!hasDeviceCredential()) status = strings.t("shell.submit.no_device_lock")
+            else authenticate(strings.t("settings.passport.delete_title"), strings.t("settings.passport.delete_body")) {
+                try {
+                    // Explicit isolated delete, never the blank-preserving save merge. Fresh read after auth.
+                    val current = readSettings()
+                    if (current != null) {
+                        val updated = current.copy(passportNumber = "")
+                        saveSettings(updated)
+                        profile = updated
+                    }
+                    cleared()
+                    status = strings.t("settings.passport.deleted")
+                } catch (_: Exception) { status = strings.t("shell.status.settings_save_failed") }
+            }
+        }, save = { value, touchedMunicipal, cleared ->
             persistSettings(value, touchedMunicipal, cleared)
         }, back = { profile = null; page = "home" }, noDeviceCredential = !hasDeviceCredential(), debugTools = if (BuildConfig.DEBUG) {
             {

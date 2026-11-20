@@ -36,6 +36,10 @@ class KeyboardInsetTest {
     }
 
     @Before fun productionEdgeToEdgeAndRealIme() {
+        InstrumentationRegistry.getInstrumentation().targetContext.let {
+            io.github.reihlinstinct.reporter.i18n.UiPrefsLanguageStore.of(it).set(
+                io.github.reihlinstinct.reporter.i18n.AppCatalog.defaultCode(it))
+        }
         priorImeSetting = shell("settings get secure show_ime_with_hard_keyboard")
         compose.activityRule.scenario.onActivity {
             it.enableEdgeToEdge()
@@ -69,6 +73,62 @@ class KeyboardInsetTest {
         capture("review-real-ime-synthetic.png")
     }
 
+    @Test fun shellSettingsSaveStaysAboveRealIme() = shellSettingsKeyboardCase(1f)
+
+    @Test fun shellSettingsSaveStaysAboveRealImeAt200Percent() {
+        org.junit.Assume.assumeTrue(
+            "200% proof is manual/weekly, not every PR",
+            InstrumentationRegistry.getArguments().getString("extendedKeyboardMatrix") == "1")
+        shellSettingsKeyboardCase(2f)
+    }
+
+    private fun shellSettingsKeyboardCase(fontScale: Float) {
+        seedSyntheticCityTopics()
+        compose.setContent {
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalDensity provides
+                    androidx.compose.ui.unit.Density(density.density, fontScale)
+            ) {
+                AppTheme {
+                    io.github.reihlinstinct.reporter.ui.AppShell(
+                        authenticate = { _, _, action -> action() },
+                        requestCamera = {}, readSettings = { null }, saveSettings = {},
+                        municipalClientFactory = { error("No municipal client is allowed in this test") })
+                }
+            }
+        }
+        compose.onNodeWithText("הגדרות").performClick()
+        compose.onNodeWithText("אימייל").performScrollTo().performClick()
+            .performTextInput("synthetic@example.invalid")
+        waitForIme()
+        compose.onNodeWithText("אמת זהות ושמור מוצפן").performScrollTo().assertIsDisplayed()
+        assertAboveIme("אמת זהות ושמור מוצפן")
+        capture("shell-settings-real-ime-${fontScale}.png")
+    }
+
+    @Test fun reviewPlateAndDescriptionKeepBothActionsAboveRealIme() {
+        val initial = ReviewDraft(Evidence("ime-actions-synthetic", "a".repeat(64),
+            "2026-01-01T12:00:00+02:00", 31.77, 35.21), "1234567", "רחוב בדיקה 1",
+            "sidewalk_parking", "רכב 1234567 חונה על המדרכה", emptySet())
+        compose.setContent { AppTheme { ReviewScreen(initial, null, {}, {}, onSubmit = {},
+            topicSnapshot = syntheticCityTopics(), topicsAvailable = true,
+            registryLookup = { _, _ -> kotlinx.coroutines.awaitCancellation() }) } }
+        compose.onNodeWithText("ערוך").performClick()
+        for ((field, value) in listOf(
+            "מספר לוחית (ספרות בלבד)" to "1234567",
+            "הטקסט המדויק לבדיקה" to "רכב 1234567 חונה על המדרכה בתרחיש סינתטי")) {
+            compose.onNodeWithText(field).performScrollTo().performClick().performTextReplacement(value)
+            waitForIme()
+            compose.onNodeWithText(field).assertTextContains(value)
+            for (action in listOf("שמור טיוטה", "שלח לעירייה")) {
+                compose.onNodeWithText(action).performScrollTo().assertIsDisplayed()
+                assertAboveIme(action)
+            }
+            capture("review-actions-real-ime-${field.hashCode()}.png")
+        }
+    }
+
     private fun waitForIme() {
         compose.waitUntil(10_000) {
             ViewCompat.getRootWindowInsets(compose.activity.window.decorView)
@@ -82,7 +142,10 @@ class KeyboardInsetTest {
         val decor = compose.activity.window.decorView
         val inset = ViewCompat.getRootWindowInsets(decor)!!.getInsets(WindowInsetsCompat.Type.ime()).bottom
         val target = compose.onNodeWithText(label).fetchSemanticsNode().boundsInRoot
-        val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
+        // Text-selection handles can add a tiny popup root on API36. Measure
+        // the root containing this action, not an arbitrary global root.
+        val root = compose.onNode(isRoot() and hasAnyDescendant(hasText(label)))
+            .fetchSemanticsNode().boundsInRoot
         assertTrue("Real keyboard must have a measurable inset", inset > 0)
         // imePadding shrinks the scroll viewport. The complete action must fit.
         assertTrue("Action remains in the visible content: $target vs $root", target.top >= root.top && target.bottom <= minOf(root.bottom, (decor.height - inset).toFloat()))

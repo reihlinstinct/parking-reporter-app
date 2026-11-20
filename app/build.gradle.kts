@@ -5,6 +5,13 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+val persistentPreviewSigning = providers.gradleProperty("persistentPreviewSigning").isPresent
+if (persistentPreviewSigning) {
+    check(providers.gradleProperty("previewSideBySide").isPresent) {
+        "Persistent preview signing requires the separate preview application identity"
+    }
+}
+
 android {
     namespace = "io.github.reihlinstinct.reporter"
     compileSdk = 37
@@ -26,8 +33,23 @@ android {
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     lint { abortOnError = true }
     sourceSets { getByName("test") { resources.srcDir("src/main/assets") } }
+    signingConfigs {
+        if (persistentPreviewSigning) {
+            create("persistentPreview") {
+                storeFile = file(requireNotNull(System.getenv("PREVIEW_SIGNING_STORE_PATH")) { "Preview signing store unavailable" })
+                storePassword = requireNotNull(System.getenv("PREVIEW_SIGNING_PASSWORD")) { "Preview signing password unavailable" }
+                keyAlias = "preview"
+                keyPassword = storePassword
+                storeType = "PKCS12"
+            }
+        }
+    }
     buildTypes {
         debug {
+            if (persistentPreviewSigning) {
+                check(applicationIdSuffix == ".preview") { "Separate preview identity has not been configured" }
+                signingConfig = signingConfigs.getByName("persistentPreview")
+            }
             isTestCoverageEnabled = true
         }
     }
@@ -68,6 +90,7 @@ dependencies {
     implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
     implementation("com.google.crypto.tink:tink-android:1.24.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-process:2.8.7")
     implementation("androidx.room:room-runtime:2.8.5")
     implementation("androidx.room:room-ktx:2.8.5")
     ksp("androidx.room:room-compiler:2.8.5")
