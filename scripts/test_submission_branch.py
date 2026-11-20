@@ -43,6 +43,7 @@ class SourceTest(unittest.TestCase):
     def test_bicycle_confirmation_keeps_all_source_boundaries(self):
         env=dict(self.env,SUBMISSION_CONFIRM='FILE_ONE_APPROVED_ABANDONED_BICYCLE')
         self.assertEqual(self.guard(env)['originalSha256'],'b'*64)
+        self.assertEqual(s.bridge_mode(env['SUBMISSION_CONFIRM']),'ABANDONED_BICYCLE_ONCE')
         for change in [dict(GITHUB_ACTOR_ID='other'),dict(GITHUB_RUN_ATTEMPT='2'),
                        dict(TRIAL_OTHER_WRITERS_FENCED='NO'),dict(APPROVED_ORIGINAL_SHA256='a'*64)]:
             with self.assertRaises(ValueError):self.guard(dict(env,**change))

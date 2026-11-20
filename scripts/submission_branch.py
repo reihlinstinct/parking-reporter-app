@@ -89,8 +89,11 @@ def source_guard(env, read=github_read):
 
 
 def bridge_mode(confirm):
-    need(confirm in {'FILE_ONE_APPROVED_CASE', 'FILE_ONE_APPROVED_CABLE_HAZARD'}, 'case mode refused')
-    return 'CABLE_HAZARD_ONCE' if confirm == 'FILE_ONE_APPROVED_CABLE_HAZARD' else 'TWO_CAR_ONCE'
+    modes = {'FILE_ONE_APPROVED_CASE': 'TWO_CAR_ONCE',
+             'FILE_ONE_APPROVED_CABLE_HAZARD': 'CABLE_HAZARD_ONCE',
+             'FILE_ONE_APPROVED_ABANDONED_BICYCLE': 'ABANDONED_BICYCLE_ONCE'}
+    need(confirm in modes, 'case mode refused')
+    return modes[confirm]
 
 
 def main():
