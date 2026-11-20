@@ -201,7 +201,7 @@ def scan_tree(root: Path, diagnose_clean_producer=False) -> None:
                     # Opt-in only for the clean, credential-free producer. Never read content.
                     print('CLEAN-PRODUCER-REJECTED-BASENAME', json.dumps(name[:160], ensure_ascii=True))
                     if name == 'qemu-version.txt':
-                        print('CLEAN-PRODUCER-QEMU-VERSION-SHAPE', diagnose_qemu_version(p))
+                        print('CLEAN-PRODUCER-QEMU-VERSION-SHAPE', diagnose_qemu_version(Path(dirpath) / name))
                 raise CacheRejected('forbidden file name in cache tree: ' + rejection_label(name))
         for d in dirnames:
             if FORBIDDEN_NAMES.search(d):
