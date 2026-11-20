@@ -5,6 +5,8 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+val sideBySidePreview = providers.gradleProperty("previewSideBySide").isPresent
+
 android {
     namespace = "io.github.reihlinstinct.reporter"
     compileSdk = 37
@@ -12,6 +14,7 @@ android {
         // Installed identity stays stable across the source namespace rename.
         applicationId = "il.sidewalks.reporter"
         testApplicationId = "il.sidewalks.reporter.test"
+        if (sideBySidePreview) { testApplicationId = "il.sidewalks.reporter.preview.test" }
         minSdk = 26
         targetSdk = 37
         if (providers.gradleProperty("previewArm64").isPresent) { ndk { abiFilters += "arm64-v8a" } }
@@ -25,9 +28,21 @@ android {
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     lint { abortOnError = true }
-    sourceSets { getByName("test") { resources.srcDir("src/main/assets") } }
+    sourceSets {
+        getByName("test") { resources.srcDir("src/main/assets") }
+        if (sideBySidePreview) {
+            getByName("debug") {
+                manifest.srcFile("src/sideBySidePreview/AndroidManifest.xml")
+                res.srcDir("src/sideBySidePreview/res")
+            }
+        }
+    }
     buildTypes {
         debug {
+            if (sideBySidePreview) {
+                applicationIdSuffix = ".preview"
+                versionNameSuffix = "-preview"
+            }
             isTestCoverageEnabled = true
         }
     }
