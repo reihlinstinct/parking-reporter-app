@@ -48,7 +48,11 @@ def validate_package(path, pin, *, cable_hazard=False, abandoned_bicycle=False):
         need(set(r) == {'reportId', 'text', 'subjectCode', 'streetCode', 'streetName', 'houseNumber',
                         'coordinateX', 'coordinateY', 'plate', 'photos', 'eventType', 'subjectPath', 'distinguishingDescription'}, 'bicycle fields refused')
     else:
-        need(isinstance(r['plate'], str) and re.fullmatch('[0-9]{7,8}', r['plate']) and (any(token.replace('-', '') == r['plate'] for token in re.findall(r'(?<![0-9-])[0-9]+(?:-[0-9]+)*(?![0-9-])', r['text'])) if cable_hazard else r['plate'] in r['text']), 'case identifier refused')
+        need(isinstance(r['plate'], str) and re.fullmatch('[0-9]{7,8}', r['plate']), 'case plate refused')
+        identifier_present = (any(token.replace('-', '') == r['plate'] for token in
+            re.findall(r'(?<![0-9-])[0-9]+(?:-[0-9]+)*(?![0-9-])', r['text']))
+            if cable_hazard else r['plate'] in r['text'])
+        need(identifier_present, 'case identifier refused')
         if cable_hazard:
             need(r['subjectCode'] == '5164' and r.get('eventType') == 'charging_cable_sidewalk_hazard'
                  and r.get('subjectPath') == ['כבישים מדרכות', 'אחר'], 'cable hazard category refused')
