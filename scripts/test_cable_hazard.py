@@ -6,7 +6,7 @@ from two_car_ci import validate_package
 class CableHazardTest(unittest.TestCase):
     def test_exact_mode_path_and_all_digests_required(self):
         photo=b'\xff\xd8synthetic';h=lambda x:hashlib.sha256(x).hexdigest()
-        report=dict(reportId='synthetic',text='synthetic cable 01234567',subjectCode='5164',plate='01234567',streetCode='1',streetName='synthetic',houseNumber='2',coordinateX=220000,coordinateY=630000,photos=[dict(path='photos/approved.jpg',sha256=h(photo))],eventType='charging_cable_sidewalk_hazard',subjectPath=['כבישים מדרכות','אחר'])
+        report=dict(reportId='synthetic',text='synthetic cable 012-34-567',subjectCode='5164',plate='01234567',streetCode='1',streetName='synthetic',houseNumber='2',coordinateX=220000,coordinateY=630000,photos=[dict(path='photos/approved.jpg',sha256=h(photo))],eventType='charging_cable_sidewalk_hazard',subjectPath=['כבישים מדרכות','אחר'])
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'input.zip'
             def package(r):

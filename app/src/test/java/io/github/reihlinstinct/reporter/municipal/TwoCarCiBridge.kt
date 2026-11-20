@@ -108,7 +108,8 @@ class TwoCarCiBridge(private val client: MunicipalClient,
                 require(raw["subjectCode"] == "5164" && raw["eventType"] == "charging_cable_sidewalk_hazard" && raw["subjectPath"] == CABLE_PATH)
             } else require(raw["subjectCode"] == ReportCategory.SIDEWALK_PARKING.municipalSubjectCode)
             val plate = raw["plate"] as String
-            require(Regex("[0-9]{7,8}").matches(plate) && (raw["text"] as String).contains(plate))
+            val text = raw["text"] as String
+            require(Regex("[0-9]{7,8}").matches(plate) && (if (cableHazard) text.replace("-", "") else text).contains(plate))
             val x = (raw["coordinateX"] as Number).toInt(); val y = (raw["coordinateY"] as Number).toInt()
             require(x in 200000..240000 && y in 610000..650000)
             return MunicipalPayloads.buildReport(MunicipalPayloads.ReportFields(
