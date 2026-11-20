@@ -52,6 +52,34 @@ class AddressShardIndex(json: String) {
         } ?: false }.map { it.id }.toSet()
     }
 
+    private val suggestionDirectory by lazy { StreetDirectory.loadRows(streets, emptySequence()) }
+
+    /** Index-only, bounded, no point download and no exact address confirmation. */
+    fun suggestStreets(query: String, limit: Int = 5) = suggestionDirectory.suggestStreets(query, limit)
+
+    /** Production GPS orchestration: outside rows may disambiguate, never establish coverage. */
+    @Suppress("UNCHECKED_CAST")
+    fun loadForLocation(latitude: Double, longitude: Double,
+        document: (String) -> Map<String, Any?>): StreetDirectory {
+        val ids = candidates(latitude, longitude)
+        require(ids.isNotEmpty()) { "Location has no address-data region" }
+        val documents = ids.associateWith(document)
+        val regions = documents.map { (id, root) ->
+            val polygons = (root["polygons"] as List<List<List<List<Number>>>>).map { polygon -> polygon.map { ring ->
+                ring.map { point -> require(point.size == 2); AddressPolygons.Point(point[0].toDouble(), point[1].toDouble()) }
+            } }
+            AddressPolygons.Region(id, polygons)
+        }
+        require(AddressPolygons.select(regions, latitude, longitude).isNotEmpty()) {
+            "Location outside CBS2022 coverage; supply a manual address"
+        }
+        // Null-bbox rows are the pinned outside-coverage shard, not a polygon.
+        // Its points must compete with near-edge points to avoid false uniqueness.
+        val ambiguityDocuments = shards.filter { it.bbox == null }.map { document(it.id) }
+        val rows = (documents.values + ambiguityDocuments).flatMap { it["addresses"] as List<Any?> }.distinct()
+        return StreetDirectory.loadRows(streets, rows.asSequence())
+    }
+
     private fun normalize(text: String): String {
         val finals = mapOf('ך' to 'כ', 'ם' to 'מ', 'ן' to 'נ', 'ף' to 'פ', 'ץ' to 'צ')
         return Normalizer.normalize(text, Normalizer.Form.NFKC).map { finals[it] ?: it }

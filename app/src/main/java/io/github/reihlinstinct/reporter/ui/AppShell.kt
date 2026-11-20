@@ -675,8 +675,10 @@ fun AppShell(
             }
             val readyDirectory = streetsDirectory.takeUnless { addressLoading }
             val addressReady = !addressLoading && addressIndexReady
-            val stableStreetSuggestions: ((String) -> List<String>)? = remember(readyDirectory) {
-                readyDirectory?.let { directory -> { query -> directory.suggestStreets(query) } }
+            val stableStreetSuggestions: ((String) -> List<String>)? = remember(readyDirectory, addressReady) {
+                if (!addressReady) null else { query ->
+                    readyDirectory?.suggestStreets(query) ?: onlineAddresses.suggestStreets(query)
+                }
             }
             ReviewScreen(value, image, ::saveDraft,
                 streetSuggestions = stableStreetSuggestions,

@@ -31,7 +31,7 @@ class OnlineStreetDirectory(private val context: Context) {
         .followRedirects(false).followSslRedirects(false).retryOnConnectionFailure(false)
         .build()
 
-    fun prepare() { if (!imported.available()) index }
+    fun prepare() { index }
     fun importLocal(input: InputStream) = imported.store(input)
     fun clear() {
         imported.clear()
@@ -47,25 +47,12 @@ class OnlineStreetDirectory(private val context: Context) {
         return load(index.forStreets(names))
     }
 
-    @Suppress("UNCHECKED_CAST")
+    fun suggestStreets(query: String, limit: Int = 5) = index.suggestStreets(query, limit)
+
     fun loadForLocation(latitude: Double, longitude: Double): StreetDirectory {
         if (imported.available()) return BundledStreetDirectory.load { imported.verifiedFile().inputStream() }
-        val ids = index.candidates(latitude, longitude)
-        require(ids.isNotEmpty()) { "Location has no address-data region" }
-        val documents = ids.associateWith { document(it) }
-        val regions = documents.map { (id, root) -> AddressPolygons.Region(id, polygons(root)) }
-        require(AddressPolygons.select(regions, latitude, longitude).isNotEmpty()) {
-            "Location outside CBS2022 coverage; supply a manual address"
-        }
-        val rows = documents.values.flatMap { it["addresses"] as List<Any?> }.distinct()
-        return StreetDirectory.loadRows(index.streets, rows.asSequence())
+        return index.loadForLocation(latitude, longitude, ::document)
     }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun polygons(root: Map<String, Any?>): List<List<List<AddressPolygons.Point>>> =
-        (root["polygons"] as List<List<List<List<Number>>>>).map { polygon -> polygon.map { ring ->
-            ring.map { point -> require(point.size == 2); AddressPolygons.Point(point[0].toDouble(), point[1].toDouble()) }
-        } }
 
     @Suppress("UNCHECKED_CAST")
     private fun document(id: String): Map<String, Any?> {
