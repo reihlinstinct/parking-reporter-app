@@ -88,6 +88,11 @@ def source_guard(env, read=github_read):
     return pin
 
 
+def bridge_mode(confirm):
+    need(confirm in {'FILE_ONE_APPROVED_CASE', 'FILE_ONE_APPROVED_CABLE_HAZARD'}, 'case mode refused')
+    return 'CABLE_HAZARD_ONCE' if confirm == 'FILE_ONE_APPROVED_CABLE_HAZARD' else 'TWO_CAR_ONCE'
+
+
 def main():
     import sys
     env = os.environ
@@ -126,7 +131,7 @@ def main():
         keys = ('PATH', 'JAVA_HOME', 'J106_SUBSCRIPTION_KEY', 'J106_APP_USERNAME', 'J106_APP_PASSWORD',
                 'REPORTER_FIRST_NAME', 'REPORTER_LAST_NAME', 'REPORTER_PHONE', 'REPORTER_ID_NUMBER', 'REPORTER_EMAIL')
         child = {k: env[k] for k in keys if k in env}
-        child.update(CAR_CI_AUTHORIZED='CABLE_HAZARD_ONCE' if cable_hazard else 'TWO_CAR_ONCE', BATCH_PRIVATE_ROOT=str(root))
+        child.update(CAR_CI_AUTHORIZED=bridge_mode(env['SUBMISSION_CONFIRM']), BATCH_PRIVATE_ROOT=str(root))
         from live_batch_hybrid import BridgeAdapter
         cp = Path('app/build/batch-bridge/classpath.txt').read_text().strip()
         need(bool(cp), 'production bridge unavailable')

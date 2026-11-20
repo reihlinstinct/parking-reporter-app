@@ -31,6 +31,15 @@ class SourceTest(unittest.TestCase):
     def test_exact_main_owner_new_dispatch_and_green_checks_pass(self):
         self.assertEqual(self.guard()['originalSha256'],'b'*64)
 
+    def test_cable_confirmation_and_exact_bridge_mapping(self):
+        env=dict(self.env,SUBMISSION_CONFIRM='FILE_ONE_APPROVED_CABLE_HAZARD')
+        self.assertEqual(self.guard(env)['originalSha256'],'b'*64)
+        self.assertEqual(s.bridge_mode(env['SUBMISSION_CONFIRM']),'CABLE_HAZARD_ONCE')
+        self.assertEqual(s.bridge_mode('FILE_ONE_APPROVED_CASE'),'TWO_CAR_ONCE')
+        for wrong in ('FILE_ONE_APPROVED_CABLE_HAZARD ', 'CABLE_HAZARD_ONCE', 'file_one_approved_cable_hazard'):
+            with self.assertRaises(ValueError):self.guard(dict(env,SUBMISSION_CONFIRM=wrong))
+            with self.assertRaises(ValueError):s.bridge_mode(wrong)
+
     def test_wrong_actor_fork_pr_rerun_main_or_unbound_branch_refused(self):
         for change in [dict(GITHUB_ACTOR_ID='other'),dict(GITHUB_TRIGGERING_ACTOR='other'),
                        dict(GITHUB_REPOSITORY='other/fork'),dict(GITHUB_REPOSITORY_ID='other'),

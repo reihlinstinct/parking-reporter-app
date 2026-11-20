@@ -23,7 +23,13 @@ current availability. After Login, before contact registration, claim or Create,
 the bridge reads the live catalog and requires code5164, name Other, and the
 exact Roads/Sidewalks path. A missing, renamed or differently parented category
 stops the run without creating a case. Other5164 paths, including parking, do not
-satisfy this check.
+satisfy this check. This verifies catalog availability only, not case routing.
+Code 5164 is shared by multiple catalog rows, including parking/Other. The
+production Create contract sends only `CaseSubjectCode`; it has no verified
+category-path field. `subjectPath` is an internal preflight condition and is
+not transmitted. The city decides routing for code-only 5164, and this route
+has not verified which bucket receives the case. Do not promise a specific
+bucket when reporting the result. The approved hazard text remains unchanged.
 
 Exact approved text, address and photo must still be supplied by the executor.
 There is no automatic wording or claim about capture time, cable height, live

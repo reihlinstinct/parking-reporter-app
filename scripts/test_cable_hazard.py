@@ -18,7 +18,7 @@ class CableHazardTest(unittest.TestCase):
             pin=package(report)
             self.assertEqual(validate_package(path,pin,cable_hazard=True)[0]['report']['plate'],'01234567')
             with self.assertRaises(ValueError):validate_package(path,pin)
-            for mutation in [dict(subjectCode='1145'),dict(subjectPath=['חניה אסורה','אחר']),dict(eventType='parking'),dict(text='changed no identifier'),dict(subjectPath=[])]:
+            for mutation in [dict(subjectCode='1145'),dict(subjectPath=['חניה אסורה','אחר']),dict(eventType='parking'),dict(text='changed no identifier'),dict(subjectPath=[]),dict(text='synthetic 12-3456789',plate='2345678'),dict(text='synthetic 001234567',plate='01234567')]:
                 pin=package(dict(report,**mutation))
                 with self.assertRaises(ValueError):validate_package(path,pin,cable_hazard=True)
             missing=copy.deepcopy(report);del missing['subjectPath'];pin=package(missing)

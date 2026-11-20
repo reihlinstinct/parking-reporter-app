@@ -5,10 +5,10 @@ import org.junit.Test
 import java.nio.file.Files
 
 class TwoCarCiBridgeTest {
-    private class Client(val hazardPath: List<String>? = null) : MunicipalClient {
+    private class Client(val hazardPath: List<String>? = null, val hazardCode: String = "5164", val hazardName: String = "אחר") : MunicipalClient {
         val calls = mutableListOf<String>()
         override fun login(): String { calls.add("login"); return "synthetic-token" }
-        override fun subjectCategories(token: String) = if (hazardPath != null) listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject("5164", "אחר", hazardPath, false)) else listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject("1145", "synthetic", emptyList(), true))
+        override fun subjectCategories(token: String) = if (hazardPath != null) listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject(hazardCode, hazardName, hazardPath, false)) else listOf(io.github.reihlinstinct.reporter.core.MunicipalSubject("1145", "synthetic", emptyList(), true))
         override fun upsertContact(token: String, contact: LinkedHashMap<String, Any?>): Map<String, Any?> { calls.add("contact"); return mapOf("ContactIdInCRM" to "synthetic-contact") }
         override fun createCase(token: String, contact: LinkedHashMap<String, Any?>, report: LinkedHashMap<String, Any?>): Map<String, Any?> { calls.add("create"); return mapOf("CaseIdInCRM" to "00000000-0000-0000-0000-000000000000", "WebCaseIdInCRM" to "synthetic-web", "CaseNumberInCRM" to null) }
         override fun attachPhoto(token: String, caseIdInCRM: String, webCaseIdInCRM: String, fileName: String, jpeg: ByteArray) {
@@ -35,16 +35,19 @@ class TwoCarCiBridgeTest {
     @Test fun cableHazardRequiresDistinctModeAndExactLivePathBeforeWrite() {
         val root=Files.createTempDirectory("synthetic-cable").toFile()
         try {
-            val r=report(root)+mapOf("subjectCode" to "5164", "eventType" to "charging_cable_sidewalk_hazard", "subjectPath" to TwoCarCiBridge.CABLE_PATH)
+            val r=report(root)+mapOf("plate" to "01234567", "text" to "synthetic cable 012-34-567", "subjectCode" to "5164", "eventType" to "charging_cable_sidewalk_hazard", "subjectPath" to TwoCarCiBridge.CABLE_PATH)
             assertEquals("5164",TwoCarCiBridge.payload(r,true)["CaseSubjectCode"])
             assertThrows(IllegalArgumentException::class.java) { TwoCarCiBridge.payload(r) }
             assertThrows(IllegalArgumentException::class.java) { TwoCarCiBridge.payload(r+("subjectPath" to listOf("חניה אסורה","אחר")),true) }
-            for (client in listOf(Client(),Client(listOf("חניה אסורה","אחר")))) {
+            for (client in listOf(Client(),Client(listOf("חניה אסורה","אחר")),Client(TwoCarCiBridge.CABLE_PATH,hazardName="renamed"),Client(TwoCarCiBridge.CABLE_PATH,hazardCode="1145"))) {
                 val b=TwoCarCiBridge(client,linkedMapOf(),root,true)
                 b.call(mapOf("operation" to "prepare","report" to r))
                 assertThrows(IllegalArgumentException::class.java) { b.call(mapOf("operation" to "login")) }
                 assertEquals(listOf("login"),client.calls)
                 assertThrows(IllegalStateException::class.java) { b.call(mapOf("operation" to "create","report" to r)) }
+            }
+            for (change in listOf(mapOf("eventType" to "parking"), mapOf("plate" to "2345678", "text" to "synthetic 12-3456789"))) {
+                assertThrows(IllegalArgumentException::class.java) { TwoCarCiBridge.payload(r+change,true) }
             }
             val c=Client(TwoCarCiBridge.CABLE_PATH);val b=TwoCarCiBridge(c,linkedMapOf(),root,true)
             b.call(mapOf("operation" to "prepare","report" to r));b.call(mapOf("operation" to "login"))
