@@ -26,6 +26,19 @@ def ready():
     raise RuntimeError('Package service did not become ready, no further reboot')
 
 
+def disable_radios():
+    # Reboots can restore radio state. Verify isolation before each probe.
+    adb('shell', 'svc', 'wifi', 'disable')
+    adb('shell', 'svc', 'data', 'disable')
+    for _ in range(10):
+        wifi = adb('shell', 'settings', 'get', 'global', 'wifi_on').strip()
+        mobile = adb('shell', 'settings', 'get', 'global', 'mobile_data').strip()
+        if wifi == '0' and mobile == '0':
+            return
+        time.sleep(1)
+    raise RuntimeError('Radio isolation could not be verified; experiment stopped')
+
+
 def capture(label):
     (OUT / (label + '-boot-logcat.txt')).write_text(adb('logcat', '-b', 'all', '-d', '-v', 'threadtime'))
     (OUT / (label + '-properties.txt')).write_text(adb('shell', 'getprop'))
@@ -61,12 +74,17 @@ def main():
             adb('reboot')
             adb('wait-for-device', timeout=150)
             ready()
+        disable_radios()
         capture(label)
         before = probe(label)
         summary['coldBoots'].append(before)
         (OUT / 'boot-probe-summary.json').write_text(json.dumps(summary, indent=2))
         print('Cold boot', ordinal, 'runtimeMax', before['javaMaxBytes'],
               'memoryClassMiB', before['memoryClassMiB'], flush=True)
+        if before['javaMaxBytes'] not in (16777216, 536870912):
+            summary.update(status='stopped_unexpected_budget', unexpectedBudget=before['javaMaxBytes'])
+            (OUT / 'boot-probe-summary.json').write_text(json.dumps(summary, indent=2))
+            raise RuntimeError('Unexpected process budget; experiment stopped without intervention')
         if before['javaMaxBytes'] == 16777216:
             # A control intervention on this synthetic emulator only. No heap
             # property, app manifest, APK or production workflow is changed.
@@ -76,6 +94,7 @@ def main():
             adb('shell', 'su', 'root', 'setprop', 'ctl.restart', 'zygote')
             time.sleep(5)
             ready()
+            disable_radios()
             capture('warm-control')
             after = probe('warm-control')
             summary.update(status='reproduced_with_control',propertyBeforeRestart=properties,

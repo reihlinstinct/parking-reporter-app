@@ -44,6 +44,13 @@ class DiagnosticRunnerTest(unittest.TestCase):
         self.assertIn('scripts/test_api29_boot_probe.py', checks)
         self.assertIn('scripts/test_warm_gradle_plugins.py', checks)
 
+    def test_optional_snapshot_directory_failure_is_contained(self):
+        source = (ROOT / 'app/src/androidTest/java/io/github/reihlinstinct/reporter/MemoryTraceListener.kt').read_text()
+        snapshot = source.split('val root = File(', 1)[1].split('override fun testFinished', 1)[0]
+        self.assertLess(snapshot.index('try {'), snapshot.index('check(root.isDirectory || root.mkdirs())'))
+        self.assertLess(snapshot.index('check(root.isDirectory || root.mkdirs())'), snapshot.index('Debug.dumpHprofData'))
+        self.assertIn('catch (failure: Exception)', snapshot)
+
     def run_case(self, mode='suite', **values):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
