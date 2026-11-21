@@ -148,8 +148,9 @@ def verify_manifest(manifest, expected_inputs: dict, now: datetime,
 def diagnose_qemu_version(path: Path) -> str:
     """Classify only an exact producer metadata file, never emit its bytes.
 
-    Recognition is not permission to cache, remove or alter this file. Cap the
-    read, refuse links and special files, and log only a fixed vocabulary.
+    Cap the read, refuse links and special files, and log only fixed labels.
+    The scanner separately permits only the observed exact_ascii_2 shape;
+    all other classifications remain rejections. Never remove or alter it.
     """
     if path.name != 'qemu-version.txt':
         return 'not_exact_name'
@@ -194,6 +195,12 @@ def scan_tree(root: Path, diagnose_clean_producer=False) -> None:
             if count > MAX_FILES:
                 raise CacheRejected('too many files in cache tree')
             lower = name.lower()
+            # Clean producer run44884560876 observed exactly one ASCII byte2.
+            # Retain that metadata, but never turn its basename into a generic
+            # text allowlist. Use the same bounded/no-follow regular-file read
+            # during production AND restoration, regardless of diagnostic flag.
+            if name == 'qemu-version.txt' and diagnose_qemu_version(Path(dirpath) / name) == 'exact_ascii_2':
+                continue
             if lower in ALLOWED_EXACT:
                 continue
             if FORBIDDEN_NAMES.search(name) or lower.endswith(FORBIDDEN_SUFFIXES):
@@ -204,7 +211,7 @@ def scan_tree(root: Path, diagnose_clean_producer=False) -> None:
                         print('CLEAN-PRODUCER-QEMU-VERSION-SHAPE', diagnose_qemu_version(Path(dirpath) / name))
                 raise CacheRejected('forbidden file name in cache tree: ' + rejection_label(name))
         for d in dirnames:
-            if FORBIDDEN_NAMES.search(d):
+            if d.lower() == 'qemu-version.txt' or FORBIDDEN_NAMES.search(d):
                 raise CacheRejected('forbidden directory name in cache tree: ' + rejection_label(d))
 
 

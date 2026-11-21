@@ -1,20 +1,29 @@
-# Clean-producer QEMU metadata diagnostic
+# Clean-producer QEMU metadata validation
 
-The clean producer reached snapshot creation on 2026-11-20, then the unchanged
-manifest validator rejected `qemu-version.txt` as a forbidden text file. Nothing
-was published. This was not a dependency-resolution or app-test failure.
+The scheduled clean producer on2026-11-21 (run44884560876) built the APKs,
+booted the emulator and saved its snapshot, then refused cache publication.
+The diagnostic added inPR709 classified the rejected `qemu-version.txt` as
+`exact_ascii_2`: exactly the single byte `2`, without a newline. This was not
+a dependency-resolution or app-test failure. Retrying unchanged code wastes
+a build and does not fix the refusal.
 
-The meaning and necessity of this file have not been established. It is neither
-allowed nor deleted. A retry of the same code is not expected to fix it.
+The scanner now permits only that exact, case-sensitive basename with exactly
+that observed value. It retains the file unchanged, preserving its contents
+for the emulator rather than guessing that removal is harmless. It does not
+claim to establish the meaning of the version marker or prove snapshot restore
+compatibility on its own. The existing cache identity also pins the emulator,
+system image, runner image, app sources and preparation scripts.
 
-The opt-in clean-producer diagnostic now classifies only that exact basename.
-It uses a no-follow, nonblocking open, requires a regular file, caps the read at
-17 bytes, and prints only a fixed label: exact ASCII 2, ASCII 2 plus LF, empty,
-other bounded value, over 16 bytes, not regular, or unreadable. It never prints
-contents, hashes or full paths. Ordinary restore validation never reads it.
+Production and restoration apply the same check, with or without diagnostics:
+no-follow/nonblocking open, regular-file check, bounded read of at most17bytes,
+and exact byte equality. Other values, newlines, empty files, large files,
+case variants, symlinks, directories and FIFOs remain refused. The general text
+and log suffix rules are unchanged. Other forbidden files still block the whole
+cache, even alongside a valid marker. Unknown metadata must be diagnosed and
+reviewed separately, never deleted or broadly allowed to make a run green.
 
-The file remains rejected after classification. No cache permission, cleanup or
-snapshot-consumer behavior changes. This is evidence gathering, not recovery.
-Any subsequent exact-file cleanup or allowance needs its own reviewed change
-and evidence that snapshot compatibility is preserved. Do not broaden the text
-suffix rule or run repeated unchanged producer retries.
+Opt-in clean-producer diagnostics remain fixed classifications only, never raw
+contents, hashes or full paths. Rejected values remain unchanged. No workflow,
+cache permissions, private-data access or live-consumer activation is added.
+A successful producer/restore run is still needed before claiming recovery;
+clearing this first refusal may expose another blocker.
