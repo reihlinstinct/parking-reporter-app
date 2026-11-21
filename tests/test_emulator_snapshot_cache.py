@@ -8,6 +8,7 @@ import unittest
 from contextlib import redirect_stdout
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location(
     'snapcache', Path(__file__).resolve().parents[1] / 'scripts/emulator_snapshot_cache.py')
@@ -124,6 +125,63 @@ class ScanTest(unittest.TestCase):
     def test_clean_avd_passes(self):
         m.scan_tree(self.root)
 
+    def test_marker_read_failure_and_read_bound(self):
+        marker = self.root / 'qemu-version.txt'
+        marker.write_bytes(b'2')
+        with patch.object(m.os, 'open', side_effect=PermissionError):
+            with self.assertRaises(m.CacheRejected):
+                m.scan_tree(self.root)
+        real_read = os.read
+        with patch.object(m.os, 'read', wraps=real_read) as reading:
+            m.scan_tree(self.root)
+        self.assertEqual(1, reading.call_count)
+        self.assertEqual(17, reading.call_args.args[1])
+
+    def test_observed_qemu_marker_passes_without_deleting_or_changing_it(self):
+        marker = self.root / 'qemu-version.txt'
+        marker.write_bytes(b'2')
+        for diagnostic in (False, True):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                m.scan_tree(self.root, diagnose_clean_producer=diagnostic)
+            self.assertEqual(b'2', marker.read_bytes())
+            self.assertEqual('', output.getvalue())
+
+    def test_qemu_marker_exception_is_exact_and_does_not_hide_other_forbidden_files(self):
+        marker = self.root / 'qemu-version.txt'
+        marker.write_bytes(b'2')
+        for name in ('notes.txt', 'another.txt', 'qemu.log', 'read-snapshot.txt',
+                     'QEMU-VERSION.txt', 'qemu-version.txt.extra.txt'):
+            with self.subTest(name=name):
+                other = self.root / name
+                other.write_bytes(b'2')
+                try:
+                    with self.assertRaises(m.CacheRejected):
+                        m.scan_tree(self.root)
+                finally:
+                    other.unlink()
+        marker.unlink()
+        marker.mkdir()
+        with self.assertRaises(m.CacheRejected):
+            m.scan_tree(self.root)
+
+    def test_qemu_marker_special_nodes_and_unknown_values_never_pass(self):
+        marker = self.root / 'qemu-version.txt'
+        for value in (b'', b'1', b'3', b'22', b' 2', b'2\n', b'2\x00', b'x' * 10000):
+            marker.write_bytes(value)
+            for diagnostic in (False, True):
+                with redirect_stdout(io.StringIO()), self.assertRaises(m.CacheRejected):
+                    m.scan_tree(self.root, diagnose_clean_producer=diagnostic)
+            self.assertEqual(value, marker.read_bytes())
+        marker.unlink()
+        os.mkfifo(marker)
+        with self.assertRaises(m.CacheRejected):
+            m.scan_tree(self.root)
+        marker.unlink()
+        marker.symlink_to(self.root / 'config.ini')
+        with self.assertRaises(m.CacheRejected):
+            m.scan_tree(self.root)
+
     def test_private_looking_content_rejected(self):
         for n in ['photo.jpg', 'live-params.json', 'addresses.json', 'rec.mp4', 'a.zip', 'x.enc',
                   'TRIAL_DATA', 'token', 'run.log', 'notes.txt', 'id_rsa', 'secret.key']:
@@ -174,7 +232,7 @@ class ScanTest(unittest.TestCase):
 
     def test_qemu_version_diagnostic_is_bounded_opt_in_and_still_rejects(self):
         path = self.root / 'qemu-version.txt'
-        for value, expected in ((b'2', 'exact_ascii_2'), (b'2\n', 'exact_ascii_2_lf'),
+        for value, expected in ((b'2\n', 'exact_ascii_2_lf'),
                                 (b'', 'empty'), (b'NEVER_PRINT', 'other_bounded_value'),
                                 (b'PRIVATE' * 1000, 'over_16_bytes')):
             path.write_bytes(value)
@@ -277,6 +335,19 @@ class CliTest(unittest.TestCase):
         self.assertIn('if [ "$GITHUB_REF" = refs/heads/main ]; then\n            diagnostic=(--diagnose-clean-producer)\n          fi', block)
         self.assertIn('"${diagnostic[@]}"', block)
         self.assertEqual(1, block.count('--diagnose-clean-producer'))
+
+    def test_marker_is_validated_on_produce_and_again_on_restore(self):
+        marker = self.avd / 'qemu-version.txt'
+        marker.write_bytes(b'2')
+        self.assertEqual(0, self.run_cli('write-manifest', '--avd-dir', str(self.avd))[0])
+        self.assertEqual(0, self.run_cli('verify', '--avd-dir', str(self.avd))[0])
+        marker.write_bytes(b'3')
+        rc, output = self.run_cli('verify', '--avd-dir', str(self.avd))
+        self.assertEqual(3, rc)
+        self.assertIn('SNAPSHOT-REJECTED', output)
+        rc, output = self.run_cli('write-manifest', '--avd-dir', str(self.avd))
+        self.assertEqual(3, rc)
+        self.assertEqual(b'3', marker.read_bytes())
 
     def test_roundtrip_and_source_change(self):
         rc, out = self.run_cli('write-manifest', '--avd-dir', str(self.avd))
