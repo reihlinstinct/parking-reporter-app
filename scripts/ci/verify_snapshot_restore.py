@@ -12,10 +12,13 @@ class RestoreRejected(Exception):
     pass
 
 
-def check_guest(run=subprocess.run):
+def check_guest(run=subprocess.run, deadline=None, clock=time.monotonic):
     def adb(*args):
+        remaining = 15 if deadline is None else deadline - clock()
+        if remaining <= 0:
+            raise RestoreRejected('warm_restore_timeout')
         return run(['adb', '-s', 'emulator-5554', *args], check=True,
-                   capture_output=True, text=True, timeout=15).stdout
+                   capture_output=True, text=True, timeout=min(15, remaining)).stdout
     if adb('shell', 'getprop', 'sys.boot_completed').strip() != '1':
         raise RestoreRejected('guest_not_ready')
     for package in ('il.sidewalks.reporter', 'il.sidewalks.reporter.test'):
@@ -40,7 +43,9 @@ def prove(popen=subprocess.Popen, run=subprocess.run, clock=time.monotonic,
                       start_new_session=True)
         deadline = clock() + 180
         try:
-            while clock() < deadline:
+            def check_state():
+                if clock() >= deadline:
+                    raise RestoreRejected('warm_restore_timeout')
                 if child.poll() is not None:
                     raise RestoreRejected('emulator_exited')
                 if os.fstat(log.fileno()).st_size > 8 * 1024 * 1024:
@@ -49,15 +54,24 @@ def prove(popen=subprocess.Popen, run=subprocess.run, clock=time.monotonic,
                 data = os.pread(log.fileno(), 8 * 1024 * 1024, 0)
                 if b"Failed to load snapshot" in data or b'cold boot' in data.lower():
                     raise RestoreRejected('cold_fallback_or_load_failure')
+                return data
+
+            while clock() < deadline:
+                data = check_state()
                 if b"Successfully loaded snapshot 'default_boot'" in data:
                     try:
-                        check_guest(run)
+                        check_guest(run, deadline, clock)
                     except (subprocess.SubprocessError, RestoreRejected):
                         pass  # Boot/ADB may not yet be stable. Never reboot.
                     else:
+                        # ADB probes take time and can race new emulator output
+                        # or exit. Never certify stale pre-probe state.
+                        check_state()
                         print('SNAPSHOT-WARM-RESTORE-VERIFIED')
                         return
-                pause(2)
+                remaining = deadline - clock()
+                if remaining > 0:
+                    pause(min(2, remaining))
             raise RestoreRejected('warm_restore_timeout')
         finally:
             try:

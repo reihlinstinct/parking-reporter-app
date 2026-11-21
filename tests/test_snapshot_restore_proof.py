@@ -84,6 +84,48 @@ class ProofTest(unittest.TestCase):
                 self.assertEqual(3, m.main())
             self.assertEqual('SNAPSHOT-WARM-RESTORE-REJECTED\n', output.getvalue())
 
+    def test_late_deadline_failure_exit_and_log_growth_cannot_certify_success(self):
+        for mode in ('deadline', 'fallback', 'failure', 'exit', 'oversize'):
+            with self.subTest(mode=mode):
+                ticks = [0]
+                child = Mock(pid=123)
+                child.poll.return_value = None
+                logs = []
+                def launch(args, **kwargs):
+                    logs.append(kwargs['stdout'])
+                    logs[0].write(b"Successfully loaded snapshot 'default_boot'")
+                    logs[0].flush()
+                    return child
+                def probes(*args):
+                    if mode == 'deadline':
+                        ticks[0] = 240
+                    elif mode == 'exit':
+                        child.poll.return_value = 1
+                    else:
+                        value = {'fallback': b'cold boot', 'failure': b'Failed to load snapshot',
+                                 'oversize': b'x' * (8 * 1024 * 1024 + 1)}[mode]
+                        logs[0].write(value)
+                        logs[0].flush()
+                kill = Mock()
+                output = io.StringIO()
+                with patch.object(m, 'check_guest', side_effect=probes), redirect_stdout(output):
+                    with self.assertRaises(m.RestoreRejected):
+                        m.prove(popen=launch, clock=lambda: ticks[0], killpg=kill)
+                self.assertNotIn('VERIFIED', output.getvalue())
+                kill.assert_called_once_with(child.pid, signal.SIGKILL)
+                child.wait.assert_called_once_with()
+
+    def test_each_adb_probe_uses_remaining_global_budget(self):
+        ticks = [170.0]
+        def run(args, **kwargs):
+            self.assertEqual(min(15, 180 - ticks[0]), kwargs['timeout'])
+            ticks[0] += 3
+            return self.guest()(args, **kwargs)
+        with self.assertRaises(m.RestoreRejected):
+            m.check_guest(run, deadline=180, clock=lambda: ticks[0])
+        # Four probes consume the remaining10s; the fifth must not be launched.
+        self.assertEqual(182, ticks[0])
+
     def test_workflow_is_single_manual_main_only_without_build_save_or_private_inputs(self):
         import yaml
         workflow = yaml.safe_load((ROOT / '.github/workflows/emulator-snapshot-restore-proof.yml').read_text())
