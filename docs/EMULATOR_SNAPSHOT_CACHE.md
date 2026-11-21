@@ -56,3 +56,27 @@ After clean emulator shutdown, the producer removes only regular files named exa
 ### Clean producer refusal diagnosis
 
 The main-only producer opts into `write-manifest --diagnose-clean-producer`. On rejection it prints only the rejected basename, JSON escaped and capped at 160 characters, never the directory path or file contents. This is limited to the fresh synthetic producer that has no credentials or private inputs. Consumers retain redacted fixed-vocabulary diagnostics. Validation, the allowlist and cache-save ordering are unchanged: a rejected file still stops publication. This diagnostic does not guess which file failed run 44515878752; one reviewed producer run is needed to identify it before any further cleanup change.
+
+## Single warm-restore proof
+
+`Single warm snapshot restore proof (mock only)` is manual and main-only. It
+runs one standard Linux job with a ten-minute cap. It computes the current
+identity key and calls the existing exact-key restore/manifest/age/content
+validator. A miss is a failure, not a cold fallback. It never calls the
+producer, builds APKs, reinstalls APKs, saves a cache, uses secrets or contacts
+the municipality. A producer cache must already exist for the same sources,
+preparation files, emulator/image and hosted-runner image. A runner-image or
+identity change can cause an honest miss; do not call that a warm success.
+
+The bounded boot helper starts the restored `test` AVD with `default_boot` and
+no snapshot save. It requires the emulator's explicit successful-load marker,
+boot completion, both APK packages already installed, and a healthy guest.
+Cold-fallback/failure markers, early exit, oversize logs or timeout refuse the
+proof. There is no recovery reboot. Emulator stdout stays in a temporary file,
+not an artifact or log dump, and only a fixed success/refusal label is printed.
+The process group is always killed/reaped and restored material is removed by
+an always-run workflow step. Emulator log vocabulary changes can fail closed.
+
+Passing this proof establishes one usable warm restore. It is not a benchmark,
+not a measured savings claim, and does not activate any live consumer. The
+three-cold/three-warm benchmark is a separate, larger operation.
