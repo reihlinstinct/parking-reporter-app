@@ -1,0 +1,40 @@
+name: Single warm snapshot restore proof (mock only)
+
+# Manual, one Linux job. No producer/build, cold fallback, secrets, environments,
+# cache save, APK reinstall, app submissions or private/municipal traffic.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: snapshot-restore-proof-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  restore:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - id: key
+        uses: ./.github/actions/emulator-snapshot-key
+      - id: restore
+        uses: ./.github/actions/emulator-snapshot-restore
+        with:
+          key: ${{ steps.key.outputs.key }}
+      - name: Require exact verified cache hit, never fall back cold
+        env:
+          HIT: ${{ steps.restore.outputs.hit }}
+        run: test "$HIT" = true
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Prove loaded snapshot, preinstalled APKs and healthy guest without reboot
+        run: python3 scripts/ci/verify_snapshot_restore.py
+      - name: Remove restored material, never save mutated cache
+        if: always()
+        run: rm -rf "$HOME/.android/avd"
