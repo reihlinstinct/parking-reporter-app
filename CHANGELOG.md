@@ -6,6 +6,55 @@ Every release gets a `v<version>` git tag, a matching entry here, and release no
 
 ## [Unreleased]
 
+## [0.55.0] - 2026-11-21
+
+### Features
+
+- feat: wire local polygon lookup and optional advanced address import (refs #700) (f67678d)
+- feat: fetch only needed regional address data and retain offline verified cache (refs #700) (c5c9b68)
+- feat: publish pinned CBS2022 regional files with complete outside-coverage accounting (refs #700) (ef4f694)
+- feat: generate geographic address shards without hiding alias ambiguity (refs #700) (5ab4a15)
+- feat: add verified regional address cache and local polygon routing (refs #700) (c37872d)
+
+### Fixes
+
+- fix(ci): recheck warm restore state after globally bounded ADB probes (f93392c)
+- fix(ci): validate exact observed QEMU snapshot version marker (50dcb59)
+- fix(address): keep all consent paragraphs reachable at large font scales (973c0b9)
+- fix(address): pin published v1 and disclose regional lookup limits (8786e07)
+- fix(intake): refuse huge integers and validate public address helpers (82a6ae8)
+- fix(address): preserve coverage-edge ambiguity and local street suggestions (898fa10)
+- fix(i18n): complete new address controls for French machine-draft locale (12e47d1)
+- fix(address): retain existing home live-region imports after control extraction (5795b78)
+- fix(address): satisfy dispatcher catalog and attribution integration gates (670cd2d)
+- fix(address): align review privacy and failure text with regional lookup (363b5b3)
+- fix(address): scope regional directories and render honest advanced controls (2d55ce5)
+- fix(address): stage filtered assets through supported Gradle sources (e2ab460)
+- fix(intake): validate consumed directory shape before derivation (#610) (cbc6400)
+
+### Other changes
+
+- Merge pull request #718 from reihlinstinct/feat/snapshot-restore-proof (850b838)
+- ci: add one-job warm snapshot restore proof without cold fallback (ea1a230)
+- Merge pull request #717 from reihlinstinct/fix/snapshot-qemu-version (f91a39e)
+- Merge pull request #702 from reihlinstinct/batch/address-usability (a2e764d)
+- merge: integrate reviewed main while preserving regional assets and golden vectors (f59db2b)
+- Merge pull request #701 from reihlinstinct/batch/privacy-data-contracts (6af8d07)
+- test(address): update approved consent snapshot and use catalog default (dfdec7d)
+- test(address): scope duplicated consent copy assertion to the dialog (034874e)
+- test(address): capture consent pixels and warm local suggestions off main thread (c7d70f3)
+- test(address): compare production suggestion cache against prior state (b3eb67c)
+- test: retain both address and approved-copy display coverage independent of order (d637838)
+- Merge current main into regional address batch retaining privacy and signing gates (b07e366)
+- Merge current main into privacy contract batch preserving vector resources (47b873d)
+- test(address): require advanced-settings pixels on both display profiles (refs #700) (d3bf830)
+- test(address): pin reviewed regional privacy and availability wording (fc74385)
+- test(address): assert regional production and full-file test APK boundary (e1f76f8)
+- test(address): capture readable advanced settings top and bottom (7aa73c3)
+- test(address): pin CBS input and reproduce every regional shard (b25bd3a)
+- test: keep optional address import behind advanced settings (refs #700) (df57b5d)
+- test(prpkg2): bind published golden vectors to production codec (#10) (fc4f52c)
+
 ## [0.54.0] - 2026-11-20
 
 ### Features
